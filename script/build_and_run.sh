@@ -16,6 +16,19 @@ APP_BINARY="$APP_MACOS/$APP_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 ICON_SOURCE="$ROOT_DIR/Assets/AppIcon.icns"
 
+default_codesign_identity() {
+  if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
+    printf "%s" "$CODESIGN_IDENTITY"
+    return
+  fi
+
+  security find-identity -p codesigning -v 2>/dev/null \
+    | awk -F'"' '/"Apple Development:|"Developer ID Application:/{print $2; exit}'
+}
+
+CODESIGN_IDENTITY="$(default_codesign_identity)"
+CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
+
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
 swift build --product "$APP_NAME"
@@ -63,6 +76,8 @@ cat >"$INFO_PLIST" <<PLIST
 </dict>
 </plist>
 PLIST
+
+codesign --force --deep --timestamp=none --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
 
 open_app() {
   /usr/bin/open -n "$APP_BUNDLE"

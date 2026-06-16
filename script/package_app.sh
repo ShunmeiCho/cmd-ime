@@ -17,6 +17,19 @@ INFO_PLIST="$APP_CONTENTS/Info.plist"
 ZIP_PATH="$DIST_DIR/$APP_NAME-$VERSION.zip"
 ICON_SOURCE="$ROOT_DIR/Assets/AppIcon.icns"
 
+default_codesign_identity() {
+  if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
+    printf "%s" "$CODESIGN_IDENTITY"
+    return
+  fi
+
+  security find-identity -p codesigning -v 2>/dev/null \
+    | awk -F'"' '/"Apple Development:|"Developer ID Application:/{print $2; exit}'
+}
+
+CODESIGN_IDENTITY="$(default_codesign_identity)"
+CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
+
 rm -rf "$RELEASE_DIR" "$ZIP_PATH"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 
@@ -66,6 +79,8 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
+codesign --force --deep --timestamp=none --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+codesign --verify --deep --strict "$APP_BUNDLE"
 plutil -lint "$INFO_PLIST"
 ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"
 

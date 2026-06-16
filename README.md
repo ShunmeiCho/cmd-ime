@@ -44,6 +44,32 @@ swift test
 The app needs Accessibility and Input Monitoring permissions before global
 keyboard listening can work.
 
+## Permissions Troubleshooting
+
+macOS stores Accessibility and Input Monitoring approval against the app's code
+identity. If you approve one rebuilt `CmdIME.app` and then run another copy from
+`dist/`, `dist/release/`, or `/Applications`, macOS can treat it as a different
+app and show the prompt again.
+
+Use one stable app location when granting permissions:
+
+1. Quit CmdIME.
+2. Remove old `CmdIME.app` entries from System Settings > Privacy & Security >
+   Accessibility and Input Monitoring.
+3. Install or copy the app to the location you actually use, such as
+   `/Applications/CmdIME.app`.
+4. Open that exact app and grant both permissions.
+5. Quit and reopen CmdIME.
+
+For local development, `script/build_and_run.sh` signs the generated app bundle
+after staging it. It uses the first local Apple Development or Developer ID
+signing identity it can find, then falls back to ad-hoc signing. You can set
+`CODESIGN_IDENTITY` to choose a specific identity:
+
+```sh
+CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run.sh
+```
+
 ## CLI
 
 ```sh
@@ -67,8 +93,8 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.0
-shasum -a 256 dist/CmdIME-0.1.0.zip
+./script/package_app.sh 0.1.1
+shasum -a 256 dist/CmdIME-0.1.1.zip
 ```
 
 Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
