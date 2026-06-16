@@ -31,9 +31,9 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Image(systemName: "keyboard")
-                .font(.system(size: 30))
-                .foregroundStyle(.tint)
+            Text("⌘")
+                .font(.system(size: 30, weight: .semibold))
+                .frame(width: 36, height: 36)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("CmdIME")
@@ -49,18 +49,13 @@ struct ContentView: View {
             Button {
                 model.initializeFromScan()
                 resetDrafts()
-            } label: {
-                Label("Use detected sources", systemImage: "wand.and.stars")
-            }
+            } label: { Text("Use detected sources") }
+            .frame(width: 156)
 
             Button {
                 model.toggleListening()
-            } label: {
-                Label(
-                    model.isListening ? "Pause" : "Resume",
-                    systemImage: model.isListening ? "pause.circle" : "play.circle"
-                )
-            }
+            } label: { Text(model.isListening ? "Pause" : "Resume") }
+            .frame(width: 86)
             .buttonStyle(.borderedProminent)
         }
     }
@@ -76,41 +71,64 @@ struct ContentView: View {
                 Spacer()
                 Button {
                     model.scan()
-                } label: {
-                    Label("Refresh input sources", systemImage: "arrow.clockwise")
-                }
+                } label: { Text("Refresh input sources") }
+                .frame(width: 158)
             }
 
-            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                GridRow {
-                    Text("Role").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    Text("Matched Source").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    Text("Languages").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    Text("")
-                }
+            VStack(alignment: .leading, spacing: 8) {
+                inputSourceHeaderRow
 
                 ForEach(InputRole.allCases, id: \.self) { role in
-                    let source = model.matchedSource(for: role)
-                    GridRow {
-                        Label(role.rawValue.capitalized, systemImage: iconName(for: role))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(source?.localizedName ?? "Not matched")
-                            Text(source?.id ?? "Run Scan or Auto Setup")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        Text(source?.displayLanguages ?? "")
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                        Button("Switch") {
-                            model.switchRole(role)
-                        }
-                    }
+                    inputSourceRow(for: role, source: model.matchedSource(for: role))
                 }
             }
         }
+    }
+
+    private var inputSourceHeaderRow: some View {
+        HStack(spacing: 12) {
+            Text("Role")
+                .frame(width: 112, alignment: .leading)
+            Text("Matched Source")
+                .frame(width: 280, alignment: .leading)
+            Text("Languages")
+                .frame(width: 170, alignment: .leading)
+            Spacer(minLength: 0)
+            Text("")
+                .frame(width: 78)
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(.secondary)
+    }
+
+    private func inputSourceRow(for role: InputRole, source: InputSourceInfo?) -> some View {
+        HStack(spacing: 12) {
+            Text(roleTitle(for: role))
+                .frame(width: 112, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(source?.localizedName ?? "Not matched")
+                    .lineLimit(1)
+                Text(source?.id ?? "Run Scan or Auto Setup")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .frame(width: 280, alignment: .leading)
+
+            Text(source?.displayLanguages ?? "")
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(width: 170, alignment: .leading)
+
+            Spacer(minLength: 0)
+
+            Button("Switch") {
+                model.switchRole(role)
+            }
+            .frame(width: 78)
+        }
+        .frame(height: 46)
     }
 
     private var bindingsSection: some View {
@@ -120,7 +138,7 @@ struct ContentView: View {
 
             ForEach(InputRole.allCases, id: \.self) { role in
                 HStack(spacing: 12) {
-                    Label(role.rawValue.capitalized, systemImage: iconName(for: role))
+                    Text(roleTitle(for: role))
                         .frame(width: 120, alignment: .leading)
 
                     Picker(
@@ -237,11 +255,10 @@ struct ContentView: View {
                 Text("Stop the listener and quit the background agent")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button {
+                Button("Quit CmdIME") {
                     model.quit()
-                } label: {
-                    Label("Quit CmdIME", systemImage: "power")
                 }
+                .frame(width: 100)
             }
         }
     }
@@ -252,14 +269,14 @@ struct ContentView: View {
         )
     }
 
-    private func iconName(for role: InputRole) -> String {
+    private func roleTitle(for role: InputRole) -> String {
         switch role {
         case .english:
-            "character.cursor.ibeam"
+            "English"
         case .chinese:
-            "textformat"
+            "Chinese"
         case .japanese:
-            "textformat.alt"
+            "Japanese"
         }
     }
 

@@ -15,7 +15,7 @@ struct CmdIMEApp: App {
                 }
         }
 
-        MenuBarExtra("CmdIME", systemImage: "keyboard", isInserted: $model.config.showMenuBarIcon) {
+        MenuBarExtra("CmdIME", isInserted: $model.config.showMenuBarIcon) {
             MenuBarContent(model: model)
         }
 

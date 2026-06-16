@@ -1,6 +1,6 @@
 cask "cmd-ime" do
-  version "0.1.3"
-  sha256 "9014d3c7271142c7dd82485ebad91383bafeefb02adfa512eb54a66a1c1a9219"
+  version "0.1.4"
+  sha256 "380d74b667d4a0d643d4343fb9d278af2c827b84dfe0bd834fce55261f886d89"
 
   url "https://github.com/ShunmeiCho/cmd-ime/releases/download/v#{version}/CmdIME-#{version}.zip"
   name "CmdIME"

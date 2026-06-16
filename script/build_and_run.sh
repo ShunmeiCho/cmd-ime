@@ -4,7 +4,7 @@ set -euo pipefail
 MODE="${1:-run}"
 APP_NAME="CmdIME"
 BUNDLE_ID="com.shunmei.cmd-ime"
-VERSION="${VERSION:-0.1.3}"
+VERSION="${VERSION:-0.1.4}"
 MIN_SYSTEM_VERSION="13.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
