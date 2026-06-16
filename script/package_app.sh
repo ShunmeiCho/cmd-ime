@@ -16,11 +16,12 @@ APP_RESOURCES="$APP_CONTENTS/Resources"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 ZIP_PATH="$DIST_DIR/$APP_NAME-$VERSION.zip"
 ICON_SOURCE="$ROOT_DIR/Assets/AppIcon.icns"
+ALLOW_UNNOTARIZED="${CMDIME_ALLOW_UNNOTARIZED:-0}"
 
 find_codesign_identity() {
   local pattern="$1"
   security find-identity -p codesigning -v 2>/dev/null \
-    | awk -F'"' -v pattern="$pattern" '$0 ~ pattern {print $2; exit}'
+    | awk -F'"' -v pattern="$pattern" '$0 ~ pattern {print $2; found=1; exit} END {exit found ? 0 : 1}'
 }
 
 default_codesign_identity() {
@@ -36,17 +37,44 @@ default_codesign_identity() {
 CODESIGN_IDENTITY="$(default_codesign_identity)"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 
-codesign_bundle() {
-  local args=(--force --deep --sign "$CODESIGN_IDENTITY")
+is_developer_id_identity() {
+  [[ "$CODESIGN_IDENTITY" == Developer\ ID\ Application:* ]]
+}
+
+require_distribution_signing() {
+  if is_developer_id_identity; then
+    return
+  fi
+
+  if [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
+    echo "warning: packaging with non-Developer ID signing identity; notarization will not be available." >&2
+    return
+  fi
+
+  cat >&2 <<EOF
+error: release packaging requires a Developer ID Application signing identity.
+
+Current identity: $CODESIGN_IDENTITY
+
+Install a Developer ID Application certificate, or run a local-only smoke build
+with CMDIME_ALLOW_UNNOTARIZED=1. Do not publish local-only builds.
+EOF
+  exit 65
+}
+
+codesign_path() {
+  local path="$1"
+  local args=(--force --sign "$CODESIGN_IDENTITY")
   if [[ "$CODESIGN_IDENTITY" == Developer\ ID\ Application:* ]]; then
     args+=(--options runtime --timestamp)
   else
     args+=(--timestamp=none)
-    echo "warning: packaging with non-Developer ID signing identity; notarization will not be available." >&2
   fi
 
-  codesign "${args[@]}" "$APP_BUNDLE"
+  codesign "${args[@]}" "$path"
 }
+
+require_distribution_signing
 
 rm -rf "$RELEASE_DIR" "$ZIP_PATH"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES"
@@ -56,8 +84,9 @@ swift build -c release --product keyboardctl
 BUILD_BIN_DIR="$(swift build -c release --show-bin-path)"
 
 cp "$BUILD_BIN_DIR/$APP_NAME" "$APP_MACOS/$APP_NAME"
-cp "$BUILD_BIN_DIR/keyboardctl" "$APP_RESOURCES/keyboardctl"
-chmod +x "$APP_MACOS/$APP_NAME" "$APP_RESOURCES/keyboardctl"
+cp "$BUILD_BIN_DIR/keyboardctl" "$APP_MACOS/keyboardctl"
+ln -s "../MacOS/keyboardctl" "$APP_RESOURCES/keyboardctl"
+chmod +x "$APP_MACOS/$APP_NAME" "$APP_MACOS/keyboardctl"
 if [[ -f "$ICON_SOURCE" ]]; then
   cp "$ICON_SOURCE" "$APP_RESOURCES/AppIcon.icns"
 fi
@@ -97,7 +126,8 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
-codesign_bundle
+codesign_path "$APP_MACOS/keyboardctl"
+codesign_path "$APP_BUNDLE"
 codesign --verify --deep --strict "$APP_BUNDLE"
 plutil -lint "$INFO_PLIST"
 ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"

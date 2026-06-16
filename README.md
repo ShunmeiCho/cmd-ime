@@ -140,8 +140,13 @@ Config lives at:
 shasum -a 256 dist/CmdIME-0.1.4.zip
 ```
 
+Release packaging requires a `Developer ID Application` signing identity. For a
+local-only package smoke test on machines without that certificate, set
+`CMDIME_ALLOW_UNNOTARIZED=1`. Do not publish local-only builds.
+
 Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
-Homebrew cask.
+Homebrew cask. The cask links `keyboardctl` through `Contents/Resources`, which
+is a compatibility symlink to the signed helper in `Contents/MacOS`.
 
 ## Homebrew
 
