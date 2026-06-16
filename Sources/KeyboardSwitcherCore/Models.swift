@@ -273,4 +273,16 @@ public struct InputSourceInfo: Codable, Equatable, Sendable {
         self.languages = languages
         self.isSelectCapable = isSelectCapable
     }
+
+    public var displayLanguages: String {
+        guard !languages.isEmpty else {
+            return ""
+        }
+
+        let visibleLanguages = languages.prefix(4)
+        let suffix = languages.count > visibleLanguages.count
+            ? " +\(languages.count - visibleLanguages.count) more"
+            : ""
+        return visibleLanguages.joined(separator: ", ") + suffix
+    }
 }

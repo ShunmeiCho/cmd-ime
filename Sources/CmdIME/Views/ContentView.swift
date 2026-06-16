@@ -101,7 +101,7 @@ struct ContentView: View {
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
-                        Text(source?.languages.joined(separator: ", ") ?? "")
+                        Text(source?.displayLanguages ?? "")
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Button("Switch") {
@@ -226,7 +226,7 @@ struct ContentView: View {
                 Text(model.permissions.isReady ? "Ready" : "Input Monitoring or Accessibility missing")
                     .foregroundStyle(model.permissions.isReady ? Color.secondary : Color.orange)
                 Spacer()
-                Button("Open Prompt") {
+                Button("Request Permissions") {
                     model.requestPermissions()
                 }
             }

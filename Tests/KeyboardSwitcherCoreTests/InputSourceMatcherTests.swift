@@ -46,5 +46,15 @@ final class InputSourceMatcherTests: XCTestCase {
 
         XCTAssertEqual(match?.id, "jp")
     }
-}
 
+    func testDisplayLanguagesTruncatesLongLanguageLists() {
+        let source = InputSourceInfo(
+            id: "abc",
+            localizedName: "ABC",
+            languages: ["en", "af", "asa", "bem", "bez", "ca"],
+            isSelectCapable: true
+        )
+
+        XCTAssertEqual(source.displayLanguages, "en, af, asa, bem +2 more")
+    }
+}

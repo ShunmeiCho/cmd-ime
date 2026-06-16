@@ -33,7 +33,10 @@ public final class EventTapMonitor: @unchecked Sendable {
             return
         }
 
-        requestPermissionsIfNeeded()
+        guard MacPermissionStatus.current().isReady else {
+            throw EventTapError.missingPermissions
+        }
+
         refreshResolvedSources()
 
         let eventTypes: [CGEventType] = [
@@ -91,10 +94,6 @@ public final class EventTapMonitor: @unchecked Sendable {
     public func updateConfig(_ config: SwitcherConfig) {
         self.config = config
         refreshResolvedSources()
-    }
-
-    private func requestPermissionsIfNeeded() {
-        MacPermissionStatus.request()
     }
 
     private func refreshResolvedSources() {
@@ -374,10 +373,13 @@ public final class EventTapMonitor: @unchecked Sendable {
 }
 
 public enum EventTapError: Error, LocalizedError {
+    case missingPermissions
     case failedToCreateEventTap
 
     public var errorDescription: String? {
         switch self {
+        case .missingPermissions:
+            "Accessibility and Input Monitoring permissions are required before keyboard control can start."
         case .failedToCreateEventTap:
             "Failed to create keyboard event tap. Grant Accessibility and Input Monitoring permissions, then retry."
         }

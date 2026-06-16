@@ -136,8 +136,8 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.2
-shasum -a 256 dist/CmdIME-0.1.2.zip
+./script/package_app.sh 0.1.3
+shasum -a 256 dist/CmdIME-0.1.3.zip
 ```
 
 Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a

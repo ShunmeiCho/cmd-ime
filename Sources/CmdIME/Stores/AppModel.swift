@@ -22,7 +22,7 @@ final class AppModel: ObservableObject {
         self.config = (try? configStore.loadOrDefault()) ?? .default
         scan()
         refreshRuntimeStatus()
-        startListening()
+        startListeningIfReady()
     }
 
     func scan() {
@@ -42,6 +42,17 @@ final class AppModel: ObservableObject {
     func requestPermissions() {
         MacPermissionStatus.request()
         refreshRuntimeStatus()
+    }
+
+    func startListeningIfReady() {
+        refreshRuntimeStatus()
+        guard permissions.isReady else {
+            isListening = false
+            keyboardControlStatus = "Needs permission"
+            statusText = "Grant permissions, then resume keyboard control"
+            return
+        }
+        startListening()
     }
 
     func setLaunchAtLogin(_ enabled: Bool) {
@@ -161,6 +172,14 @@ final class AppModel: ObservableObject {
     }
 
     func startListening() {
+        refreshRuntimeStatus()
+        guard permissions.isReady else {
+            isListening = false
+            keyboardControlStatus = "Needs permission"
+            statusText = "Grant permissions, then resume keyboard control"
+            return
+        }
+
         do {
             let nextMonitor = EventTapMonitor(config: config, inputSources: inputSources)
             nextMonitor.onMessage = { [weak self] message in
