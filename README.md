@@ -1,5 +1,9 @@
 # CmdIME
 
+[![Swift](https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml/badge.svg)](https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml)
+[![Release](https://img.shields.io/github/v/release/ShunmeiCho/cmd-ime)](https://github.com/ShunmeiCho/cmd-ime/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 CmdIME is a macOS input-source switcher inspired by `cmd-eikana`, but built for a
 three-IME workflow: English, Chinese, and Japanese.
 
@@ -104,6 +108,9 @@ Monitoring permissions.
 
 For broader distribution, sign the release with a Developer ID Application
 certificate and notarize it.
+
+Mac App Store distribution needs a separate sandboxed App Store build. See
+[docs/app-store.md](docs/app-store.md).
 
 ## CLI
 

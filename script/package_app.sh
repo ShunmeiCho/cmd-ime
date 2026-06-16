@@ -17,18 +17,36 @@ INFO_PLIST="$APP_CONTENTS/Info.plist"
 ZIP_PATH="$DIST_DIR/$APP_NAME-$VERSION.zip"
 ICON_SOURCE="$ROOT_DIR/Assets/AppIcon.icns"
 
+find_codesign_identity() {
+  local pattern="$1"
+  security find-identity -p codesigning -v 2>/dev/null \
+    | awk -F'"' -v pattern="$pattern" '$0 ~ pattern {print $2; exit}'
+}
+
 default_codesign_identity() {
   if [[ -n "${CODESIGN_IDENTITY:-}" ]]; then
     printf "%s" "$CODESIGN_IDENTITY"
     return
   fi
 
-  security find-identity -p codesigning -v 2>/dev/null \
-    | awk -F'"' '/"Apple Development:|"Developer ID Application:/{print $2; exit}'
+  find_codesign_identity '"Developer ID Application:' \
+    || find_codesign_identity '"Apple Development:'
 }
 
 CODESIGN_IDENTITY="$(default_codesign_identity)"
 CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
+
+codesign_bundle() {
+  local args=(--force --deep --sign "$CODESIGN_IDENTITY")
+  if [[ "$CODESIGN_IDENTITY" == Developer\ ID\ Application:* ]]; then
+    args+=(--options runtime --timestamp)
+  else
+    args+=(--timestamp=none)
+    echo "warning: packaging with non-Developer ID signing identity; notarization will not be available." >&2
+  fi
+
+  codesign "${args[@]}" "$APP_BUNDLE"
+}
 
 rm -rf "$RELEASE_DIR" "$ZIP_PATH"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES"
@@ -79,7 +97,7 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
-codesign --force --deep --timestamp=none --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+codesign_bundle
 codesign --verify --deep --strict "$APP_BUNDLE"
 plutil -lint "$INFO_PLIST"
 ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"

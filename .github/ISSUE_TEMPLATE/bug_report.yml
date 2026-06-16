@@ -1,0 +1,66 @@
+name: Bug report
+description: Report a reproducible CmdIME problem.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve CmdIME. Please avoid sharing typed text, secrets, or personal data.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What went wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest steps that reproduce the problem.
+      placeholder: |
+        1. Open CmdIME
+        2. Configure ...
+        3. Press ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CmdIME version
+      placeholder: "0.1.2"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 15.5"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Install method
+      options:
+        - One-line installer
+        - Homebrew cask
+        - GitHub release zip
+        - Built from source
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: permissions
+    attributes:
+      label: Permissions state
+      description: Which permissions are enabled for CmdIME?
+      placeholder: Accessibility enabled, Input Monitoring enabled
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste only non-sensitive logs or command output.
+      render: shell

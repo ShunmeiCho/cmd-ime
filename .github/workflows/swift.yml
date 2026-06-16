@@ -1,0 +1,33 @@
+name: Swift
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Test package
+        run: swift test
+
+      - name: Check shell scripts
+        run: bash -n script/*.sh
+
+      - name: Check cask syntax
+        run: ruby -c Casks/cmd-ime.rb
