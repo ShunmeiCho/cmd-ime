@@ -26,12 +26,17 @@ You can also star the repository:
 
 ## App Behavior
 
-CmdIME is a menu bar agent. The settings window is only a control panel:
-closing the window does not stop keyboard listening. Release builds are packaged
-with `LSUIElement`, so the app does not appear in the Dock or app switcher.
+CmdIME is a background input-source agent. The settings window is only a control
+panel: closing the window does not stop keyboard listening. Release builds are
+packaged with `LSUIElement`, so the app does not appear in the Dock or app
+switcher.
 
 If `Show menu bar icon` is turned off, CmdIME keeps running in the background.
 Open `CmdIME.app` again to bring the settings window back.
+
+On macOS 26 and later, CmdIME disables the menu bar icon automatically to avoid
+a system status-item layout issue that can freeze the settings window and drive
+CPU usage very high. Open `CmdIME.app` again whenever you need Settings.
 
 If you need to stop a hidden background instance, use:
 
@@ -168,7 +173,7 @@ After a GitHub release is published, the cask can also live in a Homebrew tap.
 
 - `Sources/KeyboardSwitcherCore`: config, shortcut parsing, input-source scan,
   matching, switching, and global event tap logic
-- `Sources/CmdIME`: SwiftUI menu bar app and settings window
+- `Sources/CmdIME`: AppKit background app with a SwiftUI settings window
 - `Sources/keyboardctl`: CLI for scan, config, switching, and listener mode
 - `script`: local run and release package scripts
 - `Casks`: Homebrew cask template
