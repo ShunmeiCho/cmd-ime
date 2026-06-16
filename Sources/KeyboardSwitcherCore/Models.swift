@@ -216,11 +216,14 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
 
     public mutating func upsertSwitchBinding(trigger: KeyTrigger, role: InputRole) {
         let action = BindingAction.switchInputSource(role)
-        if let index = bindings.firstIndex(where: { $0.trigger == trigger }) {
-            bindings[index] = KeyBinding(trigger: trigger, action: action)
-        } else {
-            bindings.append(KeyBinding(trigger: trigger, action: action))
+        bindings.removeAll { binding in
+            binding.trigger == trigger
+                || (
+                    binding.action.type == .switchInputSource
+                        && binding.action.role == role
+                )
         }
+        bindings.append(KeyBinding(trigger: trigger, action: action))
     }
 
     public mutating func upsertRemapBinding(trigger: KeyTrigger, output: KeyTrigger) {

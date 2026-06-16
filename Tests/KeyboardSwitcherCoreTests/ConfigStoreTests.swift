@@ -37,4 +37,17 @@ final class ConfigStoreTests: XCTestCase {
 
         XCTAssertTrue(config.showMenuBarIcon)
     }
+
+    func testUpsertSwitchBindingReplacesExistingRoleBinding() {
+        var config = SwitcherConfig.default
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 58, keyName: "left-option")
+
+        config.upsertSwitchBinding(trigger: trigger, role: .japanese)
+
+        let japaneseBindings = config.bindings.filter { binding in
+            binding.action.type == .switchInputSource && binding.action.role == .japanese
+        }
+
+        XCTAssertEqual(japaneseBindings.map(\.trigger), [trigger])
+    }
 }
