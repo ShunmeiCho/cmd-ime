@@ -98,13 +98,12 @@ One-line install for users:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
 ```
 
-The installer downloads the release zip, installs `CmdIME.app`, links
+The installer downloads the public release zip, installs `CmdIME.app`, links
 `keyboardctl`, and opens the app so macOS can request Accessibility and Input
 Monitoring permissions.
 
-This command requires the repository and release asset to be public. For broad
-distribution, sign the release with a Developer ID Application certificate and
-notarize it.
+For broader distribution, sign the release with a Developer ID Application
+certificate and notarize it.
 
 ## CLI
 
