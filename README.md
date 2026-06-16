@@ -17,6 +17,9 @@ installed in macOS instead of hardcoding one keyboard layout.
 If CmdIME saves you a little keyboard friction, you can support the project at
 [buymeacoffee.com/shunmeicor7](https://buymeacoffee.com/shunmeicor7).
 
+You can also star the repository:
+[github.com/ShunmeiCho/cmd-ime](https://github.com/ShunmeiCho/cmd-ime).
+
 ## App Behavior
 
 CmdIME is a menu bar agent. The settings window is only a control panel:
@@ -25,6 +28,18 @@ with `LSUIElement`, so the app does not appear in the Dock or app switcher.
 
 If `Show menu bar icon` is turned off, CmdIME keeps running in the background.
 Open `CmdIME.app` again to bring the settings window back.
+
+If you need to stop a hidden background instance, use:
+
+```sh
+keyboardctl quit
+```
+
+If the CLI is not linked yet, use:
+
+```sh
+pkill -x CmdIME
+```
 
 ## Bindings
 
@@ -75,6 +90,22 @@ signing identity it can find, then falls back to ad-hoc signing. You can set
 CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run.sh
 ```
 
+## Install
+
+One-line install for users:
+
+```sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+```
+
+The installer downloads the release zip, installs `CmdIME.app`, links
+`keyboardctl`, and opens the app so macOS can request Accessibility and Input
+Monitoring permissions.
+
+This command requires the repository and release asset to be public. For broad
+distribution, sign the release with a Developer ID Application certificate and
+notarize it.
+
 ## CLI
 
 ```sh
@@ -86,6 +117,7 @@ swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
 swift run keyboardctl bind double-left-command english
 swift run keyboardctl remap caps-lock escape
+swift run keyboardctl quit
 swift run keyboardctl listen
 ```
 
@@ -98,8 +130,8 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.1
-shasum -a 256 dist/CmdIME-0.1.1.zip
+./script/package_app.sh 0.1.2
+shasum -a 256 dist/CmdIME-0.1.2.zip
 ```
 
 Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
@@ -107,14 +139,19 @@ Homebrew cask.
 
 ## Homebrew
 
-Local cask test:
+Install from this repository cask:
+
+```sh
+brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb
+```
+
+Local cask test from a checkout:
 
 ```sh
 brew install --cask ./Casks/cmd-ime.rb
 ```
 
-After a GitHub release is published, the cask can live in this repository or a
-Homebrew tap.
+After a GitHub release is published, the cask can also live in a Homebrew tap.
 
 ## Project Shape
 

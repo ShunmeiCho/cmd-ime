@@ -3,7 +3,6 @@ import SwiftUI
 
 struct MenuBarContent: View {
     @ObservedObject var model: AppModel
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Button("English") {
@@ -21,14 +20,14 @@ struct MenuBarContent: View {
         Divider()
 
         Button("Settings") {
-            openWindow(id: "main")
-            NSApp.activate(ignoringOtherApps: true)
+            AppWindowCoordinator.shared.setModel(model)
+            AppWindowCoordinator.shared.showSettings()
         }
 
         Divider()
 
         Button("Quit") {
-            NSApp.terminate(nil)
+            model.quit()
         }
     }
 }

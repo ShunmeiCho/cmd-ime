@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import KeyboardSwitcherCore
 
@@ -154,6 +155,9 @@ final class AppModel: ObservableObject {
     func setMenuBarIconVisible(_ visible: Bool) {
         config.showMenuBarIcon = visible
         save()
+        statusText = visible
+            ? "Menu bar icon shown"
+            : "Menu bar icon hidden. Reopen CmdIME.app to show settings."
     }
 
     func startListening() {
@@ -186,5 +190,10 @@ final class AppModel: ObservableObject {
 
     func toggleListening() {
         isListening ? stopListening() : startListening()
+    }
+
+    func quit() {
+        stopListening()
+        NSApp.terminate(nil)
     }
 }

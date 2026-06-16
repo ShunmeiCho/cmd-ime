@@ -230,6 +230,19 @@ struct ContentView: View {
                     model.requestPermissions()
                 }
             }
+
+            HStack {
+                Text("Application")
+                    .frame(width: 120, alignment: .leading)
+                Text("Stop the listener and quit the background agent")
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    model.quit()
+                } label: {
+                    Label("Quit CmdIME", systemImage: "power")
+                }
+            }
         }
     }
 

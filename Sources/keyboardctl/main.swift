@@ -1,6 +1,10 @@
 import Foundation
 import KeyboardSwitcherCore
 
+#if os(macOS)
+import AppKit
+#endif
+
 enum CLIError: Error, LocalizedError {
     case missingCommand
     case unknownCommand(String)
@@ -64,6 +68,8 @@ struct CLI {
             try bind()
         case "remap":
             try remap()
+        case "quit":
+            try quitApp()
         default:
             throw CLIError.unknownCommand(command)
         }
@@ -175,6 +181,54 @@ struct CLI {
         print("Remapped \(trigger.displayName) to \(output.displayName)")
     }
 
+    private func quitApp() throws {
+        #if os(macOS)
+        let runningApps = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.shunmei.cmd-ime"
+        )
+
+        for app in runningApps {
+            app.terminate()
+        }
+
+        Thread.sleep(forTimeInterval: 0.4)
+
+        let stillRunning = NSRunningApplication.runningApplications(
+            withBundleIdentifier: "com.shunmei.cmd-ime"
+        )
+        if !stillRunning.isEmpty {
+            for app in stillRunning {
+                app.forceTerminate()
+            }
+        }
+
+        let terminatedByProcessName = terminateByProcessName()
+        if runningApps.isEmpty && !terminatedByProcessName {
+            print("CmdIME is not running")
+        } else {
+            print("Quit CmdIME")
+        }
+        #else
+        throw CLIError.unsupportedPlatform
+        #endif
+    }
+
+    #if os(macOS)
+    private func terminateByProcessName() -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        process.arguments = ["-x", "CmdIME"]
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+    #endif
+
     private func argument(at index: Int, name: String) throws -> String {
         guard args.indices.contains(index) else {
             throw CLIError.missingArgument(name)
@@ -195,6 +249,7 @@ struct CLI {
               keyboardctl listen
               keyboardctl bind <trigger> <english|chinese|japanese>
               keyboardctl remap <trigger> <output>
+              keyboardctl quit
               keyboardctl path
 
             Examples:
@@ -203,6 +258,7 @@ struct CLI {
               keyboardctl bind right-command chinese
               keyboardctl bind option+j japanese
               keyboardctl remap caps-lock escape
+              keyboardctl quit
             """
         )
     }
