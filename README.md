@@ -12,6 +12,11 @@ Default bindings:
 The bindings are configurable, and CmdIME scans the input sources already
 installed in macOS instead of hardcoding one keyboard layout.
 
+## Support
+
+If CmdIME saves you a little keyboard friction, you can support the project at
+[buymeacoffee.com/shunmeicor7](https://buymeacoffee.com/shunmeicor7).
+
 ## App Behavior
 
 CmdIME is a menu bar agent. The settings window is only a control panel:
