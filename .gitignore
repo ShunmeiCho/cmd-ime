@@ -1,0 +1,9 @@
+.build/
+.swiftpm/
+.agents/
+DerivedData/
+dist/
+Assets/AppIcon.iconset/
+skills-lock.json
+*.xcodeproj
+.DS_Store
