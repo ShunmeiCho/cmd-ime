@@ -17,9 +17,21 @@ final class AppModel: ObservableObject {
     private let loginItems = LoginItemService()
     private var monitor: EventTapMonitor?
 
+    var menuBarIconSupported: Bool {
+        Self.isMenuBarIconSupported
+    }
+
+    private static var isMenuBarIconSupported: Bool {
+        ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 26
+    }
+
     init(configStore: ConfigStore = ConfigStore()) {
         self.configStore = configStore
-        self.config = (try? configStore.loadOrDefault()) ?? .default
+        var initialConfig = (try? configStore.loadOrDefault()) ?? .default
+        if !Self.isMenuBarIconSupported {
+            initialConfig.showMenuBarIcon = false
+        }
+        self.config = initialConfig
         scan()
         refreshRuntimeStatus()
         startListeningIfReady()
@@ -164,6 +176,13 @@ final class AppModel: ObservableObject {
     }
 
     func setMenuBarIconVisible(_ visible: Bool) {
+        guard menuBarIconSupported else {
+            config.showMenuBarIcon = false
+            save()
+            statusText = "Menu bar icon is disabled on this macOS version"
+            return
+        }
+
         config.showMenuBarIcon = visible
         save()
         statusText = visible

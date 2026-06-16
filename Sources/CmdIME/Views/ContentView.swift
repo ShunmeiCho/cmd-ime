@@ -217,6 +217,13 @@ struct ContentView: View {
                     set: { model.setMenuBarIconVisible($0) }
                 )
             )
+            .disabled(!model.menuBarIconSupported)
+
+            if !model.menuBarIconSupported {
+                Text("Menu bar icon is disabled on this macOS version. Reopen CmdIME.app to show settings.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             Toggle(
                 "Start at login",
