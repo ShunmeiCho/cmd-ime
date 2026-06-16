@@ -1,6 +1,7 @@
 .build/
 .swiftpm/
 .agents/
+.brew-cache/
 DerivedData/
 dist/
 Assets/AppIcon.iconset/
