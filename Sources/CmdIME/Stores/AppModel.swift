@@ -11,10 +11,12 @@ final class AppModel: ObservableObject {
     @Published var keyboardControlStatus = "Starting"
     @Published var permissions = MacPermissionStatus.current()
     @Published var loginItem = LoginItemService().snapshot()
+    @Published var updateStatus: UpdateStatus
 
     private let configStore: ConfigStore
     private let inputSources = MacInputSourceService()
     private let loginItems = LoginItemService()
+    private let updates = UpdateService()
     private var monitor: EventTapMonitor?
 
     var menuBarIconSupported: Bool {
@@ -25,6 +27,10 @@ final class AppModel: ObservableObject {
         ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 26
     }
 
+    private static var currentVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+    }
+
     init(configStore: ConfigStore = ConfigStore()) {
         self.configStore = configStore
         var initialConfig = (try? configStore.loadOrDefault()) ?? .default
@@ -32,6 +38,7 @@ final class AppModel: ObservableObject {
             initialConfig.showMenuBarIcon = false
         }
         self.config = initialConfig
+        self.updateStatus = .idle(currentVersion: Self.currentVersion)
         scan()
         refreshRuntimeStatus()
         startListeningIfReady()
@@ -107,6 +114,38 @@ final class AppModel: ObservableObject {
         statusText = enabled
             ? "Double-tap shortcut protection enabled"
             : "Single-tap modifiers switch immediately"
+    }
+
+    func checkForUpdates() {
+        guard !updateStatus.isChecking else {
+            return
+        }
+
+        let currentVersion = Self.currentVersion
+        updateStatus = .checking(currentVersion: currentVersion)
+        statusText = "Checking for updates"
+
+        Task {
+            do {
+                let result = try await updates.check(currentVersion: currentVersion)
+                updateStatus = result.isUpdateAvailable
+                    ? .available(result)
+                    : .upToDate(result)
+                statusText = updateStatus.message
+            } catch {
+                updateStatus = .failed(currentVersion: currentVersion, message: error.localizedDescription)
+                statusText = error.localizedDescription
+            }
+        }
+    }
+
+    func openLatestRelease() {
+        guard let url = updateStatus.releaseURL else {
+            checkForUpdates()
+            return
+        }
+        NSWorkspace.shared.open(url)
+        statusText = "Opened CmdIME release page"
     }
 
     func initializeFromScan() {
@@ -264,5 +303,44 @@ final class AppModel: ObservableObject {
     func quit() {
         stopListening()
         NSApp.terminate(nil)
+    }
+}
+
+enum UpdateStatus: Equatable {
+    case idle(currentVersion: String)
+    case checking(currentVersion: String)
+    case upToDate(UpdateCheckResult)
+    case available(UpdateCheckResult)
+    case failed(currentVersion: String, message: String)
+
+    var isChecking: Bool {
+        if case .checking = self {
+            return true
+        }
+        return false
+    }
+
+    var releaseURL: URL? {
+        switch self {
+        case .upToDate(let result), .available(let result):
+            result.releaseURL
+        case .idle, .checking, .failed:
+            nil
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .idle(let currentVersion):
+            "Current \(currentVersion)"
+        case .checking:
+            "Checking GitHub releases"
+        case .upToDate(let result):
+            "Up to date: \(result.currentVersion)"
+        case .available(let result):
+            "New version \(result.latestVersion) available"
+        case .failed(_, let message):
+            message
+        }
     }
 }

@@ -121,6 +121,12 @@ The installer downloads the public release zip, installs `CmdIME.app`, links
 `keyboardctl`, and opens the app so macOS can request Accessibility and Input
 Monitoring permissions.
 
+CmdIME 0.1.11 and later can check GitHub Releases from Settings > Runtime >
+Updates. When a new version is available, open the release page and reinstall
+with the one-line installer or update through Homebrew. Fully automatic in-app
+replacement is left to a future Sparkle-based updater so signing and macOS
+permission behavior stay predictable.
+
 For broader distribution, sign the release with a Developer ID Application
 certificate and notarize it.
 
@@ -151,13 +157,17 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.10
-shasum -a 256 dist/CmdIME-0.1.10.zip
+./script/package_app.sh 0.1.11
+shasum -a 256 dist/CmdIME-0.1.11.zip
 ```
 
 Release packaging requires a `Developer ID Application` signing identity. For a
 local-only package smoke test on machines without that certificate, set
 `CMDIME_ALLOW_UNNOTARIZED=1`. Do not publish local-only builds.
+
+Browser-downloaded local-only builds are blocked by Gatekeeper and can appear as
+"damaged" because they are not signed with Developer ID and notarized. Public
+release zips should be notarized before publishing.
 
 Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
 Homebrew cask. The cask links `keyboardctl` through `Contents/Resources`, which

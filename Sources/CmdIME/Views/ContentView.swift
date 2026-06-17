@@ -6,6 +6,18 @@ struct ContentView: View {
     @State private var triggerDrafts: [InputRole: String] = [:]
     @State private var triggerTypeDrafts: [InputRole: BindingTriggerType] = [:]
 
+    private enum Metrics {
+        static let labelColumn: CGFloat = 140
+        static let matchedColumn: CGFloat = 280
+        static let languagesColumn: CGFloat = 170
+        static let triggerPicker: CGFloat = 140
+        static let modifierPicker: CGFloat = 220
+        static let actionButton: CGFloat = 170
+        static let compactButton: CGFloat = 96
+        static let rowHeight: CGFloat = 44
+        static let fieldHeight: CGFloat = 28
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -52,12 +64,12 @@ struct ContentView: View {
                 model.initializeFromScan()
                 resetDrafts()
             } label: { Text("Use detected sources") }
-            .frame(width: 156)
+            .frame(width: Metrics.actionButton)
 
             Button {
                 model.toggleListening()
             } label: { Text(model.isListening ? "Pause" : "Resume") }
-            .frame(width: 86)
+            .frame(width: Metrics.compactButton)
             .buttonStyle(.borderedProminent)
         }
     }
@@ -74,7 +86,7 @@ struct ContentView: View {
                 Button {
                     model.scan()
                 } label: { Text("Refresh input sources") }
-                .frame(width: 158)
+                .frame(width: Metrics.actionButton)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -90,14 +102,14 @@ struct ContentView: View {
     private var inputSourceHeaderRow: some View {
         HStack(spacing: 12) {
             Text("Role")
-                .frame(width: 112, alignment: .leading)
+                .frame(width: Metrics.labelColumn, alignment: .leading)
             Text("Matched Source")
-                .frame(width: 280, alignment: .leading)
+                .frame(width: Metrics.matchedColumn, alignment: .leading)
             Text("Languages")
-                .frame(width: 170, alignment: .leading)
+                .frame(width: Metrics.languagesColumn, alignment: .leading)
             Spacer(minLength: 0)
             Text("")
-                .frame(width: 78)
+                .frame(width: Metrics.compactButton)
         }
         .font(.caption.weight(.semibold))
         .foregroundStyle(.secondary)
@@ -106,7 +118,7 @@ struct ContentView: View {
     private func inputSourceRow(for role: InputRole, source: InputSourceInfo?) -> some View {
         HStack(spacing: 12) {
             Text(roleTitle(for: role))
-                .frame(width: 112, alignment: .leading)
+                .frame(width: Metrics.labelColumn, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
                 Text(source?.localizedName ?? "Not matched")
                     .lineLimit(1)
@@ -116,21 +128,21 @@ struct ContentView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-            .frame(width: 280, alignment: .leading)
+            .frame(width: Metrics.matchedColumn, alignment: .leading)
 
             Text(source?.displayLanguages ?? "")
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-                .frame(width: 170, alignment: .leading)
+                .frame(width: Metrics.languagesColumn, alignment: .leading)
 
             Spacer(minLength: 0)
 
             Button("Switch") {
                 model.switchRole(role)
             }
-            .frame(width: 78)
+            .frame(width: Metrics.compactButton)
         }
-        .frame(height: 46)
+        .frame(height: Metrics.rowHeight)
     }
 
     private var bindingsSection: some View {
@@ -141,7 +153,7 @@ struct ContentView: View {
             ForEach(InputRole.allCases, id: \.self) { role in
                 HStack(spacing: 12) {
                     Text(roleTitle(for: role))
-                        .frame(width: 120, alignment: .leading)
+                        .frame(width: Metrics.labelColumn, alignment: .leading)
 
                     Picker(
                         "Trigger type",
@@ -155,7 +167,7 @@ struct ContentView: View {
                         Text("Double tap").tag(BindingTriggerType.doubleTap)
                     }
                     .labelsHidden()
-                    .frame(width: 138)
+                    .frame(width: Metrics.triggerPicker)
 
                     switch triggerType(for: role) {
                     case .shortcut:
@@ -169,7 +181,8 @@ struct ContentView: View {
                                 resetDrafts()
                             }
                         )
-                        .frame(height: 28)
+                        .frame(width: Metrics.modifierPicker, height: Metrics.fieldHeight)
+                        Spacer(minLength: 0)
                     case .singleTap, .doubleTap:
                         Picker(
                             "Modifier key",
@@ -196,13 +209,14 @@ struct ContentView: View {
                             }
                         }
                         .labelsHidden()
-                        .frame(width: 220)
+                        .frame(width: Metrics.modifierPicker)
 
                         Text(model.bindingText(for: role))
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
+                .frame(minHeight: Metrics.rowHeight)
             }
         }
     }
@@ -246,26 +260,48 @@ struct ContentView: View {
             .help("Delay single-tap modifier bindings briefly so double-tap shortcuts can take precedence.")
 
             HStack {
+                Text("Updates")
+                    .frame(width: Metrics.labelColumn, alignment: .leading)
+                Text(model.updateStatus.message)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Spacer()
+                if model.updateStatus.releaseURL != nil {
+                    Button("Open Release") {
+                        model.openLatestRelease()
+                    }
+                    .frame(width: 120)
+                }
+                Button(model.updateStatus.isChecking ? "Checking" : "Check") {
+                    model.checkForUpdates()
+                }
+                .disabled(model.updateStatus.isChecking)
+                .frame(width: Metrics.actionButton)
+            }
+
+            HStack {
                 Text("Keyboard control")
-                    .frame(width: 120, alignment: .leading)
+                    .frame(width: Metrics.labelColumn, alignment: .leading)
                 Text(model.keyboardControlStatus)
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button(model.isListening ? "Pause" : "Resume") {
                     model.toggleListening()
                 }
+                .frame(width: Metrics.actionButton)
             }
 
             HStack {
                 Text("Permissions")
-                    .frame(width: 120, alignment: .leading)
+                    .frame(width: Metrics.labelColumn, alignment: .leading)
                 Text(model.permissions.isReady ? "Ready" : "Grant both permissions")
                     .foregroundStyle(model.permissions.isReady ? Color.secondary : Color.orange)
                 Spacer()
                 Button("Request All") {
                     model.requestPermissions()
                 }
-                .frame(width: 100)
+                .frame(width: Metrics.actionButton)
             }
 
             permissionRow(
@@ -286,14 +322,14 @@ struct ContentView: View {
 
             HStack {
                 Text("Application")
-                    .frame(width: 120, alignment: .leading)
+                    .frame(width: Metrics.labelColumn, alignment: .leading)
                 Text("Stop the listener and quit the background agent")
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Quit CmdIME") {
                     model.quit()
                 }
-                .frame(width: 100)
+                .frame(width: Metrics.actionButton)
             }
         }
     }
@@ -306,12 +342,12 @@ struct ContentView: View {
     ) -> some View {
         HStack {
             Text(title)
-                .frame(width: 120, alignment: .leading)
+                .frame(width: Metrics.labelColumn, alignment: .leading)
             Text(granted ? "Ready" : "Missing")
                 .foregroundStyle(granted ? Color.secondary : Color.orange)
             Spacer()
             Button(buttonTitle, action: action)
-                .frame(width: 170)
+                .frame(width: Metrics.actionButton)
         }
         .font(.caption)
     }
