@@ -46,14 +46,42 @@ public enum InputSourceServiceError: Error, LocalizedError, Equatable {
     }
 }
 
+/// Caches resolved handles by id and rebuilds the full map only on a miss, so
+/// repeated lookups (e.g. rapid input-source switches) avoid re-enumerating every
+/// source on each call. Call `invalidate()` whenever the source set may have changed.
+struct InputSourceHandleCache<Handle> {
+    private var handles: [String: Handle] = [:]
+
+    init() {}
+
+    /// Returns the handle for `id`. `rebuild` is called at most once, only when the
+    /// id is not already cached.
+    mutating func handle(for id: String, rebuild: () -> [String: Handle]) -> Handle? {
+        if let cached = handles[id] {
+            return cached
+        }
+        handles = rebuild()
+        return handles[id]
+    }
+
+    mutating func invalidate() {
+        handles.removeAll()
+    }
+}
+
 #if os(macOS)
 import Carbon
 
 public final class MacInputSourceService: InputSourceService {
+    private var handleCache = InputSourceHandleCache<TISInputSource>()
+
     public init() {}
 
     public func listInputSources() throws -> [InputSourceInfo] {
         let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as NSArray
+        // The source set was just enumerated; drop cached handles so the next
+        // selection rebuilds against the current set.
+        handleCache.invalidate()
         return list.compactMap { item -> InputSourceInfo? in
             let source = item as! TISInputSource
             return inputSourceInfo(from: source)
@@ -68,21 +96,34 @@ public final class MacInputSourceService: InputSourceService {
     }
 
     public func selectInputSource(id: String) throws {
-        let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as NSArray
-        for item in list {
-            let source = item as! TISInputSource
-            guard stringProperty(source, kTISPropertyInputSourceID) == id else {
-                continue
-            }
-
-            let status = TISSelectInputSource(source)
-            guard status == noErr else {
-                throw InputSourceServiceError.selectionFailed(id: id, status: status)
-            }
+        // Fast path: reuse a cached handle so rapid switches avoid re-enumerating
+        // every input source on each call.
+        if let source = handleCache.handle(for: id, rebuild: handleMap),
+           TISSelectInputSource(source) == noErr {
             return
         }
 
-        throw InputSourceServiceError.notFound(id)
+        // Cache miss, or a stale cached handle that failed to select: rebuild once.
+        handleCache.invalidate()
+        guard let source = handleCache.handle(for: id, rebuild: handleMap) else {
+            throw InputSourceServiceError.notFound(id)
+        }
+        let status = TISSelectInputSource(source)
+        guard status == noErr else {
+            throw InputSourceServiceError.selectionFailed(id: id, status: status)
+        }
+    }
+
+    private func handleMap() -> [String: TISInputSource] {
+        let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as NSArray
+        var map: [String: TISInputSource] = [:]
+        for item in list {
+            let source = item as! TISInputSource
+            if let id = stringProperty(source, kTISPropertyInputSourceID) {
+                map[id] = source
+            }
+        }
+        return map
     }
 
     private func inputSourceInfo(from source: TISInputSource) -> InputSourceInfo? {
