@@ -27,6 +27,10 @@ public enum Modifier: String, Codable, CaseIterable, Comparable, Sendable {
     public static func < (lhs: Modifier, rhs: Modifier) -> Bool {
         Self.allCases.firstIndex(of: lhs)! < Self.allCases.firstIndex(of: rhs)!
     }
+
+    /// Modifiers whose CGEventFlags bit is a latch (lock on/off), not a momentary
+    /// press. They must be ignored during chord matching unless explicitly required.
+    public static let latching: Set<Modifier> = [.capsLock, .fn]
 }
 
 public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
@@ -183,7 +187,7 @@ public enum SwitchIndicatorColorStyle: String, Codable, CaseIterable, Identifiab
     public var displayName: String {
         switch self {
         case .role:
-            "Role"
+            "Slot"
         case .accent:
             "Accent"
         case .monochrome:
@@ -418,5 +422,13 @@ public struct InputSourceInfo: Codable, Equatable, Sendable {
             ? " +\(languages.count - visibleLanguages.count) more"
             : ""
         return visibleLanguages.joined(separator: ", ") + suffix
+    }
+
+    /// Message for when a requested input-source selection did not take effect.
+    public static func verificationMessage(requested: InputSourceInfo, current: InputSourceInfo?) -> String {
+        if let current {
+            return "Requested \(requested.localizedName), but macOS still reports \(current.localizedName)."
+        }
+        return "Requested \(requested.localizedName), but macOS did not report the active input source."
     }
 }

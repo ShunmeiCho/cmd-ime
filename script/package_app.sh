@@ -49,7 +49,7 @@ require_distribution_signing() {
   fi
 
   if [[ "$ALLOW_UNNOTARIZED" == "1" ]]; then
-    echo "warning: packaging with non-Developer ID signing identity; notarization will not be available." >&2
+    echo "warning: packaging an unnotarized preview build; label the GitHub release clearly." >&2
     return
   fi
 
@@ -58,8 +58,8 @@ error: release packaging requires a Developer ID Application signing identity.
 
 Current identity: $CODESIGN_IDENTITY
 
-Install a Developer ID Application certificate, or run a local-only smoke build
-with CMDIME_ALLOW_UNNOTARIZED=1. Do not publish local-only builds.
+Install a Developer ID Application certificate for a notarized release, or set
+CMDIME_ALLOW_UNNOTARIZED=1 to create an explicitly labelled unnotarized preview.
 EOF
   exit 65
 }

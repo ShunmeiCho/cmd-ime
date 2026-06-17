@@ -57,4 +57,12 @@ final class ShortcutParserTests: XCTestCase {
             XCTAssertEqual(error as? ShortcutParserError, .missingKey("command"))
         }
     }
+
+    func testCapsLockIsNoLongerAOneShotTrigger() {
+        // Caps Lock is a latch, not a momentary press, so it is intentionally not
+        // offered as a one-shot trigger. It now parses as a modifier-only token.
+        XCTAssertThrowsError(try ShortcutParser.parse("caps-lock")) { error in
+            XCTAssertEqual(error as? ShortcutParserError, .missingKey("caps-lock"))
+        }
+    }
 }

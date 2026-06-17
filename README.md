@@ -4,8 +4,9 @@
 [![Release](https://img.shields.io/github/v/release/ShunmeiCho/cmd-ime)](https://github.com/ShunmeiCho/cmd-ime/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-CmdIME is a macOS input-source switcher inspired by `cmd-eikana`, but built for a
-three-IME workflow: English, Chinese, and Japanese.
+CmdIME is a macOS input-source switcher inspired by `cmd-eikana`, but built for
+configurable switch slots. The default setup targets English, Chinese, and
+Japanese.
 
 Default bindings:
 
@@ -52,7 +53,7 @@ pkill -x CmdIME
 
 ## Bindings
 
-Each role can use one of three trigger types:
+Each switch slot can use one of three trigger types:
 
 - `Shortcut`: click the recorder field, then press a real keyboard shortcut
   such as `option+j`.
@@ -73,7 +74,7 @@ CmdIME switches input sources programmatically, so it does not invoke the
 private macOS input-source chooser. Enable `Show switch indicator` to show
 CmdIME's own lightweight confirmation bubble after a switch. The indicator can
 be disabled, resized with presets and a scale slider, switched between
-icon/text display modes, or recolored with role colors, the system accent color,
+icon/text display modes, or recolored with slot colors, the system accent color,
 monochrome, or a custom color in Settings.
 
 ## Build
@@ -166,14 +167,25 @@ malicious software." To allow it:
 Prefer the one-line installer or Homebrew, which avoid the quarantine path
 entirely.
 
-CmdIME 0.1.11 and later can check GitHub Releases from Settings > Runtime >
-Updates. When a new version is available, open the release page and reinstall
-with the one-line installer or update through Homebrew. Fully automatic in-app
-replacement is left to a future Sparkle-based updater so signing and macOS
-permission behavior stay predictable.
+CmdIME 0.1.11 and later can check recent GitHub Releases from Settings >
+Runtime > Updates, including explicitly labelled preview releases. When a new
+version is available, open the release page and reinstall with the one-line
+installer or update through Homebrew. Fully automatic in-app replacement is left
+to a future Sparkle-based updater so signing and macOS permission behavior stay
+predictable.
 
-For broader distribution, sign the release with a Developer ID Application
-certificate and notarize it.
+Current preview releases may be unnotarized while Developer ID distribution is
+not ready. Browser-downloaded preview zips can be blocked by Gatekeeper; the
+one-line installer and Homebrew path avoid browser quarantine. For broader
+distribution, sign the release with a Developer ID Application certificate and
+notarize it.
+
+## UI Technology
+
+The shipped app stays native SwiftUI/AppKit. React is useful for web prototypes
+or a future optional settings surface, but it does not replace the macOS APIs
+CmdIME depends on for global keyboard listening, Accessibility/Input Monitoring
+permissions, login items, or input-source switching.
 
 Mac App Store distribution needs a separate sandboxed App Store build. See
 [docs/app-store.md](docs/app-store.md).
@@ -188,7 +200,7 @@ swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
 swift run keyboardctl bind double-left-command english
-swift run keyboardctl remap caps-lock escape
+swift run keyboardctl remap right-control escape
 swift run keyboardctl quit
 swift run keyboardctl listen
 ```
@@ -206,9 +218,13 @@ Config lives at:
 shasum -a 256 dist/CmdIME-0.1.11.zip
 ```
 
-Release packaging requires a `Developer ID Application` signing identity. For a
-local-only package smoke test on machines without that certificate, set
-`CMDIME_ALLOW_UNNOTARIZED=1`. Do not publish local-only builds.
+Notarized release packaging requires a `Developer ID Application` signing
+identity. While CmdIME is distributed as an explicitly labelled unnotarized
+preview, set `CMDIME_ALLOW_UNNOTARIZED=1`:
+
+```sh
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.11
+```
 
 One-time notarization setup:
 
@@ -225,9 +241,10 @@ service, staples the ticket to `CmdIME.app`, rebuilds the distributable zip, and
 prints the SHA-256. Use `CMDIME_NOTARY_PROFILE` if your keychain profile is not
 named `cmd-ime-notary`.
 
-Browser-downloaded local-only builds are blocked by Gatekeeper and can appear as
-"damaged" because they are not signed with Developer ID and notarized. Public
-release zips should be notarized before publishing.
+Browser-downloaded unnotarized preview builds are blocked by Gatekeeper and can
+appear as "damaged" because they are not signed with Developer ID and notarized.
+Label preview release notes clearly and publish the SHA-256 printed by the
+package script.
 
 Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
 Homebrew cask. The cask links `keyboardctl` through `Contents/Resources`, which

@@ -113,7 +113,8 @@ private let oneShotModifiers: [String: KeyTrigger] = [
     "lshift": KeyTrigger(kind: .oneShotModifier, keyCode: 56, keyName: "left-shift"),
     "right-shift": KeyTrigger(kind: .oneShotModifier, keyCode: 60, keyName: "right-shift"),
     "rshift": KeyTrigger(kind: .oneShotModifier, keyCode: 60, keyName: "right-shift"),
-    "caps-lock": KeyTrigger(kind: .oneShotModifier, keyCode: 57, keyName: "caps-lock"),
+    // Caps Lock is intentionally not a one-shot trigger: its latch semantics cannot be
+    // driven by the tap/double-tap model without corrupting the user's Caps Lock state.
 ]
 
 private let modifierAliases: [String: Modifier] = [

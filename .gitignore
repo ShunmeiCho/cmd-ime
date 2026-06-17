@@ -8,3 +8,9 @@ Assets/AppIcon.iconset/
 skills-lock.json
 *.xcodeproj
 .DS_Store
+
+# Local agent and deep-review notes.
+/AGENTS.md
+/CLAUDE.md
+/DEEP_REVIEW*.md
+/REPLICATION_BLUEPRINT.md

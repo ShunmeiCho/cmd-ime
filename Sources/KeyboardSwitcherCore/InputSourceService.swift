@@ -2,7 +2,31 @@ import Foundation
 
 public protocol InputSourceService: AnyObject {
     func listInputSources() throws -> [InputSourceInfo]
+    func currentInputSource() throws -> InputSourceInfo?
     func selectInputSource(id: String) throws
+}
+
+public extension InputSourceService {
+    @discardableResult
+    func selectInputSourceAndConfirm(
+        id: String,
+        retryDelays: [TimeInterval] = [0.015, 0.035]
+    ) throws -> InputSourceInfo? {
+        try selectInputSource(id: id)
+        if let current = try currentInputSource(), current.id == id {
+            return current
+        }
+
+        for delay in retryDelays {
+            Thread.sleep(forTimeInterval: delay)
+            if let current = try currentInputSource(), current.id == id {
+                return current
+            }
+            try selectInputSource(id: id)
+        }
+
+        return try currentInputSource()
+    }
 }
 
 public enum InputSourceServiceError: Error, LocalizedError, Equatable {
@@ -32,19 +56,15 @@ public final class MacInputSourceService: InputSourceService {
         let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as NSArray
         return list.compactMap { item -> InputSourceInfo? in
             let source = item as! TISInputSource
-            guard let id = stringProperty(source, kTISPropertyInputSourceID) else {
-                return nil
-            }
-            let name = stringProperty(source, kTISPropertyLocalizedName) ?? id
-            let languages = stringArrayProperty(source, kTISPropertyInputSourceLanguages) ?? []
-            let selectCapable = boolProperty(source, kTISPropertyInputSourceIsSelectCapable) ?? false
-            return InputSourceInfo(
-                id: id,
-                localizedName: name,
-                languages: languages,
-                isSelectCapable: selectCapable
-            )
+            return inputSourceInfo(from: source)
         }
+    }
+
+    public func currentInputSource() throws -> InputSourceInfo? {
+        guard let source = TISCopyCurrentKeyboardInputSource()?.takeRetainedValue() else {
+            return nil
+        }
+        return inputSourceInfo(from: source)
     }
 
     public func selectInputSource(id: String) throws {
@@ -63,6 +83,21 @@ public final class MacInputSourceService: InputSourceService {
         }
 
         throw InputSourceServiceError.notFound(id)
+    }
+
+    private func inputSourceInfo(from source: TISInputSource) -> InputSourceInfo? {
+        guard let id = stringProperty(source, kTISPropertyInputSourceID) else {
+            return nil
+        }
+        let name = stringProperty(source, kTISPropertyLocalizedName) ?? id
+        let languages = stringArrayProperty(source, kTISPropertyInputSourceLanguages) ?? []
+        let selectCapable = boolProperty(source, kTISPropertyInputSourceIsSelectCapable) ?? false
+        return InputSourceInfo(
+            id: id,
+            localizedName: name,
+            languages: languages,
+            isSelectCapable: selectCapable
+        )
     }
 
     private func stringProperty(_ source: TISInputSource, _ key: CFString) -> String? {

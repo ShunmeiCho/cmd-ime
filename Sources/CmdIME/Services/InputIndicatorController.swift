@@ -164,6 +164,7 @@ final class InputIndicatorController {
 private struct InputIndicatorMetrics {
     let panelSize: NSSize
     let horizontalPadding: CGFloat
+    let verticalPadding: CGFloat
     let spacing: CGFloat
     let symbolSize: CGFloat
     let symbolCornerRadius: CGFloat
@@ -177,6 +178,7 @@ private struct InputIndicatorMetrics {
         let scaleFactor = CGFloat(SwitcherConfig.clampedSwitchIndicatorScale(scale))
         let basePanelSize: NSSize
         let baseHorizontalPadding: CGFloat
+        let baseVerticalPadding: CGFloat
         let baseSpacing: CGFloat
         let baseSymbolSize: CGFloat
         let baseSymbolCornerRadius: CGFloat
@@ -188,6 +190,7 @@ private struct InputIndicatorMetrics {
         switch size {
         case .small:
             baseHorizontalPadding = 10
+            baseVerticalPadding = 6
             baseSpacing = 8
             baseSymbolSize = 26
             baseSymbolCornerRadius = 7
@@ -197,6 +200,7 @@ private struct InputIndicatorMetrics {
             baseBubbleCornerRadius = 15
         case .medium:
             baseHorizontalPadding = 12
+            baseVerticalPadding = 7
             baseSpacing = 10
             baseSymbolSize = 32
             baseSymbolCornerRadius = 9
@@ -206,6 +210,7 @@ private struct InputIndicatorMetrics {
             baseBubbleCornerRadius = 18
         case .large:
             baseHorizontalPadding = 14
+            baseVerticalPadding = 8
             baseSpacing = 12
             baseSymbolSize = 40
             baseSymbolCornerRadius = 11
@@ -217,17 +222,17 @@ private struct InputIndicatorMetrics {
 
         switch (size, contentStyle) {
         case (.small, .iconOnly):
-            basePanelSize = NSSize(width: 42, height: 38)
+            basePanelSize = NSSize(width: 46, height: 42)
         case (.medium, .iconOnly):
-            basePanelSize = NSSize(width: 50, height: 46)
+            basePanelSize = NSSize(width: 56, height: 48)
         case (.large, .iconOnly):
-            basePanelSize = NSSize(width: 62, height: 58)
+            basePanelSize = NSSize(width: 72, height: 60)
         case (.small, .textOnly):
-            basePanelSize = NSSize(width: 86, height: 38)
+            basePanelSize = NSSize(width: 92, height: 38)
         case (.medium, .textOnly):
-            basePanelSize = NSSize(width: 112, height: 46)
+            basePanelSize = NSSize(width: 118, height: 46)
         case (.large, .textOnly):
-            basePanelSize = NSSize(width: 140, height: 58)
+            basePanelSize = NSSize(width: 146, height: 58)
         case (.small, .iconAndText):
             basePanelSize = NSSize(width: 138, height: 44)
         case (.medium, .iconAndText):
@@ -241,6 +246,7 @@ private struct InputIndicatorMetrics {
             height: (basePanelSize.height * scaleFactor).rounded(.up)
         )
         horizontalPadding = baseHorizontalPadding * scaleFactor
+        verticalPadding = baseVerticalPadding * scaleFactor
         spacing = max(4, baseSpacing * scaleFactor)
         symbolSize = baseSymbolSize * scaleFactor
         symbolCornerRadius = baseSymbolCornerRadius * scaleFactor
@@ -262,7 +268,13 @@ private struct InputIndicatorView: View {
 
     var body: some View {
         content
+        .frame(
+            width: max(1, metrics.panelSize.width - metrics.horizontalPadding * 2),
+            height: max(1, metrics.panelSize.height - metrics.verticalPadding * 2),
+            alignment: .center
+        )
         .padding(.horizontal, metrics.horizontalPadding)
+        .padding(.vertical, metrics.verticalPadding)
         .frame(width: metrics.panelSize.width, height: metrics.panelSize.height)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius))
         .overlay {

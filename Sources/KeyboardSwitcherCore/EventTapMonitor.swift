@@ -15,6 +15,7 @@ public final class EventTapMonitor: @unchecked Sendable {
     private var consumedKeyDowns = Set<Int>()
     private var resolvedSources: [InputRole: InputSourceInfo] = [:]
     private var pendingSingleTapTimer: Timer?
+    private let eventTapConfirmationRetryDelays: [TimeInterval] = [0.01]
 
     public init(config: SwitcherConfig, inputSources: InputSourceService = MacInputSourceService()) {
         self.config = config
@@ -213,9 +214,10 @@ public final class EventTapMonitor: @unchecked Sendable {
             KeyTrigger(kind: .oneShotModifier, keyCode: keyCode, keyName: "left-shift")
         case 60:
             KeyTrigger(kind: .oneShotModifier, keyCode: keyCode, keyName: "right-shift")
-        case 57:
-            KeyTrigger(kind: .oneShotModifier, keyCode: keyCode, keyName: "caps-lock")
         default:
+            // Caps Lock (57) is intentionally excluded: its CGEventFlags bit is a latch
+            // (lock on/off), not a momentary press, so the tap/double-tap one-shot model
+            // cannot drive it without corrupting the user's Caps Lock state.
             nil
         }
     }
@@ -271,22 +273,25 @@ public final class EventTapMonitor: @unchecked Sendable {
                     refreshResolvedSources()
                 }
                 guard let source = resolvedSources[role] else {
-                    onMessage?("No input source matched \(role.rawValue).")
+                    onMessage?("No input method matched this switch slot.")
                     return
                 }
                 do {
-                    try inputSources.selectInputSource(id: source.id)
-                    onSwitch?(role, source)
-                    onMessage?("Selected \(source.localizedName) for \(role.rawValue).")
+                    try selectAndReport(source, role: role, prefix: nil)
                 } catch {
+                    let originalError = error
                     refreshResolvedSources()
-                    if let fallback = resolvedSources[role] {
-                        try inputSources.selectInputSource(id: fallback.id)
-                        onSwitch?(role, fallback)
-                        onMessage?("Selected \(fallback.localizedName) for \(role.rawValue).")
-                    } else {
-                        throw error
+                    guard let fallback = resolvedSources[role], fallback.id != source.id else {
+                        // No different source to fall back to; surface the real reason
+                        // instead of the generic "Action failed".
+                        onMessage?("Could not switch this slot: \(originalError.localizedDescription)")
+                        return
                     }
+                    try selectAndReport(
+                        fallback,
+                        role: role,
+                        prefix: "\(source.localizedName) failed: \(originalError.localizedDescription)"
+                    )
                 }
             case .sendKey:
                 guard let output = action.output else {
@@ -298,6 +303,23 @@ public final class EventTapMonitor: @unchecked Sendable {
             }
         } catch {
             onMessage?("Action failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func selectAndReport(_ source: InputSourceInfo, role: InputRole, prefix: String?) throws {
+        let current = try inputSources.selectInputSourceAndConfirm(
+            id: source.id,
+            retryDelays: eventTapConfirmationRetryDelays
+        )
+        guard current?.id == source.id else {
+            onMessage?(InputSourceInfo.verificationMessage(requested: source, current: current))
+            return
+        }
+        onSwitch?(role, source)
+        if let prefix {
+            onMessage?("\(prefix). Selected refreshed input method \(source.localizedName).")
+        } else {
+            onMessage?("Selected \(source.localizedName).")
         }
     }
 
@@ -330,9 +352,10 @@ public final class EventTapMonitor: @unchecked Sendable {
         return flags.contains(flag)
     }
 
-    private func eventFlags(_ flags: CGEventFlags, contain modifiers: [Modifier]) -> Bool {
+    func eventFlags(_ flags: CGEventFlags, contain modifiers: [Modifier]) -> Bool {
         let expected = Set(modifiers)
         let actual = Set(Modifier.allCases.filter { flags.contains(cgFlag(for: $0)) })
+            .subtracting(Modifier.latching.subtracting(expected))
         return actual == expected
     }
 

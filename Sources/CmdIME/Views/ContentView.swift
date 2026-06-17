@@ -7,15 +7,14 @@ struct ContentView: View {
     @State private var triggerTypeDrafts: [InputRole: BindingTriggerType] = [:]
 
     fileprivate enum Metrics {
-        static let contentMaxWidth: CGFloat = 720
-        static let labelColumn: CGFloat = 140
-        static let ruleNameColumn: CGFloat = 96
-        static let ruleLabelColumn: CGFloat = 72
-        static let ruleControl: CGFloat = 260
-        static let triggerPicker: CGFloat = 140
-        static let modifierPicker: CGFloat = 220
-        static let actionButton: CGFloat = 170
-        static let compactButton: CGFloat = 96
+        static let contentMaxWidth: CGFloat = 680
+        static let labelColumn: CGFloat = 128
+        static let ruleNameColumn: CGFloat = 92
+        static let ruleLabelColumn: CGFloat = 76
+        static let ruleControl: CGFloat = 226
+        static let triggerPicker: CGFloat = 136
+        static let actionButton: CGFloat = 150
+        static let compactButton: CGFloat = 88
         static let segmentedControl: CGFloat = 320
         static let rowHeight: CGFloat = 44
         static let fieldHeight: CGFloat = 28
@@ -36,7 +35,7 @@ struct ContentView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(24)
+            .padding(20)
             .frame(maxWidth: Metrics.contentMaxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -65,7 +64,7 @@ struct ContentView: View {
             Button {
                 model.initializeFromScan()
                 resetDrafts()
-            } label: { Text("Use detected sources") }
+            } label: { Text("Reset to detected") }
             .frame(width: Metrics.actionButton)
 
             Button {
@@ -80,16 +79,16 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Switch rules")
+                    Text("Switch slots")
                         .font(.headline)
-                    Text("Each row is one shortcut. Pick the key and the input method it activates.")
+                    Text("Three switch slots are available. Pick the key and input method for each slot.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Button("Refresh sources") {
+                Button("Refresh methods") {
                     model.scan()
                 }
                 .frame(width: 140)
@@ -227,7 +226,7 @@ struct ContentView: View {
 
     private func inputSourcePicker(for role: InputRole, source: InputSourceInfo?) -> some View {
         Picker(
-            "Input source",
+            "Input method",
             selection: Binding(
                 get: { source?.id ?? "" },
                 set: { model.setInputSourceID($0, for: role) }
@@ -494,14 +493,14 @@ struct ContentView: View {
 
     private func sourceStatus(_ source: InputSourceInfo?, for role: InputRole) -> String {
         guard let source else {
-            return "Choose an input method from the menu."
+            return "Choose an input method for this slot."
         }
 
         if hasDuplicateSource(source, for: role) {
-            return "\(source.localizedName) is already used by another shortcut."
+            return "\(source.localizedName) is already used by another slot."
         }
 
-        return "Activates \(source.localizedName)."
+        return "This slot activates \(source.localizedName)."
     }
 
     private func hasDuplicateSource(_ source: InputSourceInfo?, for role: InputRole) -> Bool {
@@ -519,7 +518,7 @@ struct ContentView: View {
         case .shortcut:
             triggerTypeDrafts[role] = .shortcut
             triggerDrafts[role] = ""
-            model.statusText = "Record a keyboard shortcut for \(role.rawValue)"
+            model.statusText = "Record a keyboard shortcut for this slot"
         case .singleTap:
             triggerTypeDrafts[role] = nil
             setOneShotType(.tap, for: role)
@@ -608,7 +607,6 @@ private enum OneShotModifierChoice: String, CaseIterable, Identifiable, Hashable
     case rightControl = "right-control"
     case leftShift = "left-shift"
     case rightShift = "right-shift"
-    case capsLock = "caps-lock"
 
     var id: String {
         rawValue
@@ -639,8 +637,6 @@ private enum OneShotModifierChoice: String, CaseIterable, Identifiable, Hashable
             "Left Shift"
         case .rightShift:
             "Right Shift"
-        case .capsLock:
-            "Caps Lock"
         }
     }
 
@@ -654,8 +650,6 @@ private enum OneShotModifierChoice: String, CaseIterable, Identifiable, Hashable
             "control"
         case .leftShift, .rightShift:
             "shift"
-        case .capsLock:
-            "capslock"
         }
     }
 
@@ -677,8 +671,6 @@ private enum OneShotModifierChoice: String, CaseIterable, Identifiable, Hashable
             56
         case .rightShift:
             60
-        case .capsLock:
-            57
         }
     }
 }

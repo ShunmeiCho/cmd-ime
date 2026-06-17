@@ -34,7 +34,20 @@ final class AppModel: ObservableObject {
 
     init(configStore: ConfigStore = ConfigStore()) {
         self.configStore = configStore
-        var initialConfig = (try? configStore.loadOrDefault()) ?? .default
+
+        var initialConfig: SwitcherConfig
+        var recoveryMessage: String?
+        do {
+            let result = try configStore.loadOrRecover()
+            initialConfig = result.config
+            if let backupURL = result.recoveredBackupURL {
+                recoveryMessage = "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults."
+            }
+        } catch {
+            initialConfig = .default
+            recoveryMessage = "Could not read config: \(error.localizedDescription). Using defaults."
+        }
+
         if !Self.isMenuBarIconSupported {
             initialConfig.showMenuBarIcon = false
         }
@@ -43,6 +56,9 @@ final class AppModel: ObservableObject {
         scan()
         refreshRuntimeStatus()
         startListeningIfReady()
+        if let recoveryMessage {
+            statusText = recoveryMessage
+        }
     }
 
     func scan() {
@@ -205,7 +221,7 @@ final class AppModel: ObservableObject {
 
         config.pinInputSourceID(source.id, for: role)
         save()
-        statusText = "\(role.rawValue.capitalized) source set to \(source.localizedName)"
+        statusText = "Switch slot set to \(source.localizedName)"
     }
 
     func save() {
@@ -224,10 +240,14 @@ final class AppModel: ObservableObject {
                 scan()
             }
             guard let source = matchedSource(for: role) else {
-                statusText = "No input source matched \(role.rawValue)"
+                statusText = "No input method matched this switch slot"
                 return
             }
-            try inputSources.selectInputSource(id: source.id)
+            let current = try inputSources.selectInputSourceAndConfirm(id: source.id)
+            guard current?.id == source.id else {
+                statusText = InputSourceInfo.verificationMessage(requested: source, current: current)
+                return
+            }
             showSwitchIndicator(for: role, source: source)
             statusText = "Selected \(source.localizedName)"
         } catch {

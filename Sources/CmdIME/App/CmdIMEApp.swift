@@ -1,5 +1,7 @@
 import AppKit
 import Combine
+import Carbon
+import KeyboardSwitcherCore
 import SwiftUI
 
 @main
@@ -26,7 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         AppWindowCoordinator.shared.setModel(model)
         statusItemController = StatusItemController(model: model)
-        AppWindowCoordinator.shared.showSettings()
+        if !Self.wasLaunchedAsLoginItem() {
+            AppWindowCoordinator.shared.showSettings()
+        }
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
@@ -41,23 +45,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppWindowCoordinator.shared.showSettings()
         return true
     }
+
+    private static func wasLaunchedAsLoginItem() -> Bool {
+        guard let event = NSAppleEventManager.shared().currentAppleEvent,
+              event.eventClass == AEEventClass(kCoreEventClass),
+              event.eventID == AEEventID(kAEOpenApplication) else {
+            return false
+        }
+
+        return event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue
+            == OSType(keyAELaunchedAsLogInItem)
+    }
 }
 
 @MainActor
 final class StatusItemController: NSObject {
     private let model: AppModel
     private var statusItem: NSStatusItem?
-    private var cancellable: AnyCancellable?
+    private var cancellables = Set<AnyCancellable>()
 
     init(model: AppModel) {
         self.model = model
         super.init()
         updateVisibility(model.config.showMenuBarIcon)
-        cancellable = model.$config.sink { [weak self] config in
+        model.$config.sink { [weak self] config in
             Task { @MainActor in
                 self?.updateVisibility(config.showMenuBarIcon)
+                self?.refreshMenu()
             }
         }
+        .store(in: &cancellables)
+        model.$sources.sink { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshMenu()
+            }
+        }
+        .store(in: &cancellables)
     }
 
     private func updateVisibility(_ visible: Bool) {
@@ -88,11 +111,22 @@ final class StatusItemController: NSObject {
         self.statusItem = nil
     }
 
+    private func refreshMenu() {
+        statusItem?.menu = makeMenu()
+    }
+
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(menuItem("English", #selector(switchEnglish)))
-        menu.addItem(menuItem("Chinese", #selector(switchChinese)))
-        menu.addItem(menuItem("Japanese", #selector(switchJapanese)))
+        for role in InputRole.allCases {
+            let source = model.matchedSource(for: role)
+            let presentation = InputSourcePresentation(source: source, fallbackRole: role)
+            let item = menuItem(
+                source == nil ? "\(presentation.title) (not matched)" : presentation.title,
+                selector(for: role)
+            )
+            item.toolTip = source?.id
+            menu.addItem(item)
+        }
         menu.addItem(.separator())
         menu.addItem(menuItem("Settings", #selector(showSettings)))
         menu.addItem(.separator())
@@ -104,6 +138,17 @@ final class StatusItemController: NSObject {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
         item.target = self
         return item
+    }
+
+    private func selector(for role: InputRole) -> Selector {
+        switch role {
+        case .english:
+            #selector(switchEnglish)
+        case .chinese:
+            #selector(switchChinese)
+        case .japanese:
+            #selector(switchJapanese)
+        }
     }
 
     @objc private func switchEnglish() {
@@ -160,7 +205,7 @@ final class AppWindowCoordinator {
 
     private func makeSettingsWindow(model: AppModel) -> NSWindow {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 800, height: 720),
+            contentRect: NSRect(x: 0, y: 0, width: 760, height: 640),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -170,7 +215,7 @@ final class AppWindowCoordinator {
         window.center()
         window.contentView = NSHostingView(
             rootView: ContentView(model: model)
-                .frame(minWidth: 680, minHeight: 560)
+                .frame(minWidth: 660, minHeight: 500)
         )
         return window
     }

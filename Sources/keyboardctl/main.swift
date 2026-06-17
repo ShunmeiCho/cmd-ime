@@ -121,7 +121,7 @@ struct CLI {
     }
 
     private func show() throws {
-        let config = try ConfigStore(url: configURL).loadOrDefault()
+        let config = try loadConfig()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         print(String(decoding: try encoder.encode(config), as: UTF8.self))
@@ -134,7 +134,7 @@ struct CLI {
         guard let role = InputRole(rawValue: roleName) else {
             throw CLIError.missingArgument("role must be english, chinese, or japanese")
         }
-        let config = try ConfigStore(url: configURL).loadOrDefault()
+        let config = try loadConfig()
         let sources = try service.listInputSources()
         guard let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) else {
             throw InputSourceServiceError.notFound(role.rawValue)
@@ -148,7 +148,7 @@ struct CLI {
 
     private func listen() throws {
         #if os(macOS)
-        let config = try ConfigStore(url: configURL).loadOrDefault()
+        let config = try loadConfig()
         let monitor = EventTapMonitor(config: config)
         monitor.onMessage = { print($0) }
         try monitor.start()
@@ -165,7 +165,7 @@ struct CLI {
             throw CLIError.missingArgument("role must be english, chinese, or japanese")
         }
         let store = ConfigStore(url: configURL)
-        var config = try store.loadOrDefault()
+        var config = try loadConfig(from: store)
         config.upsertSwitchBinding(trigger: trigger, role: role)
         try store.save(config)
         print("Bound \(trigger.displayName) to \(role.rawValue)")
@@ -175,7 +175,7 @@ struct CLI {
         let trigger = try ShortcutParser.parse(argument(at: 1, name: "trigger"))
         let output = try ShortcutParser.parse(argument(at: 2, name: "output"))
         let store = ConfigStore(url: configURL)
-        var config = try store.loadOrDefault()
+        var config = try loadConfig(from: store)
         config.upsertRemapBinding(trigger: trigger, output: output)
         try store.save(config)
         print("Remapped \(trigger.displayName) to \(output.displayName)")
@@ -236,6 +236,21 @@ struct CLI {
         return args[index]
     }
 
+    private func loadConfig() throws -> SwitcherConfig {
+        try loadConfig(from: ConfigStore(url: configURL))
+    }
+
+    private func loadConfig(from store: ConfigStore) throws -> SwitcherConfig {
+        let result = try store.loadOrRecover()
+        if let backupURL = result.recoveredBackupURL {
+            fputs(
+                "warning: config was unreadable; backed it up to \(backupURL.path) and reset to defaults.\n",
+                stderr
+            )
+        }
+        return result.config
+    }
+
     private func printUsage() {
         print(
             """
@@ -257,7 +272,7 @@ struct CLI {
               keyboardctl bind left-command english
               keyboardctl bind right-command chinese
               keyboardctl bind option+j japanese
-              keyboardctl remap caps-lock escape
+              keyboardctl remap right-control escape
               keyboardctl quit
             """
         )
