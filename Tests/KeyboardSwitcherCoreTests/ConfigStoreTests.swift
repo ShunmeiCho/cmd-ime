@@ -38,7 +38,7 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertTrue(config.showMenuBarIcon)
     }
 
-    func testLegacyConfigDefaultsDoubleTapProtectionToEnabled() throws {
+    func testLegacyConfigDefaultsSwitchIndicatorToVisible() throws {
         let json = """
         {
           "version": 1,
@@ -49,7 +49,7 @@ final class ConfigStoreTests: XCTestCase {
 
         let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
 
-        XCTAssertTrue(config.protectDoubleTapShortcuts)
+        XCTAssertTrue(config.showSwitchIndicator)
     }
 
     func testUpsertSwitchBindingReplacesExistingRoleBinding() {

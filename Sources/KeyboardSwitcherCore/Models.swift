@@ -143,20 +143,20 @@ public struct RoleInputSourcePreference: Codable, Equatable, Sendable {
 public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var version: Int
     public var showMenuBarIcon: Bool
-    public var protectDoubleTapShortcuts: Bool
+    public var showSwitchIndicator: Bool
     public var bindings: [KeyBinding]
     public var inputSources: [String: RoleInputSourcePreference]
 
     public init(
         version: Int = 1,
         showMenuBarIcon: Bool = true,
-        protectDoubleTapShortcuts: Bool = true,
+        showSwitchIndicator: Bool = true,
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
         self.version = version
         self.showMenuBarIcon = showMenuBarIcon
-        self.protectDoubleTapShortcuts = protectDoubleTapShortcuts
+        self.showSwitchIndicator = showSwitchIndicator
         self.bindings = bindings
         self.inputSources = inputSources
     }
@@ -241,7 +241,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case version
         case showMenuBarIcon
-        case protectDoubleTapShortcuts
+        case showSwitchIndicator
         case bindings
         case inputSources
     }
@@ -250,7 +250,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
-        protectDoubleTapShortcuts = try container.decodeIfPresent(Bool.self, forKey: .protectDoubleTapShortcuts) ?? true
+        showSwitchIndicator = try container.decodeIfPresent(Bool.self, forKey: .showSwitchIndicator) ?? true
         bindings = try container.decode([KeyBinding].self, forKey: .bindings)
         inputSources = try container.decode([String: RoleInputSourcePreference].self, forKey: .inputSources)
     }
@@ -259,7 +259,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(version, forKey: .version)
         try container.encode(showMenuBarIcon, forKey: .showMenuBarIcon)
-        try container.encode(protectDoubleTapShortcuts, forKey: .protectDoubleTapShortcuts)
+        try container.encode(showSwitchIndicator, forKey: .showSwitchIndicator)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }

@@ -160,7 +160,7 @@ final class AppWindowCoordinator {
 
     private func makeSettingsWindow(model: AppModel) -> NSWindow {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: 800, height: 720),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -170,7 +170,7 @@ final class AppWindowCoordinator {
         window.center()
         window.contentView = NSHostingView(
             rootView: ContentView(model: model)
-                .frame(minWidth: 720, minHeight: 520)
+                .frame(minWidth: 680, minHeight: 560)
         )
         return window
     }

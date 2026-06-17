@@ -6,6 +6,7 @@ import Foundation
 public final class EventTapMonitor: @unchecked Sendable {
     public var config: SwitcherConfig
     public var onMessage: ((String) -> Void)?
+    public var onSwitch: ((InputRole, InputSourceInfo) -> Void)?
 
     private let inputSources: InputSourceService
     private var eventTap: CFMachPort?
@@ -157,8 +158,7 @@ public final class EventTapMonitor: @unchecked Sendable {
 
         switch oneShotState.modifierUp(
             trigger,
-            hasDoubleTapBinding: hasDoubleTapBinding(for: trigger),
-            delaysSingleTap: config.protectDoubleTapShortcuts
+            hasDoubleTapBinding: hasDoubleTapBinding(for: trigger)
         ) {
         case .trigger(let output):
             pendingSingleTapTimer?.invalidate()
@@ -276,11 +276,13 @@ public final class EventTapMonitor: @unchecked Sendable {
                 }
                 do {
                     try inputSources.selectInputSource(id: source.id)
+                    onSwitch?(role, source)
                     onMessage?("Selected \(source.localizedName) for \(role.rawValue).")
                 } catch {
                     refreshResolvedSources()
                     if let fallback = resolvedSources[role] {
                         try inputSources.selectInputSource(id: fallback.id)
+                        onSwitch?(role, fallback)
                         onMessage?("Selected \(fallback.localizedName) for \(role.rawValue).")
                     } else {
                         throw error

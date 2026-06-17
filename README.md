@@ -61,12 +61,13 @@ Each role can use one of three trigger types:
 
 Single-key modifier bindings and keyboard shortcuts are intentionally separate
 so common shortcuts such as `Command+C`, `Command+V`, `Command+Tab`, and
-multi-modifier chords are not treated as one-shot Command taps.
+multi-modifier chords are not treated as one-shot Command taps. Single-tap
+modifier bindings switch immediately; CmdIME waits briefly only when the same
+modifier also has a CmdIME double-tap binding.
 
-If another app already uses a double-tap modifier shortcut, keep `Protect
-double-tap shortcuts` enabled. CmdIME will wait briefly before applying a
-single-tap modifier binding, so the second tap can cancel the CmdIME single-tap
-action or trigger a CmdIME double-tap binding.
+CmdIME switches input sources programmatically, so it does not invoke the
+private macOS input-source chooser. Enable `Show switch indicator` to show
+CmdIME's own lightweight confirmation bubble after a switch.
 
 ## Build
 

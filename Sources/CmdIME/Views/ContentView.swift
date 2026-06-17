@@ -7,9 +7,10 @@ struct ContentView: View {
     @State private var triggerTypeDrafts: [InputRole: BindingTriggerType] = [:]
 
     private enum Metrics {
+        static let contentMaxWidth: CGFloat = 720
         static let labelColumn: CGFloat = 140
-        static let matchedColumn: CGFloat = 280
-        static let languagesColumn: CGFloat = 170
+        static let matchedColumn: CGFloat = 240
+        static let languagesColumn: CGFloat = 120
         static let triggerPicker: CGFloat = 140
         static let modifierPicker: CGFloat = 220
         static let actionButton: CGFloat = 170
@@ -20,23 +21,27 @@ struct ContentView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 16) {
                 header
 
-                Divider()
+                GroupBox {
+                    inputSourcesSection
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
-                inputSourcesSection
+                GroupBox {
+                    bindingsSection
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
-                Divider()
-
-                bindingsSection
-
-                Divider()
-
-                runtimeSection
+                GroupBox {
+                    runtimeSection
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .padding(24)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: Metrics.contentMaxWidth, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
         .onAppear {
             resetDrafts()
@@ -251,13 +256,12 @@ struct ContentView: View {
             .disabled(!model.loginItem.isAvailable)
 
             Toggle(
-                "Protect double-tap shortcuts",
+                "Show switch indicator",
                 isOn: Binding(
-                    get: { model.config.protectDoubleTapShortcuts },
-                    set: { model.setProtectDoubleTapShortcuts($0) }
+                    get: { model.config.showSwitchIndicator },
+                    set: { model.setSwitchIndicatorVisible($0) }
                 )
             )
-            .help("Delay single-tap modifier bindings briefly so double-tap shortcuts can take precedence.")
 
             HStack {
                 Text("Updates")

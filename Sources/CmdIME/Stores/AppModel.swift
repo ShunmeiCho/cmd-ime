@@ -16,6 +16,7 @@ final class AppModel: ObservableObject {
     private let configStore: ConfigStore
     private let inputSources = MacInputSourceService()
     private let loginItems = LoginItemService()
+    private let switchIndicator = InputIndicatorController()
     private let updates = UpdateService()
     private var monitor: EventTapMonitor?
 
@@ -108,12 +109,10 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func setProtectDoubleTapShortcuts(_ enabled: Bool) {
-        config.protectDoubleTapShortcuts = enabled
+    func setSwitchIndicatorVisible(_ visible: Bool) {
+        config.showSwitchIndicator = visible
         save()
-        statusText = enabled
-            ? "Double-tap shortcut protection enabled"
-            : "Single-tap modifiers switch immediately"
+        statusText = visible ? "Switch indicator enabled" : "Switch indicator disabled"
     }
 
     func checkForUpdates() {
@@ -182,6 +181,7 @@ final class AppModel: ObservableObject {
                 return
             }
             try inputSources.selectInputSource(id: source.id)
+            showSwitchIndicator(for: role, source: source)
             statusText = "Selected \(source.localizedName)"
         } catch {
             statusText = error.localizedDescription
@@ -276,6 +276,11 @@ final class AppModel: ObservableObject {
                     self?.statusText = message
                 }
             }
+            nextMonitor.onSwitch = { [weak self] role, source in
+                DispatchQueue.main.async {
+                    self?.showSwitchIndicator(for: role, source: source)
+                }
+            }
             try nextMonitor.start()
             monitor = nextMonitor
             isListening = true
@@ -303,6 +308,13 @@ final class AppModel: ObservableObject {
     func quit() {
         stopListening()
         NSApp.terminate(nil)
+    }
+
+    private func showSwitchIndicator(for role: InputRole, source: InputSourceInfo) {
+        guard config.showSwitchIndicator else {
+            return
+        }
+        switchIndicator.show(role: role, source: source)
     }
 }
 
