@@ -43,6 +43,15 @@ final class ShortcutParserTests: XCTestCase {
         XCTAssertEqual(trigger.modifiers, [.command, .shift])
     }
 
+    func testFlagsMacInputSourceShortcutsAsReserved() throws {
+        let previousInputSource = try ShortcutParser.parse("control+space")
+        let nextInputSource = try ShortcutParser.parse("control+option+space")
+
+        XCTAssertTrue(previousInputSource.isReservedMacInputSourceShortcut)
+        XCTAssertTrue(nextInputSource.isReservedMacInputSourceShortcut)
+        XCTAssertFalse(try ShortcutParser.parse("command+shift+space").isReservedMacInputSourceShortcut)
+    }
+
     func testRejectsModifierOnlyShortcutWithoutSide() {
         XCTAssertThrowsError(try ShortcutParser.parse("command")) { error in
             XCTAssertEqual(error as? ShortcutParserError, .missingKey("command"))

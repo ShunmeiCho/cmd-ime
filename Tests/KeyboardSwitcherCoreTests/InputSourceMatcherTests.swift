@@ -71,6 +71,33 @@ final class InputSourceMatcherTests: XCTestCase {
         XCTAssertEqual(match?.id, "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese")
     }
 
+    func testSelectableSourcesExcludeAuxiliaryInputSources() {
+        let sources = [
+            InputSourceInfo(
+                id: "com.apple.keylayout.ABC",
+                localizedName: "ABC",
+                languages: ["en"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "com.apple.50onPaletteIM",
+                localizedName: "Japanese Kana Palette",
+                languages: ["ja"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "com.apple.CharacterPaletteIM",
+                localizedName: "Emoji & Symbols",
+                languages: ["en"],
+                isSelectCapable: true
+            ),
+        ]
+
+        let selectable = InputSourceMatcher.selectableSources(from: sources)
+
+        XCTAssertEqual(selectable.map(\.id), ["com.apple.keylayout.ABC"])
+    }
+
     func testDisplayLanguagesTruncatesLongLanguageLists() {
         let source = InputSourceInfo(
             id: "abc",

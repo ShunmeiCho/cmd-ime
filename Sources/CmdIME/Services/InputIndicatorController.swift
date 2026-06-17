@@ -12,18 +12,22 @@ final class InputIndicatorController {
         role: InputRole,
         source: InputSourceInfo,
         size: SwitchIndicatorSize,
-        colorStyle: SwitchIndicatorColorStyle
+        scale: Double,
+        colorStyle: SwitchIndicatorColorStyle,
+        contentStyle: SwitchIndicatorContentStyle,
+        customColorHex: String
     ) {
         let panel = panel ?? makePanel()
         self.panel = panel
 
-        let metrics = InputIndicatorMetrics(size: size)
+        let metrics = InputIndicatorMetrics(size: size, scale: scale, contentStyle: contentStyle)
         panel.contentView = NSHostingView(
             rootView: InputIndicatorView(
                 symbol: symbol(for: role),
                 title: title(for: role),
                 subtitle: source.localizedName,
-                tint: tint(for: role, style: colorStyle),
+                tint: tint(for: role, style: colorStyle, customColorHex: customColorHex),
+                contentStyle: contentStyle,
                 metrics: metrics
             )
         )
@@ -160,12 +164,14 @@ final class InputIndicatorController {
         }
     }
 
-    private func tint(for role: InputRole, style: SwitchIndicatorColorStyle) -> Color {
+    private func tint(for role: InputRole, style: SwitchIndicatorColorStyle, customColorHex: String) -> Color {
         switch style {
         case .accent:
             return .accentColor
         case .monochrome:
             return Color(nsColor: .secondaryLabelColor)
+        case .custom:
+            return Color(cmdIMEHex: customColorHex) ?? .accentColor
         case .role:
             return roleTint(for: role)
         }
@@ -193,40 +199,84 @@ private struct InputIndicatorMetrics {
     let titleFontSize: CGFloat
     let subtitleFontSize: CGFloat
     let bubbleCornerRadius: CGFloat
+    let bubbleStrokeOpacity: Double
 
-    init(size: SwitchIndicatorSize) {
+    init(size: SwitchIndicatorSize, scale: Double, contentStyle: SwitchIndicatorContentStyle) {
+        let scaleFactor = CGFloat(SwitcherConfig.clampedSwitchIndicatorScale(scale))
+        let basePanelSize: NSSize
+        let baseHorizontalPadding: CGFloat
+        let baseSpacing: CGFloat
+        let baseSymbolSize: CGFloat
+        let baseSymbolCornerRadius: CGFloat
+        let baseSymbolFontSize: CGFloat
+        let baseTitleFontSize: CGFloat
+        let baseSubtitleFontSize: CGFloat
+        let baseBubbleCornerRadius: CGFloat
+
         switch size {
         case .small:
-            panelSize = NSSize(width: 138, height: 44)
-            horizontalPadding = 10
-            spacing = 8
-            symbolSize = 26
-            symbolCornerRadius = 7
-            symbolFontSize = 15
-            titleFontSize = 12
-            subtitleFontSize = 10
-            bubbleCornerRadius = 15
+            baseHorizontalPadding = 10
+            baseSpacing = 8
+            baseSymbolSize = 26
+            baseSymbolCornerRadius = 7
+            baseSymbolFontSize = 15
+            baseTitleFontSize = 12
+            baseSubtitleFontSize = 10
+            baseBubbleCornerRadius = 15
         case .medium:
-            panelSize = NSSize(width: 172, height: 54)
-            horizontalPadding = 12
-            spacing = 10
-            symbolSize = 32
-            symbolCornerRadius = 9
-            symbolFontSize = 18
-            titleFontSize = 13
-            subtitleFontSize = 11
-            bubbleCornerRadius = 18
+            baseHorizontalPadding = 12
+            baseSpacing = 10
+            baseSymbolSize = 32
+            baseSymbolCornerRadius = 9
+            baseSymbolFontSize = 18
+            baseTitleFontSize = 13
+            baseSubtitleFontSize = 11
+            baseBubbleCornerRadius = 18
         case .large:
-            panelSize = NSSize(width: 210, height: 66)
-            horizontalPadding = 14
-            spacing = 12
-            symbolSize = 40
-            symbolCornerRadius = 11
-            symbolFontSize = 22
-            titleFontSize = 15
-            subtitleFontSize = 12
-            bubbleCornerRadius = 22
+            baseHorizontalPadding = 14
+            baseSpacing = 12
+            baseSymbolSize = 40
+            baseSymbolCornerRadius = 11
+            baseSymbolFontSize = 22
+            baseTitleFontSize = 15
+            baseSubtitleFontSize = 12
+            baseBubbleCornerRadius = 22
         }
+
+        switch (size, contentStyle) {
+        case (.small, .iconOnly):
+            basePanelSize = NSSize(width: 42, height: 38)
+        case (.medium, .iconOnly):
+            basePanelSize = NSSize(width: 50, height: 46)
+        case (.large, .iconOnly):
+            basePanelSize = NSSize(width: 62, height: 58)
+        case (.small, .textOnly):
+            basePanelSize = NSSize(width: 86, height: 38)
+        case (.medium, .textOnly):
+            basePanelSize = NSSize(width: 112, height: 46)
+        case (.large, .textOnly):
+            basePanelSize = NSSize(width: 140, height: 58)
+        case (.small, .iconAndText):
+            basePanelSize = NSSize(width: 138, height: 44)
+        case (.medium, .iconAndText):
+            basePanelSize = NSSize(width: 172, height: 54)
+        case (.large, .iconAndText):
+            basePanelSize = NSSize(width: 210, height: 66)
+        }
+
+        panelSize = NSSize(
+            width: (basePanelSize.width * scaleFactor).rounded(.up),
+            height: (basePanelSize.height * scaleFactor).rounded(.up)
+        )
+        horizontalPadding = baseHorizontalPadding * scaleFactor
+        spacing = max(4, baseSpacing * scaleFactor)
+        symbolSize = baseSymbolSize * scaleFactor
+        symbolCornerRadius = baseSymbolCornerRadius * scaleFactor
+        symbolFontSize = baseSymbolFontSize * scaleFactor
+        titleFontSize = baseTitleFontSize * scaleFactor
+        subtitleFontSize = baseSubtitleFontSize * scaleFactor
+        bubbleCornerRadius = baseBubbleCornerRadius * scaleFactor
+        bubbleStrokeOpacity = contentStyle == .iconAndText ? 0.18 : 0
     }
 }
 
@@ -235,35 +285,61 @@ private struct InputIndicatorView: View {
     let title: String
     let subtitle: String
     let tint: Color
+    let contentStyle: SwitchIndicatorContentStyle
     let metrics: InputIndicatorMetrics
 
     var body: some View {
-        HStack(spacing: metrics.spacing) {
-            Text(symbol)
-                .font(.system(size: metrics.symbolFontSize, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: metrics.symbolSize, height: metrics.symbolSize)
-                .background(tint, in: RoundedRectangle(cornerRadius: metrics.symbolCornerRadius))
+        content
+        .padding(.horizontal, metrics.horizontalPadding)
+        .frame(width: metrics.panelSize.width, height: metrics.panelSize.height)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius))
+        .overlay {
+            if metrics.bubbleStrokeOpacity > 0 {
+                RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius)
+                    .strokeBorder(.secondary.opacity(metrics.bubbleStrokeOpacity))
+            }
+        }
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: metrics.titleFontSize, weight: .semibold))
-                    .lineLimit(1)
+    @ViewBuilder
+    private var content: some View {
+        switch contentStyle {
+        case .iconOnly:
+            symbolView
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        case .textOnly:
+            textStack(alignment: .center)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        case .iconAndText:
+            HStack(spacing: metrics.spacing) {
+                symbolView
+                textStack(alignment: .leading)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var symbolView: some View {
+        Text(symbol)
+            .font(.system(size: metrics.symbolFontSize, weight: .bold))
+            .foregroundStyle(.white)
+            .frame(width: metrics.symbolSize, height: metrics.symbolSize)
+            .background(tint, in: RoundedRectangle(cornerRadius: metrics.symbolCornerRadius))
+    }
+
+    private func textStack(alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 2) {
+            Text(title)
+                .font(.system(size: metrics.titleFontSize, weight: .semibold))
+                .lineLimit(1)
+            if contentStyle == .iconAndText {
                 Text(subtitle)
                     .font(.system(size: metrics.subtitleFontSize))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, metrics.horizontalPadding)
-        .frame(width: metrics.panelSize.width, height: metrics.panelSize.height)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius))
-        .overlay {
-            RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius)
-                .strokeBorder(.secondary.opacity(0.18))
         }
     }
 }

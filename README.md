@@ -65,11 +65,16 @@ multi-modifier chords are not treated as one-shot Command taps. Single-tap
 modifier bindings switch immediately; CmdIME waits briefly only when the same
 modifier also has a CmdIME double-tap binding.
 
+The settings UI rejects macOS input-source shortcuts such as `control+space`
+and `control+option+space` so CmdIME does not steal the system input-source
+chooser by accident.
+
 CmdIME switches input sources programmatically, so it does not invoke the
 private macOS input-source chooser. Enable `Show switch indicator` to show
 CmdIME's own lightweight confirmation bubble after a switch. The indicator can
-be disabled, resized, or switched between role colors, the system accent color,
-and a monochrome style in Settings.
+be disabled, resized with presets and a scale slider, switched between
+icon/text display modes, or recolored with role colors, the system accent color,
+monochrome, or a custom color in Settings.
 
 ## Build
 

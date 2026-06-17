@@ -59,6 +59,15 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         return prefix.isEmpty ? keyName : "\(prefix)+\(keyName)"
     }
 
+    public var isReservedMacInputSourceShortcut: Bool {
+        guard kind == .keyPress, keyCode == 49 else {
+            return false
+        }
+
+        let modifierSet = Set(modifiers)
+        return modifierSet == [.control] || modifierSet == [.control, .option]
+    }
+
     private enum CodingKeys: String, CodingKey {
         case kind
         case gesture
@@ -165,6 +174,7 @@ public enum SwitchIndicatorColorStyle: String, Codable, CaseIterable, Identifiab
     case role
     case accent
     case monochrome
+    case custom
 
     public var id: String {
         rawValue
@@ -178,16 +188,46 @@ public enum SwitchIndicatorColorStyle: String, Codable, CaseIterable, Identifiab
             "Accent"
         case .monochrome:
             "Mono"
+        case .custom:
+            "Custom"
+        }
+    }
+}
+
+public enum SwitchIndicatorContentStyle: String, Codable, CaseIterable, Identifiable, Sendable {
+    case iconAndText
+    case iconOnly
+    case textOnly
+
+    public var id: String {
+        rawValue
+    }
+
+    public var displayName: String {
+        switch self {
+        case .iconAndText:
+            "Icon + Text"
+        case .iconOnly:
+            "Icon"
+        case .textOnly:
+            "Text"
         }
     }
 }
 
 public struct SwitcherConfig: Codable, Equatable, Sendable {
+    public static let defaultSwitchIndicatorScale = 1.0
+    public static let minSwitchIndicatorScale = 0.65
+    public static let maxSwitchIndicatorScale = 1.3
+
     public var version: Int
     public var showMenuBarIcon: Bool
     public var showSwitchIndicator: Bool
     public var switchIndicatorSize: SwitchIndicatorSize
+    public var switchIndicatorScale: Double
     public var switchIndicatorColorStyle: SwitchIndicatorColorStyle
+    public var switchIndicatorContentStyle: SwitchIndicatorContentStyle
+    public var switchIndicatorCustomColorHex: String
     public var bindings: [KeyBinding]
     public var inputSources: [String: RoleInputSourcePreference]
 
@@ -196,7 +236,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         showMenuBarIcon: Bool = true,
         showSwitchIndicator: Bool = true,
         switchIndicatorSize: SwitchIndicatorSize = .medium,
+        switchIndicatorScale: Double = SwitcherConfig.defaultSwitchIndicatorScale,
         switchIndicatorColorStyle: SwitchIndicatorColorStyle = .role,
+        switchIndicatorContentStyle: SwitchIndicatorContentStyle = .iconAndText,
+        switchIndicatorCustomColorHex: String = "#2F7CF6",
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
@@ -204,9 +247,16 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.showMenuBarIcon = showMenuBarIcon
         self.showSwitchIndicator = showSwitchIndicator
         self.switchIndicatorSize = switchIndicatorSize
+        self.switchIndicatorScale = Self.clampedSwitchIndicatorScale(switchIndicatorScale)
         self.switchIndicatorColorStyle = switchIndicatorColorStyle
+        self.switchIndicatorContentStyle = switchIndicatorContentStyle
+        self.switchIndicatorCustomColorHex = switchIndicatorCustomColorHex
         self.bindings = bindings
         self.inputSources = inputSources
+    }
+
+    public static func clampedSwitchIndicatorScale(_ value: Double) -> Double {
+        min(max(value, minSwitchIndicatorScale), maxSwitchIndicatorScale)
     }
 
     public static var `default`: SwitcherConfig {
@@ -291,7 +341,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case showMenuBarIcon
         case showSwitchIndicator
         case switchIndicatorSize
+        case switchIndicatorScale
         case switchIndicatorColorStyle
+        case switchIndicatorContentStyle
+        case switchIndicatorCustomColorHex
         case bindings
         case inputSources
     }
@@ -302,10 +355,22 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
         showSwitchIndicator = try container.decodeIfPresent(Bool.self, forKey: .showSwitchIndicator) ?? true
         switchIndicatorSize = try container.decodeIfPresent(SwitchIndicatorSize.self, forKey: .switchIndicatorSize) ?? .medium
+        switchIndicatorScale = Self.clampedSwitchIndicatorScale(
+            try container.decodeIfPresent(Double.self, forKey: .switchIndicatorScale)
+                ?? Self.defaultSwitchIndicatorScale
+        )
         switchIndicatorColorStyle = try container.decodeIfPresent(
             SwitchIndicatorColorStyle.self,
             forKey: .switchIndicatorColorStyle
         ) ?? .role
+        switchIndicatorContentStyle = try container.decodeIfPresent(
+            SwitchIndicatorContentStyle.self,
+            forKey: .switchIndicatorContentStyle
+        ) ?? .iconAndText
+        switchIndicatorCustomColorHex = try container.decodeIfPresent(
+            String.self,
+            forKey: .switchIndicatorCustomColorHex
+        ) ?? "#2F7CF6"
         bindings = try container.decode([KeyBinding].self, forKey: .bindings)
         inputSources = try container.decode([String: RoleInputSourcePreference].self, forKey: .inputSources)
     }
@@ -316,7 +381,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(showMenuBarIcon, forKey: .showMenuBarIcon)
         try container.encode(showSwitchIndicator, forKey: .showSwitchIndicator)
         try container.encode(switchIndicatorSize, forKey: .switchIndicatorSize)
+        try container.encode(switchIndicatorScale, forKey: .switchIndicatorScale)
         try container.encode(switchIndicatorColorStyle, forKey: .switchIndicatorColorStyle)
+        try container.encode(switchIndicatorContentStyle, forKey: .switchIndicatorContentStyle)
+        try container.encode(switchIndicatorCustomColorHex, forKey: .switchIndicatorCustomColorHex)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }

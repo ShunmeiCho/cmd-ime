@@ -121,10 +121,29 @@ final class AppModel: ObservableObject {
         statusText = "Switch indicator size set to \(size.displayName)"
     }
 
+    func setSwitchIndicatorScale(_ scale: Double) {
+        let clampedScale = SwitcherConfig.clampedSwitchIndicatorScale(scale)
+        config.switchIndicatorScale = clampedScale
+        save()
+        statusText = "Switch indicator scale set to \(Int((clampedScale * 100).rounded()))%"
+    }
+
     func setSwitchIndicatorColorStyle(_ style: SwitchIndicatorColorStyle) {
         config.switchIndicatorColorStyle = style
         save()
         statusText = "Switch indicator color set to \(style.displayName)"
+    }
+
+    func setSwitchIndicatorContentStyle(_ style: SwitchIndicatorContentStyle) {
+        config.switchIndicatorContentStyle = style
+        save()
+        statusText = "Switch indicator display set to \(style.displayName)"
+    }
+
+    func setSwitchIndicatorCustomColorHex(_ hex: String) {
+        config.switchIndicatorCustomColorHex = hex
+        save()
+        statusText = "Switch indicator custom color set to \(hex)"
     }
 
     func checkForUpdates() {
@@ -171,6 +190,21 @@ final class AppModel: ObservableObject {
 
         config = nextConfig
         save()
+    }
+
+    var selectableSources: [InputSourceInfo] {
+        InputSourceMatcher.selectableSources(from: sources)
+    }
+
+    func setInputSourceID(_ id: String, for role: InputRole) {
+        guard let source = selectableSources.first(where: { $0.id == id }) else {
+            statusText = "Input source not found: \(id)"
+            return
+        }
+
+        config.pinInputSourceID(source.id, for: role)
+        save()
+        statusText = "\(role.rawValue.capitalized) source set to \(source.localizedName)"
     }
 
     func save() {
@@ -226,6 +260,11 @@ final class AppModel: ObservableObject {
     }
 
     func setBindingTrigger(_ trigger: KeyTrigger, for role: InputRole) {
+        guard !trigger.isReservedMacInputSourceShortcut else {
+            statusText = "\(trigger.displayName) is reserved by macOS input source switching"
+            return
+        }
+
         config.upsertSwitchBinding(trigger: trigger, role: role)
         save()
     }
@@ -330,7 +369,10 @@ final class AppModel: ObservableObject {
             role: role,
             source: source,
             size: config.switchIndicatorSize,
-            colorStyle: config.switchIndicatorColorStyle
+            scale: config.switchIndicatorScale,
+            colorStyle: config.switchIndicatorColorStyle,
+            contentStyle: config.switchIndicatorContentStyle,
+            customColorHex: config.switchIndicatorCustomColorHex
         )
     }
 }

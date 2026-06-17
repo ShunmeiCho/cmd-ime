@@ -51,7 +51,26 @@ final class ConfigStoreTests: XCTestCase {
 
         XCTAssertTrue(config.showSwitchIndicator)
         XCTAssertEqual(config.switchIndicatorSize, .medium)
+        XCTAssertEqual(config.switchIndicatorScale, SwitcherConfig.defaultSwitchIndicatorScale)
         XCTAssertEqual(config.switchIndicatorColorStyle, .role)
+        XCTAssertEqual(config.switchIndicatorContentStyle, .iconAndText)
+        XCTAssertEqual(config.switchIndicatorCustomColorHex, "#2F7CF6")
+    }
+
+    func testSwitchIndicatorScaleIsClampedWhenDecoding() throws {
+        let json = """
+        {
+          "version": 1,
+          "showSwitchIndicator": true,
+          "switchIndicatorScale": 99,
+          "bindings": [],
+          "inputSources": {}
+        }
+        """
+
+        let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
+
+        XCTAssertEqual(config.switchIndicatorScale, SwitcherConfig.maxSwitchIndicatorScale)
     }
 
     func testUpsertSwitchBindingReplacesExistingRoleBinding() {

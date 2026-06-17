@@ -15,6 +15,7 @@ struct ContentView: View {
         static let modifierPicker: CGFloat = 220
         static let actionButton: CGFloat = 170
         static let compactButton: CGFloat = 96
+        static let segmentedControl: CGFloat = 320
         static let rowHeight: CGFloat = 44
         static let fieldHeight: CGFloat = 28
     }
@@ -125,8 +126,21 @@ struct ContentView: View {
             Text(roleTitle(for: role))
                 .frame(width: Metrics.labelColumn, alignment: .leading)
             VStack(alignment: .leading, spacing: 2) {
-                Text(source?.localizedName ?? "Not matched")
-                    .lineLimit(1)
+                Picker(
+                    "Input source",
+                    selection: Binding(
+                        get: { source?.id ?? "" },
+                        set: { model.setInputSourceID($0, for: role) }
+                    )
+                ) {
+                    if source == nil {
+                        Text("Not matched").tag("")
+                    }
+                    ForEach(model.selectableSources, id: \.id) { candidate in
+                        Text(candidate.localizedName).tag(candidate.id)
+                    }
+                }
+                .labelsHidden()
                 Text(source?.id ?? "Run Scan or Auto Setup")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -265,6 +279,26 @@ struct ContentView: View {
 
             if model.config.showSwitchIndicator {
                 HStack {
+                    Text("Indicator display")
+                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    Picker(
+                        "Indicator display",
+                        selection: Binding(
+                            get: { model.config.switchIndicatorContentStyle },
+                            set: { model.setSwitchIndicatorContentStyle($0) }
+                        )
+                    ) {
+                        ForEach(SwitchIndicatorContentStyle.allCases) { style in
+                            Text(style.displayName).tag(style)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: Metrics.segmentedControl)
+                    Spacer()
+                }
+
+                HStack {
                     Text("Indicator size")
                         .frame(width: Metrics.labelColumn, alignment: .leading)
                     Picker(
@@ -280,7 +314,30 @@ struct ContentView: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.segmented)
-                    .frame(width: 240)
+                    .frame(width: Metrics.segmentedControl)
+                    Spacer()
+                }
+
+                HStack {
+                    Text("Indicator scale")
+                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    Slider(
+                        value: Binding(
+                            get: { model.config.switchIndicatorScale },
+                            set: { model.setSwitchIndicatorScale($0) }
+                        ),
+                        in: SwitcherConfig.minSwitchIndicatorScale...SwitcherConfig.maxSwitchIndicatorScale,
+                        step: 0.05
+                    )
+                    .frame(width: 220)
+                    Text("\(Int((model.config.switchIndicatorScale * 100).rounded()))%")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, alignment: .trailing)
+                    Button("Reset") {
+                        model.setSwitchIndicatorScale(SwitcherConfig.defaultSwitchIndicatorScale)
+                    }
+                    .frame(width: 72)
                     Spacer()
                 }
 
@@ -300,8 +357,34 @@ struct ContentView: View {
                     }
                     .labelsHidden()
                     .pickerStyle(.segmented)
-                    .frame(width: 240)
+                    .frame(width: Metrics.segmentedControl)
                     Spacer()
+                }
+
+                if model.config.switchIndicatorColorStyle == .custom {
+                    HStack {
+                        Text("Custom color")
+                            .frame(width: Metrics.labelColumn, alignment: .leading)
+                        ColorPicker(
+                            "Custom color",
+                            selection: Binding(
+                                get: {
+                                    Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex) ?? .accentColor
+                                },
+                                set: { color in
+                                    if let hex = color.cmdIMEHexString {
+                                        model.setSwitchIndicatorCustomColorHex(hex)
+                                    }
+                                }
+                            ),
+                            supportsOpacity: false
+                        )
+                        .labelsHidden()
+                        Text(model.config.switchIndicatorCustomColorHex)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
                 }
             }
 
