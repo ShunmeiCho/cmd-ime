@@ -17,6 +17,8 @@ INFO_PLIST="$APP_CONTENTS/Info.plist"
 ZIP_PATH="$DIST_DIR/$APP_NAME-$VERSION.zip"
 ICON_SOURCE="$ROOT_DIR/Assets/AppIcon.icns"
 ALLOW_UNNOTARIZED="${CMDIME_ALLOW_UNNOTARIZED:-0}"
+SKIP_NOTARIZE="${CMDIME_SKIP_NOTARIZE:-0}"
+NOTARY_PROFILE="${CMDIME_NOTARY_PROFILE:-cmd-ime-notary}"
 
 find_codesign_identity() {
   local pattern="$1"
@@ -74,6 +76,33 @@ codesign_path() {
   codesign "${args[@]}" "$path"
 }
 
+require_notarization_tools() {
+  xcrun --find notarytool >/dev/null
+  xcrun --find stapler >/dev/null
+}
+
+notarize_app() {
+  if ! is_developer_id_identity; then
+    echo "warning: skipping notarization because this is not a Developer ID build." >&2
+    return
+  fi
+
+  if [[ "$SKIP_NOTARIZE" == "1" ]]; then
+    echo "warning: skipping notarization because CMDIME_SKIP_NOTARIZE=1." >&2
+    return
+  fi
+
+  require_notarization_tools
+  echo "Submitting $ZIP_PATH for notarization with keychain profile '$NOTARY_PROFILE'..." >&2
+  xcrun notarytool submit "$ZIP_PATH" --keychain-profile "$NOTARY_PROFILE" --wait
+  xcrun stapler staple "$APP_BUNDLE"
+  xcrun stapler validate "$APP_BUNDLE"
+
+  rm -f "$ZIP_PATH"
+  ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"
+  spctl --assess --type execute --verbose=4 "$APP_BUNDLE"
+}
+
 require_distribution_signing
 
 rm -rf "$RELEASE_DIR" "$ZIP_PATH"
@@ -128,8 +157,11 @@ PLIST
 
 codesign_path "$APP_MACOS/keyboardctl"
 codesign_path "$APP_BUNDLE"
-codesign --verify --deep --strict "$APP_BUNDLE"
+codesign --verify --strict "$APP_MACOS/keyboardctl"
+codesign --verify --strict "$APP_BUNDLE"
 plutil -lint "$INFO_PLIST"
 ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"
+notarize_app
+shasum -a 256 "$ZIP_PATH"
 
 echo "$ZIP_PATH"

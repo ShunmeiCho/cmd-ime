@@ -173,6 +173,21 @@ Release packaging requires a `Developer ID Application` signing identity. For a
 local-only package smoke test on machines without that certificate, set
 `CMDIME_ALLOW_UNNOTARIZED=1`. Do not publish local-only builds.
 
+One-time notarization setup:
+
+```sh
+security find-identity -p codesigning -v
+xcrun notarytool store-credentials "cmd-ime-notary" \
+  --apple-id "YOUR_APPLE_ID" \
+  --team-id "YOUR_TEAM_ID" \
+  --password "APP_SPECIFIC_PASSWORD"
+```
+
+The package script signs with Developer ID, submits the zip to Apple notary
+service, staples the ticket to `CmdIME.app`, rebuilds the distributable zip, and
+prints the SHA-256. Use `CMDIME_NOTARY_PROFILE` if your keychain profile is not
+named `cmd-ime-notary`.
+
 Browser-downloaded local-only builds are blocked by Gatekeeper and can appear as
 "damaged" because they are not signed with Developer ID and notarized. Public
 release zips should be notarized before publishing.
