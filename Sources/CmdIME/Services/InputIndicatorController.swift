@@ -20,13 +20,14 @@ final class InputIndicatorController {
         let panel = panel ?? makePanel()
         self.panel = panel
 
+        let presentation = InputSourcePresentation(source: source, fallbackRole: role)
         let metrics = InputIndicatorMetrics(size: size, scale: scale, contentStyle: contentStyle)
         panel.contentView = NSHostingView(
             rootView: InputIndicatorView(
-                symbol: symbol(for: role),
-                title: title(for: role),
-                subtitle: source.localizedName,
-                tint: tint(for: role, style: colorStyle, customColorHex: customColorHex),
+                symbol: presentation.symbol,
+                title: presentation.title,
+                subtitle: presentation.detail,
+                tint: tint(for: presentation, style: colorStyle, customColorHex: customColorHex),
                 contentStyle: contentStyle,
                 metrics: metrics
             )
@@ -142,29 +143,11 @@ final class InputIndicatorController {
         return NSPoint(x: point.x, y: point.y)
     }
 
-    private func symbol(for role: InputRole) -> String {
-        switch role {
-        case .english:
-            "A"
-        case .chinese:
-            "中"
-        case .japanese:
-            "あ"
-        }
-    }
-
-    private func title(for role: InputRole) -> String {
-        switch role {
-        case .english:
-            "English"
-        case .chinese:
-            "Chinese"
-        case .japanese:
-            "Japanese"
-        }
-    }
-
-    private func tint(for role: InputRole, style: SwitchIndicatorColorStyle, customColorHex: String) -> Color {
+    private func tint(
+        for presentation: InputSourcePresentation,
+        style: SwitchIndicatorColorStyle,
+        customColorHex: String
+    ) -> Color {
         switch style {
         case .accent:
             return .accentColor
@@ -173,18 +156,7 @@ final class InputIndicatorController {
         case .custom:
             return Color(cmdIMEHex: customColorHex) ?? .accentColor
         case .role:
-            return roleTint(for: role)
-        }
-    }
-
-    private func roleTint(for role: InputRole) -> Color {
-        switch role {
-        case .english:
-            return Color(red: 0.16, green: 0.43, blue: 0.92)
-        case .chinese:
-            return Color(red: 0.12, green: 0.56, blue: 0.36)
-        case .japanese:
-            return Color(red: 0.78, green: 0.22, blue: 0.27)
+            return presentation.tint
         }
     }
 }

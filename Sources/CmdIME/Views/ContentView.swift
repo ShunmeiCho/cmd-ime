@@ -82,7 +82,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Switch rules")
                         .font(.headline)
-                    Text("Choose what key gesture switches to each macOS input source.")
+                    Text("Each row is one shortcut. Pick the key and the input method it activates.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -108,23 +108,32 @@ struct ContentView: View {
 
     private func switchRuleRow(for role: InputRole) -> some View {
         let source = model.matchedSource(for: role)
+        let presentation = InputSourcePresentation(source: source, fallbackRole: role)
 
         return HStack(alignment: .top, spacing: 14) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(roleSymbol(for: role))
+                Text(presentation.symbol)
                     .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
                     .frame(width: 30, height: 30)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
+                    .background(presentation.tint, in: RoundedRectangle(cornerRadius: 7))
 
-                Text(roleTitle(for: role))
+                Text(presentation.title)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
+
+                if source != nil, presentation.detail != presentation.title {
+                    Text(presentation.detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             .frame(width: Metrics.ruleNameColumn, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
-                    Text("Press")
+                    Text("Key")
                         .ruleLabel()
 
                     triggerTypePicker(for: role)
@@ -133,7 +142,7 @@ struct ContentView: View {
                 }
 
                 HStack(spacing: 10) {
-                    Text("Switch to")
+                    Text("Input method")
                         .ruleLabel()
 
                     inputSourcePicker(for: role, source: source)
@@ -144,9 +153,9 @@ struct ContentView: View {
                     .frame(width: Metrics.compactButton)
                 }
 
-                Text(sourceDescription(source))
+                Text(sourceStatus(source, for: role))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(hasDuplicateSource(source, for: role) ? Color.orange : Color.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -483,34 +492,26 @@ struct ContentView: View {
         triggerTypeDrafts.removeAll()
     }
 
-    private func roleTitle(for role: InputRole) -> String {
-        switch role {
-        case .english:
-            "English"
-        case .chinese:
-            "Chinese"
-        case .japanese:
-            "Japanese"
-        }
-    }
-
-    private func roleSymbol(for role: InputRole) -> String {
-        switch role {
-        case .english:
-            "A"
-        case .chinese:
-            "中"
-        case .japanese:
-            "あ"
-        }
-    }
-
-    private func sourceDescription(_ source: InputSourceInfo?) -> String {
+    private func sourceStatus(_ source: InputSourceInfo?, for role: InputRole) -> String {
         guard let source else {
-            return "No source selected. Refresh sources, then choose one from the menu."
+            return "Choose an input method from the menu."
         }
 
-        return "Input source ID: \(source.id)"
+        if hasDuplicateSource(source, for: role) {
+            return "\(source.localizedName) is already used by another shortcut."
+        }
+
+        return "Activates \(source.localizedName)."
+    }
+
+    private func hasDuplicateSource(_ source: InputSourceInfo?, for role: InputRole) -> Bool {
+        guard let source else {
+            return false
+        }
+
+        return InputRole.allCases.contains { otherRole in
+            otherRole != role && model.matchedSource(for: otherRole)?.id == source.id
+        }
     }
 
     private func setTriggerType(_ type: BindingTriggerType, for role: InputRole) {
