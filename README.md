@@ -63,6 +63,11 @@ Single-key modifier bindings and keyboard shortcuts are intentionally separate
 so common shortcuts such as `Command+C`, `Command+V`, `Command+Tab`, and
 multi-modifier chords are not treated as one-shot Command taps.
 
+If another app already uses a double-tap modifier shortcut, keep `Protect
+double-tap shortcuts` enabled. CmdIME will wait briefly before applying a
+single-tap modifier binding, so the second tap can cancel the CmdIME single-tap
+action or trigger a CmdIME double-tap binding.
+
 ## Build
 
 ```sh
@@ -89,6 +94,11 @@ Use one stable app location when granting permissions:
    `/Applications/CmdIME.app`.
 4. Open that exact app and grant both permissions.
 5. Quit and reopen CmdIME.
+
+If Japanese opens a kana palette instead of switching to Hiragana, refresh input
+sources or update to CmdIME 0.1.10 or later. macOS exposes
+`com.apple.50onPaletteIM` as a selectable Japanese source, but it is an
+auxiliary kana palette, not the normal Hiragana input method.
 
 For local development, `script/build_and_run.sh` signs the generated app bundle
 after staging it. It uses the first local Apple Development or Developer ID
@@ -141,8 +151,8 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.9
-shasum -a 256 dist/CmdIME-0.1.9.zip
+./script/package_app.sh 0.1.10
+shasum -a 256 dist/CmdIME-0.1.10.zip
 ```
 
 Release packaging requires a `Developer ID Application` signing identity. For a

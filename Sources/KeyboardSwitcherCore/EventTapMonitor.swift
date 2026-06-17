@@ -147,7 +147,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             oneShotState.modifierDown(modifierTrigger)
         }
 
-        guard let trigger = oneShotTrigger(forKeyCode: keyCode) else {
+        guard let trigger = modifierTrigger(forKeyCode: keyCode), hasOneShotBinding(for: trigger) else {
             return Unmanaged.passUnretained(event)
         }
 
@@ -155,7 +155,11 @@ public final class EventTapMonitor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
 
-        switch oneShotState.modifierUp(trigger, hasDoubleTapBinding: hasDoubleTapBinding(for: trigger)) {
+        switch oneShotState.modifierUp(
+            trigger,
+            hasDoubleTapBinding: hasDoubleTapBinding(for: trigger),
+            delaysSingleTap: config.protectDoubleTapShortcuts
+        ) {
         case .trigger(let output):
             pendingSingleTapTimer?.invalidate()
             pendingSingleTapTimer = nil
@@ -163,7 +167,7 @@ public final class EventTapMonitor: @unchecked Sendable {
                 perform(binding.action)
             }
         case .wait:
-            if binding(for: trigger) != nil {
+            if binding(for: trigger) != nil || hasDoubleTapBinding(for: trigger) {
                 scheduleSingleTapFlush()
             }
         }
@@ -189,13 +193,6 @@ public final class EventTapMonitor: @unchecked Sendable {
             return nil
         }
         return Unmanaged.passUnretained(event)
-    }
-
-    private func oneShotTrigger(forKeyCode keyCode: Int) -> KeyTrigger? {
-        config.bindings
-            .filter(\.enabled)
-            .map(\.trigger)
-            .first { $0.kind == .oneShotModifier && $0.keyCode == keyCode }
     }
 
     private func modifierTrigger(forKeyCode keyCode: Int) -> KeyTrigger? {
@@ -234,6 +231,14 @@ public final class EventTapMonitor: @unchecked Sendable {
 
     private func binding(for trigger: KeyTrigger) -> KeyBinding? {
         config.bindings.first { $0.enabled && $0.trigger == trigger }
+    }
+
+    private func hasOneShotBinding(for trigger: KeyTrigger) -> Bool {
+        config.bindings.contains {
+            $0.enabled
+                && $0.trigger.kind == .oneShotModifier
+                && $0.trigger.keyCode == trigger.keyCode
+        }
     }
 
     private func hasDoubleTapBinding(for trigger: KeyTrigger) -> Bool {

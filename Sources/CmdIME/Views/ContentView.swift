@@ -4,26 +4,28 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @State private var triggerDrafts: [InputRole: String] = [:]
+    @State private var triggerTypeDrafts: [InputRole: BindingTriggerType] = [:]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            header
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                header
 
-            Divider()
+                Divider()
 
-            inputSourcesSection
+                inputSourcesSection
 
-            Divider()
+                Divider()
 
-            bindingsSection
+                bindingsSection
 
-            Divider()
+                Divider()
 
-            runtimeSection
-
-            Spacer(minLength: 0)
+                runtimeSection
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(24)
         .onAppear {
             resetDrafts()
         }
@@ -144,7 +146,7 @@ struct ContentView: View {
                     Picker(
                         "Trigger type",
                         selection: Binding(
-                            get: { BindingTriggerType(trigger: model.trigger(for: role)) },
+                            get: { triggerType(for: role) },
                             set: { setTriggerType($0, for: role) }
                         )
                     ) {
@@ -155,7 +157,7 @@ struct ContentView: View {
                     .labelsHidden()
                     .frame(width: 138)
 
-                    switch BindingTriggerType(trigger: model.trigger(for: role)) {
+                    switch triggerType(for: role) {
                     case .shortcut:
                         ShortcutRecorderField(
                             text: Binding(
@@ -177,7 +179,7 @@ struct ContentView: View {
                                         ?? defaultOneShotChoice(for: role)
                                 },
                                 set: { choice in
-                                    let gesture = BindingTriggerType(trigger: model.trigger(for: role)).gesture ?? .tap
+                                    let gesture = triggerType(for: role).gesture ?? .tap
                                     model.setOneShotBinding(
                                         keyCode: choice.keyCode,
                                         keyName: choice.rawValue,
@@ -233,6 +235,15 @@ struct ContentView: View {
                 )
             )
             .disabled(!model.loginItem.isAvailable)
+
+            Toggle(
+                "Protect double-tap shortcuts",
+                isOn: Binding(
+                    get: { model.config.protectDoubleTapShortcuts },
+                    set: { model.setProtectDoubleTapShortcuts($0) }
+                )
+            )
+            .help("Delay single-tap modifier bindings briefly so double-tap shortcuts can take precedence.")
 
             HStack {
                 Text("Keyboard control")
@@ -309,6 +320,7 @@ struct ContentView: View {
         triggerDrafts = Dictionary(
             uniqueKeysWithValues: InputRole.allCases.map { ($0, model.bindingText(for: $0)) }
         )
+        triggerTypeDrafts.removeAll()
     }
 
     private func roleTitle(for role: InputRole) -> String {
@@ -325,14 +337,20 @@ struct ContentView: View {
     private func setTriggerType(_ type: BindingTriggerType, for role: InputRole) {
         switch type {
         case .shortcut:
-            if model.trigger(for: role)?.kind == .oneShotModifier {
-                model.statusText = "Record a keyboard shortcut for \(role.rawValue)"
-            }
+            triggerTypeDrafts[role] = .shortcut
+            triggerDrafts[role] = ""
+            model.statusText = "Record a keyboard shortcut for \(role.rawValue)"
         case .singleTap:
+            triggerTypeDrafts[role] = nil
             setOneShotType(.tap, for: role)
         case .doubleTap:
+            triggerTypeDrafts[role] = nil
             setOneShotType(.doubleTap, for: role)
         }
+    }
+
+    private func triggerType(for role: InputRole) -> BindingTriggerType {
+        triggerTypeDrafts[role] ?? BindingTriggerType(trigger: model.trigger(for: role))
     }
 
     private func setOneShotType(_ gesture: TriggerGesture, for role: InputRole) {

@@ -47,6 +47,30 @@ final class InputSourceMatcherTests: XCTestCase {
         XCTAssertEqual(match?.id, "jp")
     }
 
+    func testJapanesePaletteDoesNotBeatRealInputMethod() {
+        var config = SwitcherConfig.default
+        config.pinInputSourceID("com.apple.50onPaletteIM", for: .japanese)
+
+        let sources = [
+            InputSourceInfo(
+                id: "com.apple.50onPaletteIM",
+                localizedName: "Japanese Kana Palette",
+                languages: ["ja"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+                localizedName: "Hiragana",
+                languages: ["ja"],
+                isSelectCapable: true
+            ),
+        ]
+
+        let match = InputSourceMatcher.bestMatch(for: .japanese, sources: sources, config: config)
+
+        XCTAssertEqual(match?.id, "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese")
+    }
+
     func testDisplayLanguagesTruncatesLongLanguageLists() {
         let source = InputSourceInfo(
             id: "abc",

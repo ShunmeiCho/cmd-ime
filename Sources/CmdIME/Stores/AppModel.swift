@@ -101,6 +101,14 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func setProtectDoubleTapShortcuts(_ enabled: Bool) {
+        config.protectDoubleTapShortcuts = enabled
+        save()
+        statusText = enabled
+            ? "Double-tap shortcut protection enabled"
+            : "Single-tap modifiers switch immediately"
+    }
+
     func initializeFromScan() {
         var nextConfig = SwitcherConfig.default
         scan()

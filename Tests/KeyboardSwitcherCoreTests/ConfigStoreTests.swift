@@ -38,6 +38,20 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertTrue(config.showMenuBarIcon)
     }
 
+    func testLegacyConfigDefaultsDoubleTapProtectionToEnabled() throws {
+        let json = """
+        {
+          "version": 1,
+          "bindings": [],
+          "inputSources": {}
+        }
+        """
+
+        let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
+
+        XCTAssertTrue(config.protectDoubleTapShortcuts)
+    }
+
     func testUpsertSwitchBindingReplacesExistingRoleBinding() {
         var config = SwitcherConfig.default
         let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 58, keyName: "left-option")

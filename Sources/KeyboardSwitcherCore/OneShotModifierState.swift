@@ -30,7 +30,11 @@ public struct OneShotModifierState: Equatable, Sendable {
         }
     }
 
-    public mutating func modifierUp(_ trigger: KeyTrigger, hasDoubleTapBinding: Bool = false) -> Output {
+    public mutating func modifierUp(
+        _ trigger: KeyTrigger,
+        hasDoubleTapBinding: Bool = false,
+        delaysSingleTap: Bool = false
+    ) -> Output {
         defer {
             activeTrigger = nil
             sawChordKey = false
@@ -41,9 +45,12 @@ public struct OneShotModifierState: Equatable, Sendable {
             return .wait
         }
 
-        if hasDoubleTapBinding {
+        if hasDoubleTapBinding || delaysSingleTap {
             if pendingSingleTap == trigger {
                 pendingSingleTap = nil
+                guard hasDoubleTapBinding else {
+                    return .wait
+                }
                 var doubleTap = trigger
                 doubleTap.gesture = .doubleTap
                 return .trigger(doubleTap)

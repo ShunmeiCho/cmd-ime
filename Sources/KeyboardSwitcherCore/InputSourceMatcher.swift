@@ -6,7 +6,7 @@ public enum InputSourceMatcher {
         sources: [InputSourceInfo],
         config: SwitcherConfig
     ) -> InputSourceInfo? {
-        let selectable = sources.filter(\.isSelectCapable)
+        let selectable = sources.filter { $0.isSelectCapable && !isAuxiliaryInputSource($0) }
         let preference = config.preference(for: role)
 
         for id in preference.preferredIDs {
@@ -33,5 +33,16 @@ public enum InputSourceMatcher {
             return nameFragments.contains { name.contains($0) }
         }
     }
-}
 
+    private static func isAuxiliaryInputSource(_ source: InputSourceInfo) -> Bool {
+        let id = source.id.lowercased()
+        let name = source.localizedName.lowercased()
+        return id.contains("palette")
+            || id.contains("pressandhold")
+            || id.contains("dictation")
+            || name.contains("palette")
+            || name.contains("emoji")
+            || name.contains("symbols")
+            || name.contains("dictation")
+    }
+}

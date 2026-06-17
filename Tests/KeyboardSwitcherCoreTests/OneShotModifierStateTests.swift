@@ -89,4 +89,26 @@ final class OneShotModifierStateTests: XCTestCase {
 
         XCTAssertEqual(state.flushPendingSingleTap(), trigger)
     }
+
+    func testDelayedSingleTapFlushesAfterDoubleTapWindow() {
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 58, keyName: "left-option")
+        var state = OneShotModifierState()
+
+        state.modifierDown(trigger)
+        XCTAssertEqual(state.modifierUp(trigger, delaysSingleTap: true), .wait)
+
+        XCTAssertEqual(state.flushPendingSingleTap(), trigger)
+    }
+
+    func testDelayedSingleTapSecondTapCancelsWhenNoDoubleTapBinding() {
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 58, keyName: "left-option")
+        var state = OneShotModifierState()
+
+        state.modifierDown(trigger)
+        XCTAssertEqual(state.modifierUp(trigger, delaysSingleTap: true), .wait)
+        state.modifierDown(trigger)
+
+        XCTAssertEqual(state.modifierUp(trigger, delaysSingleTap: true), .wait)
+        XCTAssertNil(state.flushPendingSingleTap())
+    }
 }
