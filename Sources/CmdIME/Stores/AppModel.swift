@@ -49,6 +49,10 @@ final class AppModel: ObservableObject {
     func refreshRuntimeStatus() {
         permissions = MacPermissionStatus.current()
         loginItem = loginItems.snapshot()
+        if !isListening, permissions.isReady, keyboardControlStatus == "Needs permission" {
+            keyboardControlStatus = "Paused"
+            statusText = "Permissions ready. Click Resume to start keyboard control."
+        }
     }
 
     func requestPermissions() {

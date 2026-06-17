@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_NAME="CmdIME"
 REPO="ShunmeiCho/cmd-ime"
-VERSION="${CMDIME_VERSION:-0.1.7}"
+VERSION="${CMDIME_VERSION:-0.1.8}"
 INSTALL_DIR="${CMDIME_INSTALL_DIR:-/Applications}"
 BIN_DIR="${CMDIME_BIN_DIR:-$HOME/.local/bin}"
 OPEN_APP="${CMDIME_OPEN:-1}"

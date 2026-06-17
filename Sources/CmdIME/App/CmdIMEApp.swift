@@ -29,6 +29,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AppWindowCoordinator.shared.showSettings()
     }
 
+    func applicationDidBecomeActive(_ notification: Notification) {
+        model.refreshRuntimeStatus()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
