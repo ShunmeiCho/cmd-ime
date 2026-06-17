@@ -56,6 +56,25 @@ final class AppModel: ObservableObject {
         refreshRuntimeStatus()
     }
 
+    func openAccessibilitySettings() {
+        openPrivacySettings(anchor: "Privacy_Accessibility")
+        statusText = "Opened Accessibility settings"
+    }
+
+    func openInputMonitoringSettings() {
+        openPrivacySettings(anchor: "Privacy_ListenEvent")
+        statusText = "Opened Input Monitoring settings"
+    }
+
+    private func openPrivacySettings(anchor: String) {
+        guard let url = URL(
+            string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)"
+        ) else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
     func startListeningIfReady() {
         refreshRuntimeStatus()
         guard permissions.isReady else {

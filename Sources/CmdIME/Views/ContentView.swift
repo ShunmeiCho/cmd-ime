@@ -248,12 +248,29 @@ struct ContentView: View {
             HStack {
                 Text("Permissions")
                     .frame(width: 120, alignment: .leading)
-                Text(model.permissions.isReady ? "Ready" : "Input Monitoring or Accessibility missing")
+                Text(model.permissions.isReady ? "Ready" : "Grant both permissions")
                     .foregroundStyle(model.permissions.isReady ? Color.secondary : Color.orange)
                 Spacer()
-                Button("Request Permissions") {
+                Button("Request All") {
                     model.requestPermissions()
                 }
+                .frame(width: 100)
+            }
+
+            permissionRow(
+                title: "Accessibility",
+                granted: model.permissions.accessibilityGranted,
+                buttonTitle: "Open Accessibility"
+            ) {
+                model.openAccessibilitySettings()
+            }
+
+            permissionRow(
+                title: "Input Monitoring",
+                granted: model.permissions.inputMonitoringGranted,
+                buttonTitle: "Open Input Monitoring"
+            ) {
+                model.openInputMonitoringSettings()
             }
 
             HStack {
@@ -268,6 +285,24 @@ struct ContentView: View {
                 .frame(width: 100)
             }
         }
+    }
+
+    private func permissionRow(
+        title: String,
+        granted: Bool,
+        buttonTitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack {
+            Text(title)
+                .frame(width: 120, alignment: .leading)
+            Text(granted ? "Ready" : "Missing")
+                .foregroundStyle(granted ? Color.secondary : Color.orange)
+            Spacer()
+            Button(buttonTitle, action: action)
+                .frame(width: 170)
+        }
+        .font(.caption)
     }
 
     private func resetDrafts() {
