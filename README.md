@@ -133,15 +133,17 @@ Monitoring permissions.
 ### Verify the download (recommended)
 
 The installer prints the downloaded archive's SHA-256. To make it abort on a
-tampered or corrupted download, pass the expected hash (published in each
-release's notes) via `CMDIME_SHA256`:
+tampered or corrupted download, pin the version and pass the expected hash. Both
+values are published in each release's notes, which also carry the exact,
+copy-pasteable command:
 
 ```sh
-CMDIME_SHA256=<sha256-from-release-notes> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+CMDIME_VERSION=<version> CMDIME_SHA256=<sha256> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
 ```
 
-Without `CMDIME_SHA256` the installer still prints the hash so you can compare it
-with the release notes manually.
+Pinning `CMDIME_VERSION` keeps the checksum and the downloaded zip in sync even
+after a newer release becomes the latest. Without `CMDIME_SHA256` the installer
+still prints the hash so you can compare it with the release notes manually.
 
 ### First launch and allowing access
 
