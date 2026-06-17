@@ -115,6 +115,18 @@ final class AppModel: ObservableObject {
         statusText = visible ? "Switch indicator enabled" : "Switch indicator disabled"
     }
 
+    func setSwitchIndicatorSize(_ size: SwitchIndicatorSize) {
+        config.switchIndicatorSize = size
+        save()
+        statusText = "Switch indicator size set to \(size.displayName)"
+    }
+
+    func setSwitchIndicatorColorStyle(_ style: SwitchIndicatorColorStyle) {
+        config.switchIndicatorColorStyle = style
+        save()
+        statusText = "Switch indicator color set to \(style.displayName)"
+    }
+
     func checkForUpdates() {
         guard !updateStatus.isChecking else {
             return
@@ -314,7 +326,12 @@ final class AppModel: ObservableObject {
         guard config.showSwitchIndicator else {
             return
         }
-        switchIndicator.show(role: role, source: source)
+        switchIndicator.show(
+            role: role,
+            source: source,
+            size: config.switchIndicatorSize,
+            colorStyle: config.switchIndicatorColorStyle
+        )
     }
 }
 

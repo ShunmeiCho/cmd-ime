@@ -8,20 +8,27 @@ final class InputIndicatorController {
     private var panel: NSPanel?
     private var hideTask: Task<Void, Never>?
 
-    func show(role: InputRole, source: InputSourceInfo) {
+    func show(
+        role: InputRole,
+        source: InputSourceInfo,
+        size: SwitchIndicatorSize,
+        colorStyle: SwitchIndicatorColorStyle
+    ) {
         let panel = panel ?? makePanel()
         self.panel = panel
 
-        let size = NSSize(width: 172, height: 54)
+        let metrics = InputIndicatorMetrics(size: size)
         panel.contentView = NSHostingView(
             rootView: InputIndicatorView(
                 symbol: symbol(for: role),
                 title: title(for: role),
-                subtitle: source.localizedName
+                subtitle: source.localizedName,
+                tint: tint(for: role, style: colorStyle),
+                metrics: metrics
             )
         )
-        panel.setContentSize(size)
-        panel.setFrameOrigin(origin(for: size))
+        panel.setContentSize(metrics.panelSize)
+        panel.setFrameOrigin(origin(for: metrics.panelSize))
         panel.orderFrontRegardless()
 
         hideTask?.cancel()
@@ -152,27 +159,98 @@ final class InputIndicatorController {
             "Japanese"
         }
     }
+
+    private func tint(for role: InputRole, style: SwitchIndicatorColorStyle) -> Color {
+        switch style {
+        case .accent:
+            return .accentColor
+        case .monochrome:
+            return Color(nsColor: .secondaryLabelColor)
+        case .role:
+            return roleTint(for: role)
+        }
+    }
+
+    private func roleTint(for role: InputRole) -> Color {
+        switch role {
+        case .english:
+            return Color(red: 0.16, green: 0.43, blue: 0.92)
+        case .chinese:
+            return Color(red: 0.12, green: 0.56, blue: 0.36)
+        case .japanese:
+            return Color(red: 0.78, green: 0.22, blue: 0.27)
+        }
+    }
+}
+
+private struct InputIndicatorMetrics {
+    let panelSize: NSSize
+    let horizontalPadding: CGFloat
+    let spacing: CGFloat
+    let symbolSize: CGFloat
+    let symbolCornerRadius: CGFloat
+    let symbolFontSize: CGFloat
+    let titleFontSize: CGFloat
+    let subtitleFontSize: CGFloat
+    let bubbleCornerRadius: CGFloat
+
+    init(size: SwitchIndicatorSize) {
+        switch size {
+        case .small:
+            panelSize = NSSize(width: 138, height: 44)
+            horizontalPadding = 10
+            spacing = 8
+            symbolSize = 26
+            symbolCornerRadius = 7
+            symbolFontSize = 15
+            titleFontSize = 12
+            subtitleFontSize = 10
+            bubbleCornerRadius = 15
+        case .medium:
+            panelSize = NSSize(width: 172, height: 54)
+            horizontalPadding = 12
+            spacing = 10
+            symbolSize = 32
+            symbolCornerRadius = 9
+            symbolFontSize = 18
+            titleFontSize = 13
+            subtitleFontSize = 11
+            bubbleCornerRadius = 18
+        case .large:
+            panelSize = NSSize(width: 210, height: 66)
+            horizontalPadding = 14
+            spacing = 12
+            symbolSize = 40
+            symbolCornerRadius = 11
+            symbolFontSize = 22
+            titleFontSize = 15
+            subtitleFontSize = 12
+            bubbleCornerRadius = 22
+        }
+    }
 }
 
 private struct InputIndicatorView: View {
     let symbol: String
     let title: String
     let subtitle: String
+    let tint: Color
+    let metrics: InputIndicatorMetrics
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: metrics.spacing) {
             Text(symbol)
-                .font(.system(size: 18, weight: .bold))
+                .font(.system(size: metrics.symbolFontSize, weight: .bold))
                 .foregroundStyle(.white)
-                .frame(width: 32, height: 32)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 9))
+                .frame(width: metrics.symbolSize, height: metrics.symbolSize)
+                .background(tint, in: RoundedRectangle(cornerRadius: metrics.symbolCornerRadius))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: metrics.titleFontSize, weight: .semibold))
                     .lineLimit(1)
                 Text(subtitle)
-                    .font(.system(size: 11))
+                    .font(.system(size: metrics.subtitleFontSize))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -180,11 +258,11 @@ private struct InputIndicatorView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 12)
-        .frame(width: 172, height: 54)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .padding(.horizontal, metrics.horizontalPadding)
+        .frame(width: metrics.panelSize.width, height: metrics.panelSize.height)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius))
         .overlay {
-            RoundedRectangle(cornerRadius: 18)
+            RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius)
                 .strokeBorder(.secondary.opacity(0.18))
         }
     }

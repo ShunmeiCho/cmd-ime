@@ -140,10 +140,54 @@ public struct RoleInputSourcePreference: Codable, Equatable, Sendable {
     }
 }
 
+public enum SwitchIndicatorSize: String, Codable, CaseIterable, Identifiable, Sendable {
+    case small
+    case medium
+    case large
+
+    public var id: String {
+        rawValue
+    }
+
+    public var displayName: String {
+        switch self {
+        case .small:
+            "Small"
+        case .medium:
+            "Medium"
+        case .large:
+            "Large"
+        }
+    }
+}
+
+public enum SwitchIndicatorColorStyle: String, Codable, CaseIterable, Identifiable, Sendable {
+    case role
+    case accent
+    case monochrome
+
+    public var id: String {
+        rawValue
+    }
+
+    public var displayName: String {
+        switch self {
+        case .role:
+            "Role"
+        case .accent:
+            "Accent"
+        case .monochrome:
+            "Mono"
+        }
+    }
+}
+
 public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var version: Int
     public var showMenuBarIcon: Bool
     public var showSwitchIndicator: Bool
+    public var switchIndicatorSize: SwitchIndicatorSize
+    public var switchIndicatorColorStyle: SwitchIndicatorColorStyle
     public var bindings: [KeyBinding]
     public var inputSources: [String: RoleInputSourcePreference]
 
@@ -151,12 +195,16 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         version: Int = 1,
         showMenuBarIcon: Bool = true,
         showSwitchIndicator: Bool = true,
+        switchIndicatorSize: SwitchIndicatorSize = .medium,
+        switchIndicatorColorStyle: SwitchIndicatorColorStyle = .role,
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
         self.version = version
         self.showMenuBarIcon = showMenuBarIcon
         self.showSwitchIndicator = showSwitchIndicator
+        self.switchIndicatorSize = switchIndicatorSize
+        self.switchIndicatorColorStyle = switchIndicatorColorStyle
         self.bindings = bindings
         self.inputSources = inputSources
     }
@@ -242,6 +290,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case version
         case showMenuBarIcon
         case showSwitchIndicator
+        case switchIndicatorSize
+        case switchIndicatorColorStyle
         case bindings
         case inputSources
     }
@@ -251,6 +301,11 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         showMenuBarIcon = try container.decodeIfPresent(Bool.self, forKey: .showMenuBarIcon) ?? true
         showSwitchIndicator = try container.decodeIfPresent(Bool.self, forKey: .showSwitchIndicator) ?? true
+        switchIndicatorSize = try container.decodeIfPresent(SwitchIndicatorSize.self, forKey: .switchIndicatorSize) ?? .medium
+        switchIndicatorColorStyle = try container.decodeIfPresent(
+            SwitchIndicatorColorStyle.self,
+            forKey: .switchIndicatorColorStyle
+        ) ?? .role
         bindings = try container.decode([KeyBinding].self, forKey: .bindings)
         inputSources = try container.decode([String: RoleInputSourcePreference].self, forKey: .inputSources)
     }
@@ -260,6 +315,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(version, forKey: .version)
         try container.encode(showMenuBarIcon, forKey: .showMenuBarIcon)
         try container.encode(showSwitchIndicator, forKey: .showSwitchIndicator)
+        try container.encode(switchIndicatorSize, forKey: .switchIndicatorSize)
+        try container.encode(switchIndicatorColorStyle, forKey: .switchIndicatorColorStyle)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }

@@ -263,6 +263,48 @@ struct ContentView: View {
                 )
             )
 
+            if model.config.showSwitchIndicator {
+                HStack {
+                    Text("Indicator size")
+                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    Picker(
+                        "Indicator size",
+                        selection: Binding(
+                            get: { model.config.switchIndicatorSize },
+                            set: { model.setSwitchIndicatorSize($0) }
+                        )
+                    ) {
+                        ForEach(SwitchIndicatorSize.allCases) { size in
+                            Text(size.displayName).tag(size)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 240)
+                    Spacer()
+                }
+
+                HStack {
+                    Text("Indicator color")
+                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    Picker(
+                        "Indicator color",
+                        selection: Binding(
+                            get: { model.config.switchIndicatorColorStyle },
+                            set: { model.setSwitchIndicatorColorStyle($0) }
+                        )
+                    ) {
+                        ForEach(SwitchIndicatorColorStyle.allCases) { style in
+                            Text(style.displayName).tag(style)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .frame(width: 240)
+                    Spacer()
+                }
+            }
+
             HStack {
                 Text("Updates")
                     .frame(width: Metrics.labelColumn, alignment: .leading)

@@ -67,7 +67,9 @@ modifier also has a CmdIME double-tap binding.
 
 CmdIME switches input sources programmatically, so it does not invoke the
 private macOS input-source chooser. Enable `Show switch indicator` to show
-CmdIME's own lightweight confirmation bubble after a switch.
+CmdIME's own lightweight confirmation bubble after a switch. The indicator can
+be disabled, resized, or switched between role colors, the system accent color,
+and a monochrome style in Settings.
 
 ## Build
 

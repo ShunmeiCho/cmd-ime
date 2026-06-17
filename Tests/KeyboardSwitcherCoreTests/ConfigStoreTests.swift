@@ -50,6 +50,8 @@ final class ConfigStoreTests: XCTestCase {
         let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
 
         XCTAssertTrue(config.showSwitchIndicator)
+        XCTAssertEqual(config.switchIndicatorSize, .medium)
+        XCTAssertEqual(config.switchIndicatorColorStyle, .role)
     }
 
     func testUpsertSwitchBindingReplacesExistingRoleBinding() {
