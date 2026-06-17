@@ -129,6 +129,43 @@ The installer downloads the public release zip, installs `CmdIME.app`, links
 `keyboardctl`, and opens the app so macOS can request Accessibility and Input
 Monitoring permissions.
 
+### Verify the download (recommended)
+
+The installer prints the downloaded archive's SHA-256. To make it abort on a
+tampered or corrupted download, pass the expected hash (published in each
+release's notes) via `CMDIME_SHA256`:
+
+```sh
+CMDIME_SHA256=<sha256-from-release-notes> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+```
+
+Without `CMDIME_SHA256` the installer still prints the hash so you can compare it
+with the release notes manually.
+
+### First launch and allowing access
+
+The `curl | bash` installer and Homebrew do not quarantine the app, so it opens
+directly and prompts for **Accessibility** and **Input Monitoring** the first
+time. Grant both in System Settings > Privacy & Security.
+
+The current public release is signed with an Apple Development certificate and is
+not yet notarized. If you instead download the `.zip` from the GitHub Releases
+page in a browser, macOS quarantines it and Gatekeeper may block it as
+"CmdIME is damaged" or "cannot be opened because Apple cannot check it for
+malicious software." To allow it:
+
+- Open System Settings > Privacy & Security, scroll to the CmdIME message, and
+  click **Open Anyway** (on macOS 15+, the old right-click > Open shortcut is
+  gone); or
+- Remove the quarantine attribute from a terminal:
+
+  ```sh
+  xattr -dr com.apple.quarantine /Applications/CmdIME.app
+  ```
+
+Prefer the one-line installer or Homebrew, which avoid the quarantine path
+entirely.
+
 CmdIME 0.1.11 and later can check GitHub Releases from Settings > Runtime >
 Updates. When a new version is available, open the release page and reinstall
 with the one-line installer or update through Homebrew. Fully automatic in-app

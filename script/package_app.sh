@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-0.1.11}"
+VERSION="${1:-$(cat "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/VERSION")}"
 APP_NAME="CmdIME"
 BUNDLE_ID="com.shunmei.cmd-ime"
 MIN_SYSTEM_VERSION="13.0"

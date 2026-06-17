@@ -31,3 +31,6 @@ jobs:
 
       - name: Check cask syntax
         run: ruby -c Casks/cmd-ime.rb
+
+      - name: Check version consistency
+        run: bash script/check-version.sh
