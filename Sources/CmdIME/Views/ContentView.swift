@@ -6,11 +6,12 @@ struct ContentView: View {
     @State private var triggerDrafts: [InputRole: String] = [:]
     @State private var triggerTypeDrafts: [InputRole: BindingTriggerType] = [:]
 
-    private enum Metrics {
+    fileprivate enum Metrics {
         static let contentMaxWidth: CGFloat = 720
         static let labelColumn: CGFloat = 140
-        static let matchedColumn: CGFloat = 240
-        static let languagesColumn: CGFloat = 120
+        static let ruleNameColumn: CGFloat = 96
+        static let ruleLabelColumn: CGFloat = 72
+        static let ruleControl: CGFloat = 260
         static let triggerPicker: CGFloat = 140
         static let modifierPicker: CGFloat = 220
         static let actionButton: CGFloat = 170
@@ -26,12 +27,7 @@ struct ContentView: View {
                 header
 
                 GroupBox {
-                    inputSourcesSection
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                GroupBox {
-                    bindingsSection
+                    switchRulesSection
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
@@ -80,164 +76,163 @@ struct ContentView: View {
         }
     }
 
-    private var inputSourcesSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Input Sources")
-                .font(.headline)
+    private var switchRulesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Switch rules")
+                        .font(.headline)
+                    Text("Choose what key gesture switches to each macOS input source.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
-            HStack {
-                Text("Matched from your macOS input sources")
-                    .foregroundStyle(.secondary)
                 Spacer()
-                Button {
+
+                Button("Refresh sources") {
                     model.scan()
-                } label: { Text("Refresh input sources") }
-                .frame(width: Metrics.actionButton)
+                }
+                .frame(width: 140)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                inputSourceHeaderRow
-
+            VStack(alignment: .leading, spacing: 0) {
                 ForEach(InputRole.allCases, id: \.self) { role in
-                    inputSourceRow(for: role, source: model.matchedSource(for: role))
+                    switchRuleRow(for: role)
+                    if role != InputRole.allCases.last {
+                        Divider()
+                    }
                 }
             }
         }
     }
 
-    private var inputSourceHeaderRow: some View {
-        HStack(spacing: 12) {
-            Text("Role")
-                .frame(width: Metrics.labelColumn, alignment: .leading)
-            Text("Matched Source")
-                .frame(width: Metrics.matchedColumn, alignment: .leading)
-            Text("Languages")
-                .frame(width: Metrics.languagesColumn, alignment: .leading)
-            Spacer(minLength: 0)
-            Text("")
-                .frame(width: Metrics.compactButton)
-        }
-        .font(.caption.weight(.semibold))
-        .foregroundStyle(.secondary)
-    }
+    private func switchRuleRow(for role: InputRole) -> some View {
+        let source = model.matchedSource(for: role)
 
-    private func inputSourceRow(for role: InputRole, source: InputSourceInfo?) -> some View {
-        HStack(spacing: 12) {
-            Text(roleTitle(for: role))
-                .frame(width: Metrics.labelColumn, alignment: .leading)
-            VStack(alignment: .leading, spacing: 2) {
-                Picker(
-                    "Input source",
-                    selection: Binding(
-                        get: { source?.id ?? "" },
-                        set: { model.setInputSourceID($0, for: role) }
-                    )
-                ) {
-                    if source == nil {
-                        Text("Not matched").tag("")
-                    }
-                    ForEach(model.selectableSources, id: \.id) { candidate in
-                        Text(candidate.localizedName).tag(candidate.id)
-                    }
+        return HStack(alignment: .top, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(roleSymbol(for: role))
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 30, height: 30)
+                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 7))
+
+                Text(roleTitle(for: role))
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+            }
+            .frame(width: Metrics.ruleNameColumn, alignment: .leading)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Text("Press")
+                        .ruleLabel()
+
+                    triggerTypePicker(for: role)
+
+                    triggerControl(for: role)
                 }
-                .labelsHidden()
-                Text(source?.id ?? "Run Scan or Auto Setup")
+
+                HStack(spacing: 10) {
+                    Text("Switch to")
+                        .ruleLabel()
+
+                    inputSourcePicker(for: role, source: source)
+
+                    Button("Test") {
+                        model.switchRole(role)
+                    }
+                    .frame(width: Metrics.compactButton)
+                }
+
+                Text(sourceDescription(source))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-            .frame(width: Metrics.matchedColumn, alignment: .leading)
-
-            Text(source?.displayLanguages ?? "")
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .frame(width: Metrics.languagesColumn, alignment: .leading)
-
-            Spacer(minLength: 0)
-
-            Button("Switch") {
-                model.switchRole(role)
-            }
-            .frame(width: Metrics.compactButton)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: Metrics.rowHeight)
+        .padding(.vertical, 12)
     }
 
-    private var bindingsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Bindings")
-                .font(.headline)
+    private func triggerTypePicker(for role: InputRole) -> some View {
+        Picker(
+            "Trigger type",
+            selection: Binding(
+                get: { triggerType(for: role) },
+                set: { setTriggerType($0, for: role) }
+            )
+        ) {
+            Text("Shortcut").tag(BindingTriggerType.shortcut)
+            Text("Single tap").tag(BindingTriggerType.singleTap)
+            Text("Double tap").tag(BindingTriggerType.doubleTap)
+        }
+        .labelsHidden()
+        .frame(width: Metrics.triggerPicker)
+    }
 
-            ForEach(InputRole.allCases, id: \.self) { role in
-                HStack(spacing: 12) {
-                    Text(roleTitle(for: role))
-                        .frame(width: Metrics.labelColumn, alignment: .leading)
-
-                    Picker(
-                        "Trigger type",
-                        selection: Binding(
-                            get: { triggerType(for: role) },
-                            set: { setTriggerType($0, for: role) }
-                        )
-                    ) {
-                        Text("Shortcut").tag(BindingTriggerType.shortcut)
-                        Text("Single tap").tag(BindingTriggerType.singleTap)
-                        Text("Double tap").tag(BindingTriggerType.doubleTap)
-                    }
-                    .labelsHidden()
-                    .frame(width: Metrics.triggerPicker)
-
-                    switch triggerType(for: role) {
-                    case .shortcut:
-                        ShortcutRecorderField(
-                            text: Binding(
-                                get: { triggerDrafts[role] ?? model.bindingText(for: role) },
-                                set: { triggerDrafts[role] = $0 }
-                            ),
-                            onCommit: { shortcut in
-                                model.setBindingText(shortcut, for: role)
-                                resetDrafts()
-                            }
-                        )
-                        .frame(width: Metrics.modifierPicker, height: Metrics.fieldHeight)
-                        Spacer(minLength: 0)
-                    case .singleTap, .doubleTap:
-                        Picker(
-                            "Modifier key",
-                            selection: Binding(
-                                get: {
-                                    OneShotModifierChoice(trigger: model.trigger(for: role))
-                                        ?? defaultOneShotChoice(for: role)
-                                },
-                                set: { choice in
-                                    let gesture = triggerType(for: role).gesture ?? .tap
-                                    model.setOneShotBinding(
-                                        keyCode: choice.keyCode,
-                                        keyName: choice.rawValue,
-                                        gesture: gesture,
-                                        for: role
-                                    )
-                                    resetDrafts()
-                                }
-                            )
-                        ) {
-                            ForEach(OneShotModifierChoice.allCases) { choice in
-                                Label(choice.title, systemImage: choice.iconName)
-                                    .tag(choice)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: Metrics.modifierPicker)
-
-                        Text(model.bindingText(for: role))
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+    @ViewBuilder
+    private func triggerControl(for role: InputRole) -> some View {
+        switch triggerType(for: role) {
+        case .shortcut:
+            ShortcutRecorderField(
+                text: Binding(
+                    get: { triggerDrafts[role] ?? model.bindingText(for: role) },
+                    set: { triggerDrafts[role] = $0 }
+                ),
+                onCommit: { shortcut in
+                    model.setBindingText(shortcut, for: role)
+                    resetDrafts()
                 }
-                .frame(minHeight: Metrics.rowHeight)
+            )
+            .frame(width: Metrics.ruleControl, height: Metrics.fieldHeight)
+        case .singleTap, .doubleTap:
+            Picker(
+                "Modifier key",
+                selection: Binding(
+                    get: {
+                        OneShotModifierChoice(trigger: model.trigger(for: role))
+                            ?? defaultOneShotChoice(for: role)
+                    },
+                    set: { choice in
+                        let gesture = triggerType(for: role).gesture ?? .tap
+                        model.setOneShotBinding(
+                            keyCode: choice.keyCode,
+                            keyName: choice.rawValue,
+                            gesture: gesture,
+                            for: role
+                        )
+                        resetDrafts()
+                    }
+                )
+            ) {
+                ForEach(OneShotModifierChoice.allCases) { choice in
+                    Label(choice.title, systemImage: choice.iconName)
+                        .tag(choice)
+                }
+            }
+            .labelsHidden()
+            .frame(width: Metrics.ruleControl)
+        }
+    }
+
+    private func inputSourcePicker(for role: InputRole, source: InputSourceInfo?) -> some View {
+        Picker(
+            "Input source",
+            selection: Binding(
+                get: { source?.id ?? "" },
+                set: { model.setInputSourceID($0, for: role) }
+            )
+        ) {
+            if source == nil {
+                Text("Not matched").tag("")
+            }
+            ForEach(model.selectableSources, id: \.id) { candidate in
+                Text(candidate.localizedName).tag(candidate.id)
             }
         }
+        .labelsHidden()
+        .frame(width: Metrics.ruleControl)
     }
 
     private var runtimeSection: some View {
@@ -499,6 +494,25 @@ struct ContentView: View {
         }
     }
 
+    private func roleSymbol(for role: InputRole) -> String {
+        switch role {
+        case .english:
+            "A"
+        case .chinese:
+            "中"
+        case .japanese:
+            "あ"
+        }
+    }
+
+    private func sourceDescription(_ source: InputSourceInfo?) -> String {
+        guard let source else {
+            return "No source selected. Refresh sources, then choose one from the menu."
+        }
+
+        return "Input source ID: \(source.id)"
+    }
+
     private func setTriggerType(_ type: BindingTriggerType, for role: InputRole) {
         switch type {
         case .shortcut:
@@ -539,6 +553,15 @@ struct ContentView: View {
         case .japanese:
             .leftOption
         }
+    }
+}
+
+private extension Text {
+    func ruleLabel() -> some View {
+        self
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .frame(width: ContentView.Metrics.ruleLabelColumn, alignment: .leading)
     }
 }
 

@@ -179,7 +179,7 @@ final class AppModel: ObservableObject {
     }
 
     func initializeFromScan() {
-        var nextConfig = SwitcherConfig.default
+        var nextConfig = config
         scan()
 
         for role in InputRole.allCases {
@@ -190,6 +190,7 @@ final class AppModel: ObservableObject {
 
         config = nextConfig
         save()
+        statusText = "Updated input sources from scan"
     }
 
     var selectableSources: [InputSourceInfo] {
