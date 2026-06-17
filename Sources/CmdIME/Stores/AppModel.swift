@@ -72,7 +72,7 @@ final class AppModel: ObservableObject {
 
     private func openPrivacySettings(anchor: String) {
         guard let url = URL(
-            string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)"
+            string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?\(anchor)"
         ) else {
             return
         }

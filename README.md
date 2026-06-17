@@ -141,8 +141,8 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.8
-shasum -a 256 dist/CmdIME-0.1.8.zip
+./script/package_app.sh 0.1.9
+shasum -a 256 dist/CmdIME-0.1.9.zip
 ```
 
 Release packaging requires a `Developer ID Application` signing identity. For a
