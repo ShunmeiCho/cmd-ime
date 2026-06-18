@@ -155,4 +155,89 @@ final class ConfigStoreTests: XCTestCase {
 
         XCTAssertEqual(japaneseBindings.map(\.trigger), [trigger])
     }
+
+    func testSanitizePreferredIDsRemovesCrossRoleSelectableSources() {
+        var config = SwitcherConfig.default
+        config.inputSources[InputRole.english.rawValue]?.preferredIDs = [
+            "com.apple.keylayout.ABC",
+            "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+            "custom.missing",
+        ]
+        config.inputSources[InputRole.chinese.rawValue]?.preferredIDs = [
+            "com.apple.inputmethod.SCIM.ITABC",
+            "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+            "com.apple.keylayout.ABC",
+            "com.apple.inputmethod.SCIM",
+        ]
+        let sources = [
+            InputSourceInfo(
+                id: "com.apple.keylayout.ABC",
+                localizedName: "ABC",
+                languages: ["en"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+                localizedName: "Hiragana",
+                languages: ["ja"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "com.apple.inputmethod.SCIM.ITABC",
+                localizedName: "Pinyin - Simplified",
+                languages: ["zh-Hans"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "com.apple.inputmethod.SCIM",
+                localizedName: "Chinese, Simplified",
+                languages: ["zh-Hans"],
+                isSelectCapable: false
+            ),
+        ]
+
+        config.sanitizePreferredIDs(using: sources)
+
+        XCTAssertEqual(
+            config.preference(for: .english).preferredIDs,
+            [
+                "com.apple.keylayout.ABC",
+                "custom.missing",
+            ]
+        )
+        XCTAssertEqual(
+            config.preference(for: .chinese).preferredIDs,
+            [
+                "com.apple.inputmethod.SCIM.ITABC",
+                "com.apple.inputmethod.SCIM",
+            ]
+        )
+    }
+
+    func testSanitizePreferredIDsPreventsCrossRoleBestMatchWhenPrimaryIsMissing() {
+        var config = SwitcherConfig.default
+        config.inputSources[InputRole.chinese.rawValue]?.preferredIDs = [
+            "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+            "com.apple.keylayout.ABC",
+        ]
+        let sources = [
+            InputSourceInfo(
+                id: "com.apple.keylayout.ABC",
+                localizedName: "ABC",
+                languages: ["en"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+                localizedName: "Hiragana",
+                languages: ["ja"],
+                isSelectCapable: true
+            ),
+        ]
+
+        config.sanitizePreferredIDs(using: sources)
+        let match = InputSourceMatcher.bestMatch(for: .chinese, sources: sources, config: config)
+
+        XCTAssertNil(match)
+    }
 }

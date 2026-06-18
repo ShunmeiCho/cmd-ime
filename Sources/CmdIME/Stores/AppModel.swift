@@ -197,6 +197,7 @@ final class AppModel: ObservableObject {
     func initializeFromScan() {
         var nextConfig = config
         scan()
+        nextConfig.sanitizePreferredIDs(using: sources)
 
         for role in InputRole.allCases {
             if let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: nextConfig) {

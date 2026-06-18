@@ -319,6 +319,34 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         inputSources[role.rawValue] = preference
     }
 
+    public mutating func sanitizePreferredIDs(using sources: [InputSourceInfo]) {
+        let selectableSourcesByID = Dictionary(
+            uniqueKeysWithValues: InputSourceMatcher.selectableSources(from: sources).map { ($0.id, $0) }
+        )
+
+        for role in InputRole.allCases {
+            var preference = preference(for: role)
+            guard Self.canClassifySource(for: preference) else {
+                continue
+            }
+
+            preference.preferredIDs = preference.preferredIDs.filter { id in
+                guard let source = selectableSourcesByID[id] else {
+                    return true
+                }
+                if Self.source(source, matches: preference) {
+                    return true
+                }
+
+                let matchesOtherRole = InputRole.allCases.contains { otherRole in
+                    otherRole != role && Self.source(source, matches: self.preference(for: otherRole))
+                }
+                return !matchesOtherRole
+            }
+            inputSources[role.rawValue] = preference
+        }
+    }
+
     public mutating func upsertSwitchBinding(trigger: KeyTrigger, role: InputRole) {
         let action = BindingAction.switchInputSource(role)
         bindings.removeAll { binding in
@@ -391,6 +419,29 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(switchIndicatorCustomColorHex, forKey: .switchIndicatorCustomColorHex)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
+    }
+
+    private static func canClassifySource(for preference: RoleInputSourcePreference) -> Bool {
+        !preference.languagePrefixes.isEmpty || !preference.nameContains.isEmpty
+    }
+
+    private static func source(
+        _ source: InputSourceInfo,
+        matches preference: RoleInputSourcePreference
+    ) -> Bool {
+        let languagePrefixes = preference.languagePrefixes.map { $0.lowercased() }
+        let matchesLanguage = !languagePrefixes.isEmpty && source.languages.contains { language in
+            let normalized = language
+                .lowercased()
+                .replacingOccurrences(of: "_", with: "-")
+            return languagePrefixes.contains { normalized.hasPrefix($0) }
+        }
+
+        let nameFragments = preference.nameContains.map { $0.lowercased() }
+        let name = source.localizedName.lowercased()
+        let matchesName = !nameFragments.isEmpty && nameFragments.contains { name.contains($0) }
+
+        return matchesLanguage || matchesName
     }
 }
 
