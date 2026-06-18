@@ -1,37 +1,35 @@
-## CmdIME v0.1.11 Preview
+## CmdIME v0.1.12 Preview
 
-CmdIME v0.1.11 improves input-source switching reliability, configuration recovery, shortcut handling, and the settings UI.
+CmdIME v0.1.12 improves input-source switching reliability, mouse-click handling, scanned input-source preferences, and the settings UI.
 
 This is an unnotarized preview release.
 
 ### Highlights
 
-- Improved input-source switch confirmation and clearer failure messages.
-- Reduced key-trigger switch latency on the global keyboard listener path.
-- Fixed shortcut matching when Caps Lock or Fn is active.
-- Removed Caps Lock as a single-tap trigger because macOS treats it as a latching key.
-- Added safer config recovery: unreadable config files are backed up before CmdIME resets to defaults.
-- Improved settings layout, scrolling, and switch indicator customization.
-- Added update check support in Settings.
+- Moves mouse-down observation out of the active CGEventTap so slow input-source switching can no longer stall mouse clicks.
+- Keeps mouse-down cancellation for one-shot modifier state through global and local NSEvent monitors.
+- Sanitizes scanned preferred input-source IDs to avoid cross-role fallbacks such as Japanese sources leaking into English or Chinese slots.
+- Caches TIS input-source handles to reduce per-switch enumeration work.
+- Normalizes Runtime settings typography so status rows and permission rows use consistent text sizing.
 
 ### Install
 
 Recommended install command with version and SHA-256 verification:
 
 ```sh
-CMDIME_VERSION=0.1.11 CMDIME_SHA256=b3ae83d20266197e302ee3b472ad578b8286df8e6eef277667c50ababdec8dfd /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/v0.1.11/script/install.sh)"
+CMDIME_VERSION=0.1.12 CMDIME_SHA256=ed4b1e8230fb7ade55c97ef73e79558a81ea765fff9f60e04b0747e0c23d0fb8 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/v0.1.12/script/install.sh)"
 ```
 
 Direct download SHA-256:
 
 ```text
-b3ae83d20266197e302ee3b472ad578b8286df8e6eef277667c50ababdec8dfd  CmdIME-0.1.11.zip
+ed4b1e8230fb7ade55c97ef73e79558a81ea765fff9f60e04b0747e0c23d0fb8  CmdIME-0.1.12.zip
 ```
 
 Manual verification:
 
 ```sh
-shasum -a 256 CmdIME-0.1.11.zip
+shasum -a 256 CmdIME-0.1.12.zip
 ```
 
 ### Preview Notice

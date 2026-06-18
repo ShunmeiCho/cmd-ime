@@ -216,8 +216,8 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.11
-shasum -a 256 dist/CmdIME-0.1.11.zip
+./script/package_app.sh 0.1.12
+shasum -a 256 dist/CmdIME-0.1.12.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing
@@ -225,7 +225,7 @@ identity. While CmdIME is distributed as an explicitly labelled unnotarized
 preview, set `CMDIME_ALLOW_UNNOTARIZED=1`:
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.11
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.12
 ```
 
 One-time notarization setup:
