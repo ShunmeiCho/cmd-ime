@@ -9,17 +9,60 @@ public final class EventTapMonitor: @unchecked Sendable {
     public var onSwitch: ((InputRole, InputSourceInfo) -> Void)?
 
     private let inputSources: InputSourceService
+    private let addGlobalMouseDownMonitor: GlobalMouseDownMonitorInstaller
+    private let addLocalMouseDownMonitor: LocalMouseDownMonitorInstaller
+    private let removeMouseDownMonitor: MouseDownMonitorRemover
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+    private var mouseDownMonitors: [Any] = []
     private var oneShotState = OneShotModifierState()
     private var consumedKeyDowns = Set<Int>()
     private var resolvedSources: [InputRole: InputSourceInfo] = [:]
     private var pendingSingleTapTimer: Timer?
     private let eventTapConfirmationRetryDelays: [TimeInterval] = [0.01]
 
-    public init(config: SwitcherConfig, inputSources: InputSourceService = MacInputSourceService()) {
+    typealias GlobalMouseDownMonitorInstaller = (NSEvent.EventTypeMask, @escaping (NSEvent) -> Void) -> Any?
+    typealias LocalMouseDownMonitorInstaller = (NSEvent.EventTypeMask, @escaping (NSEvent) -> NSEvent?) -> Any?
+    typealias MouseDownMonitorRemover = (Any) -> Void
+
+    static let eventTapEventTypes: [CGEventType] = [
+        .keyDown,
+        .keyUp,
+        .flagsChanged,
+    ]
+
+    static let eventTapEventMask: CGEventMask = eventTapEventTypes.reduce(CGEventMask(0)) { mask, eventType in
+        mask | CGEventMask(1 << eventType.rawValue)
+    }
+
+    static let mouseDownEventMask: NSEvent.EventTypeMask = [
+        .leftMouseDown,
+        .rightMouseDown,
+        .otherMouseDown,
+    ]
+
+    public convenience init(config: SwitcherConfig, inputSources: InputSourceService = MacInputSourceService()) {
+        self.init(
+            config: config,
+            inputSources: inputSources,
+            addGlobalMouseDownMonitor: NSEvent.addGlobalMonitorForEvents,
+            addLocalMouseDownMonitor: NSEvent.addLocalMonitorForEvents,
+            removeMouseDownMonitor: NSEvent.removeMonitor
+        )
+    }
+
+    init(
+        config: SwitcherConfig,
+        inputSources: InputSourceService,
+        addGlobalMouseDownMonitor: @escaping GlobalMouseDownMonitorInstaller,
+        addLocalMouseDownMonitor: @escaping LocalMouseDownMonitorInstaller,
+        removeMouseDownMonitor: @escaping MouseDownMonitorRemover
+    ) {
         self.config = config
         self.inputSources = inputSources
+        self.addGlobalMouseDownMonitor = addGlobalMouseDownMonitor
+        self.addLocalMouseDownMonitor = addLocalMouseDownMonitor
+        self.removeMouseDownMonitor = removeMouseDownMonitor
     }
 
     deinit {
@@ -41,24 +84,12 @@ public final class EventTapMonitor: @unchecked Sendable {
 
         refreshResolvedSources()
 
-        let eventTypes: [CGEventType] = [
-            .keyDown,
-            .keyUp,
-            .flagsChanged,
-            .leftMouseDown,
-            .rightMouseDown,
-            .otherMouseDown,
-        ]
-        let eventMask = eventTypes.reduce(CGEventMask(0)) { mask, eventType in
-            mask | CGEventMask(1 << eventType.rawValue)
-        }
-
         let observer = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
             options: .defaultTap,
-            eventsOfInterest: eventMask,
+            eventsOfInterest: Self.eventTapEventMask,
             callback: { proxy, type, event, refcon in
                 guard let refcon else {
                     return Unmanaged.passUnretained(event)
@@ -75,6 +106,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+        installMouseDownMonitor()
         onMessage?("Listener started.")
     }
 
@@ -87,6 +119,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
         eventTap = nil
         runLoopSource = nil
+        removeMouseDownMonitors()
         oneShotState.cancel()
         pendingSingleTapTimer?.invalidate()
         pendingSingleTapTimer = nil
@@ -134,14 +167,56 @@ public final class EventTapMonitor: @unchecked Sendable {
             return handleKeyDown(event)
         case .keyUp:
             return handleKeyUp(event)
-        case .leftMouseDown, .rightMouseDown, .otherMouseDown:
-            oneShotState.cancel()
-            return Unmanaged.passUnretained(event)
         default:
             oneShotState.cancel()
             return Unmanaged.passUnretained(event)
         }
     }
+
+    func installMouseDownMonitor() {
+        guard mouseDownMonitors.isEmpty else {
+            return
+        }
+
+        if let globalMonitor = addGlobalMouseDownMonitor(Self.mouseDownEventMask, { [weak self] _ in
+            self?.cancelOneShotFromMouseDown()
+        }) {
+            mouseDownMonitors.append(globalMonitor)
+        }
+        if let localMonitor = addLocalMouseDownMonitor(Self.mouseDownEventMask, { [weak self] event in
+            self?.cancelOneShotFromMouseDown()
+            return event
+        }) {
+            mouseDownMonitors.append(localMonitor)
+        }
+    }
+
+    private func cancelOneShotFromMouseDown() {
+        if Thread.isMainThread {
+            oneShotState.cancel()
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.oneShotState.cancel()
+            }
+        }
+    }
+
+    func removeMouseDownMonitors() {
+        for mouseDownMonitor in mouseDownMonitors {
+            removeMouseDownMonitor(mouseDownMonitor)
+        }
+        mouseDownMonitors.removeAll()
+    }
+
+    #if DEBUG
+    func setOneShotModifierDownForTesting(_ trigger: KeyTrigger) {
+        oneShotState.modifierDown(trigger)
+    }
+
+    func releaseOneShotModifierForTesting(_ trigger: KeyTrigger) -> OneShotModifierState.Output {
+        oneShotState.modifierUp(trigger)
+    }
+    #endif
 
     private func handleFlagsChanged(_ event: CGEvent) -> Unmanaged<CGEvent>? {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
