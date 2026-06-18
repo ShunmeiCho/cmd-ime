@@ -1,9 +1,10 @@
 # CmdIME Follow-ups
 
-Work deferred past the v0.1.11 preview. Recorded from the review passes (deep
-review, code review, /simplify, security review) and post-release review.
+Work deferred after the v0.1.12 preview. Recorded from the review passes (deep
+review, code review, /simplify, security review), release prep, and post-release
+checks.
 
-## Next patch (0.1.12)
+## Next patch (0.1.13)
 
 ### [Medium] Switch indicator "Custom color" is global, not per-slot
 - `SwitcherConfig` holds a single `switchIndicatorCustomColorHex`
@@ -22,7 +23,7 @@ review, code review, /simplify, security review) and post-release review.
   `<tag>/script/install.sh` in the example.
 
 ### [Low] "Preview" wording vs GitHub non-prerelease Latest
-- v0.1.11 is marked Latest / `prerelease=false` so the bare `curl` install and the
+- v0.1.12 is marked Latest / `prerelease=false` so the bare `curl` install and the
   version badge resolve to it, while the title still says "Preview".
 - Action: keep emphasizing "unnotarized preview" in public communication so it is
   not read as a stable, notarized release.
