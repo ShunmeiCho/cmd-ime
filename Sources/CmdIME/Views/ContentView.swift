@@ -282,8 +282,7 @@ struct ContentView: View {
 
             if model.config.showSwitchIndicator {
                 HStack {
-                    Text("Indicator display")
-                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    runtimeLabel("Indicator display")
                     Picker(
                         "Indicator display",
                         selection: Binding(
@@ -302,8 +301,7 @@ struct ContentView: View {
                 }
 
                 HStack {
-                    Text("Indicator size")
-                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    runtimeLabel("Indicator size")
                     Picker(
                         "Indicator size",
                         selection: Binding(
@@ -322,8 +320,7 @@ struct ContentView: View {
                 }
 
                 HStack {
-                    Text("Indicator scale")
-                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    runtimeLabel("Indicator scale")
                     Slider(
                         value: Binding(
                             get: { model.config.switchIndicatorScale },
@@ -333,9 +330,7 @@ struct ContentView: View {
                         step: 0.05
                     )
                     .frame(width: 220)
-                    Text("\(Int((model.config.switchIndicatorScale * 100).rounded()))%")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    runtimeValue("\(Int((model.config.switchIndicatorScale * 100).rounded()))%")
                         .frame(width: 44, alignment: .trailing)
                     Button("Reset") {
                         model.setSwitchIndicatorScale(SwitcherConfig.defaultSwitchIndicatorScale)
@@ -345,8 +340,7 @@ struct ContentView: View {
                 }
 
                 HStack {
-                    Text("Indicator color")
-                        .frame(width: Metrics.labelColumn, alignment: .leading)
+                    runtimeLabel("Indicator color")
                     Picker(
                         "Indicator color",
                         selection: Binding(
@@ -366,8 +360,7 @@ struct ContentView: View {
 
                 if model.config.switchIndicatorColorStyle == .custom {
                     HStack {
-                        Text("Custom color")
-                            .frame(width: Metrics.labelColumn, alignment: .leading)
+                        runtimeLabel("Custom color")
                         ColorPicker(
                             "Custom color",
                             selection: Binding(
@@ -383,19 +376,15 @@ struct ContentView: View {
                             supportsOpacity: false
                         )
                         .labelsHidden()
-                        Text(model.config.switchIndicatorCustomColorHex)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        runtimeValue(model.config.switchIndicatorCustomColorHex)
                         Spacer()
                     }
                 }
             }
 
             HStack {
-                Text("Updates")
-                    .frame(width: Metrics.labelColumn, alignment: .leading)
-                Text(model.updateStatus.message)
-                    .foregroundStyle(.secondary)
+                runtimeLabel("Updates")
+                runtimeValue(model.updateStatus.message)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer()
@@ -413,10 +402,8 @@ struct ContentView: View {
             }
 
             HStack {
-                Text("Keyboard control")
-                    .frame(width: Metrics.labelColumn, alignment: .leading)
-                Text(model.keyboardControlStatus)
-                    .foregroundStyle(.secondary)
+                runtimeLabel("Keyboard control")
+                runtimeValue(model.keyboardControlStatus)
                 Spacer()
                 Button(model.isListening ? "Pause" : "Resume") {
                     model.toggleListening()
@@ -425,10 +412,11 @@ struct ContentView: View {
             }
 
             HStack {
-                Text("Permissions")
-                    .frame(width: Metrics.labelColumn, alignment: .leading)
-                Text(model.permissions.isReady ? "Ready" : "Grant both permissions")
-                    .foregroundStyle(model.permissions.isReady ? Color.secondary : Color.orange)
+                runtimeLabel("Permissions")
+                runtimeValue(
+                    model.permissions.isReady ? "Ready" : "Grant both permissions",
+                    color: model.permissions.isReady ? .secondary : .orange
+                )
                 Spacer()
                 Button("Request All") {
                     model.requestPermissions()
@@ -453,10 +441,8 @@ struct ContentView: View {
             }
 
             HStack {
-                Text("Application")
-                    .frame(width: Metrics.labelColumn, alignment: .leading)
-                Text("Stop the listener and quit the background agent")
-                    .foregroundStyle(.secondary)
+                runtimeLabel("Application")
+                runtimeValue("Stop the listener and quit the background agent")
                 Spacer()
                 Button("Quit CmdIME") {
                     model.quit()
@@ -466,6 +452,18 @@ struct ContentView: View {
         }
     }
 
+    private func runtimeLabel(_ title: String) -> some View {
+        Text(title)
+            .font(.body)
+            .frame(width: Metrics.labelColumn, alignment: .leading)
+    }
+
+    private func runtimeValue(_ value: String, color: Color = .secondary) -> some View {
+        Text(value)
+            .font(.body)
+            .foregroundStyle(color)
+    }
+
     private func permissionRow(
         title: String,
         granted: Bool,
@@ -473,15 +471,12 @@ struct ContentView: View {
         action: @escaping () -> Void
     ) -> some View {
         HStack {
-            Text(title)
-                .frame(width: Metrics.labelColumn, alignment: .leading)
-            Text(granted ? "Ready" : "Missing")
-                .foregroundStyle(granted ? Color.secondary : Color.orange)
+            runtimeLabel(title)
+            runtimeValue(granted ? "Ready" : "Missing", color: granted ? .secondary : .orange)
             Spacer()
             Button(buttonTitle, action: action)
                 .frame(width: Metrics.actionButton)
         }
-        .font(.caption)
     }
 
     private func resetDrafts() {
