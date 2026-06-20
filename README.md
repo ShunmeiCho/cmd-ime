@@ -120,10 +120,20 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 
 ## Install
 
-One-line install for users:
+CmdIME is currently distributed as an unnotarized preview build. It is not
+distributed through the Mac App Store and is not yet signed with a Developer ID
+certificate.
+
+Recommended install with Homebrew:
 
 ```sh
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb
+```
+
+Or use the pinned installer command from the release notes:
+
+```sh
+CMDIME_VERSION=<version> CMDIME_SHA256=<sha256> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
 ```
 
 The installer downloads the public release zip, installs `CmdIME.app`, links
@@ -135,11 +145,7 @@ Monitoring permissions.
 The installer prints the downloaded archive's SHA-256. To make it abort on a
 tampered or corrupted download, pin the version and pass the expected hash. Both
 values are published in each release's notes, which also carry the exact,
-copy-pasteable command:
-
-```sh
-CMDIME_VERSION=<version> CMDIME_SHA256=<sha256> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
-```
+copy-pasteable command.
 
 Pinning `CMDIME_VERSION` keeps the checksum and the downloaded zip in sync even
 after a newer release becomes the latest. Without `CMDIME_SHA256` the installer
@@ -151,11 +157,12 @@ The `curl | bash` installer and Homebrew do not quarantine the app, so it opens
 directly and prompts for **Accessibility** and **Input Monitoring** the first
 time. Grant both in System Settings > Privacy & Security.
 
-The current public release is signed with an Apple Development certificate and is
-not yet notarized. If you instead download the `.zip` from the GitHub Releases
-page in a browser, macOS quarantines it and Gatekeeper may block it as
-"CmdIME is damaged" or "cannot be opened because Apple cannot check it for
-malicious software." To allow it:
+Current preview releases are not notarized. They may be signed with an Apple
+Development certificate or ad-hoc signature, but not with a Developer ID
+certificate. If you download the `.zip` from the GitHub Releases page in a
+browser, macOS quarantines it and Gatekeeper may block it as "CmdIME is damaged"
+or "cannot be opened because Apple cannot check it for malicious software." To
+allow it:
 
 - Open System Settings > Privacy & Security, scroll to the CmdIME message, and
   click **Open Anyway** (on macOS 15+, the old right-click > Open shortcut is
@@ -216,8 +223,8 @@ Config lives at:
 ## Package
 
 ```sh
-./script/package_app.sh 0.1.12
-shasum -a 256 dist/CmdIME-0.1.12.zip
+./script/package_app.sh 0.1.13
+shasum -a 256 dist/CmdIME-0.1.13.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing
@@ -225,7 +232,7 @@ identity. While CmdIME is distributed as an explicitly labelled unnotarized
 preview, set `CMDIME_ALLOW_UNNOTARIZED=1`:
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.12
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.13
 ```
 
 One-time notarization setup:
