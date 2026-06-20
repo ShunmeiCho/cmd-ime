@@ -7,8 +7,10 @@ Design CmdIME demo videos as native premium macOS utility motion graphics for de
 Use the local UI exploration draft as visual reference, not as source markup.
 Keep its strongest ideas: switch slots, keycaps, live keyboard visualization,
 material indicator bubbles, menu bar information structure, and permissions
-onboarding copy. Do not copy the full dashboard density, fake titlebar, heavy
-glow, or full-screen dark styling into the demo compositions.
+onboarding copy. Use graphite native-utility surfaces where they help the
+videos feel like a focused macOS menu-bar tool. Do not copy the full dashboard
+density, heavy glow, or oversized design-board layout into the demo
+compositions.
 
 ## Colors
 
@@ -17,9 +19,9 @@ glow, or full-screen dark styling into the demo compositions.
 - Text primary: `#1D1D1F`.
 - Text secondary: `#62666D`.
 - Primary accent: `#2F7CF6`, CmdIME/app icon blue.
-- English: `#2F7CF6`, slot blue.
-- Chinese: `#34A853`, slot green.
-- Japanese: `#E3564A`, slot red.
+- English: `#4C8DFF`, slot blue.
+- Chinese: `#FF5B57`, slot red.
+- Japanese: `#46C46B`, slot green.
 - Preview warning: `#C47A24`, soft amber.
 - Graphite code surface: `#20242A`.
 
@@ -45,6 +47,6 @@ glow, or full-screen dark styling into the demo compositions.
 
 - Do not use cyberpunk, neon, purple-blue gradients, heavy bloom, or glitch transitions.
 - Do not make the video feel like a landing page hero.
-- Do not use full-screen dark hacker styling.
+- Do not use hacker styling; graphite should feel native, quiet, and product-like.
 - Do not over-animate interface elements that should feel stable and native.
 - Do not show real private system settings or real user input.

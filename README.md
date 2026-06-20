@@ -27,9 +27,9 @@ and the bindings are configurable.
 | Chinese | Right Command | Switch to the matched Chinese input source |
 | Japanese | Option+J | Switch to the matched Japanese input source |
 
-[Watch the default switching demo](demo-videos/renders/cmdime-default-switching-demo.mp4)
+[![CmdIME default switching demo](demo-videos/renders/preview-default-switching.gif)](demo-videos/renders/cmdime-default-switching-demo.mp4)
 
-<video src="demo-videos/renders/cmdime-default-switching-demo.mp4" controls muted playsinline width="720"></video>
+[Open the full default switching demo](demo-videos/renders/cmdime-default-switching-demo.mp4)
 
 ## Distribution Status
 
@@ -63,9 +63,9 @@ brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Ca
 After installation, open CmdIME and grant both **Accessibility** and
 **Input Monitoring** permissions in System Settings > Privacy & Security.
 
-[Watch the install and permissions demo](demo-videos/renders/cmdime-install-permissions-demo.mp4)
+[![CmdIME install and permissions demo](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
-<video src="demo-videos/renders/cmdime-install-permissions-demo.mp4" controls muted playsinline width="720"></video>
+[Open the full install and permissions demo](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
 ### Verified One-Line Install
 
