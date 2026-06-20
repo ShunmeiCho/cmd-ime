@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #1b1b1e;
+      }
+
+      body {
+        color: #1d1d1f;
+        font-family: sans-serif;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0) 40%),
+          radial-gradient(circle at 18% 18%, rgba(76, 141, 255, 0.12), transparent 26%),
+          radial-gradient(circle at 82% 78%, rgba(199, 56, 69, 0.08), transparent 28%),
+          #f5f5f7;
+      }
+
+      #root::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.26;
+        background-image:
+          linear-gradient(rgba(29, 29, 31, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(29, 29, 31, 0.04) 1px, transparent 1px);
+        background-size: 80px 80px;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 42px;
+        padding: 92px 118px;
+        opacity: 0;
+      }
+
+      .scene.active {
+        opacity: 1;
+      }
+
+      .topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: rgba(29, 29, 31, 0.82);
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .brand img {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        box-shadow: 0 14px 34px rgba(76, 141, 255, 0.24);
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 38px;
+        padding: 0 16px;
+        border: 1px solid rgba(29, 29, 31, 0.08);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        color: rgba(29, 29, 31, 0.62);
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      .pulse {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #46c46b;
+        box-shadow: 0 0 12px rgba(70, 196, 107, 0.9);
+      }
+
+      .heading {
+        max-width: 1040px;
+      }
+
+      .eyebrow {
+        margin-bottom: 18px;
+        color: #8a8780;
+        font-family: monospace;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        color: #1d1d1f;
+        font-size: 80px;
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1.03;
+      }
+
+      .lede {
+        max-width: 880px;
+        margin-top: 20px;
+        color: #62666d;
+        font-size: 31px;
+        line-height: 1.36;
+      }
+
+      .stage {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr 1.08fr;
+        gap: 48px;
+        align-items: center;
+      }
+
+      .surface {
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: 18px;
+        background: rgba(37, 37, 40, 0.92);
+        box-shadow: 0 40px 90px -32px rgba(0, 0, 0, 0.74);
+      }
+
+      .window {
+        overflow: hidden;
+      }
+
+      .window-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 56px;
+        padding: 0 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        background: linear-gradient(180deg, #2d2d31, #242428);
+      }
+
+      .traffic {
+        display: flex;
+        gap: 9px;
+      }
+
+      .traffic span {
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: rgba(235, 235, 245, 0.28);
+      }
+
+      .window-title {
+        color: rgba(235, 235, 245, 0.5);
+        font-family: monospace;
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .cycle-body {
+        padding: 30px;
+      }
+
+      .cycle-label {
+        margin-bottom: 22px;
+        color: rgba(235, 235, 245, 0.46);
+        font-family: monospace;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .cycle-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .cycle-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 76px;
+        padding: 0 22px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.045);
+        color: rgba(235, 235, 245, 0.55);
+        font-size: 25px;
+        font-weight: 700;
+      }
+
+      .cycle-item.active-row {
+        border-color: rgba(76, 141, 255, 0.46);
+        background: rgba(76, 141, 255, 0.13);
+        color: #ffffff;
+      }
+
+      .arrow {
+        color: rgba(235, 235, 245, 0.35);
+        font-family: monospace;
+        font-size: 24px;
+      }
+
+      .slot-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .slot {
+        min-height: 294px;
+        padding: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        background: rgba(37, 37, 40, 0.88);
+        box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.78);
+      }
+
+      .symbol {
+        display: grid;
+        place-items: center;
+        width: 68px;
+        height: 68px;
+        margin-bottom: 28px;
+        border-radius: 16px;
+        font-family: monospace;
+        font-size: 32px;
+        font-weight: 800;
+      }
+
+      .english .symbol {
+        border: 1px solid rgba(76, 141, 255, 0.45);
+        background: rgba(76, 141, 255, 0.16);
+        color: #7db0ff;
+      }
+
+      .chinese .symbol {
+        border: 1px solid rgba(70, 196, 107, 0.45);
+        background: rgba(70, 196, 107, 0.16);
+        color: #6bd98c;
+      }
+
+      .japanese .symbol {
+        border: 1px solid rgba(199, 56, 69, 0.45);
+        background: rgba(199, 56, 69, 0.16);
+        color: #ff8c89;
+      }
+
+      .slot h3 {
+        color: #ffffff;
+        font-size: 31px;
+        font-weight: 800;
+      }
+
+      .slot p {
+        margin-top: 8px;
+        color: rgba(235, 235, 245, 0.5);
+        font-size: 20px;
+      }
+
+      .keycap {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 132px;
+        height: 46px;
+        margin-top: 26px;
+        padding: 0 16px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom-width: 3px;
+        border-radius: 10px;
+        background: #303035;
+        color: rgba(245, 245, 247, 0.78);
+        font-family: monospace;
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .mock-editor {
+        position: relative;
+        min-height: 558px;
+        overflow: hidden;
+      }
+
+      .editor-body {
+        padding: 34px;
+      }
+
+      .text-line {
+        height: 28px;
+        margin-bottom: 18px;
+        border-radius: 7px;
+        background: rgba(235, 235, 245, 0.12);
+      }
+
+      .text-line:nth-child(2) {
+        width: 84%;
+      }
+
+      .text-line:nth-child(3) {
+        width: 66%;
+      }
+
+      .keyboard-row {
+        position: absolute;
+        right: 34px;
+        bottom: 34px;
+        display: flex;
+        gap: 12px;
+      }
+
+      .demo-key {
+        display: grid;
+        place-items: center;
+        min-width: 92px;
+        height: 54px;
+        padding: 0 15px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom-width: 4px;
+        border-radius: 11px;
+        background: #303035;
+        color: rgba(245, 245, 247, 0.76);
+        font-family: monospace;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .indicator {
+        position: absolute;
+        left: 50%;
+        top: 47%;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 300px;
+        padding: 16px 25px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 19px;
+        background: rgba(24, 24, 28, 0.86);
+        box-shadow: 0 24px 56px rgba(0, 0, 0, 0.54);
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.94);
+      }
+
+      .indicator-symbol {
+        display: grid;
+        place-items: center;
+        width: 54px;
+        height: 54px;
+        border-radius: 13px;
+        font-family: monospace;
+        font-size: 28px;
+        font-weight: 800;
+      }
+
+      .indicator-title {
+        color: #ffffff;
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .indicator-source {
+        margin-top: 3px;
+        color: rgba(235, 235, 245, 0.52);
+        font-size: 14px;
+      }
+
+      #indicator-english .indicator-symbol {
+        border: 1px solid rgba(76, 141, 255, 0.45);
+        background: rgba(76, 141, 255, 0.16);
+        color: #7db0ff;
+      }
+
+      #indicator-chinese .indicator-symbol {
+        border: 1px solid rgba(70, 196, 107, 0.45);
+        background: rgba(70, 196, 107, 0.16);
+        color: #6bd98c;
+      }
+
+      #indicator-japanese .indicator-symbol {
+        border: 1px solid rgba(199, 56, 69, 0.45);
+        background: rgba(199, 56, 69, 0.16);
+        color: #ff8c89;
+      }
+
+      .popover-stack {
+        display: grid;
+        gap: 28px;
+      }
+
+      .menu-strip {
+        width: 362px;
+        margin-left: auto;
+        margin-right: 34px;
+        height: 34px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 0;
+        border-radius: 10px 10px 0 0;
+        background: linear-gradient(180deg, #2a2a2d, #232326);
+      }
+
+      .popover {
+        width: 362px;
+        margin-left: auto;
+        margin-right: 34px;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        background: rgba(30, 30, 34, 0.96);
+        box-shadow: 0 28px 64px rgba(0, 0, 0, 0.56);
+      }
+
+      .popover-head {
+        padding: 13px 12px 15px;
+      }
+
+      .popover-label {
+        color: rgba(235, 235, 245, 0.42);
+        font-family: monospace;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .active-source {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .active-source-title {
+        color: #f5f5f7;
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .active-source-detail {
+        margin-top: 2px;
+        color: rgba(235, 235, 245, 0.5);
+        font-size: 13px;
+      }
+
+      .source-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+      }
+
+      .menu-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 40px;
+        padding: 0 10px;
+        border-radius: 8px;
+        color: rgba(237, 237, 242, 0.86);
+        font-size: 15px;
+        font-weight: 600;
+      }
+
+      .menu-row.current {
+        background: rgba(70, 196, 107, 0.13);
+        color: #ffffff;
+      }
+
+      .menu-key {
+        margin-left: auto;
+        color: rgba(235, 235, 245, 0.52);
+        font-family: monospace;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .final-card {
+        align-self: center;
+        width: 820px;
+        margin-top: 56px;
+        padding: 54px;
+        text-align: center;
+      }
+
+      .final-card img {
+        width: 112px;
+        height: 112px;
+        margin-bottom: 28px;
+        border-radius: 26px;
+        box-shadow: 0 22px 52px rgba(76, 141, 255, 0.28);
+      }
+
+      .final-card h2 {
+        max-width: none;
+        font-size: 50px;
+      }
+
+      .final-card p {
+        margin-top: 15px;
+        color: rgba(235, 235, 245, 0.58);
+        font-size: 24px;
+      }
+
+      .transition-cover {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        transform: scaleX(0);
+        transform-origin: left center;
+        background: #252528;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="15"
+      data-width="1920"
+      data-height="1080"
+    >
+      <section id="scene-problem" class="scene active">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip"><span class="pulse"></span>Keyboard listening</div>
+        </div>
+        <div class="stage">
+          <div class="heading">
+            <div class="eyebrow">macOS input switching</div>
+            <h1>Cycling is slow when you type in three languages.</h1>
+            <p class="lede">CmdIME maps each target input source to a deliberate key gesture.</p>
+          </div>
+          <div class="surface window">
+            <div class="window-bar">
+              <div class="traffic"><span></span><span></span><span></span></div>
+              <div class="window-title">System input source cycle</div>
+            </div>
+            <div class="cycle-body">
+              <div class="cycle-label">Current order</div>
+              <div class="cycle-list">
+                <div class="cycle-item active-row"><span>English</span><span class="arrow">next</span></div>
+                <div class="cycle-item"><span>Chinese</span><span class="arrow">next</span></div>
+                <div class="cycle-item"><span>Japanese</span><span class="arrow">next</span></div>
+                <div class="cycle-item"><span>Back to English</span><span class="arrow">loop</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-model" class="scene">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip"><span class="pulse"></span>Direct target model</div>
+        </div>
+        <div class="heading">
+          <div class="eyebrow">Default bindings</div>
+          <h2>One gesture. One input source.</h2>
+          <p class="lede">Left Command selects English, Right Command selects Chinese, and Option+J selects Japanese.</p>
+        </div>
+        <div class="slot-grid">
+          <div class="slot english">
+            <div class="symbol">A</div>
+            <h3>English</h3>
+            <p>ABC · U.S.</p>
+            <div class="keycap">⌘ Left</div>
+          </div>
+          <div class="slot chinese">
+            <div class="symbol">中</div>
+            <h3>Chinese</h3>
+            <p>Pinyin · Simplified</p>
+            <div class="keycap">⌘ Right</div>
+          </div>
+          <div class="slot japanese">
+            <div class="symbol">あ</div>
+            <h3>Japanese</h3>
+            <p>Hiragana</p>
+            <div class="keycap">⌥ + J</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-live" class="scene">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip"><span class="pulse"></span>On-screen indicator</div>
+        </div>
+        <div class="stage">
+          <div class="surface mock-editor">
+            <div class="window-bar">
+              <div class="traffic"><span></span><span></span><span></span></div>
+              <div class="window-title">notes.txt</div>
+            </div>
+            <div class="editor-body">
+              <div class="text-line"></div>
+              <div class="text-line"></div>
+              <div class="text-line"></div>
+            </div>
+            <div id="indicator-english" class="indicator">
+              <div class="indicator-symbol">A</div>
+              <div><div class="indicator-title">English</div><div class="indicator-source">ABC · U.S.</div></div>
+            </div>
+            <div id="indicator-chinese" class="indicator">
+              <div class="indicator-symbol">中</div>
+              <div><div class="indicator-title">Chinese</div><div class="indicator-source">Pinyin · Simplified</div></div>
+            </div>
+            <div id="indicator-japanese" class="indicator">
+              <div class="indicator-symbol">あ</div>
+              <div><div class="indicator-title">Japanese</div><div class="indicator-source">Hiragana</div></div>
+            </div>
+            <div class="keyboard-row">
+              <div id="key-left" class="demo-key">⌘ L</div>
+              <div id="key-right" class="demo-key">⌘ R</div>
+              <div id="key-option" class="demo-key">⌥</div>
+              <div id="key-j" class="demo-key">J</div>
+            </div>
+          </div>
+          <div class="popover-stack">
+            <div class="heading">
+              <div class="eyebrow">Live switching</div>
+              <h2>Target the source directly.</h2>
+              <p class="lede">The indicator appears near your typing position and confirms the source CmdIME selected.</p>
+            </div>
+            <div>
+              <div class="menu-strip"></div>
+              <div class="popover">
+                <div class="popover-head">
+                  <div class="popover-label">Active now</div>
+                  <div class="active-source">
+                    <div class="symbol" style="width: 42px; height: 42px; margin: 0; border-color: rgba(70,196,107,.45); background: rgba(70,196,107,.16); color: #6bd98c;">中</div>
+                    <div>
+                      <div class="active-source-title">Chinese</div>
+                      <div class="active-source-detail">Pinyin · Simplified</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="menu-row"><span class="source-dot" style="background: #4c8dff;"></span>English<span class="menu-key">⌘ L</span></div>
+                <div class="menu-row current"><span class="source-dot" style="background: #46c46b;"></span>Chinese<span class="menu-key">⌘ R</span></div>
+                <div class="menu-row"><span class="source-dot" style="background: #c73845;"></span>Japanese<span class="menu-key">⌥ J</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-close" class="scene">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip"><span class="pulse"></span>Ready</div>
+        </div>
+        <div class="surface final-card">
+          <img src="app-icon.png" alt="" />
+          <h2>Deterministic input-source switching.</h2>
+          <p>Built for multilingual typing on macOS.</p>
+        </div>
+      </section>
+
+      <div id="transition-cover" class="transition-cover"></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      const tl = gsap.timeline({
+        paused: true,
+        defaults: { ease: "power2.out", overwrite: "auto" }
+      });
+      window.__timelines["main"] = tl;
+
+      function enterScene(selector, at) {
+        tl.set(selector, { opacity: 1 }, at);
+        if (document.querySelectorAll(selector + " .topline").length) {
+          tl.fromTo(`${selector} .topline`, { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.38 }, at + 0.08);
+        }
+        if (document.querySelectorAll(selector + " .eyebrow").length) {
+          tl.fromTo(`${selector} .eyebrow`, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.34 }, at + 0.16);
+        }
+        if (document.querySelectorAll(selector + " h1, " + selector + " h2").length) {
+          tl.fromTo(`${selector} h1, ${selector} h2`, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.48 }, at + 0.25);
+        }
+        if (document.querySelectorAll(selector + " .lede").length) {
+          tl.fromTo(`${selector} .lede`, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.44 }, at + 0.38);
+        }
+        if (document.querySelectorAll(selector + " .surface, " + selector + " .slot").length) {
+          tl.fromTo(`${selector} .surface, ${selector} .slot`, { opacity: 0, y: 26 }, { opacity: 1, y: 0, duration: 0.52, stagger: 0.08 }, at + 0.5);
+        }
+      }
+
+      function coverSwitch(fromSelector, toSelector, at) {
+        tl.to("#transition-cover", { scaleX: 1, duration: 0.22, ease: "power1.inOut" }, at);
+        tl.set(fromSelector, { opacity: 0 }, at + 0.22);
+        tl.set(toSelector, { opacity: 1 }, at + 0.22);
+        tl.to("#transition-cover", { scaleX: 0, transformOrigin: "right center", duration: 0.24, ease: "power1.inOut" }, at + 0.23);
+        tl.set("#transition-cover", { transformOrigin: "left center" }, at + 0.49);
+      }
+
+      function tapKey(keySelector, indicatorSelector, color, at) {
+        tl.to(keySelector, { y: 4, backgroundColor: color, color: "#ffffff", duration: 0.12 }, at);
+        tl.fromTo(indicatorSelector, { opacity: 0, scale: 0.94, xPercent: -50, yPercent: -50 }, { opacity: 1, scale: 1, duration: 0.2 }, at + 0.08);
+        tl.to(indicatorSelector, { opacity: 0, scale: 0.96, duration: 0.24 }, at + 0.9);
+        tl.to(keySelector, { y: 0, backgroundColor: "#303035", color: "rgba(245,245,247,0.76)", duration: 0.16 }, at + 0.22);
+      }
+
+      enterScene("#scene-problem", 0);
+      tl.to("#scene-problem .cycle-item", { y: -90, duration: 0.36, stagger: 0.08 }, 1.35);
+      tl.to("#scene-problem .cycle-item", { y: 0, duration: 0.36, stagger: 0.08 }, 2.0);
+
+      coverSwitch("#scene-problem", "#scene-model", 2.55);
+      enterScene("#scene-model", 2.78);
+
+      coverSwitch("#scene-model", "#scene-live", 5.0);
+      enterScene("#scene-live", 5.22);
+      tapKey("#key-left", "#indicator-english", "#4c8dff", 6.38);
+      tapKey("#key-right", "#indicator-chinese", "#46c46b", 8.08);
+      tl.to("#key-option", { y: 4, backgroundColor: "#c73845", color: "#ffffff", duration: 0.12 }, 9.8);
+      tapKey("#key-j", "#indicator-japanese", "#c73845", 9.92);
+      tl.to("#key-option", { y: 0, backgroundColor: "#303035", color: "rgba(245,245,247,0.76)", duration: 0.16 }, 10.36);
+
+      coverSwitch("#scene-live", "#scene-close", 11.65);
+      enterScene("#scene-close", 11.88);
+      tl.fromTo("#scene-close .final-card", { opacity: 0, y: 28, scale: 0.97 }, { opacity: 1, y: 0, scale: 1, duration: 0.56 }, 12.12);
+      tl.to("#scene-close .final-card", { y: -4, duration: 2.1, ease: "sine.inOut" }, 12.75);
+    </script>
+  </body>
+</html>

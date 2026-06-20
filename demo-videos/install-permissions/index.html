@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #f5f5f7;
+      }
+
+      body {
+        color: #1d1d1f;
+        font-family: sans-serif;
+      }
+
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0) 38%),
+          radial-gradient(circle at 16% 18%, rgba(76, 141, 255, 0.13), transparent 27%),
+          radial-gradient(circle at 84% 80%, rgba(196, 122, 36, 0.12), transparent 28%),
+          #f5f5f7;
+      }
+
+      #root::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        opacity: 0.24;
+        background-image:
+          linear-gradient(rgba(29, 29, 31, 0.045) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(29, 29, 31, 0.035) 1px, transparent 1px);
+        background-size: 80px 80px;
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+        padding: 92px 118px;
+        opacity: 0;
+      }
+
+      .scene.active {
+        opacity: 1;
+      }
+
+      .topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        color: rgba(29, 29, 31, 0.82);
+        font-size: 24px;
+        font-weight: 800;
+      }
+
+      .brand img {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        box-shadow: 0 14px 34px rgba(76, 141, 255, 0.22);
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 38px;
+        padding: 0 16px;
+        border: 1px solid rgba(29, 29, 31, 0.08);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: rgba(29, 29, 31, 0.62);
+        font-size: 17px;
+        font-weight: 800;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #46c46b;
+        box-shadow: 0 0 12px rgba(70, 196, 107, 0.9);
+      }
+
+      .heading {
+        max-width: 1060px;
+      }
+
+      .eyebrow {
+        margin-bottom: 18px;
+        color: #8a8780;
+        font-family: monospace;
+        font-size: 20px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2 {
+        color: #1d1d1f;
+        font-size: 78px;
+        font-weight: 820;
+        letter-spacing: 0;
+        line-height: 1.04;
+      }
+
+      .lede {
+        max-width: 890px;
+        margin-top: 20px;
+        color: #62666d;
+        font-size: 30px;
+        line-height: 1.36;
+      }
+
+      .grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 28px;
+        align-items: center;
+      }
+
+      .surface {
+        border: 1px solid rgba(29, 29, 31, 0.08);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow: 0 34px 80px rgba(31, 38, 55, 0.13);
+      }
+
+      .dark-surface {
+        border-color: rgba(255, 255, 255, 0.09);
+        background: rgba(30, 30, 34, 0.96);
+        box-shadow: 0 40px 90px -34px rgba(0, 0, 0, 0.68);
+      }
+
+      .status-card {
+        min-height: 318px;
+        padding: 38px;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        height: 38px;
+        padding: 0 15px;
+        margin-bottom: 27px;
+        border-radius: 999px;
+        background: rgba(196, 122, 36, 0.12);
+        color: #8a520f;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .status-badge.blue {
+        background: rgba(76, 141, 255, 0.12);
+        color: #2f65b6;
+      }
+
+      .status-title {
+        margin-bottom: 14px;
+        font-size: 38px;
+        font-weight: 820;
+      }
+
+      .status-text {
+        color: #62666d;
+        font-size: 25px;
+        line-height: 1.36;
+      }
+
+      .install-card {
+        min-height: 278px;
+        padding: 34px;
+      }
+
+      .install-title {
+        margin-bottom: 18px;
+        color: #ffffff;
+        font-size: 31px;
+        font-weight: 820;
+      }
+
+      .command {
+        display: block;
+        padding: 21px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        background: #20242a;
+        color: #eef2f7;
+        font-family: monospace;
+        font-size: 19px;
+        font-weight: 700;
+        line-height: 1.42;
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+
+      .meta-line {
+        margin-top: 16px;
+        color: rgba(235, 235, 245, 0.48);
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      .onboarding {
+        align-self: center;
+        width: 720px;
+        overflow: hidden;
+        background: #1b1b1e;
+      }
+
+      .onboarding-head {
+        padding: 28px 38px 24px;
+        text-align: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+
+      .onboarding-head img {
+        width: 62px;
+        height: 62px;
+        margin-bottom: 14px;
+        border-radius: 18px;
+        box-shadow: 0 18px 44px rgba(76, 141, 255, 0.28);
+      }
+
+      .onboarding-title {
+        color: #f5f5f7;
+        font-size: 33px;
+        font-weight: 830;
+      }
+
+      .onboarding-copy {
+        max-width: 570px;
+        margin: 9px auto 0;
+        color: rgba(235, 235, 245, 0.58);
+        font-size: 18px;
+        line-height: 1.45;
+      }
+
+      .permission-list {
+        padding: 20px;
+      }
+
+      .permission-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-height: 72px;
+        padding: 13px 16px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 13px;
+        background: #252528;
+      }
+
+      .permission-row + .permission-row {
+        margin-top: 10px;
+      }
+
+      .check {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(70, 196, 107, 0.4);
+        border-radius: 9px;
+        background: rgba(70, 196, 107, 0.16);
+        color: #6bd98c;
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .permission-name {
+        color: #f5f5f7;
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      .permission-detail {
+        margin-top: 3px;
+        color: rgba(235, 235, 245, 0.48);
+        font-size: 15px;
+      }
+
+      .permission-action {
+        margin-left: auto;
+        padding: 9px 14px;
+        border-radius: 9px;
+        background: #4c8dff;
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .ready-pill {
+        margin-left: auto;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(70, 196, 107, 0.14);
+        color: #6bd98c;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .gatekeeper-card {
+        align-self: center;
+        width: 1120px;
+        padding: 38px;
+      }
+
+      .settings-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 70px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid rgba(29, 29, 31, 0.08);
+        font-size: 31px;
+        font-weight: 820;
+      }
+
+      .settings-row {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        min-height: 88px;
+        border-bottom: 1px solid rgba(29, 29, 31, 0.08);
+        color: #1d1d1f;
+        font-size: 26px;
+        font-weight: 750;
+      }
+
+      .settings-row:last-child {
+        border-bottom: 0;
+      }
+
+      .settings-row span:first-child {
+        flex: 1;
+      }
+
+      .button {
+        padding: 13px 20px;
+        border-radius: 11px;
+        background: #4c8dff;
+        color: #ffffff;
+        font-size: 19px;
+        font-weight: 820;
+      }
+
+      .warning {
+        color: #8a520f;
+        font-size: 19px;
+        font-weight: 800;
+      }
+
+      .location-card {
+        align-self: center;
+        width: 1120px;
+        padding: 46px;
+        display: grid;
+        grid-template-columns: 118px 1fr;
+        gap: 38px;
+        align-items: center;
+      }
+
+      .location-card img {
+        width: 112px;
+        height: 112px;
+        border-radius: 25px;
+        box-shadow: 0 22px 52px rgba(76, 141, 255, 0.24);
+      }
+
+      .path {
+        margin-top: 16px;
+        color: #62666d;
+        font-family: monospace;
+        font-size: 28px;
+        font-weight: 800;
+      }
+
+      .transition-cover {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        transform: scaleX(0);
+        transform-origin: left center;
+        background: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="30"
+      data-width="1920"
+      data-height="1080"
+    >
+      <section id="scene-status" class="scene active">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip"><span class="dot"></span>Preview release</div>
+        </div>
+        <div class="heading">
+          <div class="eyebrow">Distribution status</div>
+          <h1>Preview build. Clear expectations.</h1>
+          <p class="lede">CmdIME can run without Developer ID signing, but preview releases should be installed deliberately.</p>
+        </div>
+        <div class="grid">
+          <div class="surface status-card">
+            <div class="status-badge">Unnotarized preview</div>
+            <div class="status-title">For technical users and early adopters</div>
+            <div class="status-text">macOS may ask you to approve CmdIME manually before first launch.</div>
+          </div>
+          <div class="surface status-card">
+            <div class="status-badge blue">Trust path</div>
+            <div class="status-title">Verify what you install</div>
+            <div class="status-text">Use Homebrew or a pinned installer command with the release SHA-256.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-install" class="scene">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip">Install paths</div>
+        </div>
+        <div class="heading">
+          <div class="eyebrow">Install</div>
+          <h2>Choose a preview install path.</h2>
+          <p class="lede">Homebrew is the simplest path. The one-line installer can be pinned to a checksum.</p>
+        </div>
+        <div class="grid">
+          <div class="surface dark-surface install-card">
+            <div class="install-title">Homebrew cask</div>
+            <code class="command">brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb</code>
+            <div class="meta-line">Good default for repeatable local installs.</div>
+          </div>
+          <div class="surface dark-surface install-card">
+            <div class="install-title">Pinned installer</div>
+            <code class="command">CMDIME_VERSION=0.1.13 CMDIME_SHA256=86fb954c... /bin/bash -c "$(curl -fsSL ...)"</code>
+            <div class="meta-line">Use the published checksum when you install directly.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-permissions" class="scene">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip">First launch</div>
+        </div>
+        <div class="heading">
+          <div class="eyebrow">Permissions</div>
+          <h2>Grant only what CmdIME needs.</h2>
+          <p class="lede">CmdIME watches for configured switch keys. Nothing is recorded or sent anywhere.</p>
+        </div>
+        <div class="surface onboarding">
+          <div class="onboarding-head">
+            <img src="app-icon.png" alt="" />
+            <div class="onboarding-title">Welcome to CmdIME</div>
+            <div class="onboarding-copy">macOS controls these permissions. CmdIME can request them or open the right Settings pane.</div>
+          </div>
+          <div class="permission-list">
+            <div class="permission-row">
+              <div class="check">✓</div>
+              <div>
+                <div class="permission-name">Accessibility</div>
+                <div class="permission-detail">Required to respond to global shortcut events.</div>
+              </div>
+              <div class="ready-pill">Ready</div>
+            </div>
+            <div class="permission-row">
+              <div class="check">✓</div>
+              <div>
+                <div class="permission-name">Input Monitoring</div>
+                <div class="permission-detail">Required to see configured key triggers.</div>
+              </div>
+              <div class="permission-action">Open Settings</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-gatekeeper" class="scene">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip">Gatekeeper</div>
+        </div>
+        <div class="heading">
+          <div class="eyebrow">First launch</div>
+          <h2>If macOS blocks a browser download, approve only releases you trust.</h2>
+        </div>
+        <div class="surface gatekeeper-card">
+          <div class="settings-title">
+            <span>Privacy & Security</span>
+            <span class="warning">Preview build</span>
+          </div>
+          <div class="settings-row"><span>CmdIME was blocked from opening</span><span class="button">Open Anyway</span></div>
+          <div class="settings-row"><span>Then grant Accessibility</span><span class="warning">Required</span></div>
+          <div class="settings-row"><span>Then grant Input Monitoring</span><span class="warning">Required</span></div>
+        </div>
+      </section>
+
+      <section id="scene-location" class="scene">
+        <div class="topline">
+          <div class="brand"><img src="app-icon.png" alt="" />CmdIME</div>
+          <div class="chip"><span class="dot"></span>Ready</div>
+        </div>
+        <div class="surface location-card">
+          <img src="app-icon.png" alt="" />
+          <div>
+            <h2>Use one stable app location.</h2>
+            <p class="path">/Applications/CmdIME.app</p>
+            <p class="lede">Stable code identity keeps macOS permission prompts predictable.</p>
+          </div>
+        </div>
+      </section>
+
+      <div id="transition-cover" class="transition-cover"></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+
+      const tl = gsap.timeline({
+        paused: true,
+        defaults: { ease: "power2.out", overwrite: "auto" }
+      });
+      window.__timelines["main"] = tl;
+
+      function enterScene(selector, at) {
+        tl.set(selector, { opacity: 1 }, at);
+        if (document.querySelectorAll(selector + " .topline").length) {
+          tl.fromTo(`${selector} .topline`, { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.38 }, at + 0.08);
+        }
+        if (document.querySelectorAll(selector + " .eyebrow").length) {
+          tl.fromTo(`${selector} .eyebrow`, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.34 }, at + 0.18);
+        }
+        if (document.querySelectorAll(selector + " h1, " + selector + " h2").length) {
+          tl.fromTo(`${selector} h1, ${selector} h2`, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.48 }, at + 0.28);
+        }
+        if (document.querySelectorAll(selector + " .lede").length) {
+          tl.fromTo(`${selector} .lede`, { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.42 }, at + 0.44);
+        }
+        if (document.querySelectorAll(selector + " .surface").length) {
+          tl.fromTo(`${selector} .surface`, { opacity: 0, y: 28, scale: 0.985 }, { opacity: 1, y: 0, scale: 1, duration: 0.52, stagger: 0.09 }, at + 0.64);
+        }
+      }
+
+      function coverSwitch(fromSelector, toSelector, at) {
+        tl.to("#transition-cover", { scaleX: 1, duration: 0.28, ease: "power1.inOut" }, at);
+        tl.set(fromSelector, { opacity: 0 }, at + 0.28);
+        tl.set(toSelector, { opacity: 1 }, at + 0.28);
+        tl.to("#transition-cover", { scaleX: 0, transformOrigin: "right center", duration: 0.3, ease: "power1.inOut" }, at + 0.3);
+        tl.set("#transition-cover", { transformOrigin: "left center" }, at + 0.62);
+      }
+
+      enterScene("#scene-status", 0);
+      tl.fromTo("#scene-status .status-badge", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.28, stagger: 0.08 }, 1.08);
+
+      coverSwitch("#scene-status", "#scene-install", 5.1);
+      enterScene("#scene-install", 5.42);
+      tl.fromTo("#scene-install .command", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.38, stagger: 0.1 }, 6.72);
+
+      coverSwitch("#scene-install", "#scene-permissions", 11.0);
+      enterScene("#scene-permissions", 11.32);
+      tl.fromTo("#scene-permissions .permission-row", { opacity: 0, x: -18 }, { opacity: 1, x: 0, duration: 0.38, stagger: 0.12 }, 12.92);
+      tl.fromTo("#scene-permissions .permission-action", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.24 }, 13.55);
+
+      coverSwitch("#scene-permissions", "#scene-gatekeeper", 17.0);
+      enterScene("#scene-gatekeeper", 17.32);
+      tl.fromTo("#scene-gatekeeper .settings-row", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.36, stagger: 0.1 }, 18.7);
+      tl.fromTo("#scene-gatekeeper .button", { opacity: 0, scale: 0.94 }, { opacity: 1, scale: 1, duration: 0.26 }, 19.18);
+
+      coverSwitch("#scene-gatekeeper", "#scene-location", 24.0);
+      enterScene("#scene-location", 24.32);
+      tl.fromTo("#scene-location .location-card img", { opacity: 0, scale: 0.88 }, { opacity: 1, scale: 1, duration: 0.44 }, 25.08);
+      tl.to("#scene-location .location-card", { y: -4, duration: 3.0, ease: "sine.inOut" }, 26.0);
+    </script>
+  </body>
+</html>
