@@ -1,29 +1,135 @@
-# CmdIME
+<div align="center">
+  <img src="Assets/AppIcon.png" alt="CmdIME app icon" width="112">
+  <h1>CmdIME</h1>
+  <p><strong>Deterministic macOS input-source switching for multilingual typing.</strong></p>
 
-[![Swift](https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml/badge.svg)](https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml)
-[![Release](https://img.shields.io/github/v/release/ShunmeiCho/cmd-ime)](https://github.com/ShunmeiCho/cmd-ime/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+  <p>
+    <a href="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml"><img alt="Swift" src="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml/badge.svg"></a>
+    <a href="https://github.com/ShunmeiCho/cmd-ime/releases"><img alt="Release" src="https://img.shields.io/github/v/release/ShunmeiCho/cmd-ime"></a>
+    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+  </p>
+</div>
 
 CmdIME is a macOS input-source switcher inspired by `cmd-eikana`, but built for
-configurable switch slots. The default setup targets English, Chinese, and
-Japanese.
+configurable switch slots. It replaces cycling through input sources with direct
+target switching: press the slot you want, and CmdIME selects the matching macOS
+input source.
 
-Default bindings:
+## What It Does
 
-- left Command switches to English
-- right Command switches to Chinese
-- Option+J switches to Japanese
+CmdIME scans the input sources already installed in macOS instead of hardcoding
+one keyboard layout. The default setup targets English, Chinese, and Japanese,
+and the bindings are configurable.
 
-The bindings are configurable, and CmdIME scans the input sources already
-installed in macOS instead of hardcoding one keyboard layout.
+| Slot | Default trigger | Action |
+| --- | --- | --- |
+| English | Left Command | Switch to the matched English input source |
+| Chinese | Right Command | Switch to the matched Chinese input source |
+| Japanese | Option+J | Switch to the matched Japanese input source |
 
-## Support
+Demo video planning lives in [demo-videos](demo-videos/). Rendered videos will
+be linked here once the visual direction is finalized.
 
-If CmdIME saves you a little keyboard friction, you can support the project at
-[buymeacoffee.com/shunmeicor7](https://buymeacoffee.com/shunmeicor7).
+## Distribution Status
 
-You can also star the repository:
-[github.com/ShunmeiCho/cmd-ime](https://github.com/ShunmeiCho/cmd-ime).
+CmdIME is currently distributed as an **unnotarized preview build**.
+
+It is not distributed through the Mac App Store, and current preview builds are
+not signed with a Developer ID certificate unless a release explicitly says so.
+macOS may block the app on first launch or ask you to approve it manually in
+System Settings.
+
+After you approve CmdIME and grant the required permissions, it runs normally.
+This preview distribution path is intended for technical users and early
+adopters.
+
+Apple's Gatekeeper documentation explains that apps downloaded from outside the
+App Store are checked for identified developer signing, notarization, and
+modification status. Developer ID signing and notarization are the smoother path
+for broader public distribution:
+
+- [Gatekeeper and runtime protection in macOS](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web)
+- [Signing Mac Software with Developer ID](https://developer.apple.com/developer-id/)
+
+## Install
+
+### Recommended Preview Install: Homebrew
+
+```sh
+brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb
+```
+
+After installation, open CmdIME and grant both **Accessibility** and
+**Input Monitoring** permissions in System Settings > Privacy & Security.
+
+### Verified One-Line Install
+
+Each release publishes a SHA-256 checksum. For the safest installer path, pin
+both the version and checksum from the GitHub Release notes:
+
+```sh
+CMDIME_VERSION=0.1.13 CMDIME_SHA256=86fb954cb15ef56ad6b9ef53347ca8a50f89cb7a72069c9251b1ad09e3331bc0 \
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+```
+
+The installer downloads the release zip, checks the archive when
+`CMDIME_SHA256` is set, installs `CmdIME.app`, links `keyboardctl`, and opens the
+app so macOS can request permissions.
+
+Without `CMDIME_SHA256`, the installer still prints the downloaded archive's
+SHA-256 so you can compare it manually with the release notes.
+
+### Build From Source
+
+```sh
+git clone https://github.com/ShunmeiCho/cmd-ime.git
+cd cmd-ime
+swift test
+./script/build_and_run.sh
+```
+
+The local app still needs Accessibility and Input Monitoring permissions before
+global keyboard listening can work.
+
+## First Launch And Permissions
+
+CmdIME needs both macOS permissions:
+
+- Accessibility
+- Input Monitoring
+
+Use one stable app location when granting permissions. macOS stores approval
+against the app's code identity, so approving one rebuilt `CmdIME.app` and then
+running another copy from `dist/`, `dist/release/`, or `/Applications` can make
+macOS ask again.
+
+Recommended permission reset flow:
+
+1. Quit CmdIME.
+2. Remove old `CmdIME.app` entries from System Settings > Privacy & Security >
+   Accessibility and Input Monitoring.
+3. Install or copy the app to the location you actually use, such as
+   `/Applications/CmdIME.app`.
+4. Open that exact app and grant both permissions.
+5. Quit and reopen CmdIME.
+
+## Gatekeeper Troubleshooting
+
+Because current preview builds are not notarized, macOS may show a warning such
+as "CmdIME is damaged" or "Apple cannot check it for malicious software" when
+you open a browser-downloaded zip.
+
+If you trust the release you downloaded, try opening CmdIME once, then go to
+System Settings > Privacy & Security and choose **Open Anyway**.
+
+If needed, you can also remove the browser quarantine attribute:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/CmdIME.app
+```
+
+Prefer the Homebrew or pinned installer path when possible. Those paths avoid
+the browser quarantine flow.
 
 ## App Behavior
 
@@ -77,127 +183,10 @@ be disabled, resized with presets and a scale slider, switched between
 icon/text display modes, or recolored with slot colors, the system accent color,
 monochrome, or a custom color in Settings.
 
-## Build
-
-```sh
-swift test
-./script/build_and_run.sh
-```
-
-The app needs Accessibility and Input Monitoring permissions before global
-keyboard listening can work.
-
-## Permissions Troubleshooting
-
-macOS stores Accessibility and Input Monitoring approval against the app's code
-identity. If you approve one rebuilt `CmdIME.app` and then run another copy from
-`dist/`, `dist/release/`, or `/Applications`, macOS can treat it as a different
-app and show the prompt again.
-
-Use one stable app location when granting permissions:
-
-1. Quit CmdIME.
-2. Remove old `CmdIME.app` entries from System Settings > Privacy & Security >
-   Accessibility and Input Monitoring.
-3. Install or copy the app to the location you actually use, such as
-   `/Applications/CmdIME.app`.
-4. Open that exact app and grant both permissions.
-5. Quit and reopen CmdIME.
-
 If Japanese opens a kana palette instead of switching to Hiragana, refresh input
 sources or update to CmdIME 0.1.10 or later. macOS exposes
 `com.apple.50onPaletteIM` as a selectable Japanese source, but it is an
 auxiliary kana palette, not the normal Hiragana input method.
-
-For local development, `script/build_and_run.sh` signs the generated app bundle
-after staging it. It uses the first local Apple Development or Developer ID
-signing identity it can find, then falls back to ad-hoc signing. You can set
-`CODESIGN_IDENTITY` to choose a specific identity:
-
-```sh
-CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run.sh
-```
-
-## Install
-
-CmdIME is currently distributed as an unnotarized preview build. It is not
-distributed through the Mac App Store and is not yet signed with a Developer ID
-certificate.
-
-Recommended install with Homebrew:
-
-```sh
-brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb
-```
-
-Or use the pinned installer command from the release notes:
-
-```sh
-CMDIME_VERSION=<version> CMDIME_SHA256=<sha256> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
-```
-
-The installer downloads the public release zip, installs `CmdIME.app`, links
-`keyboardctl`, and opens the app so macOS can request Accessibility and Input
-Monitoring permissions.
-
-### Verify the download (recommended)
-
-The installer prints the downloaded archive's SHA-256. To make it abort on a
-tampered or corrupted download, pin the version and pass the expected hash. Both
-values are published in each release's notes, which also carry the exact,
-copy-pasteable command.
-
-Pinning `CMDIME_VERSION` keeps the checksum and the downloaded zip in sync even
-after a newer release becomes the latest. Without `CMDIME_SHA256` the installer
-still prints the hash so you can compare it with the release notes manually.
-
-### First launch and allowing access
-
-The `curl | bash` installer and Homebrew do not quarantine the app, so it opens
-directly and prompts for **Accessibility** and **Input Monitoring** the first
-time. Grant both in System Settings > Privacy & Security.
-
-Current preview releases are not notarized. They may be signed with an Apple
-Development certificate or ad-hoc signature, but not with a Developer ID
-certificate. If you download the `.zip` from the GitHub Releases page in a
-browser, macOS quarantines it and Gatekeeper may block it as "CmdIME is damaged"
-or "cannot be opened because Apple cannot check it for malicious software." To
-allow it:
-
-- Open System Settings > Privacy & Security, scroll to the CmdIME message, and
-  click **Open Anyway** (on macOS 15+, the old right-click > Open shortcut is
-  gone); or
-- Remove the quarantine attribute from a terminal:
-
-  ```sh
-  xattr -dr com.apple.quarantine /Applications/CmdIME.app
-  ```
-
-Prefer the one-line installer or Homebrew, which avoid the quarantine path
-entirely.
-
-CmdIME 0.1.11 and later can check recent GitHub Releases from Settings >
-Runtime > Updates, including explicitly labelled preview releases. When a new
-version is available, open the release page and reinstall with the one-line
-installer or update through Homebrew. Fully automatic in-app replacement is left
-to a future Sparkle-based updater so signing and macOS permission behavior stay
-predictable.
-
-Current preview releases may be unnotarized while Developer ID distribution is
-not ready. Browser-downloaded preview zips can be blocked by Gatekeeper; the
-one-line installer and Homebrew path avoid browser quarantine. For broader
-distribution, sign the release with a Developer ID Application certificate and
-notarize it.
-
-## UI Technology
-
-The shipped app stays native SwiftUI/AppKit. React is useful for web prototypes
-or a future optional settings surface, but it does not replace the macOS APIs
-CmdIME depends on for global keyboard listening, Accessibility/Input Monitoring
-permissions, login items, or input-source switching.
-
-Mac App Store distribution needs a separate sandboxed App Store build. See
-[docs/app-store.md](docs/app-store.md).
 
 ## CLI
 
@@ -220,20 +209,40 @@ Config lives at:
 ~/.config/cmd-ime/config.json
 ```
 
-## Package
+## Build
 
 ```sh
-./script/package_app.sh 0.1.13
+swift test
+./script/build_and_run.sh
+```
+
+For local development, `script/build_and_run.sh` signs the generated app bundle
+after staging it. It uses the first local Apple Development or Developer ID
+signing identity it can find, then falls back to ad-hoc signing. You can set
+`CODESIGN_IDENTITY` to choose a specific identity:
+
+```sh
+CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run.sh
+```
+
+The shipped app stays native SwiftUI/AppKit. React is useful for web prototypes
+or a future optional settings surface, but it does not replace the macOS APIs
+CmdIME depends on for global keyboard listening, Accessibility/Input Monitoring
+permissions, login items, or input-source switching.
+
+Mac App Store distribution needs a separate sandboxed App Store build. See
+[docs/app-store.md](docs/app-store.md).
+
+## Package And Release
+
+```sh
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.13
 shasum -a 256 dist/CmdIME-0.1.13.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing
-identity. While CmdIME is distributed as an explicitly labelled unnotarized
-preview, set `CMDIME_ALLOW_UNNOTARIZED=1`:
-
-```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.13
-```
+identity. For an explicitly labelled unnotarized preview, set
+`CMDIME_ALLOW_UNNOTARIZED=1`.
 
 One-time notarization setup:
 
@@ -250,14 +259,16 @@ service, staples the ticket to `CmdIME.app`, rebuilds the distributable zip, and
 prints the SHA-256. Use `CMDIME_NOTARY_PROFILE` if your keychain profile is not
 named `cmd-ime-notary`.
 
-Browser-downloaded unnotarized preview builds are blocked by Gatekeeper and can
-appear as "damaged" because they are not signed with Developer ID and notarized.
-Label preview release notes clearly and publish the SHA-256 printed by the
-package script.
-
 Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
 Homebrew cask. The cask links `keyboardctl` through `Contents/Resources`, which
 is a compatibility symlink to the signed helper in `Contents/MacOS`.
+
+CmdIME 0.1.11 and later can check recent GitHub Releases from Settings >
+Runtime > Updates, including explicitly labelled preview releases. When a new
+version is available, open the release page and reinstall with the one-line
+installer or update through Homebrew. Fully automatic in-app replacement is left
+to a future Sparkle-based updater so signing and macOS permission behavior stay
+predictable.
 
 ## Homebrew
 
@@ -273,6 +284,10 @@ Local cask test from a checkout:
 brew install --cask ./Casks/cmd-ime.rb
 ```
 
+The cask includes Homebrew's `unsigned_accessibility` caveat because preview
+builds are not Developer ID signed. Homebrew documents that this caveat tells
+users they may need to re-enable Accessibility after updates.
+
 After a GitHub release is published, the cask can also live in a Homebrew tap.
 
 ## Project Shape
@@ -283,3 +298,11 @@ After a GitHub release is published, the cask can also live in a Homebrew tap.
 - `Sources/keyboardctl`: CLI for scan, config, switching, and listener mode
 - `script`: local run and release package scripts
 - `Casks`: Homebrew cask template
+
+## Support
+
+If CmdIME saves you a little keyboard friction, you can support the project at
+[buymeacoffee.com/shunmeicor7](https://buymeacoffee.com/shunmeicor7).
+
+You can also star the repository:
+[github.com/ShunmeiCho/cmd-ime](https://github.com/ShunmeiCho/cmd-ime).
