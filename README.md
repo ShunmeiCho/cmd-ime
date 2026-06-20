@@ -10,10 +10,9 @@
   </p>
 </div>
 
-CmdIME is a macOS input-source switcher inspired by `cmd-eikana`, but built for
-configurable switch slots. It replaces cycling through input sources with direct
-target switching: press the slot you want, and CmdIME selects the matching macOS
-input source.
+CmdIME is a macOS input-source switcher built around configurable switch slots
+and direct target switching. Instead of cycling through input sources, press the
+slot you want and CmdIME selects the matching macOS input source.
 
 ## What It Does
 
