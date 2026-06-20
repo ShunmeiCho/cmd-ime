@@ -80,6 +80,79 @@ final class EventTapMonitorTests: XCTestCase {
 
         XCTAssertEqual(monitor.releaseOneShotModifierForTesting(trigger), .wait)
     }
+
+    func testUnboundModifierShortcutDoesNotPoisonNextOneShotModifier() {
+        let inputSources = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: inputSources)
+        var switchedRoles: [InputRole] = []
+        monitor.onSwitch = { role, _ in
+            switchedRoles.append(role)
+        }
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 58, flags: [.maskAlternate]))
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
+        XCTAssertNil(monitor.handleKeyUpForTesting(makeKeyboardEvent(keyCode: 38, keyDown: false)))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 58))
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+
+        XCTAssertEqual(switchedRoles, [.japanese, .english])
+        XCTAssertEqual(
+            inputSources.selectedIDs,
+            [
+                "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+                "com.apple.keylayout.ABC",
+            ]
+        )
+    }
+
+    func testRightUnboundModifierShortcutDoesNotPoisonNextOneShotModifier() {
+        let inputSources = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: inputSources)
+        var switchedRoles: [InputRole] = []
+        monitor.onSwitch = { role, _ in
+            switchedRoles.append(role)
+        }
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 61, flags: [.maskAlternate]))
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
+        XCTAssertNil(monitor.handleKeyUpForTesting(makeKeyboardEvent(keyCode: 38, keyDown: false)))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 61))
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54, flags: [.maskCommand]))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54))
+
+        XCTAssertEqual(switchedRoles, [.japanese, .chinese])
+        XCTAssertEqual(
+            inputSources.selectedIDs,
+            [
+                "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+                "com.apple.inputmethod.SCIM.ITABC",
+            ]
+        )
+    }
+
+    func testModifierChordStillCancelsOneShotAfterUnboundModifierShortcut() {
+        let inputSources = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: inputSources)
+        var switchedRoles: [InputRole] = []
+        monitor.onSwitch = { role, _ in
+            switchedRoles.append(role)
+        }
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 58, flags: [.maskAlternate]))
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
+        XCTAssertNil(monitor.handleKeyUpForTesting(makeKeyboardEvent(keyCode: 38, keyDown: false)))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 58))
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        _ = monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 8, flags: [.maskCommand]))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+
+        XCTAssertEqual(switchedRoles, [.japanese])
+        XCTAssertEqual(inputSources.selectedIDs, ["com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"])
+    }
     #endif
 
     func testKeyPressFlagsIgnoreUnexpectedCapsLockAndFn() {
@@ -113,15 +186,59 @@ private func makeLeftMouseDownEvent() -> NSEvent {
     )!
 }
 
+private func makeKeyboardEvent(keyCode: Int, flags: CGEventFlags = [], keyDown: Bool = true) -> CGEvent {
+    let event = CGEvent(
+        keyboardEventSource: nil,
+        virtualKey: CGKeyCode(keyCode),
+        keyDown: keyDown
+    )!
+    event.flags = flags
+    return event
+}
+
+private func makeSwitchSources() -> [InputSourceInfo] {
+    [
+        InputSourceInfo(
+            id: "com.apple.keylayout.ABC",
+            localizedName: "ABC",
+            languages: ["en"],
+            isSelectCapable: true
+        ),
+        InputSourceInfo(
+            id: "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+            localizedName: "Hiragana",
+            languages: ["ja"],
+            isSelectCapable: true
+        ),
+        InputSourceInfo(
+            id: "com.apple.inputmethod.SCIM.ITABC",
+            localizedName: "Pinyin - Simplified",
+            languages: ["zh-Hans"],
+            isSelectCapable: true
+        ),
+    ]
+}
+
 private final class StubInputSourceService: InputSourceService {
+    private let sources: [InputSourceInfo]
+    private var selectedID: String?
+    private(set) var selectedIDs: [String] = []
+
+    init(sources: [InputSourceInfo] = []) {
+        self.sources = sources
+    }
+
     func listInputSources() throws -> [InputSourceInfo] {
-        []
+        sources
     }
 
     func currentInputSource() throws -> InputSourceInfo? {
-        nil
+        sources.first { $0.id == selectedID }
     }
 
-    func selectInputSource(id _: String) throws {}
+    func selectInputSource(id: String) throws {
+        selectedID = id
+        selectedIDs.append(id)
+    }
 }
 #endif

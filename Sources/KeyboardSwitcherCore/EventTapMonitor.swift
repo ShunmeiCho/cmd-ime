@@ -216,26 +216,45 @@ public final class EventTapMonitor: @unchecked Sendable {
     func releaseOneShotModifierForTesting(_ trigger: KeyTrigger) -> OneShotModifierState.Output {
         oneShotState.modifierUp(trigger)
     }
+
+    @discardableResult
+    func handleFlagsChangedForTesting(_ event: CGEvent) -> Unmanaged<CGEvent>? {
+        handleFlagsChanged(event)
+    }
+
+    @discardableResult
+    func handleKeyDownForTesting(_ event: CGEvent) -> Unmanaged<CGEvent>? {
+        handleKeyDown(event)
+    }
+
+    @discardableResult
+    func handleKeyUpForTesting(_ event: CGEvent) -> Unmanaged<CGEvent>? {
+        handleKeyUp(event)
+    }
     #endif
 
     private func handleFlagsChanged(_ event: CGEvent) -> Unmanaged<CGEvent>? {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
-        if let modifierTrigger = modifierTrigger(forKeyCode: keyCode), isModifierDown(for: keyCode, flags: event.flags) {
-            oneShotState.modifierDown(modifierTrigger)
-        }
-
-        guard let trigger = modifierTrigger(forKeyCode: keyCode), hasOneShotBinding(for: trigger) else {
+        guard let trigger = modifierTrigger(forKeyCode: keyCode) else {
             return Unmanaged.passUnretained(event)
         }
 
         if isModifierDown(for: keyCode, flags: event.flags) {
+            oneShotState.modifierDown(trigger)
             return Unmanaged.passUnretained(event)
         }
 
-        switch oneShotState.modifierUp(
+        let hasBinding = hasOneShotBinding(for: trigger)
+        let output = oneShotState.modifierUp(
             trigger,
             hasDoubleTapBinding: hasDoubleTapBinding(for: trigger)
-        ) {
+        )
+
+        guard hasBinding else {
+            return Unmanaged.passUnretained(event)
+        }
+
+        switch output {
         case .trigger(let output):
             pendingSingleTapTimer?.invalidate()
             pendingSingleTapTimer = nil
