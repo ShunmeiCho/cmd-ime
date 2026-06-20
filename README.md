@@ -53,20 +53,7 @@ for broader public distribution:
 
 ## Install
 
-### Recommended Preview Install: Homebrew
-
-```sh
-brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb
-```
-
-After installation, open CmdIME and grant both **Accessibility** and
-**Input Monitoring** permissions in System Settings > Privacy & Security.
-
-[![CmdIME install and permissions demo](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
-
-[Open the full install and permissions demo](demo-videos/renders/cmdime-install-permissions-demo.mp4)
-
-### Verified One-Line Install
+### Recommended Preview Install
 
 Each release publishes a SHA-256 checksum. For the safest installer path, pin
 both the version and checksum from the GitHub Release notes:
@@ -82,6 +69,13 @@ app so macOS can request permissions.
 
 Without `CMDIME_SHA256`, the installer still prints the downloaded archive's
 SHA-256 so you can compare it manually with the release notes.
+
+After installation, open CmdIME and grant both **Accessibility** and
+**Input Monitoring** permissions in System Settings > Privacy & Security.
+
+[![CmdIME install and permissions demo](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
+
+[Open the full install and permissions demo](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
 ### Build From Source
 
@@ -132,8 +126,8 @@ If needed, you can also remove the browser quarantine attribute:
 xattr -dr com.apple.quarantine /Applications/CmdIME.app
 ```
 
-Prefer the Homebrew or pinned installer path when possible. Those paths avoid
-the browser quarantine flow.
+Prefer the pinned installer path when possible. That path avoids the browser
+quarantine flow.
 
 ## App Behavior
 
@@ -276,23 +270,17 @@ predictable.
 
 ## Homebrew
 
-Install from this repository cask:
-
-```sh
-brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb
-```
-
-Local cask test from a checkout:
-
-```sh
-brew install --cask ./Casks/cmd-ime.rb
-```
+`Casks/cmd-ime.rb` is maintained as a tap-ready cask for future Homebrew
+distribution. Recent Homebrew versions require casks to be installed from a tap
+and reject direct raw GitHub or local cask file paths, so use the verified
+one-line installer above until a public tap is available.
 
 The cask includes Homebrew's `unsigned_accessibility` caveat because preview
 builds are not Developer ID signed. Homebrew documents that this caveat tells
 users they may need to re-enable Accessibility after updates.
 
-After a GitHub release is published, the cask can also live in a Homebrew tap.
+After a GitHub release is published and a tap repository exists, this cask can
+be copied into that tap for normal Homebrew distribution.
 
 ## Project Shape
 
