@@ -73,7 +73,7 @@ Each release publishes a SHA-256 checksum. For the safest installer path, pin
 both the version and checksum from the GitHub Release notes:
 
 ```sh
-CMDIME_VERSION=0.1.13 CMDIME_SHA256=86fb954cb15ef56ad6b9ef53347ca8a50f89cb7a72069c9251b1ad09e3331bc0 \
+CMDIME_VERSION=0.2.0 CMDIME_SHA256=5c805357292bf7f51209a7afe58db642390289b8fff28078be8e1f9213070199 \
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
 ```
 
@@ -241,8 +241,8 @@ Mac App Store distribution needs a separate sandboxed App Store build. See
 ## Package And Release
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.1.13
-shasum -a 256 dist/CmdIME-0.1.13.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.2.0
+shasum -a 256 dist/CmdIME-0.2.0.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing
