@@ -55,6 +55,36 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(config.switchIndicatorColorStyle, .role)
         XCTAssertEqual(config.switchIndicatorContentStyle, .iconAndText)
         XCTAssertEqual(config.switchIndicatorCustomColorHex, "#2F7CF6")
+        XCTAssertEqual(config.switchIndicatorCustomRoleColorHexes, [:])
+    }
+
+    func testSwitchIndicatorCustomRoleColorsRoundTrip() throws {
+        var config = SwitcherConfig.default
+        config.setSwitchIndicatorCustomColorHex("#4D8CFF", for: .english)
+        config.setSwitchIndicatorCustomColorHex("#2FBA5A", for: .chinese)
+        config.setSwitchIndicatorCustomColorHex("#E9574F", for: .japanese)
+
+        let data = try JSONEncoder().encode(config)
+        let loaded = try JSONDecoder().decode(SwitcherConfig.self, from: data)
+
+        XCTAssertEqual(loaded.switchIndicatorCustomColorHex(for: .english), "#4D8CFF")
+        XCTAssertEqual(loaded.switchIndicatorCustomColorHex(for: .chinese), "#2FBA5A")
+        XCTAssertEqual(loaded.switchIndicatorCustomColorHex(for: .japanese), "#E9574F")
+    }
+
+    func testOneShotModifierConflictIgnoresGesture() {
+        var config = SwitcherConfig.default
+        let trigger = KeyTrigger(
+            kind: .oneShotModifier,
+            keyCode: 54,
+            keyName: "right-command",
+            gesture: .doubleTap
+        )
+
+        XCTAssertEqual(config.oneShotModifierConflict(for: trigger, excluding: .english), .chinese)
+
+        config.upsertSwitchBinding(trigger: trigger, role: .chinese)
+        XCTAssertNil(config.oneShotModifierConflict(for: trigger, excluding: .chinese))
     }
 
     func testSwitchIndicatorScaleIsClampedWhenDecoding() throws {

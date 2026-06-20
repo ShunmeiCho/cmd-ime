@@ -68,14 +68,35 @@ final class StatusItemController: NSObject {
         self.model = model
         super.init()
         updateVisibility(model.config.showMenuBarIcon)
-        model.$config.sink { [weak self] config in
+        model.$config
+            .map(StatusMenuConfigSnapshot.init(config:))
+            .removeDuplicates()
+            .sink { [weak self] snapshot in
             Task { @MainActor in
-                self?.updateVisibility(config.showMenuBarIcon)
+                self?.updateVisibility(snapshot.showMenuBarIcon)
                 self?.refreshMenu()
             }
         }
         .store(in: &cancellables)
         model.$sources.sink { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshMenu()
+            }
+        }
+        .store(in: &cancellables)
+        model.$isListening.sink { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshMenu()
+            }
+        }
+        .store(in: &cancellables)
+        model.$keyboardControlStatus.sink { [weak self] _ in
+            Task { @MainActor in
+                self?.refreshMenu()
+            }
+        }
+        .store(in: &cancellables)
+        model.$permissions.sink { [weak self] _ in
             Task { @MainActor in
                 self?.refreshMenu()
             }
@@ -97,7 +118,7 @@ final class StatusItemController: NSObject {
         }
 
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "CmdIME"
+        item.button?.title = "⌘"
         item.button?.toolTip = "CmdIME"
         item.menu = makeMenu()
         statusItem = item
@@ -117,21 +138,48 @@ final class StatusItemController: NSObject {
 
     private func makeMenu() -> NSMenu {
         let menu = NSMenu()
+        let header = NSMenuItem(title: "CmdIME", action: nil, keyEquivalent: "")
+        header.isEnabled = false
+        menu.addItem(header)
+
+        let status = NSMenuItem(title: menuStatusTitle, action: nil, keyEquivalent: "")
+        status.isEnabled = false
+        menu.addItem(status)
+
+        menu.addItem(.separator())
+
         for role in InputRole.allCases {
             let source = model.matchedSource(for: role)
             let presentation = InputSourcePresentation(source: source, fallbackRole: role)
+            let trigger = model.bindingText(for: role)
             let item = menuItem(
-                source == nil ? "\(presentation.title) (not matched)" : presentation.title,
+                source == nil
+                    ? "\(role.displayName) - Not matched"
+                    : "\(role.displayName) - \(trigger)",
                 selector(for: role)
             )
-            item.toolTip = source?.id
+            item.toolTip = source.map { "\(presentation.title): \($0.localizedName)" }
             menu.addItem(item)
         }
         menu.addItem(.separator())
-        menu.addItem(menuItem("Settings", #selector(showSettings)))
+        menu.addItem(menuItem(model.isListening ? "Pause Keyboard Control" : "Resume Keyboard Control", #selector(toggleKeyboardControl)))
+        menu.addItem(menuItem("Settings...", #selector(showSettings)))
         menu.addItem(.separator())
-        menu.addItem(menuItem("Quit", #selector(quit)))
+        menu.addItem(menuItem("Quit CmdIME", #selector(quit)))
         return menu
+    }
+
+    private var menuStatusTitle: String {
+        if model.isListening {
+            return "Active"
+        }
+        if !model.permissions.isReady {
+            return "Needs Permission"
+        }
+        if model.keyboardControlStatus == "Failed" {
+            return "Listener Failed"
+        }
+        return "Paused"
     }
 
     private func menuItem(_ title: String, _ action: Selector) -> NSMenuItem {
@@ -167,8 +215,28 @@ final class StatusItemController: NSObject {
         AppWindowCoordinator.shared.showSettings()
     }
 
+    @objc private func toggleKeyboardControl() {
+        model.toggleListening()
+    }
+
     @objc private func quit() {
         model.quit()
+    }
+}
+
+private struct StatusMenuConfigSnapshot: Equatable {
+    let showMenuBarIcon: Bool
+    let bindingTitles: [String]
+
+    init(config: SwitcherConfig) {
+        showMenuBarIcon = config.showMenuBarIcon
+        bindingTitles = InputRole.allCases.map { role in
+            config.bindings.first { binding in
+                binding.enabled
+                    && binding.action.type == .switchInputSource
+                    && binding.action.role == role
+            }?.trigger.displayName ?? ""
+        }
     }
 }
 
@@ -205,7 +273,7 @@ final class AppWindowCoordinator {
 
     private func makeSettingsWindow(model: AppModel) -> NSWindow {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 760, height: 640),
+            contentRect: NSRect(x: 0, y: 0, width: 820, height: 840),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -215,7 +283,7 @@ final class AppWindowCoordinator {
         window.center()
         window.contentView = NSHostingView(
             rootView: ContentView(model: model)
-                .frame(minWidth: 660, minHeight: 500)
+                .frame(minWidth: 720, minHeight: 640)
         )
         return window
     }

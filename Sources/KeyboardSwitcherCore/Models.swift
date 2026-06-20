@@ -232,6 +232,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var switchIndicatorColorStyle: SwitchIndicatorColorStyle
     public var switchIndicatorContentStyle: SwitchIndicatorContentStyle
     public var switchIndicatorCustomColorHex: String
+    public var switchIndicatorCustomRoleColorHexes: [String: String]
     public var bindings: [KeyBinding]
     public var inputSources: [String: RoleInputSourcePreference]
 
@@ -244,6 +245,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         switchIndicatorColorStyle: SwitchIndicatorColorStyle = .role,
         switchIndicatorContentStyle: SwitchIndicatorContentStyle = .iconAndText,
         switchIndicatorCustomColorHex: String = "#2F7CF6",
+        switchIndicatorCustomRoleColorHexes: [String: String] = [:],
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
@@ -255,6 +257,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.switchIndicatorColorStyle = switchIndicatorColorStyle
         self.switchIndicatorContentStyle = switchIndicatorContentStyle
         self.switchIndicatorCustomColorHex = switchIndicatorCustomColorHex
+        self.switchIndicatorCustomRoleColorHexes = switchIndicatorCustomRoleColorHexes
         self.bindings = bindings
         self.inputSources = inputSources
     }
@@ -310,6 +313,31 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
 
     public func preference(for role: InputRole) -> RoleInputSourcePreference {
         inputSources[role.rawValue] ?? RoleInputSourcePreference()
+    }
+
+    public func switchIndicatorCustomColorHex(for role: InputRole) -> String {
+        switchIndicatorCustomRoleColorHexes[role.rawValue] ?? switchIndicatorCustomColorHex
+    }
+
+    public mutating func setSwitchIndicatorCustomColorHex(_ hex: String, for role: InputRole) {
+        switchIndicatorCustomRoleColorHexes[role.rawValue] = hex
+    }
+
+    public func oneShotModifierConflict(for trigger: KeyTrigger, excluding role: InputRole) -> InputRole? {
+        guard trigger.kind == .oneShotModifier else {
+            return nil
+        }
+
+        return bindings.first { binding in
+            binding.enabled
+                && binding.action.type == .switchInputSource
+                && binding.action.role != role
+                && binding.trigger.kind == .oneShotModifier
+                && (
+                    binding.trigger.keyCode == trigger.keyCode
+                        || binding.trigger.keyName == trigger.keyName
+                )
+        }?.action.role
     }
 
     public mutating func pinInputSourceID(_ id: String, for role: InputRole) {
@@ -377,6 +405,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case switchIndicatorColorStyle
         case switchIndicatorContentStyle
         case switchIndicatorCustomColorHex
+        case switchIndicatorCustomRoleColorHexes
         case bindings
         case inputSources
     }
@@ -403,6 +432,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             String.self,
             forKey: .switchIndicatorCustomColorHex
         ) ?? "#2F7CF6"
+        switchIndicatorCustomRoleColorHexes = try container.decodeIfPresent(
+            [String: String].self,
+            forKey: .switchIndicatorCustomRoleColorHexes
+        ) ?? [:]
         bindings = try container.decode([KeyBinding].self, forKey: .bindings)
         inputSources = try container.decode([String: RoleInputSourcePreference].self, forKey: .inputSources)
     }
@@ -417,6 +450,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(switchIndicatorColorStyle, forKey: .switchIndicatorColorStyle)
         try container.encode(switchIndicatorContentStyle, forKey: .switchIndicatorContentStyle)
         try container.encode(switchIndicatorCustomColorHex, forKey: .switchIndicatorCustomColorHex)
+        try container.encode(switchIndicatorCustomRoleColorHexes, forKey: .switchIndicatorCustomRoleColorHexes)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }

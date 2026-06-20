@@ -109,11 +109,11 @@ private enum InputSourceKind {
     var tint: Color {
         switch self {
         case .english:
-            Color(red: 0.16, green: 0.43, blue: 0.92)
+            CmdIMEDesign.Colors.role(.english)
         case .chinese:
-            Color(red: 0.12, green: 0.56, blue: 0.36)
+            CmdIMEDesign.Colors.role(.chinese)
         case .japanese:
-            Color(red: 0.78, green: 0.22, blue: 0.27)
+            CmdIMEDesign.Colors.role(.japanese)
         case .unknown:
             Color(nsColor: .secondaryLabelColor)
         }

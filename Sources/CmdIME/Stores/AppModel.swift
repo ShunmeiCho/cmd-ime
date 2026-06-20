@@ -8,6 +8,7 @@ final class AppModel: ObservableObject {
     @Published var sources: [InputSourceInfo] = []
     @Published var statusText = "Ready"
     @Published var isListening = false
+    @Published var activeRole: InputRole?
     @Published var keyboardControlStatus = "Starting"
     @Published var permissions = MacPermissionStatus.current()
     @Published var loginItem = LoginItemService().snapshot()
@@ -162,6 +163,12 @@ final class AppModel: ObservableObject {
         statusText = "Switch indicator custom color set to \(hex)"
     }
 
+    func setSwitchIndicatorCustomColorHex(_ hex: String, for role: InputRole) {
+        config.setSwitchIndicatorCustomColorHex(hex, for: role)
+        save()
+        statusText = "\(role.displayName) indicator custom color set to \(hex)"
+    }
+
     func checkForUpdates() {
         guard !updateStatus.isChecking else {
             return
@@ -286,6 +293,10 @@ final class AppModel: ObservableObject {
             statusText = "\(trigger.displayName) is reserved by macOS input source switching"
             return
         }
+        if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
+            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(conflictRole.displayName)"
+            return
+        }
 
         config.upsertSwitchBinding(trigger: trigger, role: role)
         save()
@@ -310,8 +321,26 @@ final class AppModel: ObservableObject {
             return
         }
         trigger.gesture = gesture
+        if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
+            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(conflictRole.displayName)"
+            return
+        }
         config.upsertSwitchBinding(trigger: trigger, role: role)
         save()
+    }
+
+    func oneShotConflictRole(forKeyCode keyCode: Int, keyName: String, excluding role: InputRole) -> InputRole? {
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: keyCode, keyName: keyName)
+        return config.oneShotModifierConflict(for: trigger, excluding: role)
+    }
+
+    func oneShotConflictWarning(for role: InputRole) -> String? {
+        guard let trigger = trigger(for: role),
+              let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) else {
+            return nil
+        }
+
+        return "\(readableOneShotName(trigger.keyName)) already used by \(conflictRole.displayName)"
     }
 
     func matchedSource(for role: InputRole) -> InputSourceInfo? {
@@ -384,6 +413,7 @@ final class AppModel: ObservableObject {
     }
 
     private func showSwitchIndicator(for role: InputRole, source: InputSourceInfo) {
+        activeRole = role
         guard config.showSwitchIndicator else {
             return
         }
@@ -394,8 +424,31 @@ final class AppModel: ObservableObject {
             scale: config.switchIndicatorScale,
             colorStyle: config.switchIndicatorColorStyle,
             contentStyle: config.switchIndicatorContentStyle,
-            customColorHex: config.switchIndicatorCustomColorHex
+            customColorHex: config.switchIndicatorCustomColorHex(for: role)
         )
+    }
+
+    private func readableOneShotName(_ keyName: String) -> String {
+        switch keyName {
+        case "left-command":
+            return "Left Command"
+        case "right-command":
+            return "Right Command"
+        case "left-option":
+            return "Left Option"
+        case "right-option":
+            return "Right Option"
+        case "left-control":
+            return "Left Control"
+        case "right-control":
+            return "Right Control"
+        case "left-shift":
+            return "Left Shift"
+        case "right-shift":
+            return "Right Shift"
+        default:
+            return keyName
+        }
     }
 }
 
