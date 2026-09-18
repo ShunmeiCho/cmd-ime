@@ -18,6 +18,7 @@ The switch indicator becomes themeable: twelve built-in looks including Glass, L
 - **Liquid Glass.** Two more built-in themes, **Liquid Glass** and **Switcher, Liquid**, use the system's Liquid Glass material on macOS 26 and later and fall back to the Glass look on earlier systems. With Reduce Transparency or Increase Contrast they turn solid.
 - **One highlight colour on glass.** In the theme editor, "Color from" is now **Each slot** or **One color**; with One color on a glass or liquid theme you pick the tile or switcher-thumb colour from the ink presets or any custom colour. Surface can be switched between Glass, Liquid and Paper.
 - The indicator **Scale** now goes down to 40% (it was 65%); use the theme's Text size to keep small bubbles readable. The switcher themes stop shrinking earlier, where their cells would otherwise fall under their own text, and the Scale slider shows that limit.
+- Your own themes show a remove button on their tile (and "Move to Trash" on right-click); the file goes to the Trash, so it can be put back.
 - Twelve built-in themes in total. The theme picker's miniatures and the settings preview approximate glass; the real material shows on an actual switch.
 
 ## CmdIME v0.4.1 Preview

@@ -81,6 +81,34 @@ struct IndicatorThemePicker: View {
         .buttonStyle(.plain)
         .accessibilityLabel(theme.name)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .overlay(alignment: .topLeading) {
+            // Your own themes carry a visible remove button; built-ins cannot be removed.
+            if !theme.isBuiltIn {
+                Button { remove(theme) } label: {
+                    Image(systemName: "trash.circle.fill")
+                        .font(.system(size: 16))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(DesignTokens.Colors.textPrimary, DesignTokens.Colors.surfaceRaised)
+                }
+                .buttonStyle(.plain)
+                .help("Move \(theme.name) to the Trash")
+                .accessibilityLabel("Remove theme \(theme.name)")
+            }
+        }
+        .contextMenu {
+            Button("Duplicate and Edit") {
+                if let copy = library.duplicate(theme) { model.setSwitchIndicatorThemeID(copy.id) }
+            }
+            if !theme.isBuiltIn {
+                Button("Move to Trash", role: .destructive) { remove(theme) }
+            }
+        }
+    }
+
+    /// The file goes to the Trash, so a mistaken removal can be put back from there.
+    private func remove(_ theme: IndicatorTheme) {
+        guard library.removeTheme(id: theme.id) else { return }
+        if theme.id == selected.id { model.setSwitchIndicatorThemeID(nil) }
     }
 
     /// Wide bubbles (a switcher row, a long source name) are scaled down to fit the
@@ -145,10 +173,8 @@ struct IndicatorThemePicker: View {
             Divider()
             Button("Import...", action: importTheme)
             Button("Export...", action: exportTheme)
-            Button("Remove", role: .destructive) {
-                if library.removeTheme(id: selected.id) { model.setSwitchIndicatorThemeID(nil) }
-            }
-            .disabled(selected.isBuiltIn)
+            Button("Move to Trash", role: .destructive) { remove(selected) }
+                .disabled(selected.isBuiltIn)
             Divider()
             Button("Show in Finder") { library.revealInFinder(library.themesDirectory) }
         }
