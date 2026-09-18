@@ -3,10 +3,24 @@ import SwiftUI
 struct SlotBoardNoticeBar: View {
     let notice: BoardNotice
     let canUndo: Bool
+    let undoSlotName: String?
     let onUndo: () -> Void
     let onDismiss: () -> Void
     let onAdd: (String) -> Void
     @AccessibilityFocusState private var undoFocused: Bool
+
+    private var removalName: String? {
+        if case let .removed(name) = notice { return name }
+        return undoSlotName
+    }
+
+    private var noticeSummary: String {
+        switch notice {
+        case let .removed(name): "Removed slot \(name)"
+        case let .found(_, name): "Found input source \(name)"
+        case let .rejected(reason): reason
+        }
+    }
 
     private var discardsUndo: Bool {
         if case .removed = notice { return canUndo }
@@ -49,12 +63,15 @@ struct SlotBoardNoticeBar: View {
                 Button("Undo", action: onUndo)
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
                     .accessibilityFocused($undoFocused)
+                    .accessibilityLabel(removalName.map { "Undo removal of \($0) slot" } ?? "Undo last slot removal")
             }
             Spacer(minLength: 0)
             Button(discardsUndo ? "Discard" : "Dismiss", action: onDismiss)
                 .buttonStyle(ConsoleButtonStyle())
                 .help(discardsUndo ? "Discard the opportunity to restore this removed slot." : "Hide this message. Any pending Undo remains available.")
-                .accessibilityLabel(discardsUndo ? "Discard removal Undo" : "Dismiss message")
+                .accessibilityLabel(discardsUndo
+                    ? removalName.map { "Discard Undo for removed \($0) slot" } ?? "Discard last slot removal Undo"
+                    : "Dismiss notice: \(noticeSummary)")
         }
     }
 

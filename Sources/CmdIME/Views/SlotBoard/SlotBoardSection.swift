@@ -10,6 +10,7 @@ struct SlotBoardSection: View {
     @State private var renamingSlotID: InputRole?
     @State private var pendingRenameCommit: (() -> Bool)?
     @State private var focusedSlotID: InputRole?
+    @State private var undoSlotName: String?
     @State private var revealRequest: (id: InputRole, token: UUID)?
     @State private var seatingID: InputRole?
     @State private var seatGeneration = 0
@@ -34,6 +35,10 @@ struct SlotBoardSection: View {
                         resetDrafts()
                     }
                 }, onOpenSettings: showKeyboardSettings, onLocate: locateSlot)
+                .focusSection()
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Input sources")
+                .accessibilitySortPriority(2)
                 VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
                     HStack(spacing: DesignTokens.Layout.rowGap) {
                         SectionLabel("Slots")
@@ -44,19 +49,28 @@ struct SlotBoardSection: View {
                                 guard commitPendingRename() else { return }
                                 showsResetConfirmation = true
                             }
+                            .accessibilityLabel("Reset slots to detected input sources")
                         }
                         .fixedSize()
                         .accessibilityLabel("Manage slots")
                     }
                     .frame(height: DesignTokens.Layout.panelHeaderHeight)
                     SlotListColumn(slots: model.config.slots, notice: model.boardNotice,
-                                   canUndo: model.canUndoRemoval, seatingID: seatingID, drag: drag,
+                                   canUndo: model.canUndoRemoval, undoSlotName: undoSlotName,
+                                   seatingID: seatingID, drag: drag,
                                    insertionTint: dragTint, onUndo: undo, onDismiss: dismissNotice, onAdd: add) { slot in
                         card(for: slot)
                     }
                     Divider()
                     footer
+                        .focusSection()
+                        .accessibilityElement(children: .contain)
+                        .accessibilitySortPriority(-1)
                 }
+                .focusSection()
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Slots")
+                .accessibilitySortPriority(1)
                 .padding(DesignTokens.Layout.panelInset)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
@@ -68,7 +82,9 @@ struct SlotBoardSection: View {
                 guard let notice else { return }
                 switch notice {
                 case let .rejected(reason): announce(reason)
-                case let .removed(name): announce("Removed slot \(name). Undo available.")
+                case let .removed(name):
+                    undoSlotName = name
+                    announce("Removed slot \(name). Undo available.")
                 case let .found(_, name): announce("Found \(name). Add Slot available.")
                 }
                 // Drag rejection must not scroll the board under the held pointer.
@@ -81,6 +97,12 @@ struct SlotBoardSection: View {
             }
         }
         .coordinateSpace(name: "slotBoard")
+        .onAppear {
+            if case let .removed(name) = model.boardNotice { undoSlotName = name }
+        }
+        .onChange(of: model.canUndoRemoval) { available in
+            if !available { undoSlotName = nil }
+        }
         .overlay(alignment: .topLeading) { dragGhost }
         .zIndex(drag.payload == nil ? 0 : 1)
         .onDisappear { drag.tearDown() }
@@ -172,6 +194,13 @@ struct SlotBoardSection: View {
                     beginDrag(.slot(slot.id), value: $0)
                 })
         )
+        .focusSection()
+        .accessibilityActions {
+            if !isGhost, let index = model.config.slots.firstIndex(where: { $0.id == slot.id }) {
+                if index > 0 { Button("Move up") { move(slot.id, by: -1) } }
+                if index + 1 < model.config.slots.count { Button("Move down") { move(slot.id, by: 1) } }
+            }
+        }
         .background {
             SlotRevealAnchor(requestID: !isGhost && revealRequest?.id == slot.id ? revealRequest?.token : nil,
                              isEnabled: !isGhost && drag.payload == nil,
@@ -219,7 +248,7 @@ struct SlotBoardSection: View {
         if let source, case let .owned(owner) = model.sourceUsage(of: source), owner != slot.id {
             reason = "Already pinned to \(model.config.displayName(for: owner)). Choose another input source."
         }
-        return SlotMatchNotice(explanation: explanation, preferredName: preferredName,
+        return SlotMatchNotice(slotName: slot.name, explanation: explanation, preferredName: preferredName,
                                pinUnavailableReason: reason) {
             guard !isGhost, let source, commitPendingRename() else { return }
             model.setInputSourceID(source.id, for: slot.id)
@@ -402,10 +431,12 @@ private struct AddSlotMenu: View {
             } else {
                 ForEach(sources, id: \.id) { source in
                     Button(source.localizedName) { onAdd(source.id) }
+                        .accessibilityLabel("Add \(source.localizedName) as a slot")
                 }
             }
         }
         .fixedSize()
-        .accessibilityLabel("Add Slot")
+        .accessibilityLabel("Add slot from input sources")
+        .accessibilityValue(sources.isEmpty ? "All input sources are in slots" : "\(sources.count) available input sources")
     }
 }

@@ -30,10 +30,13 @@ struct SlotModifierMenu: View {
             Text(category == .single ? "Single" : "Double")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
+                .accessibilityHidden(true)
             ConsoleMenuButton(title: "\(title) for \(name): \(value)",
-                              valueLabel: AnyView(valueLabel),
+                              valueLabel: AnyView(valueLabel.accessibilityHidden(true)),
                               tint: SlotLook(slots: model.config.slots).tint(for: role)) {
                 Button("None") { select(nil) }
+                    .accessibilityLabel("No \(title.lowercased()) trigger for \(name)")
+                    .accessibilityValue(trigger == nil ? "Selected" : "Not selected")
                 Divider()
                 ForEach(Self.keys, id: \.0) { key, label in
                     let candidate = candidate(for: key)
@@ -43,6 +46,8 @@ struct SlotModifierMenu: View {
                         select(candidate)
                     }
                     .disabled(owner != nil || candidate == nil)
+                    .accessibilityLabel("\(label), \(title.lowercased()) for \(name)")
+                    .accessibilityValue(owner.map { "Used by \($0)" } ?? (trigger == candidate ? "Selected" : "Not selected"))
                 }
                 Divider()
                 Text("Many Chinese input methods use Shift to switch between Chinese and English.")

@@ -2,6 +2,7 @@ import KeyboardSwitcherCore
 import SwiftUI
 
 struct SlotMatchNotice: View {
+    let slotName: String
     let explanation: SlotMatchExplanation
     let preferredName: String?
     let pinUnavailableReason: String?
@@ -24,7 +25,8 @@ struct SlotMatchNotice: View {
                     .buttonStyle(ConsoleButtonStyle())
                     .disabled(pinUnavailableReason != nil)
                     .help(pinUnavailableReason ?? "Make this input source the slot’s preferred source.")
-                    .accessibilityLabel("Pin \(source.localizedName) as the preferred input source")
+                    .accessibilityLabel("Pin \(source.localizedName) as the preferred input source for \(slotName)")
+                    .accessibilityValue(pinUnavailableReason ?? "Not pinned")
                 if let pinUnavailableReason {
                     Text(pinUnavailableReason).fixedSize(horizontal: false, vertical: true)
                 }

@@ -53,6 +53,7 @@ struct SlotColorPopover: View {
                 Spacer()
                 Button("Close", action: onClose)
                     .buttonStyle(ConsoleButtonStyle())
+                    .accessibilityLabel("Close color picker for \(slot.name)")
             }
         }
         .padding(DesignTokens.Spacing.md)
@@ -87,9 +88,10 @@ struct SlotColorPopover: View {
                         .opacity(selected ? 1 : 0)
                 }
                 .contentShape(Circle())
+                .accessibilityHidden(true)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Slot color \(hex)")
+        .accessibilityLabel("Color \(hex) for \(slot.name)")
         .accessibilityValue(selected ? "Selected" : "Not selected")
         .accessibilityAddTraits(selected ? [.isSelected] : [])
         .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.stateChange,

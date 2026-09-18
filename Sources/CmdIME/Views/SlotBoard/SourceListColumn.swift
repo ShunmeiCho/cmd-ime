@@ -109,24 +109,18 @@ struct SourceRow: View {
         }
     }
 
-    var body: some View {
+    private var rowContent: some View {
         HStack(spacing: DesignTokens.Layout.rowGap) {
             Circle().fill(tint).frame(width: 6, height: 6).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
-                Text(source.localizedName)
-                    .font(DesignTokens.Typography.body.weight(.semibold))
-                    .foregroundStyle(DesignTokens.Colors.textPrimary)
-                    .lineLimit(2)
-                if isNew {
-                    Label("New", systemImage: "sparkles")
-                        .font(DesignTokens.Typography.auxiliary.weight(.semibold))
-                        .foregroundStyle(DesignTokens.Colors.textPrimary)
-                }
-                Label(name, systemImage: icon)
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(rejected ? DesignTokens.Colors.warning : (isAvailable ? DesignTokens.Colors.textMuted : tint))
-                    .id(name).transition(.opacity)
+            Button(action: activateRow) {
+                sourceDetails
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel(source.localizedName)
+            .accessibilityValue(accessibilityUsage)
+            .accessibilityHint(isAvailable ? "Add as a slot" : "Show the slot using this input source")
             Spacer(minLength: 0)
             if case let .resolved(owner, _) = usage {
                 Button {
@@ -134,22 +128,64 @@ struct SourceRow: View {
                     onLocate(owner)
                 } label: {
                     Image(systemName: "arrow.right").frame(width: 22, height: 24)
+                        .accessibilityHidden(true)
                 }
                 .buttonStyle(ConsoleButtonStyle())
                 .help("Show \(model.config.displayName(for: owner)) slot")
-                .accessibilityLabel("Show \(model.config.displayName(for: owner)) slot")
+                .accessibilityLabel("Show \(model.config.displayName(for: owner)) slot using \(source.localizedName)")
             }
             if isAvailable {
-                Button {
-                    guard !isGhost, !suppressClick else { return }
-                    onAdd()
-                } label: {
+                Button(action: activateRow) {
                     Image(systemName: "plus").frame(width: 22, height: 24)
+                        .accessibilityHidden(true)
                 }
                 .buttonStyle(ConsoleButtonStyle())
                 .help("Add \(source.localizedName) as a slot")
+                .accessibilityLabel("Add \(source.localizedName) as a slot")
+                .accessibilityValue(accessibilityUsage)
             }
         }
+    }
+
+    private var sourceDetails: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+            Text(source.localizedName)
+                .font(DesignTokens.Typography.body.weight(.semibold))
+                .foregroundStyle(DesignTokens.Colors.textPrimary)
+                .lineLimit(2)
+            if isNew {
+                Label("New", systemImage: "sparkles")
+                    .font(DesignTokens.Typography.auxiliary.weight(.semibold))
+                    .foregroundStyle(DesignTokens.Colors.textPrimary)
+            }
+            Label(name, systemImage: icon)
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(rejected ? DesignTokens.Colors.warning : (isAvailable ? DesignTokens.Colors.textMuted : tint))
+                .id(name).transition(.opacity)
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func activateRow() {
+        guard !isGhost, !suppressClick, !isDragging, !attempted else { return }
+        switch usage {
+        case .available: onAdd()
+        case let .owned(owner), let .resolved(owner, _): onLocate(owner)
+        }
+    }
+
+    private var accessibilityUsage: String {
+        let state: String
+        switch usage {
+        case .available: state = "Available"
+        case let .owned(owner): state = "Used by \(model.config.displayName(for: owner))"
+        case let .resolved(owner, _): state = "Used by \(model.config.displayName(for: owner)) as a fallback"
+        }
+        return isNew ? "New, \(state)" : state
+    }
+
+    var body: some View {
+        rowContent
         .padding(.vertical, DesignTokens.Layout.rowGap)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Rectangle().fill(Color.white.opacity(hover && isAvailable ? 0.07 : 0)))
@@ -203,18 +239,8 @@ struct SourceRow: View {
             withAnimation(reduceMotion ? nil : DesignTokens.Motion.keyRelease) { offset = .zero }
         }
         .onDisappear { if !isGhost { drag.cancel(sessionID: hostSessionID) } }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(source.localizedName)
-        .accessibilityValue(isNew ? "New, \(name)" : name)
-        .accessibilityAddTraits(isAvailable ? .isButton : [])
-        .accessibilityAction { if isAvailable && !isGhost { onAdd() } }
-        .accessibilityActions {
-            if case let .resolved(owner, _) = usage {
-                Button("Show \(model.config.displayName(for: owner)) slot") {
-                    if !isGhost { onLocate(owner) }
-                }
-            }
-        }
+        .accessibilityElement(children: .contain)
+        .accessibilityAction { activateRow() }
         .allowsHitTesting(!isGhost)
         .accessibilityHidden(isGhost)
     }

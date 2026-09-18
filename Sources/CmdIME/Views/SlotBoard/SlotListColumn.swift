@@ -5,6 +5,7 @@ struct SlotListColumn<Card: View>: View {
     let slots: [SwitchSlot]
     let notice: BoardNotice?
     let canUndo: Bool
+    let undoSlotName: String?
     let seatingID: InputRole?
     @ObservedObject var drag: SlotBoardDragController
     let insertionTint: Color
@@ -34,6 +35,7 @@ struct SlotListColumn<Card: View>: View {
                 switch row {
                 case let .slot(slot):
                     SlotAppearingRow { card(slot) }
+                        .accessibilitySortPriority(Double(slots.count - (slots.firstIndex { $0.id == slot.id } ?? 0)))
                         // Keep the actual gesture host mounted, including while it moves.
                         .opacity(drag.payload == .slot(slot.id) ? 0 : 1)
                         .background {
@@ -64,12 +66,14 @@ struct SlotListColumn<Card: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let notice {
-                SlotBoardNoticeBar(notice: notice, canUndo: canUndo, onUndo: onUndo, onDismiss: onDismiss, onAdd: onAdd)
+                SlotBoardNoticeBar(notice: notice, canUndo: canUndo, undoSlotName: undoSlotName,
+                                   onUndo: onUndo, onDismiss: onDismiss, onAdd: onAdd)
                     .id("boardNotice")
                     .transition(SlotBoardMotion.noticeTransition(reduceMotion: reduceMotion))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("slotBoard")) } action: {
             drag.columnFrame = $0
         }
