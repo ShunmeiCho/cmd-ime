@@ -36,8 +36,8 @@ private struct RoleDiagnosis {
 
 /// `--json` payload for `keyboardctl diagnose`.
 private struct DiagnosisReport: Encodable {
-    struct RoleEntry: Encodable {
-        let role: String
+    struct SlotEntry: Encodable {
+        let slot: String
         let preferredIDs: [String]
         let languagePrefixes: [String]
         let nameContains: [String]
@@ -50,14 +50,14 @@ private struct DiagnosisReport: Encodable {
 
     let currentInputSourceID: String?
     let currentInputSourceName: String?
-    let roles: [RoleEntry]
+    let slots: [SlotEntry]
 
     init(current: InputSourceInfo?, roles: [RoleDiagnosis]) {
         currentInputSourceID = current?.id
         currentInputSourceName = current?.localizedName
-        self.roles = roles.map { diagnosis in
-            RoleEntry(
-                role: diagnosis.role.rawValue,
+        slots = roles.map { diagnosis in
+            SlotEntry(
+                slot: diagnosis.role.rawValue,
                 preferredIDs: diagnosis.preference.preferredIDs,
                 languagePrefixes: diagnosis.preference.languagePrefixes,
                 nameContains: diagnosis.preference.nameContains,
