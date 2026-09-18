@@ -3,109 +3,240 @@ import ApplicationServices
 import KeyboardSwitcherCore
 import SwiftUI
 
+extension IndicatorRenderContext {
+    /// What the system says about its surroundings right now. `auto` themes follow
+    /// the system appearance: sampling the pixels behind the bubble would need
+    /// Screen Recording permission.
+    @MainActor
+    static func current(isDarkAppearance: Bool? = nil) -> IndicatorRenderContext {
+        let workspace = NSWorkspace.shared
+        let isDark = isDarkAppearance
+            ?? (NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua)
+        return IndicatorRenderContext(
+            isDarkAppearance: isDark,
+            accentHex: Color(nsColor: .controlAccentColor).cmdIMEHexString ?? "#357AE6",
+            reduceTransparency: workspace.accessibilityDisplayShouldReduceTransparency,
+            increaseContrast: workspace.accessibilityDisplayShouldIncreaseContrast
+        )
+    }
+}
+
+/// Shows the switch indicator near the caret. The bubble is measured from its
+/// content, placed by core's `BubblePlacement`, and moved through four phases; a
+/// re-trigger while it is visible never touches its opacity.
 @MainActor
 final class InputIndicatorController {
-    private var panel: NSPanel?
+    private enum Phase {
+        case hidden, appearing, holding, dismissing
+    }
+
+    let library: IndicatorLibrary
+
+    private let state = BubbleState()
+    private lazy var panel = BubblePanel()
+    private lazy var container = BubbleContainerView(state: state)
+    private lazy var measuringController = NSHostingController(rootView: AnyView(EmptyView()))
+    private var phase = Phase.hidden
+    /// Superseded animation groups still call their completion; this tells them apart.
+    private var generation = 0
     private var hideTask: Task<Void, Never>?
+    private var bubbleFrame = CGRect.zero
+    private var anchor = BubblePlacement.Anchor.bottomLeading
+    private var target = CGPoint.zero
+    private var reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+    private var displayOptionsObserver: NSObjectProtocol?
 
-    func show(
-        slot: SwitchSlot,
-        source: InputSourceInfo,
-        size: SwitchIndicatorSize,
-        scale: Double,
-        colorStyle: SwitchIndicatorColorStyle,
-        contentStyle: SwitchIndicatorContentStyle,
-        customColorHex: String
-    ) {
-        let panel = panel ?? makePanel()
-        self.panel = panel
-
-        let presentation = InputSourcePresentation(source: source, slot: slot)
-        let metrics = InputIndicatorMetrics(size: size, scale: scale, contentStyle: contentStyle)
-        panel.contentView = NSHostingView(
-            rootView: InputIndicatorView(
-                symbol: presentation.symbol,
-                title: presentation.title,
-                subtitle: presentation.detail,
-                tint: tint(for: presentation, style: colorStyle, customColorHex: customColorHex),
-                contentStyle: contentStyle,
-                metrics: metrics
-            )
-        )
-        panel.setContentSize(metrics.panelSize)
-        panel.setFrameOrigin(origin(for: metrics.panelSize))
-        panel.orderFrontRegardless()
-
-        hideTask?.cancel()
-        hideTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 850_000_000)
-            guard !Task.isCancelled else {
-                return
+    init(configStore: ConfigStore) {
+        library = IndicatorLibrary(configStore: configStore)
+        displayOptionsObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
             }
-            panel.orderOut(nil)
         }
     }
 
-    private func makePanel() -> NSPanel {
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 172, height: 54),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
+    func show(
+        slotID: InputRole,
+        previousSlotID: InputRole?,
+        source: InputSourceInfo,
+        config: SwitcherConfig,
+        sources: [InputSourceInfo]
+    ) {
+        guard let model = IndicatorBubbleResolver.model(
+            config: config,
+            themes: library.themes,
+            sources: sources,
+            slotID: slotID,
+            previousSlotID: previousSlotID,
+            source: source,
+            context: .current()
+        ) else { return }
+
+        let size = measure(model)
+        let caret = focusedCaretRect()
+        let pointer = NSEvent.mouseLocation
+        let newTarget = caret.map { CGPoint(x: $0.midX, y: $0.maxY) } ?? pointer
+        let visible = screen(containing: newTarget).visibleFrame
+        let placement = BubblePlacement.resolve(
+            caret: caret.map { BubblePlacement.Rect(x: $0.minX, y: $0.minY, width: $0.width, height: $0.height) },
+            pointerX: pointer.x,
+            pointerY: pointer.y,
+            bubbleWidth: size.width,
+            bubbleHeight: size.height,
+            visible: BubblePlacement.Rect(x: visible.minX, y: visible.minY, width: visible.width, height: visible.height)
         )
-        panel.backgroundColor = .clear
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.hasShadow = true
-        panel.ignoresMouseEvents = true
-        panel.isFloatingPanel = true
-        panel.isOpaque = false
-        panel.level = .floating
-        return panel
+        let placed = CGRect(x: placement.originX, y: placement.originY, width: size.width, height: size.height)
+
+        generation += 1
+        let wasVisible = phase == .appearing || phase == .holding
+        let movedFar = hypot(newTarget.x - target.x, newTarget.y - target.y) > BubbleMotion.repositionThreshold
+        let frame = wasVisible && !movedFar ? keepingAnchorCorner(of: bubbleFrame, size: size) : placed
+        if !wasVisible || movedFar {
+            anchor = placement.anchor
+            target = newTarget
+        }
+        bubbleFrame = frame
+
+        configurePanel(for: model, bubbleSize: size)
+        state.present(
+            model,
+            fresh: phase == .hidden,
+            anchor: anchor == .bottomLeading ? .bottomLeading : .topLeading,
+            fixedSize: size,
+            reduceMotion: reduceMotion
+        )
+
+        switch phase {
+        case .hidden:
+            panel.alphaValue = 0
+            panel.setFrame(panelFrame(for: frame, travel: reduceMotion ? 0 : BubbleMotion.riseDistance), display: true)
+            panel.orderFrontRegardless()
+            appear(to: frame)
+        case .dismissing:
+            appear(to: frame)
+        case .appearing:
+            // Alpha keeps rising from where it is; only the destination changes.
+            appear(to: frame)
+        case .holding:
+            panel.setFrame(panelFrame(for: frame, travel: 0), display: true)
+            scheduleHide(for: model, after: 0)
+        }
     }
 
-    private func origin(for size: NSSize) -> NSPoint {
-        let anchor = focusedCaretPoint() ?? NSEvent.mouseLocation
-        let screen = screen(containing: anchor)
-        let frame = screen.visibleFrame
-        let proposed = NSPoint(x: anchor.x + 10, y: anchor.y + 18)
+    // MARK: - Phases
 
-        return NSPoint(
-            x: min(max(proposed.x, frame.minX + 8), frame.maxX - size.width - 8),
-            y: min(max(proposed.y, frame.minY + 8), frame.maxY - size.height - 8)
+    private func appear(to frame: CGRect) {
+        phase = .appearing
+        hideTask?.cancel()
+        let current = generation
+        let duration = reduceMotion ? BubbleMotion.reducedFadeIn : BubbleMotion.appearDuration
+        let model = state.model
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = duration
+            context.timingFunction = BubbleMotion.easeOutTimingFunction
+            panel.animator().alphaValue = 1
+            panel.animator().setFrame(panelFrame(for: frame, travel: 0), display: true)
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.generation == current, self.phase == .appearing else { return }
+                self.phase = .holding
+            }
+        }
+        if let model { scheduleHide(for: model, after: duration) }
+    }
+
+    /// The hold is measured from the end of the appear.
+    private func scheduleHide(for model: BubbleRenderModel, after appearDuration: Double) {
+        hideTask?.cancel()
+        let hold = model.archetype == .switcher ? BubbleMotion.holdSwitcher : BubbleMotion.holdStandard
+        let current = generation
+        hideTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64((appearDuration + hold) * 1_000_000_000))
+            guard !Task.isCancelled, let self, self.generation == current else { return }
+            self.dismiss()
+        }
+    }
+
+    /// Leaves the way it came: fading, a little back toward the caret.
+    private func dismiss() {
+        phase = .dismissing
+        let current = generation
+        let travel = reduceMotion ? 0 : BubbleMotion.dismissTravel
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = reduceMotion ? BubbleMotion.reducedFadeOut : BubbleMotion.dismissDuration
+            context.timingFunction = BubbleMotion.easeOutTimingFunction
+            panel.animator().alphaValue = 0
+            panel.animator().setFrame(panelFrame(for: bubbleFrame, travel: travel), display: true)
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.generation == current, self.phase == .dismissing else { return }
+                self.panel.orderOut(nil)
+                self.state.clear()
+                self.phase = .hidden
+            }
+        }
+    }
+
+    // MARK: - Geometry
+
+    /// Laid out exactly as the panel will show it, so larger text never clips.
+    private func measure(_ model: BubbleRenderModel) -> CGSize {
+        measuringController.rootView = AnyView(SwitchBubbleView(model: model, mode: .live))
+        let fitted = measuringController.sizeThatFits(
+            in: CGSize(width: model.metrics.maxBubbleWidth, height: .greatestFiniteMagnitude)
         )
+        return CGSize(width: fitted.width.rounded(.up), height: fitted.height.rounded(.up))
+    }
+
+    private func configurePanel(for model: BubbleRenderModel, bubbleSize: CGSize) {
+        if panel.contentView !== container { panel.contentView = container }
+        let margin = model.metrics.shadowMargin.points
+        if case let .glass(isDark, _) = model.substrate {
+            container.setGlass(.init(
+                isDark: isDark,
+                frame: CGRect(origin: CGPoint(x: margin, y: margin), size: bubbleSize),
+                cornerRadius: model.metrics.bubbleRadius.points
+            ))
+        } else {
+            container.setGlass(nil)
+        }
+    }
+
+    /// The panel is the bubble plus a transparent, click-through margin for the shadow.
+    /// `travel` moves it toward the caret along the line through the anchor corner.
+    private func panelFrame(for bubble: CGRect, travel: CGFloat) -> CGRect {
+        let margin = (state.model?.metrics.shadowMargin ?? 0).points
+        let towardCaret = anchor == .bottomLeading ? -travel : travel
+        return bubble.insetBy(dx: -margin, dy: -margin).offsetBy(dx: 0, dy: towardCaret)
+    }
+
+    private func keepingAnchorCorner(of old: CGRect, size: CGSize) -> CGRect {
+        let y = anchor == .bottomLeading ? old.minY : old.maxY - size.height
+        return CGRect(x: old.minX, y: y, width: size.width, height: size.height)
     }
 
     private func screen(containing point: NSPoint) -> NSScreen {
-        if let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) {
-            return screen
-        }
-        if let main = NSScreen.main {
-            return main
-        }
-        return NSScreen.screens.first!
+        NSScreen.screens.first { $0.frame.contains(point) } ?? NSScreen.main ?? NSScreen.screens[0]
     }
 
-    private func focusedCaretPoint() -> NSPoint? {
+    // MARK: - Caret
+
+    private func focusedCaretRect() -> CGRect? {
         let systemWide = AXUIElementCreateSystemWide()
         var focusedValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            systemWide,
-            kAXFocusedUIElementAttribute as CFString,
-            &focusedValue
-        ) == .success, let focusedValue else {
-            return nil
-        }
-
-        guard CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
+              let focusedValue, CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
             return nil
         }
         let focusedElement = focusedValue as! AXUIElement
+
         var rangeValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(
-            focusedElement,
-            kAXSelectedTextRangeAttribute as CFString,
-            &rangeValue
-        ) == .success, let rangeValue else {
+        guard AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
+              let rangeValue else {
             return nil
         }
 
@@ -115,215 +246,23 @@ final class InputIndicatorController {
             kAXBoundsForRangeParameterizedAttribute as CFString,
             rangeValue,
             &boundsValue
-        ) == .success, let boundsValue else {
-            return nil
-        }
-
-        guard CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
+        ) == .success, let boundsValue, CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
             return nil
         }
 
         let bounds = boundsValue as! AXValue
         var rect = CGRect.zero
-        guard AXValueGetType(bounds) == .cgRect,
-              AXValueGetValue(bounds, .cgRect, &rect),
-              !rect.isEmpty else {
+        guard AXValueGetType(bounds) == .cgRect, AXValueGetValue(bounds, .cgRect, &rect), !rect.isEmpty else {
             return nil
         }
-
-        return convertAccessibilityPoint(CGPoint(x: rect.midX, y: rect.minY))
+        return convertAccessibilityRect(rect)
     }
 
-    private func convertAccessibilityPoint(_ point: CGPoint) -> NSPoint {
+    /// Accessibility rects have a top-left origin; AppKit's is bottom-left.
+    private func convertAccessibilityRect(_ rect: CGRect) -> CGRect {
         let maxY = NSScreen.screens.map(\.frame.maxY).max() ?? 0
-        let converted = NSPoint(x: point.x, y: maxY - point.y)
-        if NSScreen.screens.contains(where: { $0.frame.contains(converted) }) {
-            return converted
-        }
-        return NSPoint(x: point.x, y: point.y)
-    }
-
-    private func tint(
-        for presentation: InputSourcePresentation,
-        style: SwitchIndicatorColorStyle,
-        customColorHex: String
-    ) -> Color {
-        switch style {
-        case .accent:
-            return .accentColor
-        case .monochrome:
-            return Color(nsColor: .secondaryLabelColor)
-        case .custom:
-            return Color(cmdIMEHex: customColorHex) ?? .accentColor
-        case .role:
-            return presentation.tint
-        }
-    }
-}
-
-private struct InputIndicatorMetrics {
-    let panelSize: NSSize
-    let horizontalPadding: CGFloat
-    let verticalPadding: CGFloat
-    let spacing: CGFloat
-    let symbolSize: CGFloat
-    let symbolCornerRadius: CGFloat
-    let symbolFontSize: CGFloat
-    let titleFontSize: CGFloat
-    let subtitleFontSize: CGFloat
-    let bubbleCornerRadius: CGFloat
-    let bubbleStrokeOpacity: Double
-
-    init(size: SwitchIndicatorSize, scale: Double, contentStyle: SwitchIndicatorContentStyle) {
-        let scaleFactor = CGFloat(SwitcherConfig.clampedSwitchIndicatorScale(scale))
-        let basePanelSize: NSSize
-        let baseHorizontalPadding: CGFloat
-        let baseVerticalPadding: CGFloat
-        let baseSpacing: CGFloat
-        let baseSymbolSize: CGFloat
-        let baseSymbolCornerRadius: CGFloat
-        let baseSymbolFontSize: CGFloat
-        let baseTitleFontSize: CGFloat
-        let baseSubtitleFontSize: CGFloat
-        let baseBubbleCornerRadius: CGFloat
-
-        switch size {
-        case .small:
-            baseHorizontalPadding = 10
-            baseVerticalPadding = 6
-            baseSpacing = 8
-            baseSymbolSize = 26
-            baseSymbolCornerRadius = 7
-            baseSymbolFontSize = 15
-            baseTitleFontSize = 12
-            baseSubtitleFontSize = 10
-            baseBubbleCornerRadius = 15
-        case .medium:
-            baseHorizontalPadding = 12
-            baseVerticalPadding = 7
-            baseSpacing = 10
-            baseSymbolSize = 32
-            baseSymbolCornerRadius = 9
-            baseSymbolFontSize = 18
-            baseTitleFontSize = 13
-            baseSubtitleFontSize = 11
-            baseBubbleCornerRadius = 18
-        case .large:
-            baseHorizontalPadding = 14
-            baseVerticalPadding = 8
-            baseSpacing = 12
-            baseSymbolSize = 40
-            baseSymbolCornerRadius = 11
-            baseSymbolFontSize = 22
-            baseTitleFontSize = 15
-            baseSubtitleFontSize = 12
-            baseBubbleCornerRadius = 22
-        }
-
-        switch (size, contentStyle) {
-        case (.small, .iconOnly):
-            basePanelSize = NSSize(width: 46, height: 42)
-        case (.medium, .iconOnly):
-            basePanelSize = NSSize(width: 56, height: 48)
-        case (.large, .iconOnly):
-            basePanelSize = NSSize(width: 72, height: 60)
-        case (.small, .textOnly):
-            basePanelSize = NSSize(width: 92, height: 38)
-        case (.medium, .textOnly):
-            basePanelSize = NSSize(width: 118, height: 46)
-        case (.large, .textOnly):
-            basePanelSize = NSSize(width: 146, height: 58)
-        case (.small, .iconAndText):
-            basePanelSize = NSSize(width: 138, height: 44)
-        case (.medium, .iconAndText):
-            basePanelSize = NSSize(width: 172, height: 54)
-        case (.large, .iconAndText):
-            basePanelSize = NSSize(width: 210, height: 66)
-        }
-
-        panelSize = NSSize(
-            width: (basePanelSize.width * scaleFactor).rounded(.up),
-            height: (basePanelSize.height * scaleFactor).rounded(.up)
-        )
-        horizontalPadding = baseHorizontalPadding * scaleFactor
-        verticalPadding = baseVerticalPadding * scaleFactor
-        spacing = max(4, baseSpacing * scaleFactor)
-        symbolSize = baseSymbolSize * scaleFactor
-        symbolCornerRadius = baseSymbolCornerRadius * scaleFactor
-        symbolFontSize = baseSymbolFontSize * scaleFactor
-        titleFontSize = baseTitleFontSize * scaleFactor
-        subtitleFontSize = baseSubtitleFontSize * scaleFactor
-        bubbleCornerRadius = baseBubbleCornerRadius * scaleFactor
-        bubbleStrokeOpacity = contentStyle == .iconAndText ? 0.18 : 0
-    }
-}
-
-private struct InputIndicatorView: View {
-    let symbol: String
-    let title: String
-    let subtitle: String
-    let tint: Color
-    let contentStyle: SwitchIndicatorContentStyle
-    let metrics: InputIndicatorMetrics
-
-    var body: some View {
-        content
-        .frame(
-            width: max(1, metrics.panelSize.width - metrics.horizontalPadding * 2),
-            height: max(1, metrics.panelSize.height - metrics.verticalPadding * 2),
-            alignment: .center
-        )
-        .padding(.horizontal, metrics.horizontalPadding)
-        .padding(.vertical, metrics.verticalPadding)
-        .frame(width: metrics.panelSize.width, height: metrics.panelSize.height)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius))
-        .overlay {
-            if metrics.bubbleStrokeOpacity > 0 {
-                RoundedRectangle(cornerRadius: metrics.bubbleCornerRadius)
-                    .strokeBorder(.secondary.opacity(metrics.bubbleStrokeOpacity))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        switch contentStyle {
-        case .iconOnly:
-            symbolView
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        case .textOnly:
-            textStack(alignment: .center)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        case .iconAndText:
-            HStack(spacing: metrics.spacing) {
-                symbolView
-                textStack(alignment: .leading)
-                Spacer(minLength: 0)
-            }
-        }
-    }
-
-    private var symbolView: some View {
-        Text(symbol)
-            .font(.system(size: metrics.symbolFontSize, weight: .bold))
-            .foregroundStyle(.white)
-            .frame(width: metrics.symbolSize, height: metrics.symbolSize)
-            .background(tint, in: RoundedRectangle(cornerRadius: metrics.symbolCornerRadius))
-    }
-
-    private func textStack(alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 2) {
-            Text(title)
-                .font(.system(size: metrics.titleFontSize, weight: .semibold))
-                .lineLimit(1)
-            if contentStyle == .iconAndText {
-                Text(subtitle)
-                    .font(.system(size: metrics.subtitleFontSize))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-        }
+        let converted = CGRect(x: rect.minX, y: maxY - rect.maxY, width: rect.width, height: rect.height)
+        let top = CGPoint(x: converted.midX, y: converted.maxY)
+        return NSScreen.screens.contains { $0.frame.contains(top) } ? converted : rect
     }
 }
