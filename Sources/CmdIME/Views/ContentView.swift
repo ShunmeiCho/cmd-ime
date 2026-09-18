@@ -261,32 +261,26 @@ private struct CompactLiveKeysStrip: View {
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
 
-            ViewThatFits(in: .horizontal) {
-                VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
-                    HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
-                        ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
-                        LiveStripKey("space")
-                        ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
-                    }
-                    .fixedSize(horizontal: true, vertical: false)
-                    if !model.config.chordTriggers.isEmpty {
-                        LiveKeyFlowLayout(spacing: DesignTokens.Layout.rowGap) { chordKeys }
-                    }
+            // Laid out like the bottom of a keyboard: Shift on the upper row, the
+            // other modifiers around the space bar, shortcuts where the letter keys sit.
+            VStack(spacing: DesignTokens.Layout.rowGap) {
+                HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                    modifierKey("left-shift").frame(width: Self.shiftWidth)
+                    HStack(spacing: DesignTokens.Layout.rowGap) { chordKeys }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    modifierKey("right-shift").frame(width: Self.shiftWidth)
                 }
-                // Narrow panel: chords share the second row instead of opening a third.
-                VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
-                    HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
-                        ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
-                        LiveStripKey("space")
-                    }
-                    LiveKeyFlowLayout(spacing: DesignTokens.Layout.rowGap) {
-                        ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
-                        chordKeys
-                    }
+                HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                    ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0).frame(width: Self.modifierWidth) }
+                    LiveStripKey("space")
+                    ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0).frame(width: Self.modifierWidth) }
                 }
             }
         }
     }
+
+    private static let shiftWidth: CGFloat = 96
+    private static let modifierWidth: CGFloat = 58
 
     private var chordKeys: some View {
         ForEach(Array(model.config.chordTriggers.enumerated()), id: \.offset) { _, entry in
@@ -300,8 +294,8 @@ private struct CompactLiveKeysStrip: View {
     }
 
     // Physical one-shot modifier keys, ordered like the bottom row of a keyboard.
-    private static let leftModifierKeys = ["left-shift", "left-control", "left-option", "left-command"]
-    private static let rightModifierKeys = ["right-command", "right-option", "right-control", "right-shift"]
+    private static let leftModifierKeys = ["left-control", "left-option", "left-command"]
+    private static let rightModifierKeys = ["right-command", "right-option", "right-control"]
 
     @ViewBuilder
     private func modifierKey(_ keyName: String) -> some View {
@@ -313,7 +307,7 @@ private struct CompactLiveKeysStrip: View {
             }.map { (slot: slot.id, trigger: $0.trigger) }
         }
         if entries.isEmpty {
-            LiveStripKey(keycap.label)
+            LiveStripKey(keycap.label, fillsWidth: true)
         } else {
             // Multiple bindings keep the same physical key column. Gesture text
             // distinguishes them even when their slot colors are identical.
@@ -322,7 +316,7 @@ private struct CompactLiveKeysStrip: View {
                     let gesture = entry.trigger.gesture == .doubleTap ? "×2" : (entries.count > 1 ? "x1" : nil)
                     LiveStripKey(keycap.label, role: entry.slot,
                                  detail: [keycap.detail, gesture].compactMap { $0 }.joined(separator: " "),
-                                 isActive: model.activeRole == entry.slot)
+                                 isActive: model.activeRole == entry.slot, fillsWidth: true)
                         .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
                 }
             }
@@ -395,7 +389,10 @@ private struct LiveStripKey: View {
     let detail: String?
     let isActive: Bool
 
-    init(_ label: String, role: InputRole? = nil, detail: String? = nil, isActive: Bool = false) {
+    var fillsWidth = false
+
+    init(_ label: String, role: InputRole? = nil, detail: String? = nil, isActive: Bool = false, fillsWidth: Bool = false) {
+        self.fillsWidth = fillsWidth
         self.label = label
         self.role = role
         self.detail = detail
@@ -404,7 +401,7 @@ private struct LiveStripKey: View {
 
     var body: some View {
         KeycapView(label, detail: detail, role: role, isPressed: isActive, isBound: role != nil,
-                   appearance: .display, expandsHorizontally: label == "space")
+                   appearance: .display, expandsHorizontally: fillsWidth || label == "space")
             .frame(minWidth: 46, minHeight: 34)
     }
 }

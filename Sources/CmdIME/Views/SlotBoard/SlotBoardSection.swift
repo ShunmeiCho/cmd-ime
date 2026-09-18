@@ -26,6 +26,7 @@ struct SlotBoardSection: View {
         let generation = seatGeneration
         let phase = seatPhase
         ScrollViewReader { proxy in
+          VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
             HStack(alignment: .top, spacing: DesignTokens.Layout.panelGap) {
                 SourceListColumn(model: model, drag: drag,
                                  onBeginDrag: { beginDrag(.source($0), value: $1) }, onAdd: add, onRefresh: {
@@ -65,11 +66,6 @@ struct SlotBoardSection: View {
                         .font(DesignTokens.Typography.auxiliary)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
-                    Divider()
-                    footer
-                        .focusSection()
-                        .accessibilityElement(children: .contain)
-                        .accessibilitySortPriority(-1)
                 }
                 .focusSection()
                 .accessibilityElement(children: .contain)
@@ -80,6 +76,9 @@ struct SlotBoardSection: View {
                 .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
                     .fill(DesignTokens.Colors.surface))
             }
+            // Both panels share the taller one's height, so the short sources panel
+            // no longer floats above an empty well.
+            .fixedSize(horizontal: false, vertical: true)
             .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion),
                        value: model.boardNotice)
             .onChange(of: model.boardNotice) { notice in
@@ -99,6 +98,16 @@ struct SlotBoardSection: View {
                     }
                 }
             }
+            // Full width: the nine physical keys fit on one row here.
+            footer
+                .focusSection()
+                .accessibilityElement(children: .contain)
+                .accessibilitySortPriority(-1)
+                .padding(DesignTokens.Layout.panelInset)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
+                    .fill(DesignTokens.Colors.surface))
+          }
         }
         .coordinateSpace(name: "slotBoard")
         .onAppear {

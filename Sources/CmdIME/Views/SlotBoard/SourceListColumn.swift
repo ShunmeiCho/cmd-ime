@@ -53,7 +53,8 @@ struct SourceListColumn: View {
             }
         }
         .padding(DesignTokens.Layout.panelInset)
-        .frame(width: DesignTokens.Layout.sourcePanelWidth, alignment: .leading)
+        .frame(width: DesignTokens.Layout.sourcePanelWidth, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
             .fill(DesignTokens.Colors.surfaceInset))
         .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
