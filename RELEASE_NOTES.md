@@ -1,4 +1,4 @@
-## Unreleased
+## CmdIME v0.2.1 Preview
 
 CmdIME removes the menu bar status icon, makes CLI switching verifiable, adds a diagnosis command, and keeps the event tap responsive while a switch is confirmed.
 
