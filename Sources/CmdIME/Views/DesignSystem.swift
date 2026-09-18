@@ -14,8 +14,9 @@ enum DesignTokens {
         static let separatorStrong = Color.white.opacity(0.12)
         static let textPrimary = Color(red: 0.96, green: 0.96, blue: 0.97)
         static let textSecondary = Color(red: 0.72, green: 0.72, blue: 0.76)
-        static let textMuted = Color(red: 0.52, green: 0.52, blue: 0.56)
+        static let textMuted = Color(red: 154 / 255, green: 154 / 255, blue: 163 / 255)
         static let accent = Color(red: 0.21, green: 0.48, blue: 0.90)
+        static let actionFill = Color(red: 40 / 255, green: 104 / 255, blue: 199 / 255)
         static let success = Color(red: 0.27, green: 0.77, blue: 0.42)
         static let warning = Color(red: 0.77, green: 0.48, blue: 0.14)
         static let danger = Color(red: 0.89, green: 0.31, blue: 0.28)
@@ -32,6 +33,12 @@ enum DesignTokens {
                 Color(nsColor: .secondaryLabelColor)
             }
         }
+    }
+
+    enum Typography {
+        static let title = Font.system(size: 13, weight: .semibold)
+        static let body = Font.system(size: 12)
+        static let auxiliary = Font.system(size: 11)
     }
 
     enum Radius {
@@ -201,6 +208,11 @@ struct SettingsSectionHeader: View {
 }
 
 struct KeycapView: View {
+    enum Appearance {
+        case display
+        case control
+    }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.slotLook) private var slotLook
 
@@ -209,41 +221,48 @@ struct KeycapView: View {
     var role: InputRole?
     var isPressed = false
     var isBound = true
+    var appearance: Appearance = .control
+    var expandsHorizontally = false
 
-    init(_ label: String, detail: String? = nil, role: InputRole? = nil, isPressed: Bool = false, isBound: Bool = true) {
+    init(_ label: String, detail: String? = nil, role: InputRole? = nil, isPressed: Bool = false,
+         isBound: Bool = true, appearance: Appearance = .control, expandsHorizontally: Bool = false) {
         self.label = label
         self.detail = detail
         self.role = role
         self.isPressed = isPressed
         self.isBound = isBound
+        self.appearance = appearance
+        self.expandsHorizontally = expandsHorizontally
     }
 
     var body: some View {
         HStack(spacing: 4) {
             Text(label)
-                .font(.system(.callout, design: .monospaced).weight(.semibold))
+                .font(DesignTokens.Typography.body.monospaced().weight(.semibold))
             if let detail {
                 Text(detail)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(DesignTokens.Typography.auxiliary.monospaced().weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .padding(.top, 2)
             }
         }
             .foregroundStyle(foregroundColor)
-            .frame(minWidth: 42, minHeight: 30)
+            .frame(minWidth: 42, maxWidth: expandsHorizontally ? .infinity : nil, minHeight: 30)
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                    .fill(keycapFill)
+                    .fill(appearance == .display ? AnyShapeStyle(DesignTokens.Colors.surfaceInset) : AnyShapeStyle(keycapFill))
                     .overlay(
                         RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
                             .stroke(borderColor, lineWidth: isBound ? 1.2 : 1)
                     )
             )
-            .shadow(color: glowColor, radius: isPressed ? 10 : 4, y: isPressed ? 1 : 3)
-            .scaleEffect(reduceMotion ? 1 : (isPressed ? 0.94 : 1))
-            .offset(y: reduceMotion ? 0 : (isPressed ? 1 : 0))
-            .animation(isPressed ? DesignTokens.Motion.keyPress : DesignTokens.Motion.keyRelease, value: isPressed)
+            .shadow(color: appearance == .display ? .clear : glowColor,
+                    radius: isPressed ? 10 : 4, y: isPressed ? 1 : 3)
+            .scaleEffect(appearance == .display || reduceMotion ? 1 : (isPressed ? 0.94 : 1))
+            .offset(y: appearance == .display || reduceMotion ? 0 : (isPressed ? 1 : 0))
+            .animation(appearance == .display ? nil : (isPressed ? DesignTokens.Motion.keyPress : DesignTokens.Motion.keyRelease),
+                       value: isPressed)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityLabelText)
             .accessibilityValue(isPressed ? "Active" : (isBound ? "Bound" : "Unbound"))
@@ -534,21 +553,55 @@ struct ConsoleButtonStyle: ButtonStyle {
     var prominent = false
 
     func makeBody(configuration: Configuration) -> some View {
+        ConsoleButtonBody(configuration: configuration, prominent: prominent)
+    }
+}
+
+private struct ConsoleButtonBody: View {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
+    let configuration: ButtonStyleConfiguration
+    let prominent: Bool
+
+    private var isPressed: Bool { isEnabled && configuration.isPressed }
+
+    private var foreground: Color {
+        if !isEnabled { return DesignTokens.Colors.textMuted.opacity(0.55) }
+        return prominent ? .white : DesignTokens.Colors.textPrimary
+    }
+
+    private var fill: Color {
+        if prominent { return DesignTokens.Colors.actionFill.opacity(isEnabled ? 1 : 0.28) }
+        return Color.white.opacity(!isEnabled ? 0.035 : (isPressed ? 0.11 : (isHovered ? 0.095 : 0.07)))
+    }
+
+    var body: some View {
         configuration.label
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(prominent ? Color.white : DesignTokens.Colors.textPrimary)
+            .font(DesignTokens.Typography.body.weight(.semibold))
+            .foregroundStyle(foreground)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                    .fill(prominent ? DesignTokens.Colors.accent : Color.white.opacity(configuration.isPressed ? 0.11 : 0.07))
+                    .fill(fill)
+                    .overlay {
+                        if prominent && isEnabled {
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+                                .fill(isPressed ? Color.black.opacity(0.10) : Color.white.opacity(isHovered ? 0.04 : 0))
+                        }
+                    }
                     .overlay(
                         RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                            .stroke(Color.white.opacity(prominent ? 0.10 : 0.12), lineWidth: 1)
+                            .stroke(Color.white.opacity(isEnabled ? 0.12 : 0.05), lineWidth: 1)
                     )
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(DesignTokens.Motion.keyPress, value: configuration.isPressed)
+            // Leave focus and activation to the enclosing native Button.
+            .scaleEffect(isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(isEnabled && !reduceMotion ? DesignTokens.Motion.keyPress : nil, value: isPressed)
+            .animation(isEnabled ? DesignTokens.Motion.stateChange : nil, value: isHovered)
+            .onHover { isHovered = isEnabled && $0 }
+            .onChange(of: isEnabled) { if !$0 { isHovered = false } }
     }
 }
 
