@@ -73,7 +73,8 @@ final class AppModel: ObservableObject {
                 recoveryMessage = "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults."
             }
         } catch {
-            initialConfig = .default
+            // A config file exists but could not be moved aside: not a first run.
+            initialConfig = SwitcherConfig.default.completingSetup()
             recoveryMessage = "Could not read config: \(error.localizedDescription). Using defaults."
         }
 

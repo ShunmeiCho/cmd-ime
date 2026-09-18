@@ -462,10 +462,7 @@ struct CLI {
                 stderr
             )
         }
-        // Starting from defaults (no file, or an unreadable one): whatever the CLI
-        // writes from here is not a GUI first run either.
-        let isCreatedByCLI = result.isFirstRun || result.recoveredBackupURL != nil
-        return isCreatedByCLI ? result.config.completingSetup() : result.config
+        return result.configForCLI
     }
 
     private func printUsage() {

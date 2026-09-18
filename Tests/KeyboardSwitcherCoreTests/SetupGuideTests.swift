@@ -2,8 +2,14 @@ import XCTest
 @testable import KeyboardSwitcherCore
 
 final class SetupGuideTests: XCTestCase {
-    private func source(_ language: String, selectable: Bool = true) -> InputSourceInfo {
-        InputSourceInfo(id: "source.\(language)", localizedName: "Source \(language)", languages: [language], isSelectCapable: selectable)
+    private func source(_ language: String, id: String? = nil, selectable: Bool = true) -> InputSourceInfo {
+        InputSourceInfo(id: id ?? "source.\(language)", localizedName: "Source \(id ?? language)", languages: [language], isSelectCapable: selectable)
+    }
+
+    private func temporaryStore() -> ConfigStore {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        return ConfigStore(url: directory.appendingPathComponent("config.json"))
     }
 
     private func input(
@@ -85,6 +91,55 @@ final class SetupGuideTests: XCTestCase {
         expected.hasCompletedSetup = true
         XCTAssertEqual(completed, expected)
         XCTAssertTrue(completed.rebuildingSlots(from: [source("de")]).hasCompletedSetup)
+    }
+
+    func testUnreadableConfigRecoversAsCompletedAndOnlyAFirstRunIsPending() throws {
+        let store = temporaryStore()
+        let absent = try store.loadOrRecover()
+        XCTAssertFalse(absent.config.hasCompletedSetup)
+        XCTAssertTrue(absent.configForCLI.hasCompletedSetup)
+
+        try store.save(SwitcherConfig.detected(from: [source("en"), source("ko")]))
+        let pending = try store.loadOrRecover()
+        XCTAssertFalse(pending.configForCLI.hasCompletedSetup)
+        XCTAssertEqual(pending.configForCLI, pending.config)
+
+        try Data("{}".utf8).write(to: store.url)
+        let recovered = try store.loadOrRecover()
+        XCTAssertNotNil(recovered.recoveredBackupURL)
+        XCTAssertFalse(recovered.isFirstRun)
+        XCTAssertTrue(recovered.config.hasCompletedSetup)
+        XCTAssertEqual(recovered.configForCLI, SwitcherConfig.default.completingSetup())
+    }
+
+    func testV1FileStaysCompletedThroughLoadAndSave() throws {
+        let store = temporaryStore()
+        try FileManager.default.createDirectory(at: store.url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(#"{"bindings":[],"inputSources":{}}"#.utf8).write(to: store.url)
+
+        let loaded = try store.loadOrRecover()
+        try store.save(loaded.config)
+
+        XCTAssertEqual(loaded.migratedFromVersion, 1)
+        let object = try JSONSerialization.jsonObject(with: Data(contentsOf: store.url)) as? [String: Any]
+        XCTAssertEqual(object?["hasCompletedSetup"] as? Bool, true)
+        XCTAssertTrue(try store.loadOrRecover().config.hasCompletedSetup)
+    }
+
+    func testResetToDetectedAndRemoveUndoKeepTheStoredFlag() throws {
+        let store = temporaryStore()
+        let pending = SwitcherConfig.detected(from: [source("en"), source("ko")])
+
+        for config in [pending, pending.completingSetup()] {
+            let rebuilt = try store.resettingSlots(in: config, from: [source("de"), source("fr")])
+            XCTAssertEqual(rebuilt.hasCompletedSetup, config.hasCompletedSetup)
+            XCTAssertEqual(try store.load().hasCompletedSetup, config.hasCompletedSetup)
+
+            let removal = try config.removingSlotWithReceipt(config.slots[0].id)
+            let restored = try removal.config.restoringSlot(removal.removed).config
+            XCTAssertEqual(removal.config.hasCompletedSetup, config.hasCompletedSetup)
+            XCTAssertEqual(restored, config)
+        }
     }
 
     // MARK: Step derivation

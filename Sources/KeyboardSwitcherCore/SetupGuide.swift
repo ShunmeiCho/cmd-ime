@@ -130,3 +130,12 @@ extension SwitcherConfig {
         return result
     }
 }
+
+extension ConfigLoadResult {
+    /// The configuration `keyboardctl` starts from. With no file yet, whatever the CLI
+    /// writes is not a GUI first run, so the setup guide stays hidden for it. A pending
+    /// first run that the GUI already saved is left pending.
+    public var configForCLI: SwitcherConfig {
+        isFirstRun ? config.completingSetup() : config
+    }
+}
