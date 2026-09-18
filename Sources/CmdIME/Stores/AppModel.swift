@@ -195,7 +195,7 @@ final class AppModel: ObservableObject {
         scan()
         nextConfig.sanitizePreferredIDs(using: sources)
 
-        for role in InputRole.allCases {
+        for role in InputRole.legacy {
             if let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: nextConfig) {
                 nextConfig.pinInputSourceID(source.id, for: role)
             }

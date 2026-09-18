@@ -156,7 +156,7 @@ struct CLI {
 
         var config = SwitcherConfig.default
         let sources = try service.listInputSources()
-        for role in InputRole.allCases {
+        for role in InputRole.legacy {
             if let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) {
                 config.pinInputSourceID(source.id, for: role)
             }
@@ -179,7 +179,7 @@ struct CLI {
         #if os(macOS)
         let service = MacInputSourceService()
         let roleName = try argument(at: 1, name: "role")
-        guard let role = InputRole(rawValue: roleName) else {
+        guard let role = InputRole.legacy.first(where: { $0.rawValue == roleName }) else {
             throw CLIError.missingArgument("role must be english, chinese, or japanese")
         }
         let config = try loadConfig()
@@ -205,7 +205,7 @@ struct CLI {
         let sources = try service.listInputSources()
         let current = try service.currentInputSource()
 
-        let reports = InputRole.allCases.map { role -> RoleDiagnosis in
+        let reports = InputRole.legacy.map { role -> RoleDiagnosis in
             let preference = config.preference(for: role)
             let result = InputSourceMatcher.match(for: role, sources: sources, config: config)
             return RoleDiagnosis(role: role, preference: preference, result: result)
@@ -254,7 +254,7 @@ struct CLI {
     private func bind() throws {
         let trigger = try ShortcutParser.parse(argument(at: 1, name: "trigger"))
         let roleName = try argument(at: 2, name: "role")
-        guard let role = InputRole(rawValue: roleName) else {
+        guard let role = InputRole.legacy.first(where: { $0.rawValue == roleName }) else {
             throw CLIError.missingArgument("role must be english, chinese, or japanese")
         }
         let store = ConfigStore(url: configURL)

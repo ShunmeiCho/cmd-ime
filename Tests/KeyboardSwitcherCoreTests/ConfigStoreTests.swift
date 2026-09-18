@@ -7,7 +7,7 @@ final class ConfigStoreTests: XCTestCase {
 
         let roles = Set(config.bindings.compactMap(\.action.role))
 
-        XCTAssertEqual(roles, Set(InputRole.allCases))
+        XCTAssertEqual(roles, Set(InputRole.legacy))
     }
 
     func testConfigRoundTripsThroughJSON() throws {

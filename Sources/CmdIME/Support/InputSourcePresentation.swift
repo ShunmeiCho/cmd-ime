@@ -29,6 +29,8 @@ struct InputSourcePresentation {
             .chinese
         case .japanese:
             .japanese
+        default:
+            .unknown
         }
 
         return InputSourcePresentation(

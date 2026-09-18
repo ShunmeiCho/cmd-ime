@@ -28,6 +28,8 @@ enum DesignTokens {
                 Color(red: 0.20, green: 0.66, blue: 0.33)
             case .japanese:
                 Color(red: 0.89, green: 0.34, blue: 0.29)
+            default:
+                Color(nsColor: .secondaryLabelColor)
             }
         }
     }
@@ -381,6 +383,8 @@ extension InputRole {
             "中"
         case .japanese:
             "あ"
+        default:
+            String(rawValue.prefix(1)).uppercased()
         }
     }
 
@@ -392,6 +396,8 @@ extension InputRole {
             "Chinese"
         case .japanese:
             "Japanese"
+        default:
+            rawValue
         }
     }
 }

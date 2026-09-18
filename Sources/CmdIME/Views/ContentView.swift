@@ -61,7 +61,7 @@ struct ContentView: View {
 
     private func resetDrafts() {
         triggerDrafts = Dictionary(
-            uniqueKeysWithValues: InputRole.allCases.map { ($0, model.bindingText(for: $0)) }
+            uniqueKeysWithValues: InputRole.legacy.map { ($0, model.bindingText(for: $0)) }
         )
         triggerTypeDrafts.removeAll()
     }
@@ -259,7 +259,7 @@ private struct SwitchSlotsSection: View {
             }
 
             VStack(spacing: 9) {
-                ForEach(InputRole.allCases, id: \.self) { role in
+                ForEach(InputRole.legacy, id: \.self) { role in
                     switchSlotCard(for: role)
                 }
             }
@@ -401,7 +401,7 @@ private struct SwitchSlotsSection: View {
             return false
         }
 
-        return InputRole.allCases.contains { otherRole in
+        return InputRole.legacy.contains { otherRole in
             otherRole != role && model.matchedSource(for: otherRole)?.id == source.id
         }
     }
@@ -445,6 +445,8 @@ private struct SwitchSlotsSection: View {
             .rightCommand
         case .japanese:
             .leftOption
+        default:
+            .leftCommand
         }
     }
 }
@@ -820,7 +822,7 @@ private struct CustomRoleColorControls: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(InputRole.allCases, id: \.self) { role in
+            ForEach(InputRole.legacy, id: \.self) { role in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(role.displayName)
                         .font(.caption2.weight(.semibold))

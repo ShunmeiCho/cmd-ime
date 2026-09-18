@@ -1,9 +1,16 @@
 import Foundation
 
-public enum InputRole: String, Codable, CaseIterable, Sendable {
-    case english
-    case chinese
-    case japanese
+public struct InputRole: RawRepresentable, Codable, Hashable, Sendable {
+    public let rawValue: String
+
+    public init(rawValue: String) {
+        self.rawValue = rawValue
+    }
+
+    public static let english = InputRole(rawValue: "english")
+    public static let chinese = InputRole(rawValue: "chinese")
+    public static let japanese = InputRole(rawValue: "japanese")
+    public static let legacy: [InputRole] = [.english, .chinese, .japanese]
 }
 
 public enum TriggerKind: String, Codable, Sendable {
@@ -349,7 +356,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             uniqueKeysWithValues: InputSourceMatcher.selectableSources(from: sources).map { ($0.id, $0) }
         )
 
-        for role in InputRole.allCases {
+        for role in InputRole.legacy {
             var preference = preference(for: role)
             guard Self.canClassifySource(for: preference) else {
                 continue
@@ -363,7 +370,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
                     return true
                 }
 
-                let matchesOtherRole = InputRole.allCases.contains { otherRole in
+                let matchesOtherRole = InputRole.legacy.contains { otherRole in
                     otherRole != role && Self.source(source, matches: self.preference(for: otherRole))
                 }
                 return !matchesOtherRole

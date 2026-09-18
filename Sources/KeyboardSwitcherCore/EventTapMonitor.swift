@@ -153,7 +153,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         do {
             let sources = try inputSources.listInputSources()
             resolvedSources = Dictionary(
-                uniqueKeysWithValues: InputRole.allCases.compactMap { role in
+                uniqueKeysWithValues: InputRole.legacy.compactMap { role in
                     guard let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) else {
                         return nil
                     }
