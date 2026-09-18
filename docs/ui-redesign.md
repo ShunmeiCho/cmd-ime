@@ -192,7 +192,9 @@ and modifier events are inspected in memory by key code and modifier state.
 Step and fold changes reuse `expandCollapse`; tried marks reuse `stateChange`.
 Reduce Motion gets instant layout changes and a plain fade instead of the shrink.
 Real-device checks of focus order, announcements, the relaunch path, trigger
-firing while Settings is key, and the 720-point layout remain required.
+firing while Settings is key, and the 720-point layout remain required. So does
+the revoke-then-grant path: the guide rebuilds the listener when a permission
+returns, on the unverified assumption that the old event tap does not recover.
 
 ## Verification
 

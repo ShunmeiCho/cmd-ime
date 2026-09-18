@@ -29,10 +29,14 @@ struct SetupGuideCard: View {
         }
         .onChange(of: model.permissions.isReady) { isReady in
             // The model starts the listener only at launch or on Resume. Inside the
-            // guide a fresh grant should lead straight on to the next step.
-            if isReady, !state.isFinished, !model.isListening {
-                model.startListeningIfReady()
+            // guide a fresh grant should lead straight on to the next step. A grant that
+            // returns after being revoked leaves `isListening` stale, and the old event
+            // tap is not known to recover, so the listener is rebuilt, never trusted.
+            guard isReady, !state.isFinished else { return }
+            if model.isListening {
+                model.stopListening()
             }
+            model.startListeningIfReady()
         }
     }
 
