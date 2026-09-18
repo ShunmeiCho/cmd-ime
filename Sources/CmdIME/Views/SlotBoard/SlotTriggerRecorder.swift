@@ -44,8 +44,8 @@ struct SlotTriggerRecorder: View {
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                 }
                 .buttonStyle(.borderless)
-                .help("Clear trigger")
-                .accessibilityLabel("Clear trigger for \(slotLook.name(for: role))")
+                .help("Immediately remove this slot’s trigger")
+                .accessibilityLabel("Immediately remove trigger for \(slotLook.name(for: role))")
             }
         }
         .allowsHitTesting(!isGhost)
@@ -114,14 +114,13 @@ private struct TriggerRecorderPopover: View {
                 RoleBadge(role: role, symbol: role.defaultSymbol, size: 24, isActive: false)
                 Text(name).font(.caption.weight(.semibold))
                 Spacer()
-                // Keep the prototype's non-key-taking content. Escape/Return are
-                // keyboard paths; the footer also has an explicit VoiceOver action.
-                Text("Close Esc or Return")
-                    .font(.caption)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .onTapGesture { session.end(reason: .explicitClose) }
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction { session.end(reason: .explicitClose) }
+                Button("Cancel · Esc", action: session.cancel)
+                    .buttonStyle(ConsoleButtonStyle())
+                    .accessibilityLabel("Cancel recording")
+                Button("Save · Return", action: session.save)
+                    .buttonStyle(ConsoleButtonStyle(prominent: true))
+                    .disabled(!session.canSave)
+                    .accessibilityLabel("Save trigger")
             }
         }
         .padding(16)

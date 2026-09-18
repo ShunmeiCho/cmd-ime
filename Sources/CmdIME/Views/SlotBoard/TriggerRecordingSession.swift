@@ -31,6 +31,29 @@ final class TriggerRecordingSession: ObservableObject {
 
     init() {}
 
+    var canSave: Bool { isRecording && eligibility.hasDraft && warning == nil }
+
+    func cancel() { end(reason: .cancelled) }
+
+    /// Mouse, accessibility and Return use the same path; host key status is not a precondition.
+    func save() {
+        guard isRecording else { return }
+        guard eligibility.hasDraft else {
+            if warning == nil, !eligibility.canClear, draft == nil {
+                cancel()
+            } else {
+                reject("Record a trigger before saving.")
+            }
+            return
+        }
+        if let draft, let error = onValidate?(draft) {
+            reject(error)
+            return
+        }
+        guard warning == nil else { return }
+        commit(draft)
+    }
+
     func begin(
         in window: NSWindow,
         existingTrigger: KeyTrigger? = nil,
@@ -83,12 +106,17 @@ final class TriggerRecordingSession: ObservableObject {
             },
         ]
         onCaptureChanged(true)
-        announce("Recording. Press a trigger. Return saves; Escape cancels; Delete clears.")
+        announce("Recording. Press a trigger. Return saves; Escape cancels; Delete clears the draft.")
+        if let draft, let error = onValidate(draft) { reject(error) }
     }
 
     func end(reason: EndReason, sessionID: UUID? = nil) {
         guard isRecording, sessionID == nil || sessionID == self.sessionID else { return }
         let dismiss = onDismiss
+        switch reason {
+        case .committed: announce("Trigger saved.")
+        default: announce("Recording cancelled. Previous trigger unchanged.")
+        }
         cleanup()
         dismiss?()
     }
@@ -181,22 +209,9 @@ final class TriggerRecordingSession: ObservableObject {
         case .tap, .doubleTap:
             if let trigger = recognizer.draft { captured(trigger) }
         case .cancel:
-            end(reason: .cancelled)
+            cancel()
         case .commit:
-            guard eligibility.hasDraft else {
-                if warning == nil, !eligibility.canClear, draft == nil {
-                    // An untouched empty recorder closes without deleting disabled bindings.
-                    end(reason: .committed)
-                } else {
-                    reject("Record a trigger before saving.")
-                }
-                return
-            }
-            if let draft, let error = onValidate?(draft) {
-                reject(error)
-                return
-            }
-            commit(draft)
+            save()
         case .clear:
             if eligibility.canClear { clearDraft() }
         }
