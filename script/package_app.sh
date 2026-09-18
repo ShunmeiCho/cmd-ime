@@ -176,5 +176,7 @@ plutil -lint "$INFO_PLIST"
 ditto -c -k --keepParent "$APP_BUNDLE" "$ZIP_PATH"
 notarize_app
 shasum -a 256 "$ZIP_PATH"
+# Published next to the zip so script/install.sh can verify without a pinned checksum.
+(cd "$(dirname "$ZIP_PATH")" && shasum -a 256 "$(basename "$ZIP_PATH")" >"$(basename "$ZIP_PATH").sha256")
 
 echo "$ZIP_PATH"
