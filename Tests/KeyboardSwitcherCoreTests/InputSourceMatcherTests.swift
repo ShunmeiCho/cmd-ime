@@ -2,6 +2,49 @@ import XCTest
 @testable import KeyboardSwitcherCore
 
 final class InputSourceMatcherTests: XCTestCase {
+    private func source(_ id: String, selectable: Bool = true) -> InputSourceInfo {
+        InputSourceInfo(id: id, localizedName: id, languages: ["en"], isSelectCapable: selectable)
+    }
+
+    func testNewSelectableSourcesIgnoresExistingIDsAndMetadataChanges() {
+        let existing = source("existing")
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [existing], current: [existing]), [])
+        var renamed = existing
+        renamed.localizedName = "New display name"
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [existing], current: [renamed]), [])
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [], current: []), [])
+    }
+
+    func testNewSelectableSourcesReturnsAddedSource() {
+        let existing = source("existing")
+        let added = source("added")
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [existing], current: [existing, added]), [added])
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [], current: [added]), [added])
+    }
+
+    func testNewSelectableSourcesExcludesNonselectableAndAuxiliaryAdditions() {
+        let existing = source("existing")
+        let unavailable = source("unavailable", selectable: false)
+        let palette = source("com.apple.CharacterPaletteIM")
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [existing], current: [existing, unavailable, palette]), [])
+    }
+
+    func testNewSelectableSourcesDoesNotReportRemovedSources() {
+        let kept = source("kept")
+        let removed = source("removed")
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [kept, removed], current: [kept]), [])
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [kept], current: []), [])
+    }
+
+    func testNewSelectableSourcesPreservesCurrentOrder() {
+        let existing = source("existing")
+        let first = source("z-first")
+        let second = source("a-second")
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(
+            previous: [existing], current: [first, existing, source("hidden", selectable: false), second]
+        ), [first, second])
+    }
+
     func testDynamicFallbackUsesPrimaryLanguageAndPreferredIDWins() {
         let role = InputRole(rawValue: "german")
         var config = SwitcherConfig.default
