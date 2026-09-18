@@ -14,7 +14,7 @@ struct SetupTryItStep: View {
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
-        let progress = progress(tried: session.triedSlots)
+        let progress = progress()
         VStack(alignment: .leading, spacing: 10) {
             Text(model.config.showSwitchIndicator
                 ? "Click into the field, then fire each trigger. The matching line lights up, the input source changes, and the switch indicator shows up near the caret."
@@ -48,7 +48,7 @@ struct SetupTryItStep: View {
                 .accessibilityLabel("Practice field")
                 .accessibilityHint(placeholder(for: progress))
 
-            SetupSlotSentenceList(model: model, triedSlots: session.triedSlots)
+            SetupSlotSentenceList(model: model, triedSlots: Set(progress.triedSlots))
 
             if !progress.unmatchedSlots.isEmpty {
                 SetupNotice(
@@ -82,7 +82,7 @@ struct SetupTryItStep: View {
             }
         }
         .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion),
-                   value: session.triedSlots)
+                   value: session.triggerEvidence)
         .onAppear {
             // Focus after the step has been laid out, so the first trigger already
             // has a caret to show the indicator at.
@@ -92,23 +92,25 @@ struct SetupTryItStep: View {
         }
         // A passthrough event is not replayed on entering the step.
         .onReceive(model.triggeredSwitches) { event in
-            markTried(event.slotID)
+            markTried(event)
         }
     }
 
-    private func markTried(_ slot: InputRole) {
-        let before = progress(tried: session.triedSlots)
-        guard before.boundSlots.contains(slot), !before.triedSlots.contains(slot) else { return }
-        session.triedSlots.insert(slot)
-        let after = progress(tried: session.triedSlots)
+    private func markTried(_ event: SetupTriggeredSwitch) {
+        guard model.isListening, !model.isRecordingTrigger else { return }
+        let slot = event.slotID
+        let before = progress()
+        session.triggerEvidence = session.triggerEvidence.recording(event, config: model.config, sources: model.sources)
+        let after = progress()
+        guard after.triedSlots.contains(slot), !before.triedSlots.contains(slot) else { return }
         let name = model.config.displayName(for: slot)
         SetupGuideNavigation.announce(after.isComplete
-            ? "Switched to \(name). Every slot was tried. Press Finish to close the guide."
+            ? "Trigger confirmed for \(name). Every available bound slot was tried. Press Finish to close the guide."
             : "Switched to \(name). \(progressText(for: after))")
     }
 
-    private func progress(tried: Set<InputRole>) -> SetupTryItProgress {
-        SetupTryItProgress(config: model.config, sources: model.sources, tried: tried)
+    private func progress() -> SetupTryItProgress {
+        SetupTryItProgress(config: model.config, sources: model.sources, evidence: session.triggerEvidence)
     }
 
     /// Why a bound line has no mark: its trigger is swallowed but has nothing to select.

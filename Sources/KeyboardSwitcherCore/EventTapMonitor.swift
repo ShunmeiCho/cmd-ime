@@ -24,6 +24,8 @@ public final class EventTapMonitor: @unchecked Sendable {
             oneShotState.cancel()
             pendingSingleTapTimer?.invalidate()
             pendingSingleTapTimer = nil
+            modifierEvidenceEpochs.removeAll()
+            pendingTapEvidenceEpoch = nil
             if newValue {
                 // Also retire actions/retries queued just before the recorder opened.
                 switchGeneration &+= 1
@@ -50,6 +52,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// Bumped on every switch request; a switch whose generation is no longer
     /// current abandons its pending start and confirmation retries.
     private var switchGeneration = 0
+    private var triggerEvidenceEpoch = UUID()
+    private var modifierEvidenceEpochs: [Int: UUID] = [:]
+    private var pendingTapEvidenceEpoch: UUID?
 
     static func scheduleOnMainQueue(after delay: TimeInterval, _ work: @escaping () -> Void) {
         // The event tap and all TIS calls live on the main thread, and `work` only
@@ -166,9 +171,16 @@ public final class EventTapMonitor: @unchecked Sendable {
         pendingSingleTapTimer = nil
         consumedKeyDowns.removeAll()
         pressedModifierKeyCodes.removeAll()
+        modifierEvidenceEpochs.removeAll()
+        pendingTapEvidenceEpoch = nil
     }
 
     public func updateConfig(_ config: SwitcherConfig) {
+        if Set(self.config.slots.map(\.id)) != Set(config.slots.map(\.id))
+            || self.config.bindings != config.bindings || self.config.inputSources != config.inputSources {
+            // Invalidate only the new evidence channel; legacy switch delivery is unchanged.
+            triggerEvidenceEpoch = UUID()
+        }
         self.config = config
         refreshResolvedSources()
     }
@@ -290,6 +302,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
         if isPress {
+            modifierEvidenceEpochs[keyCode] = triggerEvidenceEpoch
             oneShotState.modifierDown(trigger)
             // Pressed while another modifier is physically held: a chord, not a tap.
             if let heldKeyCode = pressedModifierKeyCodes.first(where: { $0 != keyCode }) {
@@ -298,6 +311,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
 
+        let pressEpoch = modifierEvidenceEpochs.removeValue(forKey: keyCode)
         let hasBinding = hasOneShotBinding(for: trigger)
         let output = oneShotState.modifierUp(
             trigger,
@@ -310,13 +324,16 @@ public final class EventTapMonitor: @unchecked Sendable {
 
         switch output {
         case .trigger(let output):
+            let evidenceEpoch = output.gesture == .doubleTap && pendingTapEvidenceEpoch != pressEpoch ? nil : pressEpoch
+            pendingTapEvidenceEpoch = nil
             pendingSingleTapTimer?.invalidate()
             pendingSingleTapTimer = nil
             if let binding = binding(for: output) {
-                perform(binding.action, trigger: binding.trigger)
+                perform(binding.action, trigger: binding.trigger, evidenceEpoch: evidenceEpoch)
             }
         case .wait:
             if binding(for: trigger) != nil || hasDoubleTapBinding(for: trigger) {
+                pendingTapEvidenceEpoch = pressEpoch
                 scheduleSingleTapFlush()
             }
         }
@@ -336,7 +353,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
 
-        perform(binding.action, trigger: binding.trigger)
+        perform(binding.action, trigger: binding.trigger, evidenceEpoch: triggerEvidenceEpoch)
         consumedKeyDowns.insert(keyCode)
         return nil
     }
@@ -409,19 +426,20 @@ public final class EventTapMonitor: @unchecked Sendable {
                 return
             }
             if let trigger = self.oneShotState.flushPendingSingleTap(), let binding = self.binding(for: trigger) {
-                self.perform(binding.action, trigger: binding.trigger)
+                self.perform(binding.action, trigger: binding.trigger, evidenceEpoch: self.pendingTapEvidenceEpoch)
             }
+            self.pendingTapEvidenceEpoch = nil
             self.pendingSingleTapTimer = nil
         }
     }
 
-    private func perform(_ action: BindingAction, trigger: KeyTrigger) {
+    private func perform(_ action: BindingAction, trigger: KeyTrigger, evidenceEpoch: UUID?) {
         switch action.type {
         case .switchInputSource:
             guard let role = action.role else {
                 return
             }
-            requestSwitch(to: role, trigger: trigger)
+            requestSwitch(to: role, trigger: trigger, evidenceEpoch: evidenceEpoch)
         case .sendKey:
             guard let output = action.output else {
                 return
@@ -434,11 +452,11 @@ public final class EventTapMonitor: @unchecked Sendable {
 
     /// Called from the event tap callback: only records the request and returns, so
     /// the callback never waits on TIS selection or confirmation retries.
-    private func requestSwitch(to role: InputRole, trigger: KeyTrigger) {
+    private func requestSwitch(to role: InputRole, trigger: KeyTrigger, evidenceEpoch: UUID?) {
         switchGeneration &+= 1
         let generation = switchGeneration
         Self.scheduleOnMainQueue(after: 0) { [weak self] in
-            self?.beginSwitch(to: role, generation: generation, trigger: trigger)
+            self?.beginSwitch(to: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
         }
     }
 
@@ -446,7 +464,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         generation == switchGeneration
     }
 
-    private func beginSwitch(to role: InputRole, generation: Int, trigger: KeyTrigger) {
+    private func beginSwitch(to role: InputRole, generation: Int, trigger: KeyTrigger, evidenceEpoch: UUID?) {
         guard isCurrentSwitch(generation) else {
             return
         }
@@ -467,7 +485,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             onMessage?("No input method matched this switch slot.")
             return
         }
-        selectAndReport(source, role: role, generation: generation, trigger: trigger, prefix: nil) { [weak self] originalError in
+        selectAndReport(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch, prefix: nil) { [weak self] originalError in
             guard let self else {
                 return
             }
@@ -483,6 +501,7 @@ public final class EventTapMonitor: @unchecked Sendable {
                 role: role,
                 generation: generation,
                 trigger: trigger,
+                evidenceEpoch: evidenceEpoch,
                 prefix: "\(source.localizedName) failed: \(originalError.localizedDescription)"
             ) { [weak self] error in
                 self?.onMessage?("Action failed: \(error.localizedDescription)")
@@ -497,6 +516,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         role: InputRole,
         generation: Int,
         trigger: KeyTrigger,
+        evidenceEpoch: UUID?,
         prefix: String?,
         onError: @escaping (Error) -> Void
     ) {
@@ -513,7 +533,7 @@ public final class EventTapMonitor: @unchecked Sendable {
                 }
                 switch result {
                 case .success(let current):
-                    self.report(current: current, requested: source, role: role, trigger: trigger, prefix: prefix)
+                    self.report(current: current, requested: source, role: role, trigger: trigger, evidenceEpoch: evidenceEpoch, prefix: prefix)
                 case .failure(let error):
                     onError(error)
                 }
@@ -521,13 +541,13 @@ public final class EventTapMonitor: @unchecked Sendable {
         )
     }
 
-    private func report(current: InputSourceInfo?, requested source: InputSourceInfo, role: InputRole, trigger: KeyTrigger, prefix: String?) {
+    private func report(current: InputSourceInfo?, requested source: InputSourceInfo, role: InputRole, trigger: KeyTrigger, evidenceEpoch: UUID?, prefix: String?) {
         guard current?.id == source.id else {
             onMessage?(InputSourceInfo.verificationMessage(requested: source, current: current))
             return
         }
         onSwitch?(role, source)
-        if !isCapturingShortcut {
+        if !isCapturingShortcut, let evidenceEpoch, evidenceEpoch == triggerEvidenceEpoch {
             onTriggeredSwitch?(role, source, trigger)
         }
         if let prefix {

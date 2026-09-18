@@ -50,6 +50,68 @@ final class EventTapMonitorTests: XCTestCase {
     }
 
     #if DEBUG
+    func testTriggeredSwitchRejectsPendingSingleTapEvidenceAfterRecreation() throws {
+        var config = SwitcherConfig.default
+        config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("double-left-command"), action: .switchInputSource(.english)))
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var legacy = 0
+        var proofs = 0
+        monitor.onSwitch = { _, _ in legacy += 1 }
+        monitor.onTriggeredSwitch = { _, _, _ in proofs += 1 }
+        tapLeftCommand(monitor)
+        monitor.updateConfig(try config.removingSlot(.english))
+        monitor.updateConfig(config)
+        drainSingleTapTimer()
+        XCTAssertEqual(legacy, 1)
+        XCTAssertEqual(proofs, 0)
+        tapLeftCommand(monitor)
+        drainSingleTapTimer()
+        XCTAssertEqual(proofs, 1)
+    }
+
+    func testTriggeredSwitchRejectsHeldModifierEvidenceAfterRecreation() throws {
+        let config = SwitcherConfig.default
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var legacy = 0
+        var proofs = 0
+        monitor.onSwitch = { _, _ in legacy += 1 }
+        monitor.onTriggeredSwitch = { _, _, _ in proofs += 1 }
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        monitor.updateConfig(try config.removingSlot(.english))
+        monitor.updateConfig(config)
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(legacy, 1)
+        XCTAssertEqual(proofs, 0)
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(proofs, 1)
+    }
+
+    func testTriggeredSwitchRejectsQueuedEvidenceAfterSlotRecreationButKeepsLegacyDelivery() throws {
+        let config = SwitcherConfig.default
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var legacy = 0
+        var proofs = 0
+        monitor.onSwitch = { _, _ in legacy += 1 }
+        monitor.onTriggeredSwitch = { _, _, _ in proofs += 1 }
+        tapLeftCommand(monitor)
+        monitor.updateConfig(try config.removingSlot(.english))
+        monitor.updateConfig(config)
+        drainMainQueue()
+        XCTAssertEqual(legacy, 1)
+        XCTAssertEqual(proofs, 0)
+
+        tapLeftCommand(monitor)
+        var restyled = config
+        restyled.slots[0].tintHex = "#123456"
+        restyled.showSwitchIndicator.toggle()
+        monitor.updateConfig(restyled)
+        drainMainQueue()
+        XCTAssertEqual(legacy, 2)
+        XCTAssertEqual(proofs, 1)
+    }
+
     func testTriggeredSwitchReportsActualSingleTapAfterConfirmation() throws {
         let service = StubInputSourceService(sources: makeSwitchSources())
         let monitor = EventTapMonitor(config: .default, inputSources: service)

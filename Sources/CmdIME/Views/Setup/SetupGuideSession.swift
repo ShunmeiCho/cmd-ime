@@ -12,8 +12,8 @@ struct SetupGuideSession: Equatable {
     var hasConfirmedSlots = false
     /// A returning user reopened the guide from General > Setup guide.
     var isReopened = false
-    /// Slots fired at least once during "Try it".
-    var triedSlots: Set<InputRole> = []
+    /// Successful trigger/source evidence for the current configuration, never persisted.
+    var triggerEvidence = SetupTriggerEvidence()
     /// Sections unfolded by hand, or by "Change", while the first-run guide is open.
     var unfoldedSections: Set<SetupFoldSection> = []
 }

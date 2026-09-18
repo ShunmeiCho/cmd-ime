@@ -23,6 +23,14 @@ struct SetupGuideCard: View {
             }
         }
         .id(SetupGuideNavigation.guideID)
+        // Consume each published value, not just the final rendered config: deletion
+        // must invalidate proof even when the same ID is immediately created again.
+        .onReceive(model.$config) { config in
+            reconcileEvidence(config: config, sources: model.sources)
+        }
+        .onReceive(model.$sources) { sources in
+            reconcileEvidence(config: model.config, sources: sources)
+        }
         .onChange(of: state.currentStep) { step in
             guard let step else { return }
             SetupGuideNavigation.announce("Setup step \(step.rawValue) of \(SetupStep.allCases.count): \(step.title)")
@@ -38,6 +46,11 @@ struct SetupGuideCard: View {
             }
             model.startListeningIfReady()
         }
+    }
+
+    private func reconcileEvidence(config: SwitcherConfig, sources: [InputSourceInfo]) {
+        let next = session.triggerEvidence.reconciling(config: config, sources: sources)
+        if next != session.triggerEvidence { session.triggerEvidence = next }
     }
 
     private func card(state: SetupGuideState, current: SetupStep) -> some View {

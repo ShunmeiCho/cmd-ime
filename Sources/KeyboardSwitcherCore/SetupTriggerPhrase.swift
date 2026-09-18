@@ -63,7 +63,8 @@ public struct SetupTryItProgress: Equatable, Sendable {
     /// The bound slots that were fired at least once. Removed slots are ignored.
     public let triedSlots: [InputRole]
 
-    public init(config: SwitcherConfig, sources: [InputSourceInfo], tried: Set<InputRole>) {
+    public init(config: SwitcherConfig, sources: [InputSourceInfo], evidence: SetupTriggerEvidence) {
+        let tried = evidence.triedSlotIDs(config: config, sources: sources)
         var seen = Set<InputRole>()
         let withTrigger = config.slotTriggers.map(\.slot).filter { seen.insert($0).inserted }
         let matched = Set(withTrigger.filter {

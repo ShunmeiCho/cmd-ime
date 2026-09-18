@@ -6,6 +6,15 @@ final class SetupGuideTests: XCTestCase {
         InputSourceInfo(id: id ?? "source.\(language)", localizedName: "Source \(id ?? language)", languages: [language], isSelectCapable: selectable)
     }
 
+    private func evidence(for ids: [InputRole], config: SwitcherConfig, sources: [InputSourceInfo]) -> SetupTriggerEvidence {
+        ids.reduce(SetupTriggerEvidence()) { evidence, id in
+            guard let trigger = config.slotTriggers.first(where: { $0.slot == id })?.trigger,
+                  let source = InputSourceMatcher.bestMatch(for: id, sources: sources, config: config) else { return evidence }
+            return evidence.recording(SetupTriggeredSwitch(slotID: id, sourceID: source.id, trigger: trigger),
+                                      config: config, sources: sources)
+        }
+    }
+
     private func temporaryStore() -> ConfigStore {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
@@ -361,9 +370,11 @@ final class SetupGuideTests: XCTestCase {
         ))
 
         let sources = ["en", "ko", "ja"].map { source($0) }
-        let start = SetupTryItProgress(config: config, sources: sources, tried: [])
-        let partial = SetupTryItProgress(config: config, sources: sources, tried: [ids[0], InputRole(rawValue: "removed")])
-        let done = SetupTryItProgress(config: config, sources: sources, tried: [ids[0], ids[2]])
+        let start = SetupTryItProgress(config: config, sources: sources, evidence: SetupTriggerEvidence())
+        let partial = SetupTryItProgress(config: config, sources: sources,
+                                        evidence: evidence(for: [ids[0], InputRole(rawValue: "removed")], config: config, sources: sources))
+        let done = SetupTryItProgress(config: config, sources: sources,
+                                     evidence: evidence(for: [ids[0], ids[2]], config: config, sources: sources))
 
         XCTAssertEqual(start.boundSlots, [ids[0], ids[2]])
         XCTAssertEqual(start.nextSlot, ids[0])
@@ -373,7 +384,7 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertTrue(done.isComplete)
         XCTAssertTrue(start.unmatchedSlots.isEmpty)
         config.bindings.removeAll()
-        XCTAssertFalse(SetupTryItProgress(config: config, sources: sources, tried: []).isComplete)
+        XCTAssertFalse(SetupTryItProgress(config: config, sources: sources, evidence: SetupTriggerEvidence()).isComplete)
     }
 
     func testTryItProgressLeavesOutBoundSlotsWithoutAnInputSource() {
@@ -381,9 +392,10 @@ final class SetupGuideTests: XCTestCase {
         let config = SwitcherConfig.default
         let sources = [source("en"), source("zh-Hans")]
 
-        let start = SetupTryItProgress(config: config, sources: sources, tried: [])
-        let done = SetupTryItProgress(config: config, sources: sources, tried: [.english, .chinese, .japanese])
-        let nothingInstalled = SetupTryItProgress(config: config, sources: [], tried: [])
+        let start = SetupTryItProgress(config: config, sources: sources, evidence: SetupTriggerEvidence())
+        let done = SetupTryItProgress(config: config, sources: sources,
+                                     evidence: evidence(for: [.english, .chinese, .japanese], config: config, sources: sources))
+        let nothingInstalled = SetupTryItProgress(config: config, sources: [], evidence: SetupTriggerEvidence())
 
         XCTAssertEqual(start.boundSlots, [.english, .chinese])
         XCTAssertEqual(start.unmatchedSlots, [.japanese])
@@ -392,5 +404,80 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertTrue(nothingInstalled.boundSlots.isEmpty)
         XCTAssertEqual(nothingInstalled.unmatchedSlots, [.english, .chinese, .japanese])
         XCTAssertFalse(nothingInstalled.isComplete)
+    }
+
+    func testTryEvidenceRequiresTheCurrentTriggerAndConfirmedSource() throws {
+        let sources = [source("en"), source("ko")]
+        let config = SwitcherConfig.detected(from: sources)
+        let slot = config.slots[0].id
+        let trigger = try XCTUnwrap(config.slotTriggers.first?.trigger)
+        let empty = SetupTriggerEvidence()
+        for event in [
+            SetupTriggeredSwitch(slotID: slot, sourceID: "wrong", trigger: trigger),
+            SetupTriggeredSwitch(slotID: slot, sourceID: sources[0].id, trigger: try ShortcutParser.parse("option+j")),
+            SetupTriggeredSwitch(slotID: InputRole(rawValue: "missing"), sourceID: sources[0].id, trigger: trigger),
+        ] {
+            XCTAssertEqual(empty.recording(event, config: config, sources: sources), empty)
+        }
+        let event = SetupTriggeredSwitch(slotID: slot, sourceID: sources[0].id, trigger: trigger)
+        XCTAssertEqual(empty.recording(event, config: config, sources: sources).triedSlotIDs(config: config, sources: sources), [slot])
+        XCTAssertTrue(empty.triedSlotIDs(config: config, sources: sources).isEmpty)
+    }
+
+    func testTryEvidenceDoesNotReviveWhenDeletedSlotIDIsRecreatedIdentically() throws {
+        let sources = [source("en"), source("ko")]
+        let config = SwitcherConfig.detected(from: sources)
+        let ids = config.slots.map(\.id)
+        let tried = evidence(for: ids, config: config, sources: sources)
+        let removed = try config.removingSlot(ids[0])
+        let reconciled = tried.reconciling(config: removed, sources: sources)
+        let recreated = try removed.addingSlot(for: sources[0])
+        XCTAssertEqual(recreated.slot.id, ids[0])
+        XCTAssertEqual(SetupTriggerFingerprint(slotID: ids[0], config: recreated.config, sources: sources),
+                       SetupTriggerFingerprint(slotID: ids[0], config: config, sources: sources))
+        XCTAssertEqual(reconciled.triedSlotIDs(config: recreated.config, sources: sources), [ids[1]])
+        XCTAssertFalse(SetupTryItProgress(config: recreated.config, sources: sources, evidence: reconciled).isComplete)
+    }
+
+    func testTryEvidenceInvalidatesChangedTriggerAndKeepsOtherSlots() throws {
+        let sources = [source("en"), source("ko")]
+        let config = SwitcherConfig.detected(from: sources)
+        let ids = config.slots.map(\.id)
+        let tried = evidence(for: ids, config: config, sources: sources)
+        var changed = config
+        changed.upsertSwitchBinding(trigger: try ShortcutParser.parse("option+j"), role: ids[0])
+        let reconciled = tried.reconciling(config: changed, sources: sources)
+        XCTAssertEqual(reconciled.triedSlotIDs(config: changed, sources: sources), [ids[1]])
+        // Reverting later is not a new successful trigger event either.
+        XCTAssertEqual(reconciled.triedSlotIDs(config: config, sources: sources), [ids[1]])
+    }
+
+    func testTryEvidenceInvalidatesChangedPreferenceOrResolvedInputSource() throws {
+        let sources = [source("en"), source("ko")]
+        let alternate = source("en", id: "alternate.english")
+        let config = SwitcherConfig.detected(from: sources)
+        let ids = config.slots.map(\.id)
+        let tried = evidence(for: ids, config: config, sources: sources)
+        let changed = try config.assigningInputSource(alternate, to: ids[0])
+        XCTAssertEqual(tried.triedSlotIDs(config: changed, sources: sources + [alternate]), [ids[1]])
+        // Same preference, but its missing preferred source now resolves to a fallback.
+        XCTAssertEqual(tried.triedSlotIDs(config: config, sources: [alternate, sources[1]]), [ids[1]])
+        var changedRules = config
+        changedRules.inputSources[ids[0].rawValue]?.nameContains = ["Changed rules"]
+        XCTAssertEqual(tried.triedSlotIDs(config: changedRules, sources: sources), [ids[1]])
+    }
+
+    func testTryEvidenceSurvivesUnrelatedStyleNameAndOrderChanges() throws {
+        let sources = [source("en"), source("ko")]
+        let config = SwitcherConfig.detected(from: sources)
+        let ids = config.slots.map(\.id)
+        let tried = evidence(for: ids, config: config, sources: sources)
+        var changed = try config.renamingSlot(ids[0], to: "Work")
+        changed = try changed.settingSlotTint("#123456", for: ids[0])
+        changed.showSwitchIndicator.toggle()
+        changed.slots.reverse()
+        XCTAssertEqual(tried.reconciling(config: changed, sources: sources), tried)
+        XCTAssertEqual(tried.triedSlotIDs(config: changed, sources: sources), Set(ids))
+        XCTAssertTrue(SetupTryItProgress(config: changed, sources: sources, evidence: tried).isComplete)
     }
 }
