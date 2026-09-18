@@ -152,14 +152,12 @@ public final class EventTapMonitor: @unchecked Sendable {
     private func refreshResolvedSources() {
         do {
             let sources = try inputSources.listInputSources()
-            resolvedSources = Dictionary(
-                uniqueKeysWithValues: InputRole.legacy.compactMap { role in
-                    guard let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) else {
-                        return nil
-                    }
-                    return (role, source)
+            resolvedSources.removeAll()
+            for slot in config.slots {
+                if let source = InputSourceMatcher.bestMatch(for: slot.id, sources: sources, config: config) {
+                    resolvedSources[slot.id] = source
                 }
-            )
+            }
         } catch {
             resolvedSources.removeAll()
             onMessage?("Input source refresh failed: \(error.localizedDescription)")

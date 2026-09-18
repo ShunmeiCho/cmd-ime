@@ -9,6 +9,8 @@ enum CLIError: Error, LocalizedError {
     case missingCommand
     case unknownCommand(String)
     case missingArgument(String)
+    case unknownSlot(String, available: [String])
+    case invalidArgument(String)
     case unsupportedPlatform
 
     var errorDescription: String? {
@@ -19,6 +21,10 @@ enum CLIError: Error, LocalizedError {
             "Unknown command: \(command)."
         case let .missingArgument(argument):
             "Missing argument: \(argument)."
+        case let .unknownSlot(query, available):
+            "unknown slot \"\(query)\". Slots: \(available.joined(separator: ", ")). Run \"keyboardctl slots\"."
+        case let .invalidArgument(message):
+            message
         case .unsupportedPlatform:
             "keyboardctl currently supports macOS only."
         }
@@ -29,7 +35,8 @@ enum CLIError: Error, LocalizedError {
 /// diagnose` computed for it, via the same `InputSourceMatcher.match` the
 /// switch pipeline uses.
 private struct RoleDiagnosis {
-    let role: InputRole
+    let slot: SwitchSlot
+    let duplicateSlots: [String]
     let preference: RoleInputSourcePreference
     let result: InputSourceMatchResult
 }
@@ -38,7 +45,10 @@ private struct RoleDiagnosis {
 private struct DiagnosisReport: Encodable {
     struct SlotEntry: Encodable {
         let slot: String
+        let name: String
+        let duplicateSlots: [String]
         let preferredIDs: [String]
+        let fallbackLanguage: String?
         let languagePrefixes: [String]
         let nameContains: [String]
         let matchedSourceID: String?
@@ -57,8 +67,11 @@ private struct DiagnosisReport: Encodable {
         currentInputSourceName = current?.localizedName
         slots = roles.map { diagnosis in
             SlotEntry(
-                slot: diagnosis.role.rawValue,
+                slot: diagnosis.slot.id.rawValue,
+                name: diagnosis.slot.name,
+                duplicateSlots: diagnosis.duplicateSlots,
                 preferredIDs: diagnosis.preference.preferredIDs,
+                fallbackLanguage: diagnosis.preference.fallbackLanguage,
                 languagePrefixes: diagnosis.preference.languagePrefixes,
                 nameContains: diagnosis.preference.nameContains,
                 matchedSourceID: diagnosis.result.source?.id,
@@ -112,6 +125,10 @@ struct CLI {
             try diagnose(json: args.contains("--json"))
         case "listen":
             try listen()
+        case "slots":
+            try listSlots()
+        case "slot":
+            try manageSlot()
         case "bind":
             try bind()
         case "remap":
@@ -161,7 +178,7 @@ struct CLI {
                 config.pinInputSourceID(source.id, for: role)
             }
         }
-        try store.save(config)
+        try save(config, to: store)
         print("Wrote \(configURL.path)")
         #else
         throw CLIError.unsupportedPlatform
@@ -178,11 +195,8 @@ struct CLI {
     private func switchRole() throws {
         #if os(macOS)
         let service = MacInputSourceService()
-        let roleName = try argument(at: 1, name: "role")
-        guard let role = InputRole.legacy.first(where: { $0.rawValue == roleName }) else {
-            throw CLIError.missingArgument("role must be english, chinese, or japanese")
-        }
         let config = try loadConfig()
+        let role = try requireSlot(argument(at: 1, name: "slot"), in: config).id
         let sources = try service.listInputSources()
         guard let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) else {
             throw InputSourceServiceError.notFound(role.rawValue)
@@ -205,10 +219,11 @@ struct CLI {
         let sources = try service.listInputSources()
         let current = try service.currentInputSource()
 
-        let reports = InputRole.legacy.map { role -> RoleDiagnosis in
-            let preference = config.preference(for: role)
-            let result = InputSourceMatcher.match(for: role, sources: sources, config: config)
-            return RoleDiagnosis(role: role, preference: preference, result: result)
+        let reports = config.slots.map { slot -> RoleDiagnosis in
+            let preference = config.preference(for: slot.id)
+            let result = InputSourceMatcher.match(for: slot.id, sources: sources, config: config)
+            let duplicates = config.duplicateSlotIDs(for: slot.id, sources: sources).map(\.rawValue)
+            return RoleDiagnosis(slot: slot, duplicateSlots: duplicates, preference: preference, result: result)
         }
 
         if json {
@@ -222,8 +237,14 @@ struct CLI {
         print("Current input source: \(current.map { "\($0.localizedName) (\($0.id))" } ?? "unknown")")
         for report in reports {
             print("")
-            print("[\(report.role.rawValue)]")
+            print("[\(report.slot.id.rawValue)] \(report.slot.name)")
+            if !report.duplicateSlots.isEmpty {
+                print("  duplicate with: \(report.duplicateSlots.joined(separator: ", "))")
+            }
             print("  preferredIDs: \(report.preference.preferredIDs.joined(separator: ", "))")
+            if let language = report.preference.fallbackLanguage {
+                print("  fallbackLanguage: \(language)")
+            }
             print("  languagePrefixes: \(report.preference.languagePrefixes.joined(separator: ", "))")
             print("  nameContains: \(report.preference.nameContains.joined(separator: ", "))")
             if let source = report.result.source {
@@ -253,14 +274,21 @@ struct CLI {
 
     private func bind() throws {
         let trigger = try ShortcutParser.parse(argument(at: 1, name: "trigger"))
-        let roleName = try argument(at: 2, name: "role")
-        guard let role = InputRole.legacy.first(where: { $0.rawValue == roleName }) else {
-            throw CLIError.missingArgument("role must be english, chinese, or japanese")
-        }
         let store = ConfigStore(url: configURL)
         var config = try loadConfig(from: store)
+        let role = try requireSlot(argument(at: 2, name: "slot"), in: config).id
+        let displaced = config.bindings.compactMap { binding -> InputRole? in
+            guard binding.trigger == trigger, binding.action.type == .switchInputSource,
+                  let previous = binding.action.role, previous != role else { return nil }
+            return previous
+        }
         config.upsertSwitchBinding(trigger: trigger, role: role)
-        try store.save(config)
+        try save(config, to: store)
+        for previous in Set(displaced).sorted(by: { $0.rawValue < $1.rawValue }) where !config.bindings.contains(where: {
+            $0.enabled && $0.action.type == .switchInputSource && $0.action.role == previous
+        }) {
+            fputs("note: \(trigger.displayName) was bound to \(previous.rawValue); it now has no trigger\n", stderr)
+        }
         print("Bound \(trigger.displayName) to \(role.rawValue)")
     }
 
@@ -270,8 +298,107 @@ struct CLI {
         let store = ConfigStore(url: configURL)
         var config = try loadConfig(from: store)
         config.upsertRemapBinding(trigger: trigger, output: output)
-        try store.save(config)
+        try save(config, to: store)
         print("Remapped \(trigger.displayName) to \(output.displayName)")
+    }
+
+    private func requireSlot(_ query: String, in config: SwitcherConfig) throws -> SwitchSlot {
+        guard let slot = config.slot(matching: query) else {
+            throw CLIError.unknownSlot(query, available: config.slots.map { $0.id.rawValue })
+        }
+        return slot
+    }
+
+    private func save(_ config: SwitcherConfig, to store: ConfigStore) throws {
+        let migrating = store.needsSlotsMigration
+        try store.save(config)
+        if migrating {
+            fputs("note: config upgraded to version 2 (customizable slots); backup: \(store.legacyBackupURL.path); slot ids english/chinese/japanese unchanged. Run \"keyboardctl slots\".\n", stderr)
+        }
+    }
+
+    private func triggerDescription(for slot: SwitchSlot, in config: SwitcherConfig) -> String {
+        let triggers = config.bindings.filter {
+            $0.enabled && $0.action.type == .switchInputSource && $0.action.role == slot.id
+        }.map { $0.trigger.displayName }
+        return triggers.isEmpty ? "No trigger" : triggers.joined(separator: ", ")
+    }
+
+    private func listSlots() throws {
+        #if os(macOS)
+        let config = try loadConfig()
+        let sources = try MacInputSourceService().listInputSources()
+        print("id\tname\ttrigger\tmatched-source")
+        for slot in config.slots {
+            let result = InputSourceMatcher.match(for: slot.id, sources: sources, config: config)
+            var match = result.source.map { "\($0.localizedName) (\($0.id))" } ?? "Not matched"
+            if result.source != nil && result.tier != .preferredID {
+                match += " [fallback: \(result.tier.rawValue)]"
+            }
+            print("\(slot.id.rawValue)\t\(slot.name)\t\(triggerDescription(for: slot, in: config))\t\(match)")
+        }
+        #else
+        throw CLIError.unsupportedPlatform
+        #endif
+    }
+
+    private func manageSlot() throws {
+        let operation = try argument(at: 1, name: "add or remove")
+        let store = ConfigStore(url: configURL)
+        switch operation {
+        case "remove":
+            let query = try argument(at: 2, name: "slot")
+            guard args.count == 3 else { throw CLIError.invalidArgument("Usage: keyboardctl slot remove <slot>") }
+            let config = try loadConfig(from: store)
+            let slot = try requireSlot(query, in: config)
+            try save(config.removingSlot(slot.id), to: store)
+            print("Removed \(slot.id.rawValue)")
+        case "add":
+            #if os(macOS)
+            var sourceQuery: String?
+            var name: String?
+            var index = 2
+            while index < args.count {
+                if args[index] == "--name" {
+                    guard name == nil else { throw CLIError.invalidArgument("Specify --name only once.") }
+                    name = try argument(at: index + 1, name: "name after --name")
+                    index += 2
+                } else {
+                    guard sourceQuery == nil, !args[index].hasPrefix("--") else {
+                        throw CLIError.invalidArgument("Usage: keyboardctl slot add [<number|source-id>] [--name N]")
+                    }
+                    sourceQuery = args[index]
+                    index += 1
+                }
+            }
+            let config = try loadConfig(from: store)
+            let sources = try MacInputSourceService().listInputSources()
+            let choices = config.unassignedSources(from: sources)
+            guard let sourceQuery else {
+                for (index, source) in choices.enumerated() {
+                    print("\(index + 1)\t\(source.localizedName)\t\(source.id)")
+                }
+                if choices.isEmpty { print("No unassigned input sources. Add one in System Settings > Keyboard > Input Sources.") }
+                else { print("Run keyboardctl slot add <number|source-id> [--name N].") }
+                return
+            }
+            let source: InputSourceInfo
+            if let exact = sources.first(where: { $0.id == sourceQuery }) {
+                source = exact
+            } else if let number = Int(sourceQuery), number > 0, number <= choices.count {
+                source = choices[number - 1]
+            } else {
+                throw CLIError.invalidArgument("Unknown input source or choice \"\(sourceQuery)\". Run \"keyboardctl slot add\" to list choices.")
+            }
+            let added = try config.addingSlot(for: source, name: name)
+            try save(added.config, to: store)
+            print("Added \(added.slot.id.rawValue) (\(added.slot.name)); trigger: \(triggerDescription(for: added.slot, in: added.config))")
+            #else
+            throw CLIError.unsupportedPlatform
+            #endif
+        default:
+            throw CLIError.unknownCommand("slot \(operation)")
+        }
     }
 
     private func quitApp() throws {
@@ -352,11 +479,14 @@ struct CLI {
             Usage:
               keyboardctl scan [--json]
               keyboardctl init [--force]
+              keyboardctl slots
+              keyboardctl slot add [<number|source-id>] [--name N]
+              keyboardctl slot remove <slot>
               keyboardctl show
-              keyboardctl switch <english|chinese|japanese>
+              keyboardctl switch <slot>
               keyboardctl diagnose [--json]
               keyboardctl listen
-              keyboardctl bind <trigger> <english|chinese|japanese>
+              keyboardctl bind <trigger> <slot>
               keyboardctl remap <trigger> <output>
               keyboardctl quit
               keyboardctl path

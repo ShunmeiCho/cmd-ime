@@ -2,6 +2,46 @@ import XCTest
 @testable import KeyboardSwitcherCore
 
 final class InputSourceMatcherTests: XCTestCase {
+    func testDynamicFallbackUsesPrimaryLanguageAndPreferredIDWins() {
+        let role = InputRole(rawValue: "german")
+        var config = SwitcherConfig.default
+        config.slots.append(SwitchSlot(id: role, name: "German", tintHex: "#123456"))
+        config.inputSources[role.rawValue] = RoleInputSourcePreference(preferredIDs: ["preferred"], fallbackLanguage: "de")
+        let abc = InputSourceInfo(id: "com.apple.keylayout.ABC", localizedName: "ABC", languages: ["en", "de", "es", "fr"], isSelectCapable: true)
+        let german = InputSourceInfo(id: "german", localizedName: "German", languages: ["de-DE"], isSelectCapable: true)
+        XCTAssertEqual(InputSourceMatcher.match(for: role, sources: [abc], config: config).tier, .none)
+        let fallback = InputSourceMatcher.match(for: role, sources: [abc, german], config: config)
+        XCTAssertEqual(fallback.source, german)
+        XCTAssertEqual(fallback.tier, .fallbackLanguage)
+        XCTAssertEqual(fallback.matchedValue, "de")
+        let preferred = InputSourceInfo(id: "preferred", localizedName: "Preferred", languages: ["de"], isSelectCapable: true)
+        XCTAssertEqual(InputSourceMatcher.match(for: role, sources: [german, preferred], config: config).tier, .preferredID)
+        XCTAssertEqual(InputSourceMatcher.match(for: InputRole(rawValue: "unknown"), sources: [abc, german], config: config).tier, .none)
+    }
+
+    func testGermanSlotDoesNotFallbackToMultilingualABC() throws {
+        // Captured from keyboardctl scan --json on macOS: ABC advertises German
+        // among many secondary languages, but its primary language is English.
+        let abc = InputSourceInfo(
+            id: "com.apple.keylayout.ABC",
+            localizedName: "ABC",
+            languages: [
+                "en", "acf", "af", "asa", "bem", "bez", "ca", "ceb", "cgg", "co", "da", "dav",
+                "de", "es", "eu", "fil", "fr", "fur", "ga", "gcf", "gd", "gl", "gsw", "guz", "gv",
+                "hi_Latn", "ht", "ia", "id", "ie", "io", "isc", "it", "jbo", "jmc", "jv", "kaj",
+                "kde", "kea", "kl", "kln", "ksb", "kw", "lb", "lij", "lmo", "luo", "luy", "mfe",
+                "mgh", "ms", "nb", "nd", "nds", "nl", "nn", "no", "nr", "nyn", "oc", "om", "pms",
+                "pqm", "pt", "rej", "rm", "rn", "rof", "rw", "rwk", "saq", "sbp", "sc", "seh",
+                "sg", "shp", "sn", "so", "sq", "ss", "st", "su", "su_Latn", "sv", "sw", "teo",
+                "tn", "tok", "trv", "ts", "vec", "vmw", "vun", "wa", "xh", "xog", "za", "zu",
+            ],
+            isSelectCapable: true
+        )
+        let missingGerman = InputSourceInfo(id: "missing.german", localizedName: "German", languages: ["de"], isSelectCapable: true)
+        let added = try SwitcherConfig.default.addingSlot(for: missingGerman)
+        XCTAssertNil(InputSourceMatcher.bestMatch(for: added.slot.id, sources: [abc], config: added.config))
+    }
+
     func testPreferredIDBeatsLanguageFallback() {
         var config = SwitcherConfig.default
         config.pinInputSourceID("custom.zh", for: .chinese)

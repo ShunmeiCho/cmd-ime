@@ -155,7 +155,11 @@ final class AppModel: ObservableObject {
     func setSwitchIndicatorCustomColorHex(_ hex: String, for role: InputRole) {
         config.setSwitchIndicatorCustomColorHex(hex, for: role)
         save()
-        statusText = "\(role.displayName) indicator custom color set to \(hex)"
+        statusText = "\(config.displayName(for: role)) indicator custom color set to \(hex)"
+    }
+
+    var previewSlot: SwitchSlot? {
+        activeRole.flatMap { config.slot($0) } ?? config.slots.first
     }
 
     func checkForUpdates() {
@@ -195,15 +199,37 @@ final class AppModel: ObservableObject {
         scan()
         nextConfig.sanitizePreferredIDs(using: sources)
 
-        for role in InputRole.legacy {
-            if let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: nextConfig) {
-                nextConfig.pinInputSourceID(source.id, for: role)
+        let legacySlots = config.slots.filter { slot in
+            let preference = config.preference(for: slot.id)
+            return preference.fallbackLanguage == nil
+                && (InputRole.legacy.contains(slot.id)
+                    || !preference.languagePrefixes.isEmpty
+                    || !preference.nameContains.isEmpty)
+        }
+        let legacyIDs = Set(legacySlots.map(\.id))
+        // Automatic scans must not replace a chosen preferred source with its fallback.
+        for slot in config.slots where !legacyIDs.contains(slot.id) {
+            nextConfig.inputSources[slot.id.rawValue] = config.inputSources[slot.id.rawValue]
+        }
+
+        var warnings: [String] = []
+        for slot in legacySlots {
+            guard let source = InputSourceMatcher.bestMatch(for: slot.id, sources: sources, config: nextConfig) else {
+                continue
+            }
+            do {
+                nextConfig = try nextConfig.assigningInputSource(source, to: slot.id)
+            } catch {
+                // Allowed resolution duplicates must not discard other scan updates.
+                nextConfig.inputSources[slot.id.rawValue] = config.inputSources[slot.id.rawValue]
+                warnings.append(error.localizedDescription)
             }
         }
 
         config = nextConfig
-        save()
-        statusText = "Updated input sources from scan"
+        if save() {
+            statusText = (["Updated input sources from scan"] + warnings).joined(separator: ". ")
+        }
     }
 
     var selectableSources: [InputSourceInfo] {
@@ -216,18 +242,26 @@ final class AppModel: ObservableObject {
             return
         }
 
-        config.pinInputSourceID(source.id, for: role)
-        save()
-        statusText = "Switch slot set to \(source.localizedName)"
+        do {
+            config = try config.assigningInputSource(source, to: role)
+            if save() {
+                statusText = "Switch slot set to \(source.localizedName)"
+            }
+        } catch {
+            statusText = error.localizedDescription
+        }
     }
 
-    func save() {
+    @discardableResult
+    func save() -> Bool {
         do {
             try configStore.save(config)
             monitor?.updateConfig(config)
             statusText = "Saved \(configStore.url.path)"
+            return true
         } catch {
             statusText = error.localizedDescription
+            return false
         }
     }
 
@@ -283,7 +317,7 @@ final class AppModel: ObservableObject {
             return
         }
         if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
-            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(conflictRole.displayName)"
+            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))"
             return
         }
 
@@ -311,7 +345,7 @@ final class AppModel: ObservableObject {
         }
         trigger.gesture = gesture
         if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
-            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(conflictRole.displayName)"
+            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))"
             return
         }
         config.upsertSwitchBinding(trigger: trigger, role: role)
@@ -329,7 +363,7 @@ final class AppModel: ObservableObject {
             return nil
         }
 
-        return "\(readableOneShotName(trigger.keyName)) already used by \(conflictRole.displayName)"
+        return "\(readableOneShotName(trigger.keyName)) already used by \(config.displayName(for: conflictRole))"
     }
 
     func matchedSource(for role: InputRole) -> InputSourceInfo? {
@@ -384,11 +418,11 @@ final class AppModel: ObservableObject {
 
     private func showSwitchIndicator(for role: InputRole, source: InputSourceInfo) {
         activeRole = role
-        guard config.showSwitchIndicator else {
+        guard config.showSwitchIndicator, let slot = config.slot(role) else {
             return
         }
         switchIndicator.show(
-            role: role,
+            slot: slot,
             source: source,
             size: config.switchIndicatorSize,
             scale: config.switchIndicatorScale,

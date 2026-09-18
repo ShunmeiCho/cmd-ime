@@ -8,45 +8,26 @@ struct InputSourcePresentation {
     let detail: String
     let tint: Color
 
-    init(source: InputSourceInfo?, fallbackRole: InputRole) {
+    init(source: InputSourceInfo?, slot: SwitchSlot) {
+        tint = Color(cmdIMEHex: slot.tintHex) ?? CmdIMEDesign.Colors.role(slot.id)
         guard let source else {
-            self = Self.fallback(for: fallbackRole)
+            symbol = slot.id.defaultSymbol
+            title = switch slot.id {
+            case .english: "English"
+            case .chinese: "中文"
+            case .japanese: "日本語"
+            default: slot.name
+            }
+            detail = "No input method selected"
             return
         }
 
         let sourceKind = InputSourceKind(source: source) ?? .unknown
-        symbol = sourceKind.symbol
-        title = sourceKind.title(source: source)
+        symbol = sourceKind == .unknown ? source.badgeSymbol : sourceKind.symbol
+        title = sourceKind == .unknown ? slot.name : sourceKind.title(source: source)
         detail = source.localizedName
-        tint = sourceKind.tint
     }
 
-    private static func fallback(for role: InputRole) -> InputSourcePresentation {
-        let kind: InputSourceKind = switch role {
-        case .english:
-            .english
-        case .chinese:
-            .chinese
-        case .japanese:
-            .japanese
-        default:
-            .unknown
-        }
-
-        return InputSourcePresentation(
-            symbol: kind.symbol,
-            title: kind.title(source: nil),
-            detail: "No input method selected",
-            tint: kind.tint
-        )
-    }
-
-    private init(symbol: String, title: String, detail: String, tint: Color) {
-        self.symbol = symbol
-        self.title = title
-        self.detail = detail
-        self.tint = tint
-    }
 }
 
 private enum InputSourceKind {
@@ -108,16 +89,4 @@ private enum InputSourceKind {
         }
     }
 
-    var tint: Color {
-        switch self {
-        case .english:
-            CmdIMEDesign.Colors.role(.english)
-        case .chinese:
-            CmdIMEDesign.Colors.role(.chinese)
-        case .japanese:
-            CmdIMEDesign.Colors.role(.japanese)
-        case .unknown:
-            Color(nsColor: .secondaryLabelColor)
-        }
-    }
 }

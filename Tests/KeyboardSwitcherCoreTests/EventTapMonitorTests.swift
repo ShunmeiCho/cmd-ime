@@ -50,6 +50,23 @@ final class EventTapMonitorTests: XCTestCase {
     }
 
     #if DEBUG
+    func testCustomSlotSwitchAndDuplicateIDsRemainSafe() throws {
+        let source = InputSourceInfo(id: "custom.korean", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
+        let added = try SwitcherConfig(bindings: [], inputSources: [:]).addingSlot(for: source)
+        var config = added.config
+        config.slots.append(added.slot)
+        let service = StubInputSourceService(sources: [source])
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        var roles: [InputRole] = []
+        monitor.onSwitch = { role, _ in roles.append(role) }
+        monitor.updateConfig(config)
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, [source.id])
+        XCTAssertEqual(roles, [added.slot.id])
+    }
+
     func testMouseDownMonitorsCancelPendingOneShotModifier() {
         var globalHandler: ((NSEvent) -> Void)?
         var localHandler: ((NSEvent) -> NSEvent?)?

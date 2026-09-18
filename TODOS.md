@@ -55,11 +55,26 @@ checks.
   `ShortcutParser` / `ContentView`) behind one definition to remove the
   triplicated keyCode lists.
 
+## Dynamic slots follow-ups
+
+- PR1 implements the dynamic slot collection, migration/backup, CLI management,
+  same-primary-language fallback and duplicate diagnostics; GUI renders the
+  configured collection. This is no longer out of scope.
+- PR2: GUI Add/Remove, drag-to-add, reordering and renaming, fallback notices,
+  trigger-conflict rejection, data-driven LiveKeys, adaptive custom-color grid,
+  No trigger labels, and the one-time migration banner. Unmatched slots already
+  expose Choose source; source-assignment conflicts are rejected in PR1.
+- PR3: source-detected first-run defaults and `keyboardctl init`; decide the
+  third default trigger separately. Until then preserve legacy defaults.
+- Collect real Korean/German/Russian scan fixtures for primary-language fallback.
+- Configuration file watching/hot reload remains deferred; the running GUI can
+  overwrite CLI edits.
+
 ## Out of scope for the 0.x line
 
 - Developer ID signing + notarization (requires the paid Apple Developer Program).
-- Per-slot / `SwitchRule` model refactor, including dynamic slots beyond the
-  fixed English/Chinese/Japanese `InputRole` enum; full indicator theme system.
+- `SwitchRule` model refactor and a full indicator theme system (not the dynamic
+  slot collection, which is implemented in PR1).
 - Stable/preview update channels and a stronger install trust chain, including
   notarized stable builds and tag-pinned checksum verification by default.
 - App Store sandboxed build; automatic in-app update install.

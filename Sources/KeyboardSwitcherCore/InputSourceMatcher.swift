@@ -3,6 +3,7 @@ import Foundation
 /// Which tier of `InputSourceMatcher.bestMatch` produced a match, and the
 /// specific configured value that matched.
 public enum InputSourceMatchTier: String, Equatable, Sendable {
+    case fallbackLanguage
     case preferredID
     case languagePrefix
     case nameContains
@@ -49,6 +50,11 @@ public enum InputSourceMatcher {
             if let source = selectable.first(where: { $0.id == id }) {
                 return InputSourceMatchResult(source: source, tier: .preferredID, matchedValue: id)
             }
+        }
+
+        if let fallbackLanguage = preference.fallbackLanguage,
+           let source = selectable.first(where: { source in source.primaryLanguage == fallbackLanguage }) {
+            return InputSourceMatchResult(source: source, tier: .fallbackLanguage, matchedValue: fallbackLanguage)
         }
 
         // Iterate sources first (not prefixes first) to match `bestMatch`'s

@@ -9,7 +9,7 @@ final class InputIndicatorController {
     private var hideTask: Task<Void, Never>?
 
     func show(
-        role: InputRole,
+        slot: SwitchSlot,
         source: InputSourceInfo,
         size: SwitchIndicatorSize,
         scale: Double,
@@ -20,7 +20,7 @@ final class InputIndicatorController {
         let panel = panel ?? makePanel()
         self.panel = panel
 
-        let presentation = InputSourcePresentation(source: source, fallbackRole: role)
+        let presentation = InputSourcePresentation(source: source, slot: slot)
         let metrics = InputIndicatorMetrics(size: size, scale: scale, contentStyle: contentStyle)
         panel.contentView = NSHostingView(
             rootView: InputIndicatorView(

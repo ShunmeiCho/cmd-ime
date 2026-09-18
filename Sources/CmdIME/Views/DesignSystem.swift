@@ -82,6 +82,30 @@ enum DesignTokens {
 
 typealias CmdIMEDesign = DesignTokens
 
+struct SlotLook {
+    var slots: [SwitchSlot] = SwitchSlot.legacyDefaults
+
+    func tint(for role: InputRole) -> Color {
+        slots.first { $0.id == role }.flatMap { Color(cmdIMEHex: $0.tintHex) }
+            ?? DesignTokens.Colors.role(role)
+    }
+
+    func name(for role: InputRole) -> String {
+        slots.first { $0.id == role }?.name ?? role.rawValue
+    }
+}
+
+private struct SlotLookKey: EnvironmentKey {
+    static let defaultValue = SlotLook()
+}
+
+extension EnvironmentValues {
+    var slotLook: SlotLook {
+        get { self[SlotLookKey.self] }
+        set { self[SlotLookKey.self] = newValue }
+    }
+}
+
 struct SectionCard<Content: View>: View {
     private let title: String?
     private let detail: String?
@@ -166,6 +190,7 @@ struct SettingsSectionHeader: View {
 
 struct KeycapView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.slotLook) private var slotLook
 
     let label: String
     var detail: String?
@@ -213,7 +238,7 @@ struct KeycapView: View {
     }
 
     private var accent: Color {
-        role.map(DesignTokens.Colors.role) ?? DesignTokens.Colors.accent
+        role.map { slotLook.tint(for: $0) } ?? DesignTokens.Colors.accent
     }
 
     private var foregroundColor: Color {
@@ -233,7 +258,7 @@ struct KeycapView: View {
         guard isBound else {
             return DesignTokens.Colors.separator
         }
-        return isPressed ? accent.opacity(0.64) : (role.map { DesignTokens.Colors.role($0).opacity(0.44) } ?? DesignTokens.Colors.separatorStrong)
+        return isPressed ? accent.opacity(0.64) : (role.map { slotLook.tint(for: $0).opacity(0.44) } ?? DesignTokens.Colors.separatorStrong)
     }
 
     private var glowColor: Color {
@@ -243,7 +268,7 @@ struct KeycapView: View {
     private var accessibilityLabelText: String {
         let keyText = [readableKeyName(label), detail].compactMap(\.self).joined(separator: " ")
         if let role {
-            return "\(role.displayName) key \(keyText)"
+            return "\(slotLook.name(for: role)) key \(keyText)"
         }
         return "Key \(keyText)"
     }
@@ -266,6 +291,7 @@ struct KeycapView: View {
 
 struct RoleBadge: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.slotLook) private var slotLook
 
     let role: InputRole
     let symbol: String
@@ -282,21 +308,21 @@ struct RoleBadge: View {
     var body: some View {
         Text(symbol)
             .font(.system(size: size * 0.48, weight: .semibold, design: .monospaced))
-            .foregroundStyle(DesignTokens.Colors.role(role))
+            .foregroundStyle(slotLook.tint(for: role))
             .frame(width: size, height: size)
             .background(
                 RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-                    .fill(DesignTokens.Colors.role(role).opacity(isActive ? 0.24 : 0.16))
+                    .fill(slotLook.tint(for: role).opacity(isActive ? 0.24 : 0.16))
                     .overlay(
                         RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-                            .stroke(DesignTokens.Colors.role(role).opacity(isActive ? 0.72 : 0.42), lineWidth: 1)
+                            .stroke(slotLook.tint(for: role).opacity(isActive ? 0.72 : 0.42), lineWidth: 1)
                     )
             )
-            .shadow(color: DesignTokens.Colors.role(role).opacity(isActive ? 0.28 : 0), radius: 12, y: 4)
+            .shadow(color: slotLook.tint(for: role).opacity(isActive ? 0.28 : 0), radius: 12, y: 4)
             .scaleEffect(reduceMotion ? 1 : (isActive ? 1.02 : 1))
             .animation(DesignTokens.Motion.stateChange, value: isActive)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(role.displayName) role")
+            .accessibilityLabel("\(slotLook.name(for: role)) role")
             .accessibilityValue(isActive ? "Last switched" : "Available")
     }
 }
@@ -385,19 +411,6 @@ extension InputRole {
             "あ"
         default:
             String(rawValue.prefix(1)).uppercased()
-        }
-    }
-
-    var displayName: String {
-        switch self {
-        case .english:
-            "English"
-        case .chinese:
-            "Chinese"
-        case .japanese:
-            "Japanese"
-        default:
-            rawValue
         }
     }
 }

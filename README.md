@@ -196,6 +196,10 @@ auxiliary kana palette, not the normal Hiragana input method.
 ```sh
 swift run keyboardctl scan
 swift run keyboardctl init
+swift run keyboardctl slots
+swift run keyboardctl slot add
+swift run keyboardctl slot add 1 --name Korean
+swift run keyboardctl slot remove japanese
 swift run keyboardctl switch english
 swift run keyboardctl diagnose
 swift run keyboardctl diagnose --json
@@ -208,19 +212,62 @@ swift run keyboardctl quit
 swift run keyboardctl listen
 ```
 
-- `keyboardctl switch <role>`: selects the matched input source for a slot and
+- `keyboardctl switch <slot>`: selects the matched input source for a slot and
   confirms that macOS applied the switch. If macOS does not apply the selection,
   it prints an error message to `stderr` and exits non-zero.
 - `keyboardctl diagnose [--json]`: prints each slot's configured preferences
   (`preferredIDs`, `languagePrefixes`, `nameContains`), the matched input source,
-  and the match reason (`preferredID`, `languagePrefix`, `nameContains`, or `none`).
-  Pass `--json` for structured JSON output.
+  and the match reason (`preferredID`, `fallbackLanguage`, `languagePrefix`, `nameContains`, or `none`).
+  Pass `--json` for structured JSON output: `slots` entries retain `slot` IDs,
+  and include `name` and `duplicateSlots` (an empty array when there are none).
+- `keyboardctl slots`: lists ordered slot IDs, names, triggers, and matches,
+  marking fallback matches.
+- `keyboardctl slot add [<number|source-id>] [--name N]`: without a source,
+  lists numbered unassigned input sources; with one, adds a slot and assigns
+  the first free trigger from Left Command, Right Command, Left Option,
+  Right Option, Left Control. When all are occupied, the slot has no trigger;
+  use `bind` to assign one. Shift is never assigned automatically because many
+  Chinese input sources use a Shift tap to toggle English/Chinese. Right Control
+  is also manual-only because laptop keyboards lack it.
+- `keyboardctl slot remove <slot>`: removes its bindings, preferences and custom
+  color. The last slot cannot be removed.
+- Slot queries accept an exact ID first, then a unique case-insensitive ID or
+  name. Deleted or unknown slots fail with exit code 1; they are never redirected.
+  `bind <trigger> <slot>` retains trigger-stealing behavior and reports when the
+  previous slot is left without a trigger.
+
+New slots prefer the chosen source and fall back by its **primary** language.
+An input source cannot be assigned as two slots' first preferred source, but
+fallbacks and legacy rules may resolve multiple slots to it: both still work,
+and `diagnose` reports `duplicate with: <ids>`. Existing matching rules remain
+unchanged. `init` still creates the legacy English/Chinese/Japanese defaults;
+source-detected first-run defaults and GUI add/remove controls are deferred.
+
+Quit the GUI before editing configuration with the CLI, then reopen it: the
+running GUI does not watch the file and could overwrite CLI changes.
 
 Config lives at:
 
 ```text
 ~/.config/cmd-ime/config.json
 ```
+
+### Configuration upgrade and downgrade
+
+Version 2 stores an ordered `slots` collection with stable IDs, names and tints.
+Old configurations migrate in memory on load. `show`, `slots`, `diagnose`,
+`switch` and `listen` do not save the migration or print an upgrade notice.
+The first successful write (`bind`, `remap`, `slot add`, `slot remove`, or
+`init --force`) backs up a file lacking `slots` to `config.json.v1.bak` alongside
+it, then prints a note to stderr. This also covers version-2 files whose `slots`
+key was dropped by an older binary. The backup is not overwritten; backup
+failure prevents saving. Legacy IDs and bindings are preserved on migration.
+
+Before downgrading, quit CmdIME and restore the backup to `config.json` (keep a
+separate copy of your version-2 settings). Old binaries cannot decode custom
+slot IDs and may move that config to `.corrupt.<uuid>` and reset it. Even with
+only legacy IDs, an old binary drops `slots` on save, losing names/tints and
+potentially restoring removed legacy slots on the next upgrade.
 
 ## Build
 

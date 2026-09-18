@@ -96,6 +96,12 @@ final class ConfigStoreTests: XCTestCase {
 
         XCTAssertEqual(result.config, .default)
         XCTAssertNil(result.recoveredBackupURL)
+        XCTAssertTrue(result.isFirstRun)
+        XCTAssertNil(result.migratedFromVersion)
+        XCTAssertEqual(result.config.version, 2)
+        XCTAssertEqual(result.config.slots, SwitchSlot.legacyDefaults)
+        XCTAssertFalse(store.needsSlotsMigration)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.url.path))
     }
 
     func testLoadOrRecoverReturnsSavedConfig() throws {
@@ -106,6 +112,8 @@ final class ConfigStoreTests: XCTestCase {
 
         XCTAssertEqual(result.config, .default)
         XCTAssertNil(result.recoveredBackupURL)
+        XCTAssertFalse(result.isFirstRun)
+        XCTAssertNil(result.migratedFromVersion)
     }
 
     func testLoadOrRecoverBacksUpCorruptFileWithoutDestroyingIt() throws {
@@ -121,6 +129,8 @@ final class ConfigStoreTests: XCTestCase {
         let result = try store.loadOrRecover()
 
         XCTAssertEqual(result.config, .default)
+        XCTAssertFalse(result.isFirstRun)
+        XCTAssertNil(result.migratedFromVersion)
         let backupURL = try XCTUnwrap(result.recoveredBackupURL)
         XCTAssertTrue(backupURL.lastPathComponent.hasPrefix("config.json.corrupt."))
         XCTAssertEqual(try Data(contentsOf: backupURL), garbage)
@@ -150,6 +160,156 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertNotEqual(firstBackupURL, secondBackupURL)
         XCTAssertEqual(try Data(contentsOf: firstBackupURL), first)
         XCTAssertEqual(try Data(contentsOf: secondBackupURL), second)
+    }
+
+    // Deliberately includes obsolete UI data and cross-language preferred IDs.
+    private var legacyJSON: Data {
+        Data("""
+        {
+          "version": 1,
+          "showMenuBarIcon": false,
+          "showSwitchIndicator": false,
+          "switchIndicatorSize": "large",
+          "switchIndicatorScale": 1.2,
+          "switchIndicatorColorStyle": "custom",
+          "switchIndicatorContentStyle": "textOnly",
+          "switchIndicatorCustomColorHex": "#112233",
+          "switchIndicatorCustomRoleColorHexes": {"chinese":"#ABCDEF"},
+          "bindings": [
+            {"trigger":{"kind":"oneShotModifier","keyCode":54,"keyName":"right-command","modifiers":[],"gesture":"doubleTap"},
+             "action":{"type":"switchInputSource","role":"chinese"},"enabled":false},
+            {"trigger":{"kind":"keyPress","keyCode":38,"keyName":"j","modifiers":["option"]},
+             "action":{"type":"switchInputSource","role":"japanese"},"enabled":true},
+            {"trigger":{"kind":"keyPress","keyCode":0,"keyName":"a","modifiers":[]},
+             "action":{"type":"sendKey","output":{"kind":"keyPress","keyCode":11,"keyName":"b","modifiers":[]}},"enabled":true}
+          ],
+          "inputSources": {
+            "english":{"preferredIDs":["com.apple.keylayout.ABC"],"languagePrefixes":["en"],"nameContains":["ABC"]},
+            "chinese":{"preferredIDs":["com.apple.inputmethod.SCIM.ITABC","com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese","com.apple.keylayout.ABC"],"languagePrefixes":["zh"],"nameContains":["Pinyin","中文"]},
+            "japanese":{"preferredIDs":["custom.missing"],"languagePrefixes":["ja"],"nameContains":["かな"]}
+          }
+        }
+        """.utf8)
+    }
+
+    private func writeFixture(_ data: Data, to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: url)
+    }
+
+    func testRealLegacyShapeDecodesWithoutChangingVersionOrPreferences() throws {
+        let config = try JSONDecoder().decode(SwitcherConfig.self, from: legacyJSON)
+        XCTAssertEqual(config.version, 1)
+        XCTAssertEqual(config.slots, SwitchSlot.legacyDefaults)
+        XCTAssertEqual(config.slots.map(\.id), InputRole.legacy)
+        XCTAssertEqual(config.preference(for: .chinese).preferredIDs, [
+            "com.apple.inputmethod.SCIM.ITABC",
+            "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese",
+            "com.apple.keylayout.ABC",
+        ])
+        XCTAssertEqual(config.bindings.count, 3)
+        XCTAssertFalse(config.bindings[0].enabled)
+        XCTAssertEqual(config.bindings[0].trigger.gesture, .doubleTap)
+        XCTAssertEqual(config.bindings[2].action.type, .sendKey)
+        XCTAssertFalse(config.showSwitchIndicator)
+        XCTAssertEqual(config.switchIndicatorScale, 1.2)
+        XCTAssertEqual(config.switchIndicatorCustomRoleColorHexes, ["chinese": "#ABCDEF"])
+
+        let encoded = try JSONEncoder().encode(config)
+        let before = try XCTUnwrap(JSONSerialization.jsonObject(with: legacyJSON) as? NSDictionary)
+        let after = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? NSDictionary)
+        XCTAssertEqual(before["inputSources"] as? NSDictionary, after["inputSources"] as? NSDictionary)
+        XCTAssertEqual(config.preference(for: .chinese).fallbackLanguage, nil)
+    }
+
+    func testLoadMigrationPreservesOriginalBytesAndAllLegacySettings() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        var expected = try JSONDecoder().decode(SwitcherConfig.self, from: legacyJSON)
+        expected.version = 2
+
+        let result = try store.loadOrRecover()
+
+        XCTAssertEqual(result.config, expected)
+        XCTAssertEqual(result.migratedFromVersion, 1)
+        XCTAssertFalse(result.isFirstRun)
+        XCTAssertNil(result.recoveredBackupURL)
+        XCTAssertTrue(store.needsSlotsMigration)
+        XCTAssertEqual(try Data(contentsOf: store.url), legacyJSON)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.legacyBackupURL.path))
+        XCTAssertEqual(try store.load().version, 1)
+    }
+
+    func testVersionTwoWithoutSlotsStillNeedsBackupButDoesNotReportOldVersion() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        let data = Data(String(decoding: legacyJSON, as: UTF8.self).replacingOccurrences(of: "\"version\": 1", with: "\"version\": 2").utf8)
+        try writeFixture(data, to: store.url)
+        let result = try store.loadOrRecover()
+        XCTAssertNil(result.migratedFromVersion)
+        XCTAssertEqual(result.config.slots, SwitchSlot.legacyDefaults)
+        XCTAssertTrue(store.needsSlotsMigration)
+        try store.save(result.config)
+        XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), data)
+    }
+
+    func testSaveCopiesLegacyBytesOnlyOnce() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        let config = try store.loadOrRecover().config
+        try store.save(config)
+        XCTAssertEqual(store.legacyBackupURL, store.url.appendingPathExtension("v1.bak"))
+        XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), legacyJSON)
+        XCTAssertFalse(store.needsSlotsMigration)
+        // Simulate an old binary dropping slots again: never replace the first backup.
+        try Data("{\"version\":2,\"bindings\":[],\"inputSources\":{}}".utf8).write(to: store.url)
+        try store.save(config)
+        XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), legacyJSON)
+        XCTAssertEqual(try store.load(), config)
+    }
+
+    func testBackupFailureLeavesLegacyFileUntouched() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        try FileManager.default.createDirectory(at: store.legacyBackupURL, withIntermediateDirectories: false)
+        XCTAssertThrowsError(try store.save(.default)) { error in
+            guard case ConfigStoreError.backupFailed = error else {
+                return XCTFail("Expected backupFailed, got \(error)")
+            }
+        }
+        XCTAssertEqual(try Data(contentsOf: store.url), legacyJSON)
+        XCTAssertTrue(store.needsSlotsMigration)
+    }
+
+    func testVersionTwoRoundTripPreservesSlotOrderNamesTintsAndRawRoleStrings() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        let korean = InputRole(rawValue: "korean")
+        var config = SwitcherConfig.default
+        config.slots = [
+            SwitchSlot(id: korean, name: "My Korean", tintHex: "#123456"),
+            SwitchSlot(id: .english, name: "Work", tintHex: "#FEDCBA"),
+        ]
+        config.bindings = [KeyBinding(
+            trigger: KeyTrigger(kind: .oneShotModifier, keyCode: 54, keyName: "right-command"),
+            action: .switchInputSource(korean)
+        )]
+        config.inputSources[korean.rawValue] = RoleInputSourcePreference(preferredIDs: ["korean.source"], fallbackLanguage: "ko")
+        try store.save(config)
+        XCTAssertEqual(try store.load(), config)
+        try store.save(config)
+        XCTAssertFalse(store.needsSlotsMigration)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.legacyBackupURL.path))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: store.url)) as? [String: Any])
+        let bindings = try XCTUnwrap(json["bindings"] as? [[String: Any]])
+        let action = try XCTUnwrap(bindings.first?["action"] as? [String: Any])
+        XCTAssertEqual(action["role"] as? String, "korean")
+        let preferences = try XCTUnwrap(json["inputSources"] as? [String: [String: Any]])
+        XCTAssertNil(preferences["english"]?["fallbackLanguage"])
+        XCTAssertEqual(preferences["korean"]?["fallbackLanguage"] as? String, "ko")
     }
 
     private func uniqueConfigURL() -> URL {

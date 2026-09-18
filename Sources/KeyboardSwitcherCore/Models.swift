@@ -148,15 +148,18 @@ public struct RoleInputSourcePreference: Codable, Equatable, Sendable {
     public var preferredIDs: [String]
     public var languagePrefixes: [String]
     public var nameContains: [String]
+    public var fallbackLanguage: String?
 
     public init(
         preferredIDs: [String] = [],
         languagePrefixes: [String] = [],
-        nameContains: [String] = []
+        nameContains: [String] = [],
+        fallbackLanguage: String? = nil
     ) {
         self.preferredIDs = preferredIDs
         self.languagePrefixes = languagePrefixes
         self.nameContains = nameContains
+        self.fallbackLanguage = fallbackLanguage
     }
 }
 
@@ -227,10 +230,12 @@ public enum SwitchIndicatorContentStyle: String, Codable, CaseIterable, Identifi
 }
 
 public struct SwitcherConfig: Codable, Equatable, Sendable {
+    public static let currentVersion = 2
     public static let defaultSwitchIndicatorScale = 1.0
     public static let minSwitchIndicatorScale = 0.65
     public static let maxSwitchIndicatorScale = 1.3
 
+    public var slots: [SwitchSlot]
     public var version: Int
     public var showSwitchIndicator: Bool
     public var switchIndicatorSize: SwitchIndicatorSize
@@ -243,7 +248,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var inputSources: [String: RoleInputSourcePreference]
 
     public init(
-        version: Int = 1,
+        version: Int = SwitcherConfig.currentVersion,
+        slots: [SwitchSlot] = SwitchSlot.legacyDefaults,
         showSwitchIndicator: Bool = true,
         switchIndicatorSize: SwitchIndicatorSize = .medium,
         switchIndicatorScale: Double = SwitcherConfig.defaultSwitchIndicatorScale,
@@ -254,6 +260,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
+        self.slots = slots
         self.version = version
         self.showSwitchIndicator = showSwitchIndicator
         self.switchIndicatorSize = switchIndicatorSize
@@ -356,7 +363,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             uniqueKeysWithValues: InputSourceMatcher.selectableSources(from: sources).map { ($0.id, $0) }
         )
 
-        for role in InputRole.legacy {
+        for role in slots.map(\.id) {
             var preference = preference(for: role)
             guard Self.canClassifySource(for: preference) else {
                 continue
@@ -370,7 +377,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
                     return true
                 }
 
-                let matchesOtherRole = InputRole.legacy.contains { otherRole in
+                let matchesOtherRole = slots.map(\.id).contains { otherRole in
                     otherRole != role && Self.source(source, matches: self.preference(for: otherRole))
                 }
                 return !matchesOtherRole
@@ -402,6 +409,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case version
+        case slots
         case showSwitchIndicator
         case switchIndicatorSize
         case switchIndicatorScale
@@ -440,11 +448,16 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         ) ?? [:]
         bindings = try container.decode([KeyBinding].self, forKey: .bindings)
         inputSources = try container.decode([String: RoleInputSourcePreference].self, forKey: .inputSources)
+        slots = Self.normalizedSlots(
+            try container.decodeIfPresent([SwitchSlot].self, forKey: .slots) ?? SwitchSlot.legacyDefaults,
+            bindings: bindings
+        )
     }
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(version, forKey: .version)
+        try container.encode(slots, forKey: .slots)
         try container.encode(showSwitchIndicator, forKey: .showSwitchIndicator)
         try container.encode(switchIndicatorSize, forKey: .switchIndicatorSize)
         try container.encode(switchIndicatorScale, forKey: .switchIndicatorScale)

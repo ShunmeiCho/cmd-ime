@@ -1,0 +1,237 @@
+import Foundation
+
+public struct SwitchSlot: Codable, Equatable, Identifiable, Sendable {
+    public let id: InputRole
+    public var name: String
+    public var tintHex: String
+
+    public init(id: InputRole, name: String, tintHex: String) {
+        self.id = id
+        self.name = name
+        self.tintHex = tintHex
+    }
+
+    public static let legacyDefaults: [SwitchSlot] = [
+        SwitchSlot(id: .english, name: "English", tintHex: "#4D8CFF"),
+        SwitchSlot(id: .chinese, name: "Chinese", tintHex: "#33A854"),
+        SwitchSlot(id: .japanese, name: "Japanese", tintHex: "#E3574A"),
+    ]
+}
+
+public enum SlotPalette {
+    public static let colors = ["#4D8CFF", "#33A854", "#E3574A", "#9664D8", "#E49B35", "#32A6A8", "#D65B99", "#788697"]
+
+    public static func nextColor(for id: InputRole, used: [String]) -> String {
+        let used = Set(used.map { $0.uppercased() })
+        if let legacy = SwitchSlot.legacyDefaults.first(where: { $0.id == id }), !used.contains(legacy.tintHex) {
+            return legacy.tintHex
+        }
+        return colors.first { !used.contains($0) } ?? colors[used.count % colors.count]
+    }
+}
+
+/// Validation failures for pure slot edits. Unknown IDs never silently create slots.
+public enum SlotError: Error, Equatable, LocalizedError, Sendable {
+    case sourceAlreadyUsed
+    case lastSlot
+    /// A supplied name is empty after trimming whitespace and newlines.
+    case invalidName
+    case unknownSlot(InputRole)
+    /// The source has an empty ID, is not selectable, or is an auxiliary source.
+    case invalidSource
+
+    public var errorDescription: String? {
+        switch self {
+        case .sourceAlreadyUsed: "This input source is already preferred by another slot."
+        case .lastSlot: "The last slot cannot be removed."
+        case .invalidName: "A slot name cannot be empty."
+        case let .unknownSlot(id): "Unknown slot \"\(id.rawValue)\"."
+        case .invalidSource: "Choose a selectable input source."
+        }
+    }
+}
+
+extension InputSourceInfo {
+    public var primaryLanguage: String? {
+        guard let first = languages.first else { return nil }
+        let primary = first.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased().replacingOccurrences(of: "_", with: "-")
+            .components(separatedBy: "-")[0]
+        return primary.isEmpty ? nil : primary
+    }
+
+    public var badgeSymbol: String {
+        switch primaryLanguage {
+        case "en": "A"
+        case "zh": "中"
+        case "ja": "あ"
+        case "ko": "한"
+        case let language?: String(language.prefix(2)).uppercased()
+        case nil: String(localizedName.prefix(1)).uppercased()
+        }
+    }
+}
+
+extension SwitcherConfig {
+    public func slot(_ id: InputRole) -> SwitchSlot? {
+        slots.first { $0.id == id }
+    }
+
+    public func slot(matching query: String) -> SwitchSlot? {
+        if let exact = slot(InputRole(rawValue: query)) { return exact }
+        let matches = slots.filter {
+            $0.id.rawValue.caseInsensitiveCompare(query) == .orderedSame
+                || $0.name.caseInsensitiveCompare(query) == .orderedSame
+        }
+        return matches.count == 1 ? matches.first : nil
+    }
+
+    public func displayName(for role: InputRole) -> String {
+        slot(role)?.name ?? role.rawValue
+    }
+
+    public func migrated() -> SwitcherConfig {
+        var result = self
+        result.version = Self.currentVersion
+        return result
+    }
+
+    public static func normalizedSlots(_ slots: [SwitchSlot], bindings: [KeyBinding]) -> [SwitchSlot] {
+        var result: [SwitchSlot] = []
+        var seen: Set<InputRole> = []
+        for slot in slots.isEmpty ? SwitchSlot.legacyDefaults : slots {
+            guard seen.insert(slot.id).inserted else { continue }
+            result.append(slot)
+        }
+        for binding in bindings where binding.action.type == .switchInputSource {
+            guard let id = binding.action.role, seen.insert(id).inserted else { continue }
+            let legacy = SwitchSlot.legacyDefaults.first { $0.id == id }
+            result.append(SwitchSlot(id: id, name: legacy?.name ?? id.rawValue,
+                                     tintHex: SlotPalette.nextColor(for: id, used: result.map(\.tintHex))))
+        }
+        return result
+    }
+
+    public func unassignedSources(from sources: [InputSourceInfo]) -> [InputSourceInfo] {
+        let resolved = Set(slots.compactMap { InputSourceMatcher.bestMatch(for: $0.id, sources: sources, config: self)?.id })
+        return InputSourceMatcher.selectableSources(from: sources).filter { !resolved.contains($0.id) }
+    }
+
+    public func duplicateSlotIDs(for role: InputRole, sources: [InputSourceInfo]) -> [InputRole] {
+        guard slot(role) != nil,
+              let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: self) else { return [] }
+        var seen: Set<InputRole> = [role]
+        return slots.compactMap { slot in
+            guard seen.insert(slot.id).inserted,
+                  InputSourceMatcher.bestMatch(for: slot.id, sources: sources, config: self)?.id == source.id else { return nil }
+            return slot.id
+        }
+    }
+
+    public func nextFreeOneShotTrigger() -> KeyTrigger? {
+        for name in ["left-command", "right-command", "left-option", "right-option", "left-control"] {
+            guard let trigger = try? ShortcutParser.parse(name) else { continue }
+            if !bindings.contains(where: { $0.enabled && $0.trigger.keyCode == trigger.keyCode }) { return trigger }
+        }
+        return nil
+    }
+
+    public func conflictingBinding(for trigger: KeyTrigger, excluding role: InputRole) -> KeyBinding? {
+        bindings.first { binding in
+            guard binding.enabled,
+                  !(binding.action.type == .switchInputSource && binding.action.role == role),
+                  binding.trigger.keyCode == trigger.keyCode else { return false }
+            if trigger.kind == .oneShotModifier || binding.trigger.kind == .oneShotModifier { return true }
+            return binding.trigger.gesture == trigger.gesture && Set(binding.trigger.modifiers) == Set(trigger.modifiers)
+        }
+    }
+
+    public func addingSlot(for source: InputSourceInfo, name: String? = nil, at index: Int? = nil) throws(SlotError) -> (config: SwitcherConfig, slot: SwitchSlot) {
+        try validateSource(source, excluding: nil)
+        let languageName = source.primaryLanguage.flatMap { Locale(identifier: "en_US").localizedString(forLanguageCode: $0) }
+        let base = Self.slug(languageName ?? source.localizedName)
+        var id = InputRole(rawValue: base)
+        var suffix = 2
+        while slot(id) != nil {
+            id = InputRole(rawValue: "\(base)-\(suffix)")
+            suffix += 1
+        }
+        let sameLanguage = source.primaryLanguage.map { language in
+            slots.contains { slot in
+                let preference = preference(for: slot.id)
+                return preference.fallbackLanguage == language
+                    || (preference.fallbackLanguage == nil && preference.languagePrefixes.contains(language))
+            }
+        } ?? false
+        let defaultName = sameLanguage ? source.localizedName : (languageName ?? source.localizedName)
+        let trimmed = (name ?? defaultName).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw .invalidName }
+        let slot = SwitchSlot(id: id, name: trimmed, tintHex: SlotPalette.nextColor(for: id, used: slots.map(\.tintHex)))
+        var result = self
+        result.slots.insert(slot, at: min(max(index ?? slots.count, 0), slots.count))
+        result.inputSources[id.rawValue] = RoleInputSourcePreference(preferredIDs: [source.id], fallbackLanguage: source.primaryLanguage)
+        if let trigger = nextFreeOneShotTrigger() {
+            result.bindings.append(KeyBinding(trigger: trigger, action: .switchInputSource(id)))
+        }
+        return (result, slot)
+    }
+
+    public func assigningInputSource(_ source: InputSourceInfo, to role: InputRole) throws(SlotError) -> SwitcherConfig {
+        guard slot(role) != nil else { throw .unknownSlot(role) }
+        try validateSource(source, excluding: role)
+        var result = self
+        let preference = preference(for: role)
+        // Legacy rules retain their ordered ID history and matching rules.
+        if preference.fallbackLanguage == nil && (InputRole.legacy.contains(role) || !preference.languagePrefixes.isEmpty || !preference.nameContains.isEmpty) {
+            result.pinInputSourceID(source.id, for: role)
+        } else {
+            var updated = preference
+            updated.preferredIDs = [source.id]
+            updated.fallbackLanguage = source.primaryLanguage
+            result.inputSources[role.rawValue] = updated
+        }
+        return result
+    }
+
+    public func removingSlot(_ id: InputRole) throws(SlotError) -> SwitcherConfig {
+        guard slot(id) != nil else { throw .unknownSlot(id) }
+        guard Set(slots.map(\.id)).count > 1 else { throw .lastSlot }
+        var result = self
+        result.slots.removeAll { $0.id == id }
+        result.bindings.removeAll { $0.action.type == .switchInputSource && $0.action.role == id }
+        result.inputSources.removeValue(forKey: id.rawValue)
+        result.switchIndicatorCustomRoleColorHexes.removeValue(forKey: id.rawValue)
+        return result
+    }
+
+    /// Destination is the final index, not an insertion index before removal.
+    public func movingSlot(from source: Int, to destination: Int) -> SwitcherConfig {
+        guard slots.indices.contains(source) else { return self }
+        var result = self
+        let slot = result.slots.remove(at: source)
+        result.slots.insert(slot, at: min(max(destination, 0), result.slots.count))
+        return result
+    }
+
+    public func renamingSlot(_ id: InputRole, to name: String) throws(SlotError) -> SwitcherConfig {
+        guard let index = slots.firstIndex(where: { $0.id == id }) else { throw .unknownSlot(id) }
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw .invalidName }
+        var result = self
+        result.slots[index].name = trimmed
+        return result
+    }
+
+    private func validateSource(_ source: InputSourceInfo, excluding role: InputRole?) throws(SlotError) {
+        guard !source.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !InputSourceMatcher.selectableSources(from: [source]).isEmpty else { throw .invalidSource }
+        guard !slots.contains(where: { $0.id != role && preference(for: $0.id).preferredIDs.first == source.id }) else {
+            throw .sourceAlreadyUsed
+        }
+    }
+
+    private static func slug(_ text: String) -> String {
+        let words = text.lowercased().components(separatedBy: CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyz0123456789").inverted).filter { !$0.isEmpty }
+        return words.isEmpty ? "slot" : words.joined(separator: "-")
+    }
+}

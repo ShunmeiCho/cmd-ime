@@ -33,6 +33,7 @@ struct ContentView: View {
         }
         .background(DesignTokens.Colors.canvas)
         .preferredColorScheme(.dark)
+        .environment(\.slotLook, SlotLook(slots: model.config.slots))
         .onAppear {
             resetDrafts()
         }
@@ -61,7 +62,8 @@ struct ContentView: View {
 
     private func resetDrafts() {
         triggerDrafts = Dictionary(
-            uniqueKeysWithValues: InputRole.legacy.map { ($0, model.bindingText(for: $0)) }
+            model.config.slots.map { ($0.id, model.bindingText(for: $0.id)) },
+            uniquingKeysWith: { first, _ in first }
         )
         triggerTypeDrafts.removeAll()
     }
@@ -259,16 +261,17 @@ private struct SwitchSlotsSection: View {
             }
 
             VStack(spacing: 9) {
-                ForEach(InputRole.legacy, id: \.self) { role in
-                    switchSlotCard(for: role)
+                ForEach(model.config.slots) { slot in
+                    switchSlotCard(for: slot)
                 }
             }
         }
     }
 
-    private func switchSlotCard(for role: InputRole) -> some View {
+    private func switchSlotCard(for slot: SwitchSlot) -> some View {
+        let role = slot.id
         let source = model.matchedSource(for: role)
-        let presentation = InputSourcePresentation(source: source, fallbackRole: role)
+        let presentation = InputSourcePresentation(source: source, slot: slot)
         let duplicate = hasDuplicateSource(source, for: role)
 
         return SwitchSlotCard(
@@ -322,7 +325,7 @@ private struct SwitchSlotsSection: View {
             .frame(width: 88, height: DesignTokens.Layout.fieldHeight)
         case .singleTap, .doubleTap:
             let selected = OneShotModifierChoice(trigger: model.trigger(for: role))
-                ?? defaultOneShotChoice(for: role)
+                ?? defaultOneShotChoice() ?? .leftCommand
             Menu {
                 ForEach(OneShotModifierChoice.allCases) { choice in
                     let conflictRole = model.oneShotConflictRole(
@@ -341,7 +344,7 @@ private struct SwitchSlotsSection: View {
                         resetDrafts()
                     } label: {
                         Label(
-                            conflictRole.map { "\(choice.title) - used by \($0.displayName)" } ?? choice.title,
+                            conflictRole.map { "\(choice.title) - used by \(model.config.displayName(for: $0))" } ?? choice.title,
                             systemImage: choice.iconName
                         )
                     }
@@ -401,8 +404,8 @@ private struct SwitchSlotsSection: View {
             return false
         }
 
-        return InputRole.legacy.contains { otherRole in
-            otherRole != role && model.matchedSource(for: otherRole)?.id == source.id
+        return model.config.slots.contains { otherSlot in
+            otherSlot.id != role && model.matchedSource(for: otherSlot.id)?.id == source.id
         }
     }
 
@@ -426,8 +429,11 @@ private struct SwitchSlotsSection: View {
     }
 
     private func setOneShotType(_ gesture: TriggerGesture, for role: InputRole) {
-        let choice = OneShotModifierChoice(trigger: model.trigger(for: role))
-            ?? defaultOneShotChoice(for: role)
+        guard let choice = OneShotModifierChoice(trigger: model.trigger(for: role))
+            ?? defaultOneShotChoice() else {
+            model.statusText = "Choose a modifier key or record a keyboard shortcut for this slot"
+            return
+        }
         model.setOneShotBinding(
             keyCode: choice.keyCode,
             keyName: choice.rawValue,
@@ -437,21 +443,13 @@ private struct SwitchSlotsSection: View {
         resetDrafts()
     }
 
-    private func defaultOneShotChoice(for role: InputRole) -> OneShotModifierChoice {
-        switch role {
-        case .english:
-            .leftCommand
-        case .chinese:
-            .rightCommand
-        case .japanese:
-            .leftOption
-        default:
-            .leftCommand
-        }
+    private func defaultOneShotChoice() -> OneShotModifierChoice? {
+        OneShotModifierChoice(trigger: model.config.nextFreeOneShotTrigger())
     }
 }
 
 private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, InputSourceControl: View>: View {
+    @Environment(\.slotLook) private var slotLook
     let role: InputRole
     let presentation: InputSourcePresentation
     let source: InputSourceInfo?
@@ -472,7 +470,7 @@ private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, In
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(role.displayName)
+                    Text(slotLook.name(for: role))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(DesignTokens.Colors.textPrimary)
                     statusChip
@@ -551,10 +549,10 @@ private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, In
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
                         .stroke(slotStrokeColor, lineWidth: isActive ? 1.4 : 1)
                 )
-                .shadow(color: isActive ? DesignTokens.Colors.role(role).opacity(0.26) : .clear, radius: 14, y: 5)
+                .shadow(color: isActive ? slotLook.tint(for: role).opacity(0.26) : .clear, radius: 14, y: 5)
         )
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(role.displayName) switch slot")
+        .accessibilityLabel("\(slotLook.name(for: role)) switch slot")
         .accessibilityValue(isActive ? "Current" : (source == nil ? "Not matched" : "Configured"))
     }
 
@@ -565,7 +563,7 @@ private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, In
                 .slotChip(color: DesignTokens.Colors.warning)
         } else if isActive {
             Text("Current")
-                .slotChip(color: DesignTokens.Colors.role(role))
+                .slotChip(color: slotLook.tint(for: role))
         } else if isDuplicate {
             Text("Duplicate")
                 .slotChip(color: DesignTokens.Colors.warning)
@@ -574,12 +572,12 @@ private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, In
 
     private var slotStrokeColor: Color {
         if isActive {
-            return DesignTokens.Colors.role(role).opacity(0.74)
+            return slotLook.tint(for: role).opacity(0.74)
         }
         if source == nil || isDuplicate || bindingWarning != nil {
             return DesignTokens.Colors.warning.opacity(0.35)
         }
-        return DesignTokens.Colors.role(role).opacity(0.22)
+        return slotLook.tint(for: role).opacity(0.22)
     }
 }
 
@@ -616,6 +614,7 @@ private struct TriggerKeycapSequence: View {
 }
 
 private struct OneShotMenuLabel: View {
+    @Environment(\.slotLook) private var slotLook
     let choice: OneShotModifierChoice
     let role: InputRole
 
@@ -629,7 +628,7 @@ private struct OneShotMenuLabel: View {
             Spacer(minLength: 0)
             Text(choice.keycapLabel)
                 .font(.system(.caption, design: .monospaced).weight(.bold))
-                .foregroundStyle(DesignTokens.Colors.role(role))
+                .foregroundStyle(slotLook.tint(for: role))
         }
         .padding(.horizontal, 8)
         .frame(width: 116, height: 26)
@@ -644,7 +643,7 @@ private struct OneShotMenuLabel: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                        .stroke(DesignTokens.Colors.role(role).opacity(0.42), lineWidth: 1)
+                        .stroke(slotLook.tint(for: role).opacity(0.42), lineWidth: 1)
                 )
         )
         .shadow(color: DesignTokens.Shadow.keycap, radius: 4, y: 3)
@@ -797,9 +796,10 @@ private struct IndicatorSettingsCard: View {
                             get: { model.config.switchIndicatorColorStyle },
                             set: { model.setSwitchIndicatorColorStyle($0) }
                         ),
-                        customColor: Color(
-                            cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: model.activeRole ?? .english)
-                        ) ?? DesignTokens.Colors.role(model.activeRole ?? .english)
+                        customColor: model.previewSlot.map { slot in
+                            Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: slot.id))
+                                ?? Color(cmdIMEHex: slot.tintHex) ?? DesignTokens.Colors.accent
+                        } ?? DesignTokens.Colors.accent
                     )
 
                     Text(model.config.switchIndicatorColorStyle.settingDescription)
@@ -818,23 +818,25 @@ private struct IndicatorSettingsCard: View {
 }
 
 private struct CustomRoleColorControls: View {
+    @Environment(\.slotLook) private var slotLook
     @ObservedObject var model: AppModel
 
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(InputRole.legacy, id: \.self) { role in
+            ForEach(model.config.slots) { slot in
+                let role = slot.id
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(role.displayName)
+                    Text(slotLook.name(for: role))
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                         .lineLimit(1)
 
                     ColorPicker(
-                        role.displayName,
+                        slotLook.name(for: role),
                         selection: Binding(
                             get: {
                                 Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: role))
-                                    ?? DesignTokens.Colors.role(role)
+                                    ?? slotLook.tint(for: role)
                             },
                             set: { color in
                                 if let hex = color.cmdIMEHexString {
@@ -854,12 +856,19 @@ private struct CustomRoleColorControls: View {
 }
 
 private struct IndicatorPreview: View {
+    @Environment(\.slotLook) private var slotLook
     @ObservedObject var model: AppModel
 
     var body: some View {
-        let role = model.activeRole ?? .english
+        if let slot = model.previewSlot {
+            preview(for: slot)
+        }
+    }
+
+    private func preview(for slot: SwitchSlot) -> some View {
+        let role = slot.id
         let source = model.matchedSource(for: role)
-        let presentation = InputSourcePresentation(source: source, fallbackRole: role)
+        let presentation = InputSourcePresentation(source: source, slot: slot)
         let tint = indicatorTint(for: role, presentation: presentation)
 
         return ZStack(alignment: .topLeading) {
@@ -951,7 +960,7 @@ private struct IndicatorPreview: View {
         case .monochrome:
             DesignTokens.Colors.textSecondary
         case .custom:
-            Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: role)) ?? DesignTokens.Colors.role(role)
+            Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: role)) ?? slotLook.tint(for: role)
         case .role:
             presentation.tint
         }
@@ -1154,6 +1163,7 @@ private struct ConsoleSegmentedControl<Value: Hashable>: View {
 }
 
 private struct IndicatorColorSwatches: View {
+    @Environment(\.slotLook) private var slotLook
     @Binding var selection: SwitchIndicatorColorStyle
     let customColor: Color
 
@@ -1185,11 +1195,7 @@ private struct IndicatorColorSwatches: View {
             RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            DesignTokens.Colors.role(.english),
-                            DesignTokens.Colors.role(.chinese),
-                            DesignTokens.Colors.role(.japanese)
-                        ],
+                        colors: slotLook.slots.map { slotLook.tint(for: $0.id) },
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
