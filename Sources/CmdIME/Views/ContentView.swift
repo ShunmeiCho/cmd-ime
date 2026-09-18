@@ -720,11 +720,10 @@ private struct RuntimeSection: View {
                 Divider().overlay(DesignTokens.Colors.separator)
 
                 RuntimeActionRow(title: "Quit CmdIME", detail: "Stop the background listener") {
-                    Button("Quit") {
+                    Button("Quit", role: .destructive) {
                         model.quit()
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: false))
-                    .foregroundStyle(DesignTokens.Colors.danger)
                 }
 
                 Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
