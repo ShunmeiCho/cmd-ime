@@ -201,6 +201,11 @@ struct SettingsSectionHeader: View {
 }
 
 struct KeycapView: View {
+    enum Appearance {
+        case display
+        case control
+    }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.slotLook) private var slotLook
 
@@ -209,13 +214,18 @@ struct KeycapView: View {
     var role: InputRole?
     var isPressed = false
     var isBound = true
+    var appearance: Appearance = .control
+    var expandsHorizontally = false
 
-    init(_ label: String, detail: String? = nil, role: InputRole? = nil, isPressed: Bool = false, isBound: Bool = true) {
+    init(_ label: String, detail: String? = nil, role: InputRole? = nil, isPressed: Bool = false,
+         isBound: Bool = true, appearance: Appearance = .control, expandsHorizontally: Bool = false) {
         self.label = label
         self.detail = detail
         self.role = role
         self.isPressed = isPressed
         self.isBound = isBound
+        self.appearance = appearance
+        self.expandsHorizontally = expandsHorizontally
     }
 
     var body: some View {
@@ -230,20 +240,22 @@ struct KeycapView: View {
             }
         }
             .foregroundStyle(foregroundColor)
-            .frame(minWidth: 42, minHeight: 30)
+            .frame(minWidth: 42, maxWidth: expandsHorizontally ? .infinity : nil, minHeight: 30)
             .padding(.horizontal, DesignTokens.Spacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                    .fill(keycapFill)
+                    .fill(appearance == .display ? AnyShapeStyle(DesignTokens.Colors.surfaceInset) : AnyShapeStyle(keycapFill))
                     .overlay(
                         RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
                             .stroke(borderColor, lineWidth: isBound ? 1.2 : 1)
                     )
             )
-            .shadow(color: glowColor, radius: isPressed ? 10 : 4, y: isPressed ? 1 : 3)
-            .scaleEffect(reduceMotion ? 1 : (isPressed ? 0.94 : 1))
-            .offset(y: reduceMotion ? 0 : (isPressed ? 1 : 0))
-            .animation(isPressed ? DesignTokens.Motion.keyPress : DesignTokens.Motion.keyRelease, value: isPressed)
+            .shadow(color: appearance == .display ? .clear : glowColor,
+                    radius: isPressed ? 10 : 4, y: isPressed ? 1 : 3)
+            .scaleEffect(appearance == .display || reduceMotion ? 1 : (isPressed ? 0.94 : 1))
+            .offset(y: appearance == .display || reduceMotion ? 0 : (isPressed ? 1 : 0))
+            .animation(appearance == .display ? nil : (isPressed ? DesignTokens.Motion.keyPress : DesignTokens.Motion.keyRelease),
+                       value: isPressed)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityLabelText)
             .accessibilityValue(isPressed ? "Active" : (isBound ? "Bound" : "Unbound"))

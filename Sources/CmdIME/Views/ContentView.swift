@@ -129,7 +129,7 @@ private struct SettingsHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            KeycapView("⌘")
+            KeycapView("⌘", appearance: .display)
                 .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -379,31 +379,9 @@ private struct LiveStripKey: View {
     }
 
     var body: some View {
-        if label == "space" {
-            Text("space")
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .foregroundStyle(DesignTokens.Colors.textMuted)
-                .frame(maxWidth: .infinity, minHeight: 34)
-                .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [DesignTokens.Colors.keycapTop, DesignTokens.Colors.keycapBottom],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                                .stroke(DesignTokens.Colors.separatorStrong, lineWidth: 1)
-                        )
-                )
-                .shadow(color: DesignTokens.Shadow.keycap, radius: 4, y: 3)
-                .accessibilityLabel("Space key")
-        } else {
-            KeycapView(label, detail: detail, role: role, isPressed: isActive, isBound: role != nil)
-                .frame(minWidth: 46, minHeight: 34)
-        }
+        KeycapView(label, detail: detail, role: role, isPressed: isActive, isBound: role != nil,
+                   appearance: .display, expandsHorizontally: label == "space")
+            .frame(minWidth: 46, minHeight: 34)
     }
 }
 
