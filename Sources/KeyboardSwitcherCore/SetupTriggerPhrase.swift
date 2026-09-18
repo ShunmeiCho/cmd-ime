@@ -54,14 +54,23 @@ public extension KeyTrigger {
 
 /// Which bound slots the user has already fired in the "Try it" step.
 public struct SetupTryItProgress: Equatable, Sendable {
-    /// Slots with at least one enabled switch trigger, in slot order.
+    /// Slots that can be tried, in slot order: at least one enabled switch trigger
+    /// and an installed input source to switch to.
     public let boundSlots: [InputRole]
+    /// Slots with a trigger but no matching input source. Their trigger cannot
+    /// switch, so they never count toward completion.
+    public let unmatchedSlots: [InputRole]
     /// The bound slots that were fired at least once. Removed slots are ignored.
     public let triedSlots: [InputRole]
 
-    public init(config: SwitcherConfig, tried: Set<InputRole>) {
+    public init(config: SwitcherConfig, sources: [InputSourceInfo], tried: Set<InputRole>) {
         var seen = Set<InputRole>()
-        boundSlots = config.slotTriggers.map(\.slot).filter { seen.insert($0).inserted }
+        let withTrigger = config.slotTriggers.map(\.slot).filter { seen.insert($0).inserted }
+        let matched = Set(withTrigger.filter {
+            InputSourceMatcher.bestMatch(for: $0, sources: sources, config: config) != nil
+        })
+        boundSlots = withTrigger.filter(matched.contains)
+        unmatchedSlots = withTrigger.filter { !matched.contains($0) }
         triedSlots = boundSlots.filter(tried.contains)
     }
 

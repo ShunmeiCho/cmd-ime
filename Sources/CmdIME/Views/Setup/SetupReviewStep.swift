@@ -139,13 +139,15 @@ struct SetupSlotSentenceList: View {
         VStack(alignment: .leading, spacing: 8) {
             ForEach(model.config.slots) { slot in
                 let slotTriggers = triggers.filter { $0.slot == slot.id }.map(\.trigger)
+                let source = model.matchedSource(for: slot.id)
                 SetupSlotSentenceRow(
                     slot: slot,
                     triggers: slotTriggers,
-                    source: model.matchedSource(for: slot.id),
+                    source: source,
                     isActive: triedSlots != nil && model.activeRole == slot.id,
-                    // A slot without a key cannot be tried, so it gets no mark.
-                    isTried: slotTriggers.isEmpty ? nil : triedSlots.map { $0.contains(slot.id) }
+                    // A slot without a key, or without an input source to switch to,
+                    // cannot be tried, so it gets no mark.
+                    isTried: slotTriggers.isEmpty || source == nil ? nil : triedSlots.map { $0.contains(slot.id) }
                 )
             }
         }

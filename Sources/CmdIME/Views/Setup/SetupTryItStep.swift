@@ -14,7 +14,7 @@ struct SetupTryItStep: View {
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
-        let progress = SetupTryItProgress(config: model.config, tried: session.triedSlots)
+        let progress = progress(tried: session.triedSlots)
         VStack(alignment: .leading, spacing: 10) {
             Text(model.config.showSwitchIndicator
                 ? "Click into the field, then fire each trigger. The matching line lights up, the input source changes, and the switch indicator shows up near the caret."
@@ -49,6 +49,14 @@ struct SetupTryItStep: View {
                 .accessibilityHint(placeholder(for: progress))
 
             SetupSlotSentenceList(model: model, triedSlots: session.triedSlots)
+
+            if !progress.unmatchedSlots.isEmpty {
+                SetupNotice(
+                    systemImage: "exclamationmark.triangle.fill",
+                    tone: .warning,
+                    text: unmatchedText(for: progress)
+                )
+            }
 
             Text(progressText(for: progress))
                 .font(.caption.weight(.semibold))
@@ -92,14 +100,26 @@ struct SetupTryItStep: View {
     }
 
     private func markTried(_ slot: InputRole) {
-        let before = SetupTryItProgress(config: model.config, tried: session.triedSlots)
+        let before = progress(tried: session.triedSlots)
         guard before.boundSlots.contains(slot), !before.triedSlots.contains(slot) else { return }
         session.triedSlots.insert(slot)
-        let after = SetupTryItProgress(config: model.config, tried: session.triedSlots)
+        let after = progress(tried: session.triedSlots)
         let name = model.config.displayName(for: slot)
         SetupGuideNavigation.announce(after.isComplete
             ? "Switched to \(name). Every slot was tried. Press Finish to close the guide."
             : "Switched to \(name). \(progressText(for: after))")
+    }
+
+    private func progress(tried: Set<InputRole>) -> SetupTryItProgress {
+        SetupTryItProgress(config: model.config, sources: model.sources, tried: tried)
+    }
+
+    /// Why a bound line has no mark: its trigger is swallowed but has nothing to select.
+    private func unmatchedText(for progress: SetupTryItProgress) -> String {
+        let names = progress.unmatchedSlots.map { model.config.displayName(for: $0) }
+        return names.count == 1
+            ? "\(names[0]) has no matching input source, so its trigger cannot switch yet. Choose a source for it on the slot board."
+            : "\(names.joined(separator: ", ")) have no matching input source, so their triggers cannot switch yet. Choose a source for each on the slot board."
     }
 
     /// "Tap Right Command alone" for the next untried slot, nil once all were tried.
@@ -113,7 +133,7 @@ struct SetupTryItStep: View {
 
     private func placeholder(for progress: SetupTryItProgress) -> String {
         if progress.boundSlots.isEmpty {
-            return "No slot has a key yet"
+            return progress.unmatchedSlots.isEmpty ? "No slot has a key yet" : "No slot can switch yet"
         }
         guard let instruction = nextInstruction(for: progress) else {
             return "Every slot switched. Type to check, then press Finish."
@@ -124,7 +144,9 @@ struct SetupTryItStep: View {
     /// Repeats the next key outside the field, where typed text cannot hide it.
     private func progressText(for progress: SetupTryItProgress) -> String {
         if progress.boundSlots.isEmpty {
-            return "No slot has a key yet. Go back and press Change to bind one, or finish now."
+            return progress.unmatchedSlots.isEmpty
+                ? "No slot has a key yet. Go back and press Change to bind one, or finish now."
+                : "No slot can switch yet. Go back and press Change to choose input sources, or finish now."
         }
         let count = "\(progress.triedSlots.count) of \(progress.boundSlots.count) slots tried"
         guard let instruction = nextInstruction(for: progress) else {

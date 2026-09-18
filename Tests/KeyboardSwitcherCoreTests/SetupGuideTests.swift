@@ -297,9 +297,10 @@ final class SetupGuideTests: XCTestCase {
             action: .switchInputSource(ids[0])
         ))
 
-        let start = SetupTryItProgress(config: config, tried: [])
-        let partial = SetupTryItProgress(config: config, tried: [ids[0], InputRole(rawValue: "removed")])
-        let done = SetupTryItProgress(config: config, tried: [ids[0], ids[2]])
+        let sources = ["en", "ko", "ja"].map { source($0) }
+        let start = SetupTryItProgress(config: config, sources: sources, tried: [])
+        let partial = SetupTryItProgress(config: config, sources: sources, tried: [ids[0], InputRole(rawValue: "removed")])
+        let done = SetupTryItProgress(config: config, sources: sources, tried: [ids[0], ids[2]])
 
         XCTAssertEqual(start.boundSlots, [ids[0], ids[2]])
         XCTAssertEqual(start.nextSlot, ids[0])
@@ -307,7 +308,26 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertEqual(partial.nextSlot, ids[2])
         XCTAssertFalse(partial.isComplete)
         XCTAssertTrue(done.isComplete)
+        XCTAssertTrue(start.unmatchedSlots.isEmpty)
         config.bindings.removeAll()
-        XCTAssertFalse(SetupTryItProgress(config: config, tried: []).isComplete)
+        XCTAssertFalse(SetupTryItProgress(config: config, sources: sources, tried: []).isComplete)
+    }
+
+    func testTryItProgressLeavesOutBoundSlotsWithoutAnInputSource() {
+        // Legacy defaults bind English, Chinese and Japanese (Option+J); only two are installed.
+        let config = SwitcherConfig.default
+        let sources = [source("en"), source("zh-Hans")]
+
+        let start = SetupTryItProgress(config: config, sources: sources, tried: [])
+        let done = SetupTryItProgress(config: config, sources: sources, tried: [.english, .chinese, .japanese])
+        let nothingInstalled = SetupTryItProgress(config: config, sources: [], tried: [])
+
+        XCTAssertEqual(start.boundSlots, [.english, .chinese])
+        XCTAssertEqual(start.unmatchedSlots, [.japanese])
+        XCTAssertEqual(done.triedSlots, [.english, .chinese])
+        XCTAssertTrue(done.isComplete)
+        XCTAssertTrue(nothingInstalled.boundSlots.isEmpty)
+        XCTAssertEqual(nothingInstalled.unmatchedSlots, [.english, .chinese, .japanese])
+        XCTAssertFalse(nothingInstalled.isComplete)
     }
 }
