@@ -186,7 +186,8 @@ struct SlotBoardSection: View {
     private func beginDrag(_ payload: SlotDragPayload, value: DragGesture.Value) -> Bool {
         guard !model.isRecordingTrigger, commitPendingRename(), drag.prepareForBegin() else { return false }
         return drag.begin(payload: payload, startLocation: value.startLocation, location: value.location,
-                          config: model.config, sources: model.selectableSources, reduceMotion: reduceMotion,
+                          config: model.config, sources: model.selectableSources,
+                          currentOrder: { model.config.slots.map(\.id) }, reduceMotion: reduceMotion,
                           commit: commitDrop, reject: model.rejectSlotDrop,
                           pulse: { if !drag.isForcingCompletion { seat($0, waitForLayout: false) } }, validate: dropRejection)
     }

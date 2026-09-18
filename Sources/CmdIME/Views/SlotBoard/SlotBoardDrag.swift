@@ -46,6 +46,10 @@ final class SlotBoardDragController: ObservableObject {
     private var fullHeights: [Double] = []
     private var top: Double = 0
     private var pendingIndex: Int?
+    private var originalOrder: [InputRole] = []
+    private var previousNeighbor: InputRole?
+    private var nextNeighbor: InputRole?
+    private var currentOrder: (() -> [InputRole])?
     private var commitAction: ((SlotDragPayload, Int) -> Bool)?
     private var validateAction: ((SlotDragPayload) -> String?)?
     private var rejectAction: ((String) -> Void)?
@@ -77,7 +81,8 @@ final class SlotBoardDragController: ObservableObject {
 
     @discardableResult
     func begin(payload: SlotDragPayload, startLocation: CGPoint, location: CGPoint,
-               config: SwitcherConfig, sources: [InputSourceInfo], reduceMotion: Bool,
+               config: SwitcherConfig, sources: [InputSourceInfo],
+               currentOrder: @escaping () -> [InputRole], reduceMotion: Bool,
                commit: @escaping (SlotDragPayload, Int) -> Bool,
                reject: @escaping (String) -> Void, pulse: @escaping (InputRole) -> Void,
                validate: ((SlotDragPayload) -> String?)? = nil) -> Bool {
@@ -122,6 +127,8 @@ final class SlotBoardDragController: ObservableObject {
             originFrame = frame
             placeholderHeight = snapshot.values.map(\.height).min() ?? frame.height
         }
+        originalOrder = config.slots.map(\.id)
+        self.currentOrder = currentOrder
         fullHeights = config.slots.compactMap { snapshot[$0.id].map { Double($0.height) } }
         heights = config.slots.enumerated().compactMap { index, slot in
             index == sourceIndex ? nil : snapshot[slot.id].map { Double($0.height) }
@@ -181,6 +188,12 @@ final class SlotBoardDragController: ObservableObject {
         }
         guard let index = insertionIndex else { requestCancel(); return }
         pendingIndex = index
+        let remaining = originalOrder.filter { id in
+            if case let .slot(dragged) = payload { return id != dragged }
+            return true
+        }
+        previousNeighbor = index > 0 ? remaining[index - 1] : nil
+        nextNeighbor = index < remaining.count ? remaining[index] : nil
         let y = SlotBoardGeometry.placeholderMinY(at: index, top: top, restingHeights: heights, spacing: 9)
         targetFrame = CGRect(x: frozenColumn.minX, y: y, width: originFrame.width, height: originFrame.height)
         if reduceMotion {
@@ -280,7 +293,21 @@ final class SlotBoardDragController: ObservableObject {
     }
 
     private func performCommit() -> Bool {
-        guard let index = pendingIndex, let payload else { return true }
+        guard pendingIndex != nil, let payload else { return true }
+        if let reason = validateAction?(payload) {
+            discardPendingCommit(reason: reason)
+            return false
+        }
+        let draggedID: InputRole?
+        if case let .slot(id) = payload { draggedID = id } else { draggedID = nil }
+        guard let currentOrder,
+              let index = SlotDropDestination.finalIndex(
+                originalOrder: originalOrder, draggedID: draggedID,
+                previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor,
+                currentOrder: currentOrder()) else {
+            discardPendingCommit(reason: "Slots changed during the drag. Try dragging again.")
+            return false
+        }
         pendingIndex = nil // consume before invoking application code (reentrancy safe)
         let result = withAnimation(nil) { commitAction?(payload, index) ?? false }
         if result, case let .slot(id) = payload, sourceIndex != index { pulseAction?(id) }
@@ -288,6 +315,13 @@ final class SlotBoardDragController: ObservableObject {
         // reason must never overwrite a persistence/core error in that notice.
         if !result, rejectionReason == nil { rejectionReason = "The slot could not be changed." }
         return result
+    }
+
+    /// Unlike cancel(), this never force-finishes or invokes the pending write.
+    private func discardPendingCommit(reason: String) {
+        pendingIndex = nil
+        rejectionReason = reason
+        rejectAction?(reason)
     }
 
     private func rejectDrop() {
@@ -311,6 +345,10 @@ final class SlotBoardDragController: ObservableObject {
     private func clearSession() {
         motionToken = UUID()
         pendingIndex = nil
+        currentOrder = nil
+        originalOrder = []
+        previousNeighbor = nil
+        nextNeighbor = nil
         commitAction = nil
         validateAction = nil
         rejectAction = nil
