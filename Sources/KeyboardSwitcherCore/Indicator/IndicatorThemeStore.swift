@@ -71,10 +71,17 @@ public struct IndicatorThemeStore {
         return copy
     }
 
-    /// Writes "<id>.json" atomically and returns its URL.
+    /// Writes atomically and returns the file's URL. A listed theme is written back to
+    /// the file it was read from, whatever that file is called; a new theme becomes
+    /// "<id>.json", or "<id>-2.json" when that name already holds something else.
     @discardableResult
     public func saving(_ theme: IndicatorTheme) throws(IndicatorThemeStoreError) -> URL {
-        let destination = try fileURL(forID: theme.id)
+        let destination: URL
+        if let source = try sourceFile(forID: theme.id) {
+            destination = source
+        } else {
+            destination = try freeFileURL(forID: theme.id)
+        }
         try Self.writing(theme, to: destination, creating: directory)
         return destination
     }
@@ -98,11 +105,16 @@ public struct IndicatorThemeStore {
         try Self.writing(theme, to: destination, creating: nil)
     }
 
-    public func removing(id: String) throws(IndicatorThemeStoreError) {
-        let target = try fileURL(forID: id)
-        guard FileManager.default.fileExists(atPath: target.path) else { throw .notFound(id) }
+    /// Removes the file the listed theme was read from. `toTrash` moves it to the
+    /// user's Trash instead of deleting it, so a slip can be undone from Finder.
+    public func removing(id: String, toTrash: Bool = false) throws(IndicatorThemeStoreError) {
+        guard let target = try sourceFile(forID: id) else { throw .notFound(id) }
         do {
-            try FileManager.default.removeItem(at: target)
+            if toTrash {
+                try FileManager.default.trashItem(at: target, resultingItemURL: nil)
+            } else {
+                try FileManager.default.removeItem(at: target)
+            }
         } catch {
             throw .writeFailed(error.localizedDescription)
         }
@@ -114,11 +126,37 @@ public struct IndicatorThemeStore {
 
     // MARK: - Helpers
 
-    /// Only an already-sanitised id names a file, so no id can point outside the directory.
-    private func fileURL(forID id: String) throws(IndicatorThemeStoreError) -> URL {
+    private func validating(id: String) throws(IndicatorThemeStoreError) {
         guard !id.lowercased().hasPrefix(IndicatorTheme.builtInPrefix) else { throw .builtInIsReadOnly(id) }
         guard Self.sanitizedID(id) == id else { throw .invalidName(id) }
-        return directory.appendingPathComponent(id).appendingPathExtension(Self.fileExtension)
+    }
+
+    /// The file `listing()` reads this id from: the first by name among the files that
+    /// decode to it. A hand-dropped file need not be called "<id>.json".
+    private func sourceFile(forID id: String) throws(IndicatorThemeStoreError) -> URL? {
+        try validating(id: id)
+        let files = (try? FileManager.default.indicatorStoreFiles(in: directory, extensions: [Self.fileExtension])) ?? []
+        return files.first { file in
+            if case let .success(theme) = Self.reading(file) { return theme.id == id }
+            return false
+        }
+    }
+
+    /// Only an already-sanitised id names a file, so no id can point outside the
+    /// directory. A name that is taken, by another id or by a rejected file, is never
+    /// overwritten.
+    private func freeFileURL(forID id: String) throws(IndicatorThemeStoreError) -> URL {
+        try validating(id: id)
+        func candidate(_ suffix: String) -> URL {
+            directory.appendingPathComponent(id + suffix).appendingPathExtension(Self.fileExtension)
+        }
+        var destination = candidate("")
+        var ordinal = 2
+        while FileManager.default.fileExists(atPath: destination.path) {
+            destination = candidate("-\(ordinal)")
+            ordinal += 1
+        }
+        return destination
     }
 
     private static func reading(_ file: URL) -> Result<IndicatorTheme, IndicatorThemeIssue> {

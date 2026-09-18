@@ -146,8 +146,7 @@ struct IndicatorThemePicker: View {
             Button("Import...", action: importTheme)
             Button("Export...", action: exportTheme)
             Button("Remove", role: .destructive) {
-                library.removeTheme(id: selected.id)
-                model.setSwitchIndicatorThemeID(nil)
+                if library.removeTheme(id: selected.id) { model.setSwitchIndicatorThemeID(nil) }
             }
             .disabled(selected.isBuiltIn)
             Divider()

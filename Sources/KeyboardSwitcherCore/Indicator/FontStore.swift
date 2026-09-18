@@ -49,18 +49,21 @@ public struct FontStore {
     }
 
     /// Copies the file into the directory. An existing name is never overwritten:
-    /// the copy becomes "Name-2.ttf", "Name-3.ttf", and so on.
-    public func importing(from source: URL) throws(FontStoreError) -> ImportedFont {
+    /// the copy becomes "Name-2.ttf", "Name-3.ttf", and so on. A symbolic link is
+    /// resolved first, so the font itself is size-checked and copied, never the link;
+    /// the copy keeps the name the user picked.
+    public func importing(from pickedURL: URL) throws(FontStoreError) -> ImportedFont {
         let fileManager = FileManager.default
-        let fileExtension = source.pathExtension.lowercased()
-        guard Self.allowedExtensions.contains(fileExtension) else { throw .unsupportedType(source.pathExtension) }
+        let source = pickedURL.resolvingSymlinksInPath()
+        let fileExtension = pickedURL.pathExtension.lowercased()
+        guard Self.allowedExtensions.contains(fileExtension) else { throw .unsupportedType(pickedURL.pathExtension) }
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: source.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
-            throw .notFound(source.lastPathComponent)
+            throw .notFound(pickedURL.lastPathComponent)
         }
         if let size = fileManager.indicatorFileSize(at: source), size > Self.maxFileBytes { throw .tooLarge(size) }
-        guard let fileName = Self.sanitizedFileName(source.lastPathComponent) else {
-            throw .invalidName(source.lastPathComponent)
+        guard let fileName = Self.sanitizedFileName(pickedURL.lastPathComponent) else {
+            throw .invalidName(pickedURL.lastPathComponent)
         }
 
         let stem = (fileName as NSString).deletingPathExtension

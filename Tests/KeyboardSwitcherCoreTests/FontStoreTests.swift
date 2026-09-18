@@ -39,6 +39,18 @@ final class FontStoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
     }
 
+    func testImportingALinkCopiesTheFontItself() throws {
+        let real = try makeFile("Real.ttf", bytes: 32)
+        let link = root.appendingPathComponent("Link.ttf")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: real)
+
+        let imported = try store.importing(from: link)
+
+        XCTAssertEqual(imported.fileName, "Link.ttf")
+        XCTAssertEqual(try store.list(), [imported])
+        XCTAssertEqual(try Data(contentsOf: imported.url).count, 32)
+    }
+
     func testImportRejectsWrongTypeMissingAndOversizedFiles() throws {
         XCTAssertThrowsError(try store.importing(from: try makeFile("font.woff2"))) {
             XCTAssertEqual($0 as? FontStoreError, .unsupportedType("woff2"))

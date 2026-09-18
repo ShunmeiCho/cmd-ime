@@ -80,9 +80,12 @@ final class IndicatorLibrary: ObservableObject {
         perform { try themeStore.exporting(exported, to: url) }
     }
 
-    func removeTheme(id: String) {
+    /// Moves the theme file to the Trash: an edited theme has no original elsewhere,
+    /// so a slip stays recoverable from Finder. False when nothing was removed.
+    @discardableResult
+    func removeTheme(id: String) -> Bool {
         perform {
-            try themeStore.removing(id: id)
+            try themeStore.removing(id: id, toTrash: true)
             reloadThemes()
         }
     }

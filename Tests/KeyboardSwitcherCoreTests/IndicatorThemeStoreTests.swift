@@ -103,6 +103,38 @@ final class IndicatorThemeStoreTests: XCTestCase {
         XCTAssertEqual(store.listing().themes.last?.id, imported.id)
     }
 
+    func testAHandDroppedFileIsEditedAndRemovedInPlace() throws {
+        try write(#"{"schemaVersion": 1, "cornerRadius": 10}"#, as: "My Theme.json")
+        var theme = try XCTUnwrap(store.listing().themes.last)
+        XCTAssertEqual(theme.id, "my-theme")
+
+        theme.cornerRadius = 20
+        let saved = try store.saving(theme)
+
+        XCTAssertEqual(saved.lastPathComponent, "My Theme.json")
+        XCTAssertEqual(store.listing().themes.last?.cornerRadius, 20)
+        XCTAssertTrue(store.listing().rejected.isEmpty)
+
+        try store.removing(id: "my-theme")
+        XCTAssertEqual(store.listing().themes, BuiltInIndicatorThemes.all)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: store.directory.path), [])
+    }
+
+    func testANewThemeNeverOverwritesAnotherFile() throws {
+        try write(#"{"schemaVersion": 1, "id": "bar", "name": "Bar"}"#, as: "foo.json")
+        try write("{", as: "foo-2.json")
+        let source = root.appendingPathComponent("incoming.json")
+        try Data(#"{"schemaVersion": 1, "id": "foo", "name": "Foo"}"#.utf8).write(to: source)
+
+        let imported = try store.importing(from: source, existing: store.listing().themes)
+
+        XCTAssertEqual(imported.id, "foo")
+        let listing = store.listing()
+        XCTAssertEqual(listing.themes.suffix(2).map(\.id), ["bar", "foo"])
+        XCTAssertEqual(listing.rejected.map(\.fileName), ["foo-2.json"])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.directory.appendingPathComponent("foo-3.json").path))
+    }
+
     func testImportValidatesBeforeCopying() throws {
         let source = root.appendingPathComponent("bad.json")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
