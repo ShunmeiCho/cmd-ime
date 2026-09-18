@@ -39,6 +39,8 @@ final class AppModel: ObservableObject {
     }
 
     private let configStore: ConfigStore
+    /// Capture first-run detection once; later saves must not make this an upgrade.
+    let isFreshConfig: Bool
     private let inputSources = MacInputSourceService()
     private let loginItems = LoginItemService()
     private let switchIndicator = InputIndicatorController()
@@ -72,7 +74,7 @@ final class AppModel: ObservableObject {
         slotNotices[role] = message
     }
 
-    private static var currentVersion: String {
+    static var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
 
@@ -95,6 +97,7 @@ final class AppModel: ObservableObject {
             recoveryMessage = "Could not read config: \(error.localizedDescription). Using defaults."
         }
 
+        self.isFreshConfig = isFirstRun
         self.config = initialConfig
         self.updateStatus = .idle(currentVersion: Self.currentVersion)
         let scanSucceeded = scan()
@@ -579,6 +582,14 @@ final class AppModel: ObservableObject {
         case let .swap(other): "\(source.localizedName) — swap with \(config.displayName(for: other))"
         case let .usedBy(other): "\(source.localizedName) — used by \(config.displayName(for: other))"
         default: source.localizedName
+        }
+    }
+
+    func dismissWhatsNew() {
+        let previousVersion = config.lastSeenWhatsNewVersion
+        config.lastSeenWhatsNewVersion = Self.currentVersion
+        if !save() {
+            config.lastSeenWhatsNewVersion = previousVersion
         }
     }
 

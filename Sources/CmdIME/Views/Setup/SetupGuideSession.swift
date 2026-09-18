@@ -5,8 +5,8 @@ import SwiftUI
 
 typealias SetupTriggerEvents = PassthroughSubject<SetupTriggeredSwitch, Never>
 
-/// Session-only state of the setup guide. Nothing here is persisted; the only stored
-/// fact is `SwitcherConfig.hasCompletedSetup`.
+/// Session-only state of the setup guide. Completion and the seen release version
+/// are stored separately in `SwitcherConfig`.
 struct SetupGuideSession: Equatable {
     /// The user pressed "Looks right" in the review step.
     var hasConfirmedSlots = false
@@ -40,8 +40,7 @@ extension AppModel {
     /// Finish or Skip. The guide closes for this session even when the save fails,
     /// so the window can never get stuck behind it; `statusText` carries the error.
     func completeSetup() {
-        guard !config.hasCompletedSetup else { return }
-        config = config.completingSetup()
+        config = config.completingSetup(whatsNewVersion: Self.currentVersion)
         save()
     }
 }

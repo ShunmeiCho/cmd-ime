@@ -19,6 +19,7 @@ struct ContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
                 SettingsHeader(model: model, status: runtimeStatus, onPrimaryAction: performHeaderAction)
+                WhatsNewNoticeBar(model: model, isSetupGuideReopened: setupSession.isReopened)
                 SetupGuideCard(model: model, session: $setupSession, scroll: scroll, resetDrafts: resetDrafts)
                 SlotBoardSection(
                     model: model,
