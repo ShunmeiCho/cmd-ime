@@ -32,7 +32,7 @@ struct ContentView: View {
                 )
                 .setupFold(.slotBoard)
 
-                IndicatorSettingsCard(model: model)
+                IndicatorSettingsSection(model: model)
                     .setupFold(.indicator)
                     .frame(maxWidth: .infinity)
             }
@@ -69,10 +69,6 @@ struct ContentView: View {
         )
         triggerTypeDrafts.removeAll()
     }
-}
-
-private enum SettingsLayout {
-    static let bottomCardMinHeight: CGFloat = 386
 }
 
 @MainActor
@@ -445,252 +441,6 @@ private struct LiveStripKey: View {
     }
 }
 
-private struct IndicatorSettingsCard: View {
-    @ObservedObject var model: AppModel
-
-    var body: some View {
-        CompactSection(title: "Switch indicator", minHeight: SettingsLayout.bottomCardMinHeight) {
-            VStack(alignment: .leading, spacing: 10) {
-                CompactSettingRow("Enabled") {
-                    Toggle(
-                        "Show switch indicator",
-                        isOn: Binding(
-                            get: { model.config.showSwitchIndicator },
-                            set: { model.setSwitchIndicatorVisible($0) }
-                        )
-                    )
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .tint(DesignTokens.Colors.success)
-                    .controlSize(.small)
-                    Spacer()
-                }
-
-                IndicatorPreview(model: model)
-                    .opacity(model.config.showSwitchIndicator ? 1 : 0.45)
-
-                Text("Appears near the focused caret after each switch.")
-                    .font(.caption)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-
-                CompactSettingRow("Display") {
-                    ConsoleSegmentedControl(
-                        options: SwitchIndicatorContentStyle.allCases.map {
-                            ConsoleSegmentOption(value: $0, label: $0.displayName)
-                        },
-                        selection: Binding(
-                            get: { model.config.switchIndicatorContentStyle },
-                            set: { model.setSwitchIndicatorContentStyle($0) }
-                        )
-                    )
-                    .frame(width: 202)
-                }
-
-                CompactSettingRow("Size") {
-                    ConsoleSegmentedControl(
-                        options: SwitchIndicatorSize.allCases.map {
-                            ConsoleSegmentOption(value: $0, label: $0.displayName)
-                        },
-                        selection: Binding(
-                            get: { model.config.switchIndicatorSize },
-                            set: { model.setSwitchIndicatorSize($0) }
-                        )
-                    )
-                    .frame(width: 160)
-                }
-
-                CompactSettingRow("Scale \(Int((model.config.switchIndicatorScale * 100).rounded()))%") {
-                    Slider(
-                        value: Binding(
-                            get: { model.config.switchIndicatorScale },
-                            set: { model.setSwitchIndicatorScale($0) }
-                        ),
-                        in: SwitcherConfig.minSwitchIndicatorScale...SwitcherConfig.maxSwitchIndicatorScale,
-                        step: 0.05
-                    )
-                    Button("Reset") {
-                        model.setSwitchIndicatorScale(SwitcherConfig.defaultSwitchIndicatorScale)
-                    }
-                    .buttonStyle(ConsoleButtonStyle())
-                }
-
-                CompactSettingRow("Color") {
-                    IndicatorColorSwatches(
-                        selection: Binding(
-                            get: { model.config.switchIndicatorColorStyle },
-                            set: { model.setSwitchIndicatorColorStyle($0) }
-                        ),
-                        customColor: model.previewSlot.map { slot in
-                            Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: slot.id))
-                                ?? Color(cmdIMEHex: slot.tintHex) ?? DesignTokens.Colors.accent
-                        } ?? DesignTokens.Colors.accent
-                    )
-
-                    Text(model.config.switchIndicatorColorStyle.settingDescription)
-                        .font(.caption2)
-                        .foregroundStyle(DesignTokens.Colors.textMuted)
-                }
-
-                if model.config.switchIndicatorColorStyle == .custom {
-                    CompactSettingRow("Custom") {
-                        CustomRoleColorControls(model: model)
-                    }
-                }
-            }
-        }
-    }
-}
-
-private struct CustomRoleColorControls: View {
-    @Environment(\.slotLook) private var slotLook
-    @ObservedObject var model: AppModel
-
-    var body: some View {
-        HStack(spacing: 8) {
-            ForEach(model.config.slots) { slot in
-                let role = slot.id
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(slotLook.name(for: role))
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(DesignTokens.Colors.textMuted)
-                        .lineLimit(1)
-
-                    ColorPicker(
-                        slotLook.name(for: role),
-                        selection: Binding(
-                            get: {
-                                Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: role))
-                                    ?? slotLook.tint(for: role)
-                            },
-                            set: { color in
-                                if let hex = color.cmdIMEHexString {
-                                    model.setSwitchIndicatorCustomColorHex(hex, for: role)
-                                }
-                            }
-                        ),
-                        supportsOpacity: false
-                    )
-                    .labelsHidden()
-                    .frame(width: 34, height: 24)
-                }
-                .frame(width: 58, alignment: .leading)
-            }
-        }
-    }
-}
-
-private struct IndicatorPreview: View {
-    @Environment(\.slotLook) private var slotLook
-    @ObservedObject var model: AppModel
-
-    var body: some View {
-        if let slot = model.previewSlot {
-            preview(for: slot)
-        }
-    }
-
-    private func preview(for slot: SwitchSlot) -> some View {
-        let role = slot.id
-        let source = model.matchedSource(for: role)
-        let presentation = InputSourcePresentation(source: source, slot: slot)
-        let tint = indicatorTint(for: role, presentation: presentation)
-
-        return ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(DesignTokens.Colors.surfaceInset)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(DesignTokens.Colors.separator, lineWidth: 1)
-                )
-
-            HStack(alignment: .center, spacing: 2) {
-                Text("The quick brown fox")
-                    .font(.caption)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-                RoundedRectangle(cornerRadius: 1, style: .continuous)
-                    .fill(DesignTokens.Colors.textSecondary.opacity(0.86))
-                    .frame(width: 1.5, height: 16)
-                    .shadow(color: tint.opacity(0.34), radius: 5)
-            }
-            .padding(.top, 14)
-            .padding(.leading, 14)
-
-            HStack(spacing: 8) {
-                if model.config.switchIndicatorContentStyle != .textOnly {
-                    Text(presentation.symbol)
-                        .font(.system(size: 16, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(tint)
-                        .frame(width: 30, height: 30)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(tint.opacity(0.18))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                        .stroke(tint.opacity(0.45), lineWidth: 1)
-                                )
-                        )
-                }
-
-                if model.config.switchIndicatorContentStyle != .iconOnly {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(presentation.title)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(DesignTokens.Colors.textPrimary)
-                        if model.config.switchIndicatorContentStyle == .iconAndText {
-                            Text(presentation.detail)
-                                .font(.caption2)
-                                .foregroundStyle(DesignTokens.Colors.textSecondary)
-                                .lineLimit(1)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.12), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.40), radius: 14, y: 8)
-            .scaleEffect(previewScale, anchor: .topLeading)
-            .offset(x: 154, y: 42)
-            .animation(DesignTokens.Motion.stateChange, value: model.config.switchIndicatorContentStyle)
-            .animation(DesignTokens.Motion.stateChange, value: model.config.switchIndicatorSize)
-            .animation(DesignTokens.Motion.stateChange, value: model.config.switchIndicatorScale)
-            .animation(DesignTokens.Motion.stateChange, value: model.config.switchIndicatorColorStyle)
-        }
-        .frame(height: 112)
-        .clipped()
-    }
-
-    private var previewScale: CGFloat {
-        let sizeScale: CGFloat
-        switch model.config.switchIndicatorSize {
-        case .small:
-            sizeScale = 0.86
-        case .medium:
-            sizeScale = 1.0
-        case .large:
-            sizeScale = 1.14
-        }
-        return min(sizeScale * CGFloat(model.config.switchIndicatorScale), 1.08)
-    }
-
-    private func indicatorTint(for role: InputRole, presentation: InputSourcePresentation) -> Color {
-        switch model.config.switchIndicatorColorStyle {
-        case .accent:
-            DesignTokens.Colors.accent
-        case .monochrome:
-            DesignTokens.Colors.textSecondary
-        case .custom:
-            Color(cmdIMEHex: model.config.switchIndicatorCustomColorHex(for: role)) ?? slotLook.tint(for: role)
-        case .role:
-            presentation.tint
-        }
-    }
-}
-
 struct CompactSection<Content: View>: View {
     let title: String
     var minHeight: CGFloat?
@@ -720,7 +470,7 @@ struct CompactSection<Content: View>: View {
     }
 }
 
-private struct CompactSettingRow<Content: View>: View {
+struct CompactSettingRow<Content: View>: View {
     let title: String
     @ViewBuilder let content: () -> Content
 
@@ -811,79 +561,6 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
     }
 }
 
-private struct IndicatorColorSwatches: View {
-    @Environment(\.slotLook) private var slotLook
-    @Binding var selection: SwitchIndicatorColorStyle
-    let customColor: Color
-
-    var body: some View {
-        HStack(spacing: 7) {
-            ForEach(SwitchIndicatorColorStyle.allCases) { style in
-                Button {
-                    selection = style
-                } label: {
-                    swatch(for: style)
-                        .frame(width: 22, height: 22)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .stroke(borderColor(for: style), lineWidth: selection == style ? 2 : 1)
-                        )
-                        .shadow(color: selection == style ? borderColor(for: style).opacity(0.34) : .clear, radius: 6)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(style.displayName)
-                .accessibilityValue(selection == style ? "Selected" : "Not selected")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func swatch(for style: SwitchIndicatorColorStyle) -> some View {
-        switch style {
-        case .role:
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: slotLook.slots.map { slotLook.tint(for: $0.id) },
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        case .accent:
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(DesignTokens.Colors.accent)
-        case .monochrome:
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.80), Color.white.opacity(0.42)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-        case .custom:
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(customColor)
-        }
-    }
-
-    private func borderColor(for style: SwitchIndicatorColorStyle) -> Color {
-        if selection == style {
-            switch style {
-            case .role:
-                return DesignTokens.Colors.success
-            case .accent:
-                return DesignTokens.Colors.accent
-            case .monochrome:
-                return DesignTokens.Colors.textSecondary
-            case .custom:
-                return customColor
-            }
-        }
-        return DesignTokens.Colors.separatorStrong
-    }
-}
-
 struct SectionLabel: View {
     let title: String
 
@@ -897,20 +574,5 @@ struct SectionLabel: View {
             .tracking(1.4)
             .foregroundStyle(DesignTokens.Colors.textMuted)
             .accessibilityAddTraits(.isHeader)
-    }
-}
-
-private extension SwitchIndicatorColorStyle {
-    var settingDescription: String {
-        switch self {
-        case .role:
-            "Follows active slot"
-        case .accent:
-            "Accent blue"
-        case .monochrome:
-            "Neutral gray"
-        case .custom:
-            "Custom color"
-        }
     }
 }

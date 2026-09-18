@@ -20,6 +20,10 @@ _Avoid_: Shortcut, hotkey
 The first-run checklist card in Settings that walks permissions, the detected slots and a first switch. It is finished or skipped once, and can be replayed from Runtime.
 _Avoid_: Wizard, onboarding, tutorial
 
+**Indicator Theme**:
+A named description of how the switch indicator looks: layout, surface, inks, shape and type. Built-in and user themes are the same kind of thing; the config stores only which one is selected.
+_Avoid_: Skin, style preset
+
 ## Dynamic slots (PR1)
 
 The ordered `config.slots` collection stores stable `InputRole` string IDs,

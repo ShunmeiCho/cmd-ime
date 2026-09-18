@@ -4,15 +4,18 @@ public struct SwitchSlot: Codable, Equatable, Identifiable, Sendable {
     public let id: InputRole
     public var name: String
     public var tintHex: String
+    /// One or two characters shown instead of the automatic symbol; nil follows the rule.
+    public var symbol: String?
 
-    public init(id: InputRole, name: String, tintHex: String) {
+    public init(id: InputRole, name: String, tintHex: String, symbol: String? = nil) {
         self.id = id
         self.name = name
         self.tintHex = tintHex
+        self.symbol = symbol
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, name, tintHex
+        case id, name, tintHex, symbol
     }
 
     public init(from decoder: Decoder) throws {
@@ -23,6 +26,10 @@ public struct SwitchSlot: Codable, Equatable, Identifiable, Sendable {
             ?? Self.legacyDefaults.first(where: { $0.id == decodedID })?.name ?? decodedID.rawValue
         tintHex = try container.decodeIfPresent(String.self, forKey: .tintHex)
             ?? SlotPalette.nextColor(for: id, used: [])
+        // A stored value that fails validation is dropped so the file still loads.
+        symbol = SlotSymbolResolver.validatedOverride(
+            (try? container.decodeIfPresent(String.self, forKey: .symbol)) ?? nil
+        )
     }
 
     public static let legacyDefaults: [SwitchSlot] = [
@@ -36,11 +43,12 @@ public enum SlotPalette {
     public static let colors = ["#4D8CFF", "#33A854", "#E3574A", "#9664D8", "#E49B35", "#32A6A8", "#D65B99", "#788697"]
 
     public static func nextColor(for id: InputRole, used: [String]) -> String {
-        let used = Set(used.map { $0.uppercased() })
-        if let legacy = SwitchSlot.legacyDefaults.first(where: { $0.id == id }), !used.contains(legacy.tintHex) {
+        let taken = Set(used.map { $0.uppercased() })
+        if let legacy = SwitchSlot.legacyDefaults.first(where: { $0.id == id }), !taken.contains(legacy.tintHex) {
             return legacy.tintHex
         }
-        return colors.first { !used.contains($0) } ?? colors[used.count % colors.count]
+        // Past the last free colour the palette cycles by slot count, not by distinct colours.
+        return colors.first { !taken.contains($0) } ?? colors[used.count % colors.count]
     }
 }
 
@@ -71,6 +79,8 @@ public enum SlotError: Error, Equatable, LocalizedError, Sendable {
     case slotAlreadyExists(InputRole)
     /// The source has an empty ID, is not selectable, or is an auxiliary source.
     case invalidSource
+    /// A slot symbol override that is not one or two visible characters.
+    case invalidSymbol(String)
 
     public var errorDescription: String? {
         switch self {
@@ -82,6 +92,7 @@ public enum SlotError: Error, Equatable, LocalizedError, Sendable {
         case let .unknownSlot(id): "Unknown slot \"\(id.rawValue)\"."
         case let .slotAlreadyExists(id): "Slot \"\(id.rawValue)\" already exists."
         case .invalidSource: "Choose a selectable input source."
+        case let .invalidSymbol(input): "Invalid slot symbol \(input.debugDescription). Use one or two characters."
         }
     }
 }
@@ -156,6 +167,7 @@ extension SwitcherConfig {
     public func migrated() -> SwitcherConfig {
         var result = self
         result.version = max(version, Self.currentVersion)
+        result = result.retiringCustomIndicatorColors()
         return result
     }
 

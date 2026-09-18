@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         Self.installMainMenu()
         AppWindowCoordinator.shared.setModel(model)
+        // Creating the indicator library registers the imported fonts for this process.
+        _ = model.indicatorLibrary
         if !Self.wasLaunchedAsLoginItem() {
             AppWindowCoordinator.shared.showSettings()
         }

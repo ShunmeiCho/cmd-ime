@@ -43,7 +43,7 @@ final class AppModel: ObservableObject {
     let isFreshConfig: Bool
     private let inputSources = MacInputSourceService()
     private let loginItems = LoginItemService()
-    private let switchIndicator = InputIndicatorController()
+    private(set) lazy var switchIndicator = InputIndicatorController(configStore: configStore)
     private let updates = UpdateService()
     private var monitor: EventTapMonitor?
     private var recordingRole: InputRole?
@@ -329,18 +329,6 @@ final class AppModel: ObservableObject {
         config.switchIndicatorContentStyle = style
         save()
         statusText = "Switch indicator display set to \(style.displayName)"
-    }
-
-    func setSwitchIndicatorCustomColorHex(_ hex: String) {
-        config.switchIndicatorCustomColorHex = hex
-        save()
-        statusText = "Switch indicator custom color set to \(hex)"
-    }
-
-    func setSwitchIndicatorCustomColorHex(_ hex: String, for role: InputRole) {
-        config.setSwitchIndicatorCustomColorHex(hex, for: role)
-        save()
-        statusText = "\(config.displayName(for: role)) indicator custom color set to \(hex)"
     }
 
     var previewSlot: SwitchSlot? {
@@ -853,19 +841,12 @@ final class AppModel: ObservableObject {
     }
 
     private func showSwitchIndicator(for role: InputRole, source: InputSourceInfo) {
+        let previous = activeRole
         activeRole = role
-        guard config.showSwitchIndicator, let slot = config.slot(role) else {
+        guard config.showSwitchIndicator else {
             return
         }
-        switchIndicator.show(
-            slot: slot,
-            source: source,
-            size: config.switchIndicatorSize,
-            scale: config.switchIndicatorScale,
-            colorStyle: config.switchIndicatorColorStyle,
-            contentStyle: config.switchIndicatorContentStyle,
-            customColorHex: config.switchIndicatorCustomColorHex(for: role)
-        )
+        switchIndicator.show(slotID: role, previousSlotID: previous, source: source, config: config, sources: sources)
     }
 
     private func readableOneShotName(_ keyName: String) -> String {

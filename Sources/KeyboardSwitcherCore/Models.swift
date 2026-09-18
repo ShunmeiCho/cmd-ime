@@ -202,6 +202,9 @@ public enum SwitchIndicatorColorStyle: String, Codable, CaseIterable, Identifiab
     case monochrome
     case custom
 
+    /// What the settings offer. `custom` still decodes and is retired by migration.
+    public static let selectable: [SwitchIndicatorColorStyle] = [.role, .accent, .monochrome]
+
     public var id: String {
         rawValue
     }
@@ -260,6 +263,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var switchIndicatorContentStyle: SwitchIndicatorContentStyle
     public var switchIndicatorCustomColorHex: String
     public var switchIndicatorCustomRoleColorHexes: [String: String]
+    /// Nil selects the default built-in theme. An unknown id is kept as stored.
+    public var switchIndicatorThemeID: String?
     public var bindings: [KeyBinding]
     public var inputSources: [String: RoleInputSourcePreference]
 
@@ -275,6 +280,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         switchIndicatorContentStyle: SwitchIndicatorContentStyle = .iconAndText,
         switchIndicatorCustomColorHex: String = "#2F7CF6",
         switchIndicatorCustomRoleColorHexes: [String: String] = [:],
+        switchIndicatorThemeID: String? = nil,
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
@@ -289,6 +295,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.switchIndicatorContentStyle = switchIndicatorContentStyle
         self.switchIndicatorCustomColorHex = switchIndicatorCustomColorHex
         self.switchIndicatorCustomRoleColorHexes = switchIndicatorCustomRoleColorHexes
+        self.switchIndicatorThemeID = switchIndicatorThemeID
         self.bindings = bindings
         self.inputSources = inputSources
     }
@@ -439,6 +446,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case switchIndicatorContentStyle
         case switchIndicatorCustomColorHex
         case switchIndicatorCustomRoleColorHexes
+        case switchIndicatorThemeID
         case bindings
         case inputSources
     }
@@ -470,6 +478,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             [String: String].self,
             forKey: .switchIndicatorCustomRoleColorHexes
         ) ?? [:]
+        switchIndicatorThemeID = try container.decodeIfPresent(String.self, forKey: .switchIndicatorThemeID)
         bindings = try container.decode([KeyBinding].self, forKey: .bindings)
         inputSources = try container.decode([String: RoleInputSourcePreference].self, forKey: .inputSources)
         slots = Self.normalizedSlots(
@@ -491,6 +500,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(switchIndicatorContentStyle, forKey: .switchIndicatorContentStyle)
         try container.encode(switchIndicatorCustomColorHex, forKey: .switchIndicatorCustomColorHex)
         try container.encode(switchIndicatorCustomRoleColorHexes, forKey: .switchIndicatorCustomRoleColorHexes)
+        try container.encodeIfPresent(switchIndicatorThemeID, forKey: .switchIndicatorThemeID)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }

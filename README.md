@@ -229,10 +229,17 @@ chooser by accident.
 
 CmdIME switches input sources programmatically, so it does not invoke the
 private macOS input-source chooser. Enable `Show switch indicator` to show
-CmdIME's own lightweight confirmation bubble after a switch. The indicator can
-be disabled, resized with presets and a scale slider, switched between
-icon/text display modes, or recolored with slot colors, the system accent color,
-monochrome, or a custom color in Settings.
+CmdIME's own lightweight confirmation bubble after a switch. In Settings the
+indicator can be disabled, given one of the built-in themes (glass, paper with
+one or two inks, text only, tile only, a single line, or a switcher that shows
+every slot), resized with presets and a scale slider, switched between icon/text
+display modes, and colored from each slot's own color, the system accent color
+or monochrome. Font family, weight and text size belong to the theme; editing a
+built-in theme makes a copy. Custom themes live as JSON files in
+`~/.config/cmd-ime/themes` and imported fonts in `~/.config/cmd-ime/fonts`
+(both beside the config file); fonts are registered for CmdIME only and nothing
+is installed system-wide. A theme file may have any name; removing a theme in
+Settings moves its file to the Trash.
 
 If Japanese opens a kana palette instead of switching to Hiragana, refresh input
 sources or update to CmdIME 0.1.10 or later. macOS exposes
