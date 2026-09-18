@@ -28,10 +28,11 @@ final class TriggerRecordingSession: ObservableObject {
     private var onCommit: ((KeyTrigger?) -> String?)?
     private var eligibility = TriggerRecordingDraftEligibility()
     private var onDismiss: (() -> Void)?
+    private var warningBlocksSave = true
 
     init() {}
 
-    var canSave: Bool { isRecording && eligibility.hasDraft && warning == nil }
+    var canSave: Bool { isRecording && eligibility.hasDraft && (warning == nil || !warningBlocksSave) }
 
     func cancel() { end(reason: .cancelled) }
 
@@ -50,7 +51,7 @@ final class TriggerRecordingSession: ObservableObject {
             reject(error)
             return
         }
-        guard warning == nil else { return }
+        guard warning == nil || !warningBlocksSave else { return }
         commit(draft)
     }
 
@@ -260,13 +261,14 @@ final class TriggerRecordingSession: ObservableObject {
         let error = onCommit(trigger)
         guard isRecording, sessionID == generation else { return }
         if let error {
-            reject(error)
+            reject(error, blocksSave: false)
         } else {
             end(reason: .committed, sessionID: generation)
         }
     }
 
-    private func reject(_ message: String) {
+    private func reject(_ message: String, blocksSave: Bool = true) {
+        warningBlocksSave = blocksSave
         warning = message
         rejectionRevision += 1
         announce(message)
