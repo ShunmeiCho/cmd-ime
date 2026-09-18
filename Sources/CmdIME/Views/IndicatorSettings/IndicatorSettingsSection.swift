@@ -8,11 +8,12 @@ enum IndicatorPreviewModel {
     /// Miniatures are drawn at the smallest scale the Scale setting allows.
     static let miniatureScale = SwitcherConfig.minSwitchIndicatorScale
 
+    /// The appearance always comes from the system, as it does for the live panel:
+    /// the preview must show the glass the user will really get over either page.
     static func make(
         model: AppModel,
         slot: SwitchSlot,
         previous: InputRole? = nil,
-        isDark: Bool,
         miniatureOf theme: IndicatorTheme? = nil
     ) -> BubbleRenderModel? {
         var config = model.config
@@ -28,7 +29,7 @@ enum IndicatorPreviewModel {
             slotID: slot.id,
             previousSlotID: previous,
             source: model.matchedSource(for: slot.id),
-            context: .current(isDarkAppearance: isDark)
+            context: .current()
         )
     }
 }

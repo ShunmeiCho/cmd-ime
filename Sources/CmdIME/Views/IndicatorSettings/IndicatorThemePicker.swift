@@ -88,7 +88,7 @@ struct IndicatorThemePicker: View {
     @ViewBuilder
     private func miniature(for theme: IndicatorTheme, fitting size: CGSize) -> some View {
         if let slot = model.config.slots.first,
-           let bubble = IndicatorPreviewModel.make(model: model, slot: slot, isDark: true, miniatureOf: theme) {
+           let bubble = IndicatorPreviewModel.make(model: model, slot: slot, miniatureOf: theme) {
             let natural = naturalSize(of: bubble)
             let available = CGSize(width: size.width - 2 * Self.stagePadding, height: size.height - 2 * Self.stagePadding)
             let scale = min(1, available.width / max(natural.width, 1), available.height / max(natural.height, 1))

@@ -28,6 +28,8 @@ struct IndicatorPreviewRow: View {
     @State private var slotStep = 0
     @State private var previousSlot: InputRole?
     @State private var isShown = true
+    @State private var bubbleWidth: CGFloat = 0
+    @State private var stageWidth: CGFloat = 0
 
     var body: some View {
         let current = currentModel
@@ -42,6 +44,11 @@ struct IndicatorPreviewRow: View {
                 .frame(width: 176)
                 .accessibilityLabel("Preview background")
                 Spacer(minLength: 0)
+                if fit.scale < 1 {
+                    Text("Shown at \(Int((fit.scale * 100).rounded())) percent")
+                        .font(.caption)
+                        .foregroundStyle(DesignTokens.Colors.textSecondary)
+                }
                 Button("Next slot", action: showNextSlot)
                     .buttonStyle(ConsoleButtonStyle())
                     .disabled(model.config.slots.count < 2)
@@ -58,6 +65,16 @@ struct IndicatorPreviewRow: View {
     }
 
     // MARK: - Stage
+
+    /// A bubble wider than the stage first gives up its leading inset, then is scaled
+    /// down, so large Size, Scale and Text values are never shown cut off.
+    private var fit: (leading: CGFloat, scale: CGFloat) {
+        guard bubbleWidth > 0, stageWidth > 0 else { return (Self.bubbleLeading, 1) }
+        let available = stageWidth - 2 * Self.pagePadding
+        let scale = min(1, available / bubbleWidth)
+        let leading = min(Self.bubbleLeading, stageWidth - Self.pagePadding - bubbleWidth * scale)
+        return (max(Self.pagePadding, leading), scale)
+    }
 
     private func stage(_ current: BubbleRenderModel?) -> some View {
         let isDarkPage = page == .dark
@@ -83,13 +100,24 @@ struct IndicatorPreviewRow: View {
 
             if let shown = state.model {
                 SwitchBubbleView(model: shown, mode: .preview, presentation: state.presentation)
+                    .fixedSize()
+                    .background(GeometryReader { proxy in
+                        Color.clear.preference(key: PreviewWidthKey.self, value: proxy.size.width)
+                    })
+                    .onPreferenceChange(PreviewWidthKey.self) { bubbleWidth = $0 }
+                    .scaleEffect(fit.scale, anchor: .bottomLeading)
                     .opacity(isShown ? 1 : 0)
                     .offset(y: isShown || reduceMotion ? 0 : BubbleMotion.riseDistance)
-                    .padding(.leading, Self.bubbleLeading)
+                    .padding(.leading, fit.leading)
                     .padding(.bottom, caretTop + Self.bubbleLift)
             }
         }
         .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .bottomLeading)
+        .background(GeometryReader { proxy in
+            Color.clear
+                .onAppear { stageWidth = proxy.size.width }
+                .onChange(of: proxy.size.width) { stageWidth = $0 }
+        })
         .clipShape(RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
@@ -113,7 +141,7 @@ struct IndicatorPreviewRow: View {
 
     private var currentModel: BubbleRenderModel? {
         previewedSlot.flatMap {
-            IndicatorPreviewModel.make(model: model, slot: $0, previous: previousSlot, isDark: page == .dark)
+            IndicatorPreviewModel.make(model: model, slot: $0, previous: previousSlot)
         }
     }
 
@@ -133,5 +161,13 @@ struct IndicatorPreviewRow: View {
         DispatchQueue.main.async {
             withAnimation(BubbleMotion.easeOut(duration: duration)) { isShown = true }
         }
+    }
+}
+
+private struct PreviewWidthKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
