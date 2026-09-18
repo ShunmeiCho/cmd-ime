@@ -2,6 +2,11 @@ import AppKit
 import Foundation
 import KeyboardSwitcherCore
 
+enum BoardNotice: Equatable {
+    case rejected(String)
+    case removed(slotName: String)
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var config: SwitcherConfig
@@ -14,6 +19,9 @@ final class AppModel: ObservableObject {
     @Published var loginItem = LoginItemService().snapshot()
     @Published var updateStatus: UpdateStatus
     @Published private(set) var slotNotices: [InputRole: String] = [:]
+
+    @Published private(set) var boardNotice: BoardNotice?
+    private var pendingUndo: RemovedSlot?
 
     private let configStore: ConfigStore
     private let inputSources = MacInputSourceService()
@@ -239,6 +247,7 @@ final class AppModel: ObservableObject {
         guard scan() else { return }
         do {
             let rebuilt = try configStore.resettingSlots(in: config, from: sources)
+            invalidateUndo()
             config = rebuilt
             activeRole = nil
             monitor?.updateConfig(rebuilt)
@@ -281,6 +290,7 @@ final class AppModel: ObservableObject {
             }
         }
 
+        invalidateUndo()
         config = nextConfig
         if save() {
             statusText = (["Updated input sources from scan"] + warnings).joined(separator: ". ")
@@ -291,6 +301,136 @@ final class AppModel: ObservableObject {
         InputSourceMatcher.selectableSources(from: sources)
     }
 
+    var unassignedSources: [InputSourceInfo] {
+        config.unassignedSources(from: sources)
+    }
+
+    func sourceUsage(of source: InputSourceInfo) -> SlotSourceUsage {
+        config.sourceUsage(of: source, among: sources)
+    }
+
+    @discardableResult
+    func addSlot(sourceID: String, at index: Int?) -> InputRole? {
+        guard let source = selectableSources.first(where: { $0.id == sourceID }) else {
+            reportBoardFailure(SlotError.invalidSource.localizedDescription)
+            return nil
+        }
+        switch sourceUsage(of: source) {
+        case .available: break
+        case let .owned(owner):
+            reportBoardFailure("Already in slot \(config.displayName(for: owner))")
+            return nil
+        case let .resolved(owner, _):
+            reportBoardFailure("Fallback for \(config.displayName(for: owner))")
+            return nil
+        }
+        do {
+            let added = try config.addingSlot(for: source, at: index)
+            guard commit(added.config) else { return nil }
+            invalidateUndo()
+            boardNotice = nil
+            statusText = "Added slot \(added.slot.name)"
+            return added.slot.id
+        } catch {
+            reportBoardFailure(error.localizedDescription)
+            return nil
+        }
+    }
+
+    func moveSlot(_ id: InputRole, toFinalIndex index: Int) {
+        guard let source = config.slots.firstIndex(where: { $0.id == id }) else { return }
+        commitMove(config.movingSlot(from: source, to: index), id: id)
+    }
+
+    func moveSlot(_ id: InputRole, by offset: Int) {
+        commitMove(config.movingSlot(id, by: offset), id: id)
+    }
+
+    private func commitMove(_ next: SwitcherConfig, id: InputRole) {
+        guard next.slots != config.slots, commit(next) else { return }
+        invalidateUndo()
+        boardNotice = nil
+        statusText = "Moved slot \(config.displayName(for: id))"
+    }
+
+    @discardableResult
+    func renameSlot(_ id: InputRole, to name: String) -> Bool {
+        do {
+            let next = try config.renamingSlot(id, to: name)
+            if next != config {
+                guard commit(next) else { return false }
+                invalidateUndo()
+            }
+            clearSlotNotice(for: id)
+            statusText = "Renamed slot to \(config.displayName(for: id))"
+            return true
+        } catch {
+            reportSlotFailure(error.localizedDescription, for: id)
+            return false
+        }
+    }
+
+    func removeSlot(_ id: InputRole) {
+        do {
+            let result = try config.removingSlotWithReceipt(id)
+            guard commit(result.config) else { return }
+            invalidateUndo()
+            pendingUndo = result.removed
+            if activeRole == id { activeRole = nil }
+            clearSlotNotice(for: id)
+            boardNotice = .removed(slotName: result.removed.slot.name)
+            statusText = "Removed slot \(result.removed.slot.name). Undo available."
+        } catch {
+            reportSlotFailure(error.localizedDescription, for: id)
+        }
+    }
+
+    func undoRemoveSlot() {
+        guard let removed = pendingUndo else { return }
+        do {
+            let restored = try config.restoringSlot(removed)
+            guard commit(restored.config) else { return }
+            invalidateUndo()
+            boardNotice = nil
+            statusText = "Restored slot \(removed.slot.name)"
+            if !restored.skippedBindings.isEmpty {
+                let triggers = restored.skippedBindings.map { $0.binding.trigger.displayName }.joined(separator: ", ")
+                let message = "Restored slot, but conflicting triggers were not restored: \(triggers)"
+                reportSlotFailure(message, for: removed.slot.id)
+                reportBoardFailure(message)
+            }
+        } catch {
+            reportBoardFailure(error.localizedDescription)
+        }
+    }
+
+    func dismissBoardNotice() {
+        pendingUndo = nil
+        boardNotice = nil
+    }
+
+    private func invalidateUndo() {
+        pendingUndo = nil
+        if case .removed = boardNotice { boardNotice = nil }
+    }
+
+    private func reportBoardFailure(_ message: String) {
+        statusText = message
+        boardNotice = .rejected(message)
+    }
+
+    private func commit(_ next: SwitcherConfig) -> Bool {
+        do {
+            try configStore.save(next)
+            config = next
+            monitor?.updateConfig(next)
+            return true
+        } catch {
+            reportBoardFailure(error.localizedDescription)
+            return false
+        }
+    }
+
     func setInputSourceID(_ id: String, for role: InputRole) {
         guard let source = selectableSources.first(where: { $0.id == id }) else {
             statusText = "Input source not found: \(id)"
@@ -298,7 +438,9 @@ final class AppModel: ObservableObject {
         }
 
         do {
-            config = try config.selectingInputSource(source, for: role, sources: sources)
+            let next = try config.selectingInputSource(source, for: role, sources: sources)
+            if next != config { invalidateUndo() }
+            config = next
             if save() {
                 clearSlotNotice(for: role)
                 statusText = "Switch slot set to \(source.localizedName)"
@@ -403,6 +545,7 @@ final class AppModel: ObservableObject {
         }
 
         // Validate before upsert: its replacement semantics also serve the CLI.
+        invalidateUndo()
         config.upsertSwitchBinding(trigger: trigger, role: role)
         if save() {
             clearSlotNotice(for: role)
