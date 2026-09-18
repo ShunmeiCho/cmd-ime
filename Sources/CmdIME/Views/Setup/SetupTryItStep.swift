@@ -65,7 +65,7 @@ struct SetupTryItStep: View {
             SetupNotice(
                 systemImage: "info.circle.fill",
                 tone: .neutral,
-                text: "CmdIME keeps running in the background and has no menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use Runtime > Quit agent. The switch indicator can be customized in the Switch indicator section below."
+                text: "CmdIME keeps running in the background and has no menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use General > Quit CmdIME. The switch indicator can be customized in the Switch indicator section below."
             )
 
             HStack(spacing: 8) {

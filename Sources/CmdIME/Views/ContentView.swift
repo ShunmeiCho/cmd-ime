@@ -145,17 +145,17 @@ private struct SettingsHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            KeycapView("⌘")
+            KeycapView("⌘", appearance: .display)
                 .frame(width: 44, height: 44)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("CmdIME")
-                    .font(.title2.weight(.semibold))
+                    .font(DesignTokens.Typography.title)
                     .foregroundStyle(DesignTokens.Colors.textPrimary)
                 Text("A precision instrument for input switching")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
@@ -177,39 +177,68 @@ private struct SettingsHeader: View {
 private struct PermissionsCard: View {
     @ObservedObject var model: AppModel
     let status: RuntimeStatusPresentation
+    @State private var showsDetails = false
+
+    private var needsAttention: Bool {
+        !model.permissions.isReady || model.keyboardControlStatus == "Failed"
+    }
 
     var body: some View {
-        CompactSection(title: "Keyboard control") {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(status.detail)
-                        .font(.callout)
-                        .foregroundStyle(DesignTokens.Colors.textSecondary)
-                        .lineLimit(2)
-                    Spacer()
-                    if !model.permissions.isReady {
-                        Button("Request Permissions") {
-                            model.requestPermissions()
-                        }
-                        .buttonStyle(ConsoleButtonStyle(prominent: true))
+        Group {
+            if needsAttention {
+                CompactSection(title: "Keyboard control") { details }
+            } else {
+                DisclosureGroup(isExpanded: $showsDetails) {
+                    details.padding(.top, 10)
+                } label: {
+                    Label("Keyboard access ready", systemImage: "checkmark.circle.fill")
+                        .font(DesignTokens.Typography.body)
+                        .foregroundStyle(DesignTokens.Colors.textPrimary)
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                        .fill(DesignTokens.Colors.surfaceRaised)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                                .stroke(DesignTokens.Colors.separator, lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .onChange(of: needsAttention) { if !$0 { showsDetails = false } }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(status.detail)
+                    .font(DesignTokens.Typography.body)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                if !model.permissions.isReady {
+                    Button("Request Permissions") {
+                        model.requestPermissions()
                     }
+                    .buttonStyle(ConsoleButtonStyle(prominent: true))
                 }
+            }
 
-                HStack(spacing: 10) {
-                    PermissionMiniStatus(
-                        title: "Accessibility",
-                        granted: model.permissions.accessibilityGranted,
-                        actionTitle: "Open",
-                        action: model.openAccessibilitySettings
-                    )
+            HStack(spacing: 10) {
+                PermissionMiniStatus(
+                    title: "Accessibility",
+                    granted: model.permissions.accessibilityGranted,
+                    actionTitle: "Open",
+                    action: model.openAccessibilitySettings
+                )
 
-                    PermissionMiniStatus(
-                        title: "Input Monitoring",
-                        granted: model.permissions.inputMonitoringGranted,
-                        actionTitle: "Open",
-                        action: model.openInputMonitoringSettings
-                    )
-                }
+                PermissionMiniStatus(
+                    title: "Input Monitoring",
+                    granted: model.permissions.inputMonitoringGranted,
+                    actionTitle: "Open",
+                    action: model.openInputMonitoringSettings
+                )
             }
         }
     }
@@ -224,18 +253,18 @@ private struct PermissionMiniStatus: View {
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .font(.caption.weight(.bold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(granted ? DesignTokens.Colors.success : DesignTokens.Colors.warning)
 
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
 
             Spacer()
 
             if granted {
                 Text("Ready")
-                    .font(.caption.weight(.semibold))
+                    .font(DesignTokens.Typography.body.weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.success)
             } else {
                 Button(actionTitle, action: action)
@@ -267,21 +296,27 @@ private struct CompactLiveKeysStrip: View {
                 SectionLabel("Live keys")
                 Spacer()
                 Text("Bound keys take their slot's color - the active slot's key lights up")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
 
-            HStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 6) {
                 ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
                 LiveStripKey("space")
                     .frame(maxWidth: .infinity)
                 ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
-                ForEach(model.config.chordTriggers, id: \.slot) { entry in
-                    LiveStripKey(
-                        Self.symbols(for: entry.trigger),
-                        role: entry.slot,
-                        isActive: model.activeRole == entry.slot
-                    )
+            }
+
+            if !model.config.chordTriggers.isEmpty {
+                LiveKeyFlowLayout(spacing: 6) {
+                    ForEach(Array(model.config.chordTriggers.enumerated()), id: \.offset) { _, entry in
+                        LiveStripKey(
+                            Self.symbols(for: entry.trigger),
+                            role: entry.slot,
+                            isActive: model.activeRole == entry.slot
+                        )
+                        .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
+                    }
                 }
             }
         }
@@ -291,16 +326,87 @@ private struct CompactLiveKeysStrip: View {
     private static let leftModifierKeys = ["left-shift", "left-control", "left-option", "left-command"]
     private static let rightModifierKeys = ["right-command", "right-option", "right-control", "right-shift"]
 
-    private func modifierKey(_ keyName: String) -> LiveStripKey {
+    @ViewBuilder
+    private func modifierKey(_ keyName: String) -> some View {
         let keycap = LiveKeycap(keyName: keyName)
-        guard let slot = model.config.slotID(forOneShotKeyName: keyName) else {
-            return LiveStripKey(keycap.label)
+        let entries = model.config.slots.flatMap { slot in
+            model.config.bindings.filter {
+                $0.enabled && $0.action.type == .switchInputSource && $0.action.role == slot.id
+                    && $0.trigger.kind == .oneShotModifier && $0.trigger.keyName == keyName
+            }.map { (slot: slot.id, trigger: $0.trigger) }
         }
-        return LiveStripKey(keycap.label, role: slot, detail: keycap.detail, isActive: model.activeRole == slot)
+        if entries.isEmpty {
+            LiveStripKey(keycap.label)
+        } else {
+            // Multiple bindings keep the same physical key column. Gesture text
+            // distinguishes them even when their slot colors are identical.
+            VStack(spacing: 4) {
+                ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
+                    let gesture = entry.trigger.gesture == .doubleTap ? "x2" : (entries.count > 1 ? "x1" : nil)
+                    LiveStripKey(keycap.label, role: entry.slot,
+                                 detail: [keycap.detail, gesture].compactMap { $0 }.joined(separator: " "),
+                                 isActive: model.activeRole == entry.slot)
+                        .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
+                }
+            }
+        }
     }
 
     private static func symbols(for trigger: KeyTrigger) -> String {
         trigger.displayName.split(separator: "+").map { LiveKeycap(keyName: String($0)).label }.joined()
+    }
+}
+
+/// Keeps the physical keyboard row separate from a variable number of chords.
+private struct LiveKeyFlowLayout: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        metrics(for: subviews, width: proposal.width).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let metrics = metrics(for: subviews, width: bounds.width)
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + metrics.origins[index].x,
+                                     y: bounds.minY + metrics.origins[index].y),
+                          anchor: .topLeading, proposal: ProposedViewSize(metrics.sizes[index]))
+        }
+    }
+
+    private func metrics(for subviews: Subviews, width: CGFloat?) -> LiveKeyFlowMetrics {
+        LiveKeyFlowMetrics(sizes: subviews.map { $0.sizeThatFits(.unspecified) },
+                           availableWidth: width, spacing: spacing)
+    }
+}
+
+private struct LiveKeyFlowMetrics {
+    let sizes: [CGSize]
+    let origins: [CGPoint]
+    let size: CGSize
+
+    init(sizes: [CGSize], availableWidth: CGFloat?, spacing: CGFloat) {
+        self.sizes = sizes
+        let idealWidth = sizes.reduce(0) { $0 + $1.width } + CGFloat(max(0, sizes.count - 1)) * spacing
+        let width = availableWidth.flatMap { $0.isFinite ? max(0, $0) : nil } ?? idealWidth
+        var origins: [CGPoint] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var usedWidth: CGFloat = 0
+        for item in sizes {
+            if x > 0 && x + item.width > width {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            origins.append(CGPoint(x: x, y: y))
+            usedWidth = max(usedWidth, x + item.width)
+            rowHeight = max(rowHeight, item.height)
+            x += item.width + spacing
+        }
+        self.origins = origins
+        size = CGSize(width: max(width, usedWidth), height: sizes.isEmpty ? 0 : y + rowHeight)
     }
 }
 
@@ -318,31 +424,9 @@ private struct LiveStripKey: View {
     }
 
     var body: some View {
-        if label == "space" {
-            Text("space")
-                .font(.system(.caption, design: .monospaced).weight(.semibold))
-                .foregroundStyle(DesignTokens.Colors.textMuted)
-                .frame(maxWidth: .infinity, minHeight: 34)
-                .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [DesignTokens.Colors.keycapTop, DesignTokens.Colors.keycapBottom],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.keycap, style: .continuous)
-                                .stroke(DesignTokens.Colors.separatorStrong, lineWidth: 1)
-                        )
-                )
-                .shadow(color: DesignTokens.Shadow.keycap, radius: 4, y: 3)
-                .accessibilityLabel("Space key")
-        } else {
-            KeycapView(label, detail: detail, role: role, isPressed: isActive, isBound: role != nil)
-                .frame(minWidth: 46, minHeight: 34)
-        }
+        KeycapView(label, detail: detail, role: role, isPressed: isActive, isBound: role != nil,
+                   appearance: .display, expandsHorizontally: label == "space")
+            .frame(minWidth: 46, minHeight: 34)
     }
 }
 
@@ -597,7 +681,7 @@ private struct RuntimeSection: View {
     let onShowSetupGuide: () -> Void
 
     var body: some View {
-        CompactSection(title: "Runtime", minHeight: SettingsLayout.bottomCardMinHeight) {
+        CompactSection(title: "General") {
             VStack(alignment: .leading, spacing: 0) {
                 RuntimeToggleRow(
                     title: "Launch at login",
@@ -634,13 +718,19 @@ private struct RuntimeSection: View {
 
                 Divider().overlay(DesignTokens.Colors.separator)
 
-                RuntimeActionRow(title: "Quit agent", detail: "Stop the background listener") {
+                RuntimeActionRow(title: "Quit CmdIME", detail: "Stop the background listener") {
                     Button("Quit") {
                         model.quit()
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: false))
                     .foregroundStyle(DesignTokens.Colors.danger)
                 }
+
+                Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12)
             }
         }
     }
@@ -654,7 +744,7 @@ private struct RuntimeToggleRow: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
             Spacer()
             Toggle(title, isOn: $isOn)
@@ -677,12 +767,12 @@ private struct RuntimeActionRow<Action: View>: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.caption.weight(.semibold))
+                    .font(DesignTokens.Typography.body.weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.textPrimary)
                 Text(detail)
-                    .font(.caption)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             action()
@@ -732,13 +822,24 @@ private struct CompactSettingRow<Content: View>: View {
     var body: some View {
         HStack(spacing: 10) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(width: 76, alignment: .leading)
             content()
+                .environment(\.consoleControlLabel, title)
         }
+    }
+}
+
+private struct ConsoleControlLabelKey: EnvironmentKey {
+    static let defaultValue = "Trigger type"
+}
+
+private extension EnvironmentValues {
+    var consoleControlLabel: String {
+        get { self[ConsoleControlLabelKey.self] }
+        set { self[ConsoleControlLabelKey.self] = newValue }
     }
 }
 
@@ -752,6 +853,7 @@ struct ConsoleSegmentOption<Value: Hashable>: Identifiable {
 }
 
 struct ConsoleSegmentedControl<Value: Hashable>: View {
+    @Environment(\.consoleControlLabel) private var groupLabel
     let options: [ConsoleSegmentOption<Value>]
     @Binding var selection: Value
 
@@ -762,14 +864,15 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                     selection = option.value
                 } label: {
                     Text(option.label)
-                        .font(.caption.weight(.semibold))
+                        .font(DesignTokens.Typography.body.weight(.semibold))
                         .foregroundStyle(selection == option.value ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textMuted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, minHeight: 24)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(option.label)
+                .accessibilityAddTraits(selection == option.value ? .isSelected : [])
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(selection == option.value ? Color.white.opacity(0.12) : .clear)
@@ -793,6 +896,8 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                 )
         )
         .accessibilityElement(children: .contain)
+        .accessibilityLabel(groupLabel)
+        .accessibilityValue(options.first { $0.value == selection }?.label ?? "No selection")
     }
 }
 
@@ -878,9 +983,8 @@ struct SectionLabel: View {
 
     var body: some View {
         Text(title.uppercased())
-            .font(.caption2.weight(.bold))
-            .monospaced()
-            .tracking(2.2)
+            .font(DesignTokens.Typography.auxiliary.weight(.semibold))
+            .tracking(1.4)
             .foregroundStyle(DesignTokens.Colors.textMuted)
             .accessibilityAddTraits(.isHeader)
     }

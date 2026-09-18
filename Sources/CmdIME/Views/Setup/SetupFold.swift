@@ -15,7 +15,7 @@ enum SetupFoldSection: String, Hashable, Sendable {
         case .slotBoard: "Switch slots"
         case .liveKeys: "Live keys"
         case .indicator: "Switch indicator"
-        case .runtime: "Runtime"
+        case .runtime: "General"
         }
     }
 }

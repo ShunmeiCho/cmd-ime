@@ -181,7 +181,7 @@ bars with the section label and a Show button. Bars are buttons, so every sectio
 Quit included, stays reachable. Change in step 2 unfolds the slot board and
 scrolls to it. Finish or Skip stores the flag, unfolds everything and lets the
 card shrink toward the header status pill. Returning users never see folded
-sections: Runtime > Setup guide replays the card for the session only.
+sections: General > Setup guide replays the card for the session only.
 
 Permission copy keeps the existing rule: CmdIME never implies it can grant a
 privacy permission. Actions are Open Settings, Request Permissions, Try Again and
@@ -201,3 +201,38 @@ returns, on the unverified assumption that the old event tap does not recover.
 - `swift test`
 - `git diff --check`
 - Manual app launch
+
+## Decision record — 2026-09-18: Window polish
+
+Keep the dark keyboard-console direction and slot colors. The window now gives
+configuration controls more emphasis than passive feedback:
+
+- Live keys retain the eight physical modifiers and space in one row. Chord
+  bindings wrap below in slot order using a macOS 13 `Layout`; an empty chord
+  collection adds no region. Modifier bindings show `x2` for double taps and,
+  when multiple bindings share a key column, `x1` for single taps.
+- Passive keycaps use flat surfaces and outlines, with no raised shadow or
+  pressed movement. `KeycapView` shares display and control appearances so
+  capture controls can retain their own feedback without duplicating the view.
+- Console buttons distinguish enabled, disabled, hovered and pressed states;
+  disabled controls have no pressed feedback. Native button focus remains in
+  charge. The existing flat segmented control keeps its visual treatment and
+  exposes its group name, current value and each segment's selected trait.
+- Ready keyboard permissions collapse into an expandable summary. Missing
+  permissions or a failed listener expose details automatically. General uses
+  content height, names the quit action after CmdIME, and always explains how
+  to reopen settings. Reset to Detected lives under Manage; its confirmation
+  and backup behavior are preserved.
+- Touched window views use title (13 semibold), body (12) and auxiliary (11)
+  type roles. Section labels use 11-point type with 1.4 tracking. Labels wrap
+  instead of shrinking. Monospaced text is reserved for key notation.
+- Muted text is `#9A9AA3` (5.65:1 on the raised surface). Prominent buttons use
+  `#2868C7` behind white text (5.39:1; 4.99:1 with the hover overlay). These
+  ratios use the audit's sRGB alpha-compositing calculation; final platform
+  rendering still needs on-device verification.
+
+The indicator redesign owns removal of the indicator card's minimum height and
+the Scale slider's accessibility label/value. Its view bodies stay untouched by
+this window increment. On-device acceptance includes 0, 2 and 8 chords at the
+720-point minimum width, permission disclosure, disabled buttons, Full Keyboard
+Access and VoiceOver. This increment does not claim that those UI checks ran.
