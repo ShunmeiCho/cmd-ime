@@ -16,7 +16,16 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
         set {
             precondition(Thread.isMainThread)
+            guard capturingShortcut != newValue else { return }
             capturingShortcut = newValue
+            // Neither half of a gesture may cross a recording boundary.
+            oneShotState.cancel()
+            pendingSingleTapTimer?.invalidate()
+            pendingSingleTapTimer = nil
+            if newValue {
+                // Also retire actions/retries queued just before the recorder opened.
+                switchGeneration &+= 1
+            }
         }
     }
     private var capturingShortcut = false
@@ -272,7 +281,13 @@ public final class EventTapMonitor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
 
-        if recordModifierTransition(keyCode: keyCode, flags: event.flags) {
+        let isPress = recordModifierTransition(keyCode: keyCode, flags: event.flags)
+        // Keep physical left/right tracking current, but do not recognize actions
+        // while recording. The state machine is cleared at both capture boundaries.
+        guard !isCapturingShortcut else {
+            return Unmanaged.passUnretained(event)
+        }
+        if isPress {
             oneShotState.modifierDown(trigger)
             // Pressed while another modifier is physically held: a chord, not a tap.
             if let heldKeyCode = pressedModifierKeyCodes.first(where: { $0 != keyCode }) {
@@ -388,7 +403,7 @@ public final class EventTapMonitor: @unchecked Sendable {
     private func scheduleSingleTapFlush() {
         pendingSingleTapTimer?.invalidate()
         pendingSingleTapTimer = Timer.scheduledTimer(withTimeInterval: 0.22, repeats: false) { [weak self] _ in
-            guard let self else {
+            guard let self, !self.isCapturingShortcut else {
                 return
             }
             if let trigger = self.oneShotState.flushPendingSingleTap(), let binding = self.binding(for: trigger) {
