@@ -6,7 +6,23 @@ import SwiftUI
 /// limit and the contrast floor bind the built-in themes, not the user's own.
 struct IndicatorThemeEditor: View {
     private enum PaperSurface: Hashable {
-        case glass, paper
+        case glass, liquid, paper
+
+        init(_ surface: IndicatorSurface) {
+            switch surface {
+            case .paper: self = .paper
+            case .liquidGlass: self = .liquid
+            case .glass, .none: self = .glass
+            }
+        }
+
+        var surface: IndicatorSurface {
+            switch self {
+            case .glass: .glass
+            case .liquid: .liquidGlass
+            case .paper: .paper
+            }
+        }
     }
 
     private static let swatchCell = IndicatorSwatchButton.size + 2 * (SelectionRing.ringGap + SelectionRing.ringWidth)
@@ -26,13 +42,14 @@ struct IndicatorThemeEditor: View {
                 CompactSettingRow("Surface") {
                     ConsoleSegmentedControl(
                         options: [ConsoleSegmentOption(value: PaperSurface.glass, label: "Glass"),
+                                  ConsoleSegmentOption(value: PaperSurface.liquid, label: "Liquid"),
                                   ConsoleSegmentOption(value: PaperSurface.paper, label: "Paper")],
                         selection: Binding(
-                            get: { theme.surface == .paper ? .paper : .glass },
-                            set: { surface in edit { Self.setSurface(surface == .paper ? .paper : .glass, on: &$0) } }
+                            get: { PaperSurface(theme.surface) },
+                            set: { surface in edit { Self.setSurface(surface.surface, on: &$0) } }
                         )
                     )
-                    .frame(width: 140)
+                    .frame(width: 210)
                 }
             }
 
@@ -40,11 +57,22 @@ struct IndicatorThemeEditor: View {
 
             CompactSettingRow("Color from") {
                 ConsoleSegmentedControl(
-                    options: [ConsoleSegmentOption(value: IndicatorColorSource.slot, label: "Slot"),
-                              ConsoleSegmentOption(value: IndicatorColorSource.inks, label: "Inks")],
+                    options: [ConsoleSegmentOption(value: IndicatorColorSource.slot, label: "Each slot"),
+                              ConsoleSegmentOption(value: IndicatorColorSource.inks, label: "One color")],
                     selection: Binding(get: { theme.colorSource }, set: { source in edit { $0.colorSource = source } })
                 )
-                .frame(width: 140)
+                .frame(width: 210)
+            }
+
+            // On glass the one colour fills the tile or the switcher thumb; paper has its own ink rows.
+            if theme.surface != .paper, theme.colorSource == .inks {
+                inkRow(
+                    "Highlight",
+                    options: InkCatalog.inks.map { ($0.name, $0.hex) },
+                    selectedHex: theme.tileInkHex,
+                    issueKey: "tileInkHex",
+                    clearTitle: "Neutral"
+                ) { hex, theme in theme.tileInkHex = hex }
             }
 
             slider("Corners", value: theme.cornerRadius, range: IndicatorTheme.Limits.cornerRadius.range, step: 1,
@@ -220,7 +248,9 @@ struct IndicatorThemeEditor: View {
         } else {
             theme.substrateHex = nil
             theme.textInkHex = nil
-            theme.highlightStrength = IndicatorTheme.Limits.highlightStrength.fallback
+            // The system material brings its own wash and highlight.
+            theme.highlightStrength = surface == .liquidGlass ? 0 : IndicatorTheme.Limits.highlightStrength.fallback
+            if surface == .liquidGlass { theme.washOpacity = 0 }
         }
     }
 }
