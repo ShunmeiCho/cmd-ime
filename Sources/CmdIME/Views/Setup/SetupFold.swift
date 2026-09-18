@@ -68,6 +68,7 @@ private struct SetupFoldModifier: ViewModifier {
                     withAnimation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion)) {
                         folds.unfold(section)
                     }
+                    SetupGuideNavigation.announce("\(section.title) section shown.")
                 }
                 .transition(.opacity)
             } else {

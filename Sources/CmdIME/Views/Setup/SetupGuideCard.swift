@@ -95,6 +95,7 @@ struct SetupGuideCard: View {
                         folds.unfold(.slotBoard)
                     }
                     SetupGuideNavigation.scroll(scroll, to: SetupFoldSection.slotBoard)
+                    SetupGuideNavigation.announce("\(SetupFoldSection.slotBoard.title) section opened below the setup guide.")
                 },
                 resetDrafts: resetDrafts
             )
