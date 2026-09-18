@@ -79,6 +79,7 @@ struct SetupReviewStep: View {
             HStack(spacing: 8) {
                 Button("Looks right", action: onConfirm)
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
+                    .keyboardShortcut(.defaultAction)
                 Button("Change", action: onChange)
                     .buttonStyle(ConsoleButtonStyle())
                     .accessibilityLabel("Change slots on the slot board")

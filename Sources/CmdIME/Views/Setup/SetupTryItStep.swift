@@ -40,6 +40,7 @@ struct SetupTryItStep: View {
                 .font(.body)
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
                 .focused($isFieldFocused)
+                .onSubmit { if progress.isComplete { onFinish() } }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .background(SetupInsetBackground(
@@ -71,6 +72,9 @@ struct SetupTryItStep: View {
             HStack(spacing: 8) {
                 Button("Finish", action: onFinish)
                     .buttonStyle(ConsoleButtonStyle(prominent: progress.isComplete || progress.boundSlots.isEmpty))
+                    // Return finishes only once every slot was tried, so typing in the
+                    // practice field cannot end the guide early.
+                    .keyboardShortcut(progress.isComplete || progress.boundSlots.isEmpty ? .defaultAction : nil)
                     .accessibilityLabel("Finish setup")
                 Button("Back") {
                     withAnimation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion)) {
