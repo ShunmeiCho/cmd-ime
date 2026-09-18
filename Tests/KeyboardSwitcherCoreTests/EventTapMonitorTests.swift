@@ -345,6 +345,26 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(service.listCallCount, readsBeforeRecovery + 1)
     }
 
+    func testAcceptedSnapshotOverridesStaleInProcessEnumeration() {
+        let originalSources = makeSwitchSources()
+        let removedPreferred = originalSources[1]
+        let fallback = InputSourceInfo(
+            id: "fallback.japanese", localizedName: "Fallback Japanese",
+            languages: ["ja"], isSelectCapable: true
+        )
+        // The long-running process still lists the removed source.
+        let service = StubInputSourceService(sources: [originalSources[0], removedPreferred, fallback])
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        monitor.updateConfig(.default, sources: [originalSources[0], fallback])
+        let readsAfterSnapshot = service.listCallCount
+
+        triggerJapaneseSwitch(monitor)
+        triggerJapaneseSwitch(monitor)
+
+        XCTAssertEqual(service.selectedIDs, [fallback.id, fallback.id])
+        XCTAssertEqual(service.listCallCount, readsAfterSnapshot)
+    }
+
     func testCachedFirstPreferredIDDoesNotRelistSources() {
         let service = StubInputSourceService(sources: makeSwitchSources())
         let monitor = EventTapMonitor(config: .default, inputSources: service)

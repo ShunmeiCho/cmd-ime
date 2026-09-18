@@ -44,6 +44,7 @@ public final class EventTapMonitor: @unchecked Sendable {
     private var oneShotState = OneShotModifierState()
     private var consumedKeyDowns = Set<Int>()
     private var resolvedSources: [InputRole: InputSourceInfo] = [:]
+    private var sourceSnapshot: [InputSourceInfo]?
     private var pendingSingleTapTimer: Timer?
     private let eventTapConfirmationRetryDelays: [TimeInterval] = [0.01]
     /// Physically held one-shot modifier keys, tracked per keyCode so a left/right
@@ -185,9 +186,21 @@ public final class EventTapMonitor: @unchecked Sendable {
         refreshResolvedSources()
     }
 
+    /// Adopts a source list taken outside this process. A long-running process can keep
+    /// listing sources the user already removed, so an accepted snapshot replaces the
+    /// in-process enumeration for every later resolution until the next snapshot.
+    public func updateConfig(_ config: SwitcherConfig, sources: [InputSourceInfo]) {
+        sourceSnapshot = sources
+        updateConfig(config)
+    }
+
+    private func currentSources() throws -> [InputSourceInfo] {
+        try sourceSnapshot ?? inputSources.listInputSources()
+    }
+
     private func refreshResolvedSources() {
         do {
-            let sources = try inputSources.listInputSources()
+            let sources = try currentSources()
             resolvedSources.removeAll()
             for slot in config.slots {
                 if let source = InputSourceMatcher.bestMatch(for: slot.id, sources: sources, config: config) {
@@ -474,7 +487,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             // A fallback is provisional: the preferred source may have appeared
             // since the last scan. Re-match only this slot; first-ID hits stay fast.
             do {
-                let sources = try inputSources.listInputSources()
+                let sources = try currentSources()
                 resolvedSources[role] = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config)
             } catch {
                 resolvedSources[role] = nil

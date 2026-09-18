@@ -166,7 +166,7 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func apply(scanned: [InputSourceInfo]) {
+    private func apply(scanned: [InputSourceInfo], isFreshSnapshot: Bool = false) {
         let previous = sources
         sources = scanned
         if hasSourceBaseline {
@@ -179,7 +179,11 @@ final class AppModel: ObservableObject {
         }
         hasSourceBaseline = true
         reconcileNewSources()
-        monitor?.updateConfig(config)
+        if isFreshSnapshot {
+            monitor?.updateConfig(config, sources: scanned)
+        } else {
+            monitor?.updateConfig(config)
+        }
         refreshCurrentRole()
         statusText = "Found \(sources.count) input sources"
     }
@@ -201,7 +205,7 @@ final class AppModel: ObservableObject {
         do {
             let result = try await inputSources.refreshedInputSources(using: Self.scannerURL)
             guard generation == sourceRefreshGeneration else { return false }
-            apply(scanned: result.sources)
+            apply(scanned: result.sources, isFreshSnapshot: result.fallbackReason == nil)
             guard announce else { return true }
             sourceRefreshMessage = result.fallbackReason == nil
                 ? "Updated - \(selectableSources.count) input sources"
@@ -377,7 +381,7 @@ final class AppModel: ObservableObject {
 
     func resetSlotsFromDetectedSources() {
         // The window keeps `sources` fresh; an in-process rescan could bring removed ones back.
-        guard !sources.isEmpty || scan() else { return }
+        guard hasSourceBaseline || scan() else { return }
         do {
             let rebuilt = try configStore.resettingSlots(in: config, from: sources)
             invalidateUndo()
@@ -609,7 +613,7 @@ final class AppModel: ObservableObject {
 
     func switchRole(_ role: InputRole) {
         do {
-            if sources.isEmpty {
+            if !hasSourceBaseline {
                 scan()
             }
             guard let source = matchedSource(for: role) else {
