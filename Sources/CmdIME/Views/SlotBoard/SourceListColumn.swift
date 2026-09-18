@@ -4,6 +4,8 @@ import SwiftUI
 
 struct SourceListColumn: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var drag: SlotBoardDragController
+    let onBeginDrag: (String, DragGesture.Value) -> Bool
     let onAdd: (String) -> Void
     let onRefresh: () -> Void
     let onOpenSettings: () -> Void
@@ -12,16 +14,13 @@ struct SourceListColumn: View {
         VStack(alignment: .leading, spacing: 9) {
             SectionLabel("Input sources")
             if model.selectableSources.isEmpty {
-                Label("No input sources", systemImage: "keyboard")
-                    .font(.caption)
-                Button("Refresh", action: onRefresh)
-                    .buttonStyle(ConsoleButtonStyle())
+                Label("No input sources", systemImage: "keyboard").font(.caption)
+                Button("Refresh", action: onRefresh).buttonStyle(ConsoleButtonStyle())
                 keyboardSettingsButton
             } else {
                 ForEach(model.selectableSources, id: \.id) { source in
-                    SourceRow(source: source, usage: model.sourceUsage(of: source), model: model) {
-                        onAdd(source.id)
-                    }
+                    SourceRow(source: source, usage: model.sourceUsage(of: source), model: model,
+                              drag: drag, onBeginDrag: { onBeginDrag(source.id, $0) }) { onAdd(source.id) }
                 }
                 if model.unassignedSources.isEmpty {
                     Text("All input sources are in slots.")
@@ -35,8 +34,7 @@ struct SourceListColumn: View {
     }
 
     private var keyboardSettingsButton: some View {
-        Button("Open Keyboard Settings…", action: onOpenSettings)
-            .buttonStyle(ConsoleButtonStyle())
+        Button("Open Keyboard Settings…", action: onOpenSettings).buttonStyle(ConsoleButtonStyle())
     }
 }
 
@@ -44,18 +42,27 @@ struct SourceRow: View {
     let source: InputSourceInfo
     let usage: SlotSourceUsage
     @ObservedObject var model: AppModel
+    @ObservedObject var drag: SlotBoardDragController
+    let onBeginDrag: (DragGesture.Value) -> Bool
     let onAdd: () -> Void
+    var isGhost = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @GestureState private var isDragging = false
+    @State private var attempted = false
+    @State private var suppressClick = false
+    @State private var gestureGeneration = 0
+    @State private var rejected = false
+    @State private var hover = false
+    @State private var offset = CGSize.zero
 
     private var isAvailable: Bool { usage == .available }
-
     private var name: String {
         switch usage {
         case .available: "Available"
-        case let .owned(id): "In use · \(model.config.displayName(for: id))"
+        case let .owned(id): "\(rejected ? "Already in slot" : "In use ·") \(model.config.displayName(for: id))"
         case let .resolved(id, _): "Fallback for \(model.config.displayName(for: id))"
         }
     }
-
     private var icon: String {
         switch usage {
         case .available: "plus.circle"
@@ -63,7 +70,6 @@ struct SourceRow: View {
         case .resolved: "arrow.triangle.branch"
         }
     }
-
     private var tint: Color {
         switch usage {
         case .available:
@@ -76,8 +82,7 @@ struct SourceRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Circle().fill(tint).frame(width: 6, height: 6)
-                .accessibilityHidden(true)
+            Circle().fill(tint).frame(width: 6, height: 6).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(source.localizedName)
                     .font(.caption.weight(.semibold))
@@ -85,15 +90,16 @@ struct SourceRow: View {
                     .lineLimit(2)
                 Label(name, systemImage: icon)
                     .font(.caption2)
-                    .foregroundStyle(isAvailable ? DesignTokens.Colors.textMuted : tint)
-                    .id(name)
-                    .transition(.opacity)
+                    .foregroundStyle(rejected ? DesignTokens.Colors.warning : (isAvailable ? DesignTokens.Colors.textMuted : tint))
+                    .id(name).transition(.opacity)
             }
             Spacer(minLength: 0)
             if isAvailable {
-                Button(action: onAdd) {
-                    Image(systemName: "plus")
-                        .frame(width: 22, height: 24)
+                Button {
+                    guard !isGhost, !suppressClick else { return }
+                    onAdd()
+                } label: {
+                    Image(systemName: "plus").frame(width: 22, height: 24)
                 }
                 .buttonStyle(ConsoleButtonStyle())
                 .help("Add \(source.localizedName) as a slot")
@@ -101,13 +107,59 @@ struct SourceRow: View {
         }
         .padding(9)
         .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
-            .fill(DesignTokens.Colors.surfaceRaised))
+            .fill(DesignTokens.Colors.surfaceRaised)
+            .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
+                .fill(Color.white.opacity(hover && isAvailable ? 0.07 : 0.035))))
+        .contentShape(Rectangle())
+        .onHover { if !isGhost { hover = $0 } }
+        .animation(DesignTokens.Motion.stateChange, value: hover)
         .animation(DesignTokens.Motion.stateChange, value: usage)
+        .animation(DesignTokens.Motion.stateChange, value: rejected)
+        .offset(offset)
+        .opacity(!isGhost && drag.payload == .source(source.id) ? 0.35 : 1)
+        .animation(DesignTokens.Motion.quickFade, value: drag.payload == .source(source.id))
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("slotBoard")) } action: {
+            if !isGhost { drag.sourceFrames[source.id] = $0 }
+        }
+        .simultaneousGesture(DragGesture(minimumDistance: 4, coordinateSpace: .named("slotBoard"))
+            .updating($isDragging) { _, active, _ in active = true }
+            .onChanged { value in
+                if !attempted {
+                    attempted = true
+                    suppressClick = true
+                    gestureGeneration += 1
+                    rejected = !onBeginDrag(value)
+                }
+                if rejected {
+                    if !reduceMotion {
+                        offset = CGSize(width: min(max(value.translation.width * 0.25, -6), 6),
+                                        height: min(max(value.translation.height * 0.25, -6), 6))
+                    }
+                } else {
+                    drag.move(location: value.location)
+                }
+            }
+            .onEnded { _ in drag.drop() }, including: isGhost ? .none : .all)
+        .onChange(of: isDragging) { active in
+            guard !active, !isGhost else { return }
+            drag.gestureDidEnd()
+            attempted = false
+            rejected = false
+            // Keep the release event from also activating the nested + button.
+            let generation = gestureGeneration
+            DispatchQueue.main.async {
+                if generation == gestureGeneration { suppressClick = false }
+            }
+            withAnimation(reduceMotion ? nil : DesignTokens.Motion.keyRelease) { offset = .zero }
+        }
+        .onDisappear { if attempted && !isGhost { drag.cancel() } }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(source.localizedName)
         .accessibilityValue(name)
         .accessibilityAddTraits(isAvailable ? .isButton : [])
-        .accessibilityAction { if isAvailable { onAdd() } }
+        .accessibilityAction { if isAvailable && !isGhost { onAdd() } }
+        .allowsHitTesting(!isGhost)
+        .accessibilityHidden(isGhost)
     }
 }
 

@@ -3,35 +3,36 @@ import KeyboardSwitcherCore
 import SwiftUI
 
 extension SlotBoardSection {
-    func triggerTypePicker(for role: InputRole) -> some View {
+    func triggerTypePicker(for role: InputRole, isGhost: Bool = false) -> some View {
         ConsoleSegmentedControl(
             options: BindingTriggerType.allCases.map { ConsoleSegmentOption(value: $0, label: $0.displayName) },
             selection: Binding(
                 get: { triggerType(for: role) },
-                set: { setTriggerType($0, for: role) }
+                set: { if !isGhost { setTriggerType($0, for: role) } }
             )
         )
         .frame(width: 158)
     }
 
     @ViewBuilder
-    func triggerControl(for role: InputRole) -> some View {
+    func triggerControl(for role: InputRole, isGhost: Bool = false) -> some View {
         switch triggerType(for: role) {
         case .shortcut:
             ShortcutRecorderField(
                 text: Binding(
                     get: { triggerDrafts[role] ?? model.bindingText(for: role) },
-                    set: { triggerDrafts[role] = $0 }
+                    set: { if !isGhost { triggerDrafts[role] = $0 } }
                 ),
                 displayText: { text in
                     text.split(separator: "+").map { LiveKeycap(keyName: String($0)).label }.joined()
                 },
                 onCommit: { shortcut in
-                    guard commitPendingRename() else { return }
+                    guard !isGhost, commitPendingRename() else { return }
                     model.setBindingText(shortcut, for: role)
                     resetDrafts()
                 },
                 onRecordingChanged: { recording in
+                    guard !isGhost else { return }
                     model.setShortcutRecording(recording, for: role)
                 }
             )
@@ -47,7 +48,7 @@ extension SlotBoardSection {
                         excluding: role
                     )
                     Button {
-                        guard commitPendingRename() else { return }
+                        guard !isGhost, commitPendingRename() else { return }
                         let gesture = triggerType(for: role).gesture ?? .tap
                         model.setOneShotBinding(
                             keyCode: choice.keyCode,

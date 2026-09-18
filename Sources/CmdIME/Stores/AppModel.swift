@@ -378,6 +378,10 @@ final class AppModel: ObservableObject {
         if case .removed = boardNotice { boardNotice = nil }
     }
 
+    func rejectSlotDrop(_ message: String) {
+        reportBoardFailure(message)
+    }
+
     private func reportBoardFailure(_ message: String) {
         statusText = message
         boardNotice = .rejected(message)

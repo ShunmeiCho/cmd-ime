@@ -29,6 +29,8 @@ struct SlotCard: View {
     let inputSourceControl: AnyView
     var seatProgress: CGFloat = 1
     var focusName: Bool = false
+    var isGhost: Bool = false
+    var dragHandle: AnyView = AnyView(Color.clear.frame(width: 14, height: 14))
 
     private var presentation: InputSourcePresentation { InputSourcePresentation(source: source, slot: slot) }
     private var tint: Color { slotLook.tint(for: slot.id) }
@@ -36,8 +38,7 @@ struct SlotCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                // Reserve the future drag handle's seat without advertising an inert control.
-                Color.clear.frame(width: 14, height: 14).accessibilityHidden(true)
+                dragHandle.accessibilityHidden(true)
                 RoleBadge(role: slot.id, symbol: presentation.symbol, size: 31, isActive: isActive)
                 HStack(spacing: 4) {
                     name
@@ -97,12 +98,14 @@ struct SlotCard: View {
         }
         .modifier(SlotCardOutline(progress: seatProgress, tint: tint, reduceMotion: reduceMotion,
                                   stroke: strokeColor, isActive: isActive))
-        .onAppear { nameFocused = focusName }
-        .onChange(of: focusName) { nameFocused = $0 }
+        .onAppear { if !isGhost { nameFocused = focusName } }
+        .onChange(of: focusName) { if !isGhost { nameFocused = $0 } }
         .contextMenu { menuItems }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(slot.name) slot, position \(position + 1) of \(count)")
         .accessibilityValue(isActive ? "Current" : (source == nil ? "Not matched" : "Configured"))
+        .allowsHitTesting(!isGhost)
+        .accessibilityHidden(isGhost)
     }
 
     private var name: some View {
@@ -379,7 +382,7 @@ private extension View {
 }
 
 extension SlotBoardSection {
-    func inputSourcePicker(for role: InputRole, source: InputSourceInfo?) -> some View {
+    func inputSourcePicker(for role: InputRole, source: InputSourceInfo?, isGhost: Bool = false) -> some View {
         Menu {
             if source == nil {
                 Button("Not matched") {}
@@ -387,7 +390,7 @@ extension SlotBoardSection {
             }
             ForEach(model.selectableSources, id: \.id) { candidate in
                 Button(model.inputSourceMenuTitle(candidate, for: role)) {
-                    guard commitPendingRename() else { return }
+                    guard !isGhost, commitPendingRename() else { return }
                     model.setInputSourceID(candidate.id, for: role)
                     if let notice = model.slotNotices[role] { announce(notice) }
                 }

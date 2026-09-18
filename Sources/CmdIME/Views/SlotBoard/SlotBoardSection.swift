@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SlotBoardSection: View {
     @ObservedObject var model: AppModel
+    @StateObject private var drag = SlotBoardDragController()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsResetConfirmation = false
     @State private var renamingSlotID: InputRole?
@@ -34,13 +35,15 @@ struct SlotBoardSection: View {
                     .buttonStyle(ConsoleButtonStyle())
                 }
                 HStack(alignment: .top, spacing: 14) {
-                    SourceListColumn(model: model, onAdd: add, onRefresh: {
+                    SourceListColumn(model: model, drag: drag,
+                                     onBeginDrag: { beginDrag(.source($0), value: $1) }, onAdd: add, onRefresh: {
                         guard commitPendingRename() else { return }
                         model.scan()
                         resetDrafts()
                     }, onOpenSettings: showKeyboardSettings)
                     SlotListColumn(slots: model.config.slots, notice: model.boardNotice,
-                                   canUndo: model.canUndoRemoval, seatingID: seatingID, onUndo: undo, onDismiss: dismissNotice) { slot in
+                                   canUndo: model.canUndoRemoval, seatingID: seatingID, drag: drag,
+                                   insertionTint: dragTint, onUndo: undo, onDismiss: dismissNotice) { slot in
                         card(for: slot)
                     }
                 }
@@ -53,6 +56,8 @@ struct SlotBoardSection: View {
                 case let .rejected(reason): announce(reason)
                 case let .removed(name): announce("Removed slot \(name). Undo available.")
                 }
+                // Drag rejection must not scroll the board under the held pointer.
+                guard drag.payload == nil else { return }
                 DispatchQueue.main.async {
                     withAnimation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion)) {
                         proxy.scrollTo("boardNotice")
@@ -60,6 +65,10 @@ struct SlotBoardSection: View {
                 }
             }
         }
+        .coordinateSpace(name: "slotBoard")
+        .overlay(alignment: .topLeading) { dragGhost }
+        .zIndex(drag.payload == nil ? 0 : 1)
+        .onDisappear { drag.tearDown() }
         .modifier(MotionCompletion(progress: settleProgress) {
             guard phase == .settling else { return }
             beginPulse(generation: generation)
@@ -70,6 +79,7 @@ struct SlotBoardSection: View {
             seatingID = nil
         })
         .onChange(of: reduceMotion) { reduced in
+            drag.updateReduceMotion(reduced)
             if reduced { beginPulse(generation: seatGeneration) }
         }
         .confirmationDialog(
@@ -87,7 +97,7 @@ struct SlotBoardSection: View {
         }
     }
 
-    private func card(for slot: SwitchSlot) -> some View {
+    private func card(for slot: SwitchSlot, isGhost: Bool = false) -> some View {
         let source = model.matchedSource(for: slot.id)
         return SlotCard(
             slot: slot, source: source, isActive: model.activeRole == slot.id,
@@ -96,12 +106,12 @@ struct SlotBoardSection: View {
             count: model.config.slots.count, triggerText: model.bindingText(for: slot.id),
             hasTrigger: model.trigger(for: slot.id) != nil,
             warning: model.slotNotices[slot.id] ?? model.oneShotConflictWarning(for: slot.id),
-            isRenaming: renamingSlotID == slot.id,
-            onRename: {
+            isRenaming: !isGhost && renamingSlotID == slot.id,
+            onRename: isGhost ? {} : {
                 guard commitPendingRename() else { return }
                 renamingSlotID = slot.id
             },
-            onCommitRename: { name in
+            onCommitRename: isGhost ? { _ in false } : { name in
                 let succeeded = model.renameSlot(slot.id, to: name)
                 if succeeded {
                     renamingSlotID = nil
@@ -112,28 +122,114 @@ struct SlotBoardSection: View {
                 }
                 return succeeded
             },
-            onCancelRename: {
+            onCancelRename: isGhost ? {} : {
                 renamingSlotID = nil
                 pendingRenameCommit = nil
             },
-            onRenameCommitChanged: { callback in
+            onRenameCommitChanged: isGhost ? { _ in } : { callback in
                 // An outgoing field must not clear the incoming field's registration.
                 guard renamingSlotID == slot.id else { return }
                 pendingRenameCommit = callback
             },
-            onTest: {
+            onTest: isGhost ? {} : {
                 guard commitPendingRename() else { return }
                 model.switchRole(slot.id)
             },
-            onMove: { move(slot.id, by: $0) }, onRemove: { remove(slot.id) },
+            onMove: isGhost ? { _ in } : { move(slot.id, by: $0) },
+            onRemove: isGhost ? {} : { remove(slot.id) },
             triggerControls: AnyView(HStack(spacing: 8) {
-                triggerTypePicker(for: slot.id)
-                triggerControl(for: slot.id)
+                triggerTypePicker(for: slot.id, isGhost: isGhost)
+                triggerControl(for: slot.id, isGhost: isGhost)
             }),
-            inputSourceControl: AnyView(inputSourcePicker(for: slot.id, source: source)),
-            seatProgress: seatingID == slot.id ? seatProgress : 1,
-            focusName: focusedSlotID == slot.id
+            inputSourceControl: AnyView(inputSourcePicker(for: slot.id, source: source, isGhost: isGhost)),
+            seatProgress: !isGhost && seatingID == slot.id ? seatProgress : 1,
+            focusName: !isGhost && focusedSlotID == slot.id,
+            isGhost: isGhost,
+            dragHandle: isGhost ? AnyView(SlotDragHandleGlyph()) : AnyView(
+                SlotDragHandle(controller: drag, enabled: model.config.slots.count > 1) {
+                    beginDrag(.slot(slot.id), value: $0)
+                })
         )
+    }
+
+    @ViewBuilder
+    private var dragGhost: some View {
+        if drag.payload != nil {
+            SlotDragGhost(controller: drag, pointer: drag.pointer, tint: dragTint) {
+                if let slot = drag.slotSnapshot {
+                    card(for: slot, isGhost: true)
+                } else if let source = drag.sourceSnapshot {
+                    SourceRow(source: source, usage: .available, model: model, drag: drag,
+                              onBeginDrag: { _ in false }, onAdd: {}, isGhost: true)
+                }
+            }
+            .id(drag.sessionID)
+            .transition(.opacity.animation(DesignTokens.Motion.quickFade))
+        }
+    }
+
+    private var dragTint: Color {
+        if let slot = drag.slotSnapshot {
+            return SlotLook(slots: [slot]).tint(for: slot.id)
+        }
+        if let source = drag.sourceSnapshot, let added = try? model.config.addingSlot(for: source) {
+            return SlotLook(slots: [added.slot]).tint(for: added.slot.id)
+        }
+        return DesignTokens.Colors.accent
+    }
+
+    private func beginDrag(_ payload: SlotDragPayload, value: DragGesture.Value) -> Bool {
+        guard commitPendingRename(), drag.prepareForBegin() else { return false }
+        return drag.begin(payload: payload, startLocation: value.startLocation, location: value.location,
+                          config: model.config, sources: model.selectableSources, reduceMotion: reduceMotion,
+                          commit: commitDrop, reject: model.rejectSlotDrop,
+                          pulse: { if !drag.isForcingCompletion { seat($0, waitForLayout: false) } }, validate: dropRejection)
+    }
+
+    private func dropRejection(_ payload: SlotDragPayload) -> String? {
+        switch payload {
+        case let .slot(id):
+            return model.config.slot(id) == nil ? SlotError.unknownSlot(id).localizedDescription : nil
+        case let .source(id):
+            guard let source = model.selectableSources.first(where: { $0.id == id }) else {
+                return "This input source is no longer available."
+            }
+            switch model.sourceUsage(of: source) {
+            case .available: return nil
+            case let .owned(owner): return "Already in slot \(model.config.displayName(for: owner))"
+            case let .resolved(owner, _): return "Fallback for \(model.config.displayName(for: owner))"
+            }
+        }
+    }
+
+    private func commitDrop(_ payload: SlotDragPayload, index: Int) -> Bool {
+        if let reason = dropRejection(payload) {
+            model.rejectSlotDrop(reason)
+            return false
+        }
+        switch payload {
+        case let .slot(id):
+            guard let source = model.config.slots.firstIndex(where: { $0.id == id }) else { return false }
+            let expected = model.config.movingSlot(from: source, to: index).slots
+            model.moveSlot(id, toFinalIndex: index)
+            guard model.config.slots == expected else { return false }
+            if source != index {
+                announce("\(model.config.displayName(for: id)) moved to position \(min(index + 1, expected.count)) of \(expected.count).")
+            }
+            return true
+        case let .source(id):
+            var added: InputRole?
+            withAnimation(drag.isForcingCompletion ? nil : DesignTokens.Motion.resolved(
+                DesignTokens.Motion.expandCollapse, reduceMotion: drag.reduceMotion)) {
+                added = model.addSlot(sourceID: id, at: index)
+            }
+            guard let added else { return false }
+            resetDrafts()
+            focusedSlotID = added
+            if !drag.isForcingCompletion { seat(added, waitForLayout: !drag.reduceMotion) }
+            announce("Added slot \(model.config.displayName(for: added)) at position \(index + 1) of \(model.config.slots.count).")
+            return true
+        }
     }
 
     @discardableResult
@@ -198,12 +294,12 @@ struct SlotBoardSection: View {
         structuralChange { model.dismissBoardNotice() }
     }
 
-    private func seat(_ id: InputRole) {
+    private func seat(_ id: InputRole, waitForLayout: Bool = true) {
         seatGeneration += 1
         seatingID = id
         seatPhase = .settling
         seatProgress = 1
-        if reduceMotion {
+        if reduceMotion || !waitForLayout {
             beginPulse(generation: seatGeneration)
         } else {
             settleProgress = 0
