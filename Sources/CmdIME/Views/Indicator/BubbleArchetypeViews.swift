@@ -93,7 +93,8 @@ struct BubbleTitle: View {
             .lineLimit(1)
             .truncationMode(.tail)
             .minimumScaleFactor(BubbleLayout.titleMinimumScale)
-            .frame(height: model.metrics.titleLineHeight.points)
+            // A minimum: a family with a taller line (Zapfino, Nastaliq) grows the measured bubble.
+            .frame(minHeight: model.metrics.titleLineHeight.points)
     }
 }
 
@@ -107,7 +108,7 @@ struct BubbleDetail: View {
             .foregroundStyle(Color(bubbleHex: model.detailHex).opacity(model.detailOpacity))
             .lineLimit(1)
             .truncationMode(.middle)
-            .frame(height: model.metrics.detailLineHeight.points)
+            .frame(minHeight: model.metrics.detailLineHeight.points)
     }
 }
 

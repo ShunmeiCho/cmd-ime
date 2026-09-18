@@ -121,7 +121,12 @@ struct BubbleEdges: View {
     }
 
     private func innerStroke(isDark: Bool) -> Color {
-        guard model.isGlassLike else { return Color(bubbleHex: model.detailHex).opacity(model.strokeOpacity) }
+        // A white stroke vanishes on a light solid surface: under Increase Contrast the
+        // border takes the text colour there, as it does on paper.
+        let needsDarkBorder = contrast == .increased && !isDark
+        guard model.isGlassLike, !needsDarkBorder else {
+            return Color(bubbleHex: model.detailHex).opacity(model.strokeOpacity)
+        }
         let opacity = isDark ? model.strokeOpacity : min(1, model.strokeOpacity * BubbleChrome.lightInnerStrokeBoost)
         return Color.white.opacity(opacity)
     }
