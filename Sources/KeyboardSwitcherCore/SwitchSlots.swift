@@ -167,6 +167,7 @@ extension SwitcherConfig {
     public func migrated() -> SwitcherConfig {
         var result = self
         result.version = max(version, Self.currentVersion)
+        result = result.retiringCustomIndicatorColors()
         return result
     }
 

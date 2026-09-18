@@ -228,6 +228,10 @@ final class ConfigStoreTests: XCTestCase {
         try writeFixture(legacyJSON, to: store.url)
         var expected = try JSONDecoder().decode(SwitcherConfig.self, from: legacyJSON)
         expected.version = 2
+        // The fixture uses the retired custom colour style: its per-slot colour moves into the slot tint.
+        expected = try expected.settingSlotTint("#ABCDEF", for: .chinese)
+        expected.switchIndicatorColorStyle = .role
+        expected.switchIndicatorCustomRoleColorHexes = [:]
 
         let result = try store.loadOrRecover()
 
@@ -248,7 +252,8 @@ final class ConfigStoreTests: XCTestCase {
         try writeFixture(data, to: store.url)
         let result = try store.loadOrRecover()
         XCTAssertNil(result.migratedFromVersion)
-        XCTAssertEqual(result.config.slots, SwitchSlot.legacyDefaults)
+        XCTAssertEqual(result.config.slots.map(\.id), InputRole.legacy)
+        XCTAssertEqual(result.config.slots.map(\.tintHex), ["#4D8CFF", "#ABCDEF", "#E3574A"])
         XCTAssertTrue(store.needsSlotsMigration)
         try store.save(result.config)
         XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), data)
