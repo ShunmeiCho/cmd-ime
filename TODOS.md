@@ -6,6 +6,16 @@ checks.
 
 ## Next patch (0.1.13)
 
+### [High] Ship unbound-modifier lifecycle fix
+- Root cause: `EventTapMonitor.handleFlagsChanged` let unbound side-specific
+  modifiers enter `OneShotModifierState` on key down, but skipped `modifierUp`
+  on release when the modifier had no one-shot binding.
+- Symptom: `option+j` could switch to Japanese and leave `left/right-option`
+  state behind, so the next left/right Command tap only cleared stale state and
+  had to be pressed a second time.
+- Release criteria: keep the event-level regression covering
+  `option+j -> left-command` and verify the full `swift test` suite.
+
 ### [Medium] Switch indicator "Custom color" is global, not per-slot
 - `SwitcherConfig` holds a single `switchIndicatorCustomColorHex`
   (`Sources/KeyboardSwitcherCore/Models.swift`); `.custom` renders the same color
@@ -32,9 +42,13 @@ checks.
 
 - `ConfigStore.loadOrDefault()` is now unused (CLI + GUI use `loadOrRecover`);
   remove it or delegate to `loadOrRecover().config`.
-- The event-tap confirm path uses `Thread.sleep` on the main run loop; consider
-  moving confirm/retry off the run loop (async) so the tap never blocks.
-- `EventTapMonitor` routing has thin unit coverage; add pure-logic test seams.
+- Extract a pure keyboard-event reducer from `EventTapMonitor`. Keep CGEvent tap
+  setup, event conversion, and system posting in the monitor; move one-shot state,
+  keyPress matching, consume/pass-through decisions, and action decisions into a
+  plain Swift reducer with sequence tests.
+- Have `ShortcutRecorderField` commit a `KeyTrigger` directly instead of
+  serializing `NSEvent -> String -> ShortcutParser -> KeyTrigger`; keep string
+  parsing for CLI and hand-written config.
 - Synthetic `sendKey` output carries no source marker, so a user remap can re-enter
   the tap; tag synthetic events and ignore them in `handleKeyDown`.
 - Unify the per-keyCode one-shot modifier tables (`EventTapMonitor` /
@@ -44,5 +58,8 @@ checks.
 ## Out of scope for the 0.x line
 
 - Developer ID signing + notarization (requires the paid Apple Developer Program).
-- Per-slot / `SwitchRule` model refactor; full indicator theme system.
+- Per-slot / `SwitchRule` model refactor, including dynamic slots beyond the
+  fixed English/Chinese/Japanese `InputRole` enum; full indicator theme system.
+- Stable/preview update channels and a stronger install trust chain, including
+  notarized stable builds and tag-pinned checksum verification by default.
 - App Store sandboxed build; automatic in-app update install.

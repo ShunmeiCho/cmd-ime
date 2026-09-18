@@ -146,14 +146,8 @@ panel: closing the window does not stop keyboard listening. Release builds are
 packaged with `LSUIElement`, so the app does not appear in the Dock or app
 switcher.
 
-If `Show menu bar icon` is turned off, CmdIME keeps running in the background.
-Open `CmdIME.app` again to bring the settings window back.
-
-On macOS 26 and later, CmdIME disables the menu bar icon automatically to avoid
-a system status-item layout issue that can freeze the settings window and drive
-CPU usage very high. Open `CmdIME.app` again whenever you need Settings.
-
-If you need to stop a hidden background instance, use:
+Open `CmdIME.app` again whenever you need Settings. To stop the background
+agent, use Settings > **Quit agent** or run:
 
 ```sh
 keyboardctl quit
@@ -202,6 +196,8 @@ auxiliary kana palette, not the normal Hiragana input method.
 swift run keyboardctl scan
 swift run keyboardctl init
 swift run keyboardctl switch english
+swift run keyboardctl diagnose
+swift run keyboardctl diagnose --json
 swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
@@ -210,6 +206,14 @@ swift run keyboardctl remap right-control escape
 swift run keyboardctl quit
 swift run keyboardctl listen
 ```
+
+- `keyboardctl switch <role>`: selects the matched input source for a slot and
+  confirms that macOS applied the switch. If macOS does not apply the selection,
+  it prints an error message to `stderr` and exits non-zero.
+- `keyboardctl diagnose [--json]`: prints each slot's configured preferences
+  (`preferredIDs`, `languagePrefixes`, `nameContains`), the matched input source,
+  and the match reason (`preferredID`, `languagePrefix`, `nameContains`, or `none`).
+  Pass `--json` for structured JSON output.
 
 Config lives at:
 
