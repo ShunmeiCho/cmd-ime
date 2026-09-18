@@ -120,7 +120,7 @@ private struct RuntimeStatusPresentation {
             tone = .warning
             primaryActionTitle = "Request Permissions"
             primaryActionProminent = true
-        } else if model.keyboardControlStatus == "Failed" {
+        } else if model.didListenerFailToStart {
             title = "Listener Failed"
             detail = "Keyboard listener could not start. Re-grant permissions, then try again."
             systemImage = "xmark.octagon.fill"

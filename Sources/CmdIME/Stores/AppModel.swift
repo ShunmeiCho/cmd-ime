@@ -599,6 +599,12 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The listener could not start although both permissions read as granted. Kept
+    /// beside the assignment above: the status string itself is display copy.
+    var didListenerFailToStart: Bool {
+        keyboardControlStatus == "Failed"
+    }
+
     func stopListening() {
         monitor?.stop()
         monitor = nil

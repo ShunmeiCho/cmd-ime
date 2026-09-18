@@ -24,7 +24,7 @@ extension AppModel {
             sources: sources,
             accessibilityGranted: permissions.accessibilityGranted,
             inputMonitoringGranted: permissions.inputMonitoringGranted,
-            listenerFailed: keyboardControlStatus == "Failed",
+            listenerFailed: didListenerFailToStart,
             hasConfirmedSlots: session.hasConfirmedSlots
         )
         if session.isReopened {
