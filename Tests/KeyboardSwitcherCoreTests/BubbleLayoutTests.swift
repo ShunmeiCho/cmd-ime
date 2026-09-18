@@ -48,8 +48,8 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertGreaterThan(large.baseHeight, large.tileSide + 2 * large.inset)
 
         let small = BubbleMetrics(size: .small, scale: 0, textScale: 0, theme: glass)
-        XCTAssertEqual(small.sizeFactor, 0.82 * 0.65, accuracy: 0.0001)
-        XCTAssertEqual(small.textMinWidth, 44 * 0.82 * 0.65 * 0.8, accuracy: 0.0001)
+        XCTAssertEqual(small.sizeFactor, 0.82 * SwitcherConfig.minSwitchIndicatorScale, accuracy: 0.0001)
+        XCTAssertEqual(small.textMinWidth, 44 * 0.82 * SwitcherConfig.minSwitchIndicatorScale * 0.8, accuracy: 0.0001)
     }
 
     func testRadiiAreCappedConcentricOrOverridden() {

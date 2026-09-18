@@ -6,7 +6,7 @@ import SwiftUI
 @MainActor
 enum IndicatorPreviewModel {
     /// Miniatures are drawn at the smallest scale the Scale setting allows.
-    static let miniatureScale = SwitcherConfig.minSwitchIndicatorScale
+    static let miniatureScale = 0.65
 
     /// The appearance always comes from the system, as it does for the live panel:
     /// the preview must show the glass the user will really get over either page.
