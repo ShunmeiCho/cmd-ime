@@ -147,9 +147,33 @@ final class BubbleRenderModelTests: XCTestCase {
         XCTAssertEqual(tinted.cells.count, 8)
         XCTAssertEqual(tinted.activeIndex, 7)
         XCTAssertNil(tinted.previousIndex)
+        // The slot name under the glyph is small text in the glyph colour.
         for cell in tinted.cells {
-            XCTAssertGreaterThanOrEqual(try XCTUnwrap(InkLegibility.contrast(cell.fillHex, cell.glyphHex)), 3.0)
+            XCTAssertGreaterThanOrEqual(try XCTUnwrap(InkLegibility.contrast(cell.fillHex, cell.glyphHex)), 4.5)
         }
+
+        // A two-letter glyph is under the large size: the 3.94:1 tile ink hands over to the text ink.
+        eight.switchIndicatorThemeID = "builtin.paper-two-inks"
+        let printed = try XCTUnwrap(IndicatorBubbleResolver.model(
+            config: eight, themes: BuiltInIndicatorThemes.all, sources: installed, slotID: eight.slots[1].id,
+            previousSlotID: nil, source: installed[1], context: dark
+        ))
+        XCTAssertEqual([printed.symbol.glyph, printed.tileFillHex, printed.glyphHex], ["DE", "#2148B8", "#FAFAF7"])
+    }
+
+    func testATileWithAMarkMeetsTheTextMinimum() throws {
+        var config = SwitcherConfig(slots: [], bindings: [], inputSources: [:])
+        let installed = ["Pinyin", "Wubi"].map {
+            InputSourceInfo(id: "source.\($0)", localizedName: $0, languages: ["zh-Hans"], isSelectCapable: true)
+        }
+        for source in installed { config = try config.addingSlot(for: source).config }
+        let model = try XCTUnwrap(IndicatorBubbleResolver.model(
+            config: config, themes: BuiltInIndicatorThemes.all, sources: installed, slotID: config.slots[0].id,
+            previousSlotID: nil, source: installed[0], context: dark
+        ))
+        XCTAssertNotNil(model.symbol.mark)
+        let fill = try XCTUnwrap(model.tileFillHex)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(InkLegibility.contrast(fill, model.glyphHex)), 4.5)
     }
 
     func testAccessibilityContextsReplaceTheGlass() throws {

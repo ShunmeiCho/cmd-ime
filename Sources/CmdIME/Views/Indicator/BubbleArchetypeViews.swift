@@ -9,7 +9,6 @@ enum BubbleLayout {
     static let glyphMinimumScale = 0.6
     static let titleMinimumScale = 0.85
     static let markTileRatio = 0.30
-    static let markOpacity = 0.9
     static let markInset = 2.0
     static let barWidth = 3.0
     static let barRadius = 1.5
@@ -57,7 +56,7 @@ struct BubbleTile: View {
                 if let mark = model.symbol.mark {
                     Text(mark)
                         .font(BubbleFontResolver.utility(model.typography, size: side * BubbleLayout.markTileRatio))
-                        .foregroundStyle(glyphColor.opacity(BubbleLayout.markOpacity))
+                        .foregroundStyle(glyphColor)
                         .lineLimit(1)
                         .fixedSize()
                         .padding((BubbleLayout.markInset * metrics.sizeFactor).points)

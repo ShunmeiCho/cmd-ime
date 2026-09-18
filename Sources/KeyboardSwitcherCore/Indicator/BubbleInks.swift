@@ -74,7 +74,7 @@ struct BubbleInks {
         display: SwitchIndicatorContentStyle,
         tileSide: Double
     ) -> SlotColors {
-        let tile = tile(for: slot, symbol: symbol, tileSide: tileSide)
+        let tile = tile(for: slot, symbol: symbol, display: display, tileSide: tileSide)
         let slotHex = theme.colorSource == .slot ? slotColorHex(for: slot) : nil
 
         switch theme.archetype {
@@ -106,29 +106,45 @@ struct BubbleInks {
         return IndicatorRGB.normalizedHex(chosen) ?? monochrome
     }
 
-    private func tile(for slot: SwitchSlot, symbol: SlotSymbol, tileSide: Double) -> (fillHex: String, glyphHex: String) {
+    private func tile(
+        for slot: SwitchSlot,
+        symbol: SlotSymbol,
+        display: SwitchIndicatorContentStyle,
+        tileSide: Double
+    ) -> (fillHex: String, glyphHex: String) {
+        let carriesText = carriesSmallText(symbol: symbol, display: display, tileSide: tileSide)
         if theme.colorSource == .inks {
             if case let .paper(paper) = substrate {
-                // Printed tile: the glyph is knocked out to the paper.
-                return (theme.tileInkHex ?? textHex, paper)
+                // Printed tile: the glyph is knocked out to the paper. A tile ink that is
+                // only an object colour cannot carry small text, so the text ink prints it.
+                let ink = theme.tileInkHex ?? textHex
+                let ratio = InkLegibility.contrast(ink, paper) ?? 0
+                return (carriesText && ratio < InkLegibility.textMinimum ? textHex : ink, paper)
             }
             guard let ink = theme.tileInkHex ?? theme.textInkHex else {
                 return isDark ? (Self.darkNeutralHex, DisplayTint.darkGlyphHex) : (Self.lightNeutralHex, Self.darkNeutralHex)
             }
-            return glyphRule(fillHex: ink, symbol: symbol, tileSide: tileSide)
+            return glyphRule(fillHex: ink, carriesSmallText: carriesText)
         }
         let slotHex = slotColorHex(for: slot)
         // On paper the fill must stand out from the sheet; on glass a saturated tile is the point.
         let fill = theme.surface == .paper ? legible(slotHex, minimum: InkLegibility.objectMinimum) : slotHex
-        return glyphRule(fillHex: fill, symbol: symbol, tileSide: tileSide)
+        return glyphRule(fillHex: fill, carriesSmallText: carriesText)
     }
 
-    private func glyphRule(fillHex: String, symbol: SlotSymbol, tileSide: Double) -> (fillHex: String, glyphHex: String) {
+    /// The smallest thing drawn in the glyph colour decides the rule: a glyph under the
+    /// large size, the disambiguating mark, or the slot name on the switcher's thumb.
+    private func carriesSmallText(symbol: SlotSymbol, display: SwitchIndicatorContentStyle, tileSide: Double) -> Bool {
         let isDouble = symbol.glyph.count > 1
         let pointSize = tileSide > 0
             ? tileSide * (isDouble ? Self.doubleGlyphTileRatio : Self.singleGlyphTileRatio)
             : (isDouble ? Self.switcherGlyphSizes.double : Self.switcherGlyphSizes.single)
-        let tile = pointSize < Self.largeGlyphPointSize
+        let namesTheThumb = theme.archetype == .switcher && display != .iconOnly
+        return pointSize < Self.largeGlyphPointSize || symbol.mark != nil || namesTheThumb
+    }
+
+    private func glyphRule(fillHex: String, carriesSmallText: Bool) -> (fillHex: String, glyphHex: String) {
+        let tile = carriesSmallText
             ? DisplayTint.tile(fillHex: fillHex, minimum: InkLegibility.textMinimum, maxLightnessDrop: Self.smallGlyphLightnessDrop)
             : DisplayTint.tile(fillHex: fillHex)
         return tile ?? (fillHex, DisplayTint.darkGlyphHex)
