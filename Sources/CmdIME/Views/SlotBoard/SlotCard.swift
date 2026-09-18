@@ -80,6 +80,13 @@ struct SlotCard: View {
                 statusChip
             }
             .padding(.leading, 22)
+            if !hasTrigger {
+                Label("No trigger yet - record one", systemImage: "keyboard")
+                    .font(.caption2)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 22)
+            }
             if let warning {
                 Label {
                     Text(warning).fixedSize(horizontal: false, vertical: true)
@@ -158,7 +165,7 @@ struct SlotCard: View {
         var values = [isActive ? "Current" : "Not current"]
         if source == nil { values.append("Not matched") }
         if isDuplicate { values.append("Duplicate") }
-        if !hasTrigger { values.append("No trigger") }
+        if !hasTrigger { values.append("No trigger yet - record one") }
         if let warning { values.append(warning) }
         return values.joined(separator: ", ")
     }
@@ -173,9 +180,6 @@ struct SlotCard: View {
             }
             if isDuplicate {
                 Label("Duplicate", systemImage: "square.on.square").slotChip(color: DesignTokens.Colors.warning)
-            }
-            if !hasTrigger {
-                Label("No trigger", systemImage: "keyboard").slotChip(color: DesignTokens.Colors.textMuted)
             }
         }
         .fixedSize(horizontal: false, vertical: true)

@@ -10,6 +10,7 @@ struct SlotBoardSection: View {
     @State private var renamingSlotID: InputRole?
     @State private var pendingRenameCommit: (() -> Bool)?
     @State private var focusedSlotID: InputRole?
+    @State private var revealRequest: (id: InputRole, token: UUID)?
     @State private var seatingID: InputRole?
     @State private var seatGeneration = 0
     @State private var seatPhase = SeatPhase.idle
@@ -160,6 +161,16 @@ struct SlotBoardSection: View {
                     beginDrag(.slot(slot.id), value: $0)
                 })
         )
+        .background {
+            SlotRevealAnchor(requestID: !isGhost && revealRequest?.id == slot.id ? revealRequest?.token : nil,
+                             isEnabled: !isGhost && drag.payload == nil,
+                             canReveal: { !isGhost && drag.payload == nil }) {
+                guard revealRequest?.id == slot.id, !isGhost else { return }
+                revealRequest = nil
+                seat(slot.id, waitForLayout: false)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 
     @ViewBuilder
@@ -264,7 +275,7 @@ struct SlotBoardSection: View {
         guard let id = added else { return }
         resetDrafts()
         focusedSlotID = id
-        seat(id)
+        revealRequest = (id, UUID())
         let position = (model.config.slots.firstIndex(where: { $0.id == id }) ?? 0) + 1
         let trigger = model.bindingText(for: id)
         announce("Added slot \(model.config.displayName(for: id)) at position \(position) of \(model.config.slots.count). Trigger \(trigger.isEmpty ? "not assigned" : trigger).")
