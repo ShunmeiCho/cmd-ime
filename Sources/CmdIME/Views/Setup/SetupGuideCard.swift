@@ -66,7 +66,7 @@ struct SetupGuideCard: View {
                         tone: .neutral
                     )
                     Button(session.isReopened ? "Close Guide" : "Skip Setup") {
-                        complete(announcement: session.isReopened ? "Setup guide closed." : "Setup skipped. The guide stays available under Runtime.")
+                        complete(announcement: session.isReopened ? "Setup guide closed." : "Setup skipped. The guide stays available under General.")
                     }
                     .buttonStyle(ConsoleButtonStyle())
                 }
