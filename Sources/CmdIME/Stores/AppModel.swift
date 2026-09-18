@@ -21,14 +21,6 @@ final class AppModel: ObservableObject {
     private let updates = UpdateService()
     private var monitor: EventTapMonitor?
 
-    var menuBarIconSupported: Bool {
-        Self.isMenuBarIconSupported
-    }
-
-    private static var isMenuBarIconSupported: Bool {
-        ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 26
-    }
-
     private static var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
     }
@@ -49,9 +41,6 @@ final class AppModel: ObservableObject {
             recoveryMessage = "Could not read config: \(error.localizedDescription). Using defaults."
         }
 
-        if !Self.isMenuBarIconSupported {
-            initialConfig.showMenuBarIcon = false
-        }
         self.config = initialConfig
         self.updateStatus = .idle(currentVersion: Self.currentVersion)
         scan()
@@ -347,21 +336,6 @@ final class AppModel: ObservableObject {
         InputSourceMatcher.bestMatch(for: role, sources: sources, config: config)
     }
 
-    func setMenuBarIconVisible(_ visible: Bool) {
-        guard menuBarIconSupported else {
-            config.showMenuBarIcon = false
-            save()
-            statusText = "Menu bar icon is disabled on this macOS version"
-            return
-        }
-
-        config.showMenuBarIcon = visible
-        save()
-        statusText = visible
-            ? "Menu bar icon shown"
-            : "Menu bar icon hidden. Reopen CmdIME.app to show settings."
-    }
-
     func startListening() {
         refreshRuntimeStatus()
         guard permissions.isReady else {
@@ -401,10 +375,6 @@ final class AppModel: ObservableObject {
         isListening = false
         keyboardControlStatus = "Paused"
         statusText = "Listener stopped"
-    }
-
-    func toggleListening() {
-        isListening ? stopListening() : startListening()
     }
 
     func quit() {

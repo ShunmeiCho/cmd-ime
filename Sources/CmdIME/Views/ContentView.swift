@@ -968,10 +968,6 @@ private struct RuntimeSection: View {
 
                 Divider().overlay(DesignTokens.Colors.separator)
 
-                menuBarIconRow
-
-                Divider().overlay(DesignTokens.Colors.separator)
-
                 RuntimeActionRow(title: "Updates", detail: model.updateStatus.message) {
                     if model.updateStatus.releaseURL != nil {
                         Button("Open") {
@@ -996,47 +992,6 @@ private struct RuntimeSection: View {
                     .foregroundStyle(DesignTokens.Colors.danger)
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private var menuBarIconRow: some View {
-        if model.menuBarIconSupported {
-            RuntimeToggleRow(
-                title: "Menu bar icon",
-                isOn: Binding(
-                    get: { model.config.showMenuBarIcon },
-                    set: { model.setMenuBarIconVisible($0) }
-                )
-            )
-        } else {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Menu bar icon")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(DesignTokens.Colors.textPrimary)
-                    Spacer()
-                    StatusPill(text: "Locked Off", systemImage: "lock.fill", tone: .warning)
-                }
-
-                Text("Locked off on macOS 26+ to avoid a known status-item issue that can freeze Settings and drive CPU usage very high.")
-                    .font(.caption2)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("Reopen CmdIME.app for Settings, or use keyboardctl quit to stop the agent.")
-                    .font(.caption2)
-                    .foregroundStyle(DesignTokens.Colors.textSecondary)
-
-                Button("Copy Quit Command") {
-                    let pasteboard = NSPasteboard.general
-                    pasteboard.clearContents()
-                    pasteboard.setString("keyboardctl quit", forType: .string)
-                    model.statusText = "Copied keyboardctl quit"
-                }
-                .buttonStyle(ConsoleButtonStyle())
-            }
-            .padding(.vertical, 8)
         }
     }
 }

@@ -24,20 +24,6 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(loaded, config)
     }
 
-    func testLegacyConfigDefaultsMenuBarIconToVisible() throws {
-        let json = """
-        {
-          "version": 1,
-          "bindings": [],
-          "inputSources": {}
-        }
-        """
-
-        let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
-
-        XCTAssertTrue(config.showMenuBarIcon)
-    }
-
     func testLegacyConfigDefaultsSwitchIndicatorToVisible() throws {
         let json = """
         {

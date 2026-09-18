@@ -1,5 +1,4 @@
 import AppKit
-import Combine
 import Carbon
 import KeyboardSwitcherCore
 import SwiftUI
@@ -22,12 +21,10 @@ enum CmdIMEMain {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = AppModel()
-    private var statusItemController: StatusItemController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         AppWindowCoordinator.shared.setModel(model)
-        statusItemController = StatusItemController(model: model)
         if !Self.wasLaunchedAsLoginItem() {
             AppWindowCoordinator.shared.showSettings()
         }
@@ -55,188 +52,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         return event.paramDescriptor(forKeyword: AEKeyword(keyAEPropData))?.enumCodeValue
             == OSType(keyAELaunchedAsLogInItem)
-    }
-}
-
-@MainActor
-final class StatusItemController: NSObject {
-    private let model: AppModel
-    private var statusItem: NSStatusItem?
-    private var cancellables = Set<AnyCancellable>()
-
-    init(model: AppModel) {
-        self.model = model
-        super.init()
-        updateVisibility(model.config.showMenuBarIcon)
-        model.$config
-            .map(StatusMenuConfigSnapshot.init(config:))
-            .removeDuplicates()
-            .sink { [weak self] snapshot in
-            Task { @MainActor in
-                self?.updateVisibility(snapshot.showMenuBarIcon)
-                self?.refreshMenu()
-            }
-        }
-        .store(in: &cancellables)
-        model.$sources.sink { [weak self] _ in
-            Task { @MainActor in
-                self?.refreshMenu()
-            }
-        }
-        .store(in: &cancellables)
-        model.$isListening.sink { [weak self] _ in
-            Task { @MainActor in
-                self?.refreshMenu()
-            }
-        }
-        .store(in: &cancellables)
-        model.$keyboardControlStatus.sink { [weak self] _ in
-            Task { @MainActor in
-                self?.refreshMenu()
-            }
-        }
-        .store(in: &cancellables)
-        model.$permissions.sink { [weak self] _ in
-            Task { @MainActor in
-                self?.refreshMenu()
-            }
-        }
-        .store(in: &cancellables)
-    }
-
-    private func updateVisibility(_ visible: Bool) {
-        if visible {
-            installStatusItemIfNeeded()
-        } else {
-            removeStatusItem()
-        }
-    }
-
-    private func installStatusItemIfNeeded() {
-        guard statusItem == nil else {
-            return
-        }
-
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        item.button?.title = "⌘"
-        item.button?.toolTip = "CmdIME"
-        item.menu = makeMenu()
-        statusItem = item
-    }
-
-    private func removeStatusItem() {
-        guard let statusItem else {
-            return
-        }
-        NSStatusBar.system.removeStatusItem(statusItem)
-        self.statusItem = nil
-    }
-
-    private func refreshMenu() {
-        statusItem?.menu = makeMenu()
-    }
-
-    private func makeMenu() -> NSMenu {
-        let menu = NSMenu()
-        let header = NSMenuItem(title: "CmdIME", action: nil, keyEquivalent: "")
-        header.isEnabled = false
-        menu.addItem(header)
-
-        let status = NSMenuItem(title: menuStatusTitle, action: nil, keyEquivalent: "")
-        status.isEnabled = false
-        menu.addItem(status)
-
-        menu.addItem(.separator())
-
-        for role in InputRole.allCases {
-            let source = model.matchedSource(for: role)
-            let presentation = InputSourcePresentation(source: source, fallbackRole: role)
-            let trigger = model.bindingText(for: role)
-            let item = menuItem(
-                source == nil
-                    ? "\(role.displayName) - Not matched"
-                    : "\(role.displayName) - \(trigger)",
-                selector(for: role)
-            )
-            item.toolTip = source.map { "\(presentation.title): \($0.localizedName)" }
-            menu.addItem(item)
-        }
-        menu.addItem(.separator())
-        menu.addItem(menuItem(model.isListening ? "Pause Keyboard Control" : "Resume Keyboard Control", #selector(toggleKeyboardControl)))
-        menu.addItem(menuItem("Settings...", #selector(showSettings)))
-        menu.addItem(.separator())
-        menu.addItem(menuItem("Quit CmdIME", #selector(quit)))
-        return menu
-    }
-
-    private var menuStatusTitle: String {
-        if model.isListening {
-            return "Active"
-        }
-        if !model.permissions.isReady {
-            return "Needs Permission"
-        }
-        if model.keyboardControlStatus == "Failed" {
-            return "Listener Failed"
-        }
-        return "Paused"
-    }
-
-    private func menuItem(_ title: String, _ action: Selector) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
-        item.target = self
-        return item
-    }
-
-    private func selector(for role: InputRole) -> Selector {
-        switch role {
-        case .english:
-            #selector(switchEnglish)
-        case .chinese:
-            #selector(switchChinese)
-        case .japanese:
-            #selector(switchJapanese)
-        }
-    }
-
-    @objc private func switchEnglish() {
-        model.switchRole(.english)
-    }
-
-    @objc private func switchChinese() {
-        model.switchRole(.chinese)
-    }
-
-    @objc private func switchJapanese() {
-        model.switchRole(.japanese)
-    }
-
-    @objc private func showSettings() {
-        AppWindowCoordinator.shared.showSettings()
-    }
-
-    @objc private func toggleKeyboardControl() {
-        model.toggleListening()
-    }
-
-    @objc private func quit() {
-        model.quit()
-    }
-}
-
-private struct StatusMenuConfigSnapshot: Equatable {
-    let showMenuBarIcon: Bool
-    let bindingTitles: [String]
-
-    init(config: SwitcherConfig) {
-        showMenuBarIcon = config.showMenuBarIcon
-        bindingTitles = InputRole.allCases.map { role in
-            config.bindings.first { binding in
-                binding.enabled
-                    && binding.action.type == .switchInputSource
-                    && binding.action.role == role
-            }?.trigger.displayName ?? ""
-        }
     }
 }
 
