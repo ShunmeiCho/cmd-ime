@@ -91,20 +91,21 @@ for broader public distribution:
 
 ### Recommended Preview Install
 
-Each release publishes a SHA-256 checksum. For the safest installer path, pin
-both the version and checksum from the GitHub Release notes:
+```sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+```
+
+The installer resolves the latest release, downloads the zip, verifies it against
+the `.sha256` file published with the release, installs `CmdIME.app` to
+`/Applications`, links `keyboardctl`, and opens the app so macOS can request
+permissions.
+
+To pin an exact version and checksum yourself (copy both from the release notes):
 
 ```sh
 CMDIME_VERSION=0.4.1 CMDIME_SHA256=038a480649bc8110abcae4903f03def32dc7e259a9fcf6aef44fc26a77afc101 \
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
 ```
-
-The installer downloads the release zip, checks the archive when
-`CMDIME_SHA256` is set, installs `CmdIME.app`, links `keyboardctl`, and opens the
-app so macOS can request permissions.
-
-Without `CMDIME_SHA256`, the installer still prints the downloaded archive's
-SHA-256 so you can compare it manually with the release notes.
 
 After installation, open CmdIME and grant both **Accessibility** and
 **Input Monitoring** permissions in System Settings > Privacy & Security.

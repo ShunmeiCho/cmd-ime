@@ -43,6 +43,15 @@ echo "Downloading $APP_NAME $VERSION..."
 curl -fsSL "$ZIP_URL" -o "$ZIP_PATH"
 
 ACTUAL_SHA256="$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
+# Without a pinned CMDIME_SHA256, use the checksum file published next to the zip.
+# It catches a corrupted or truncated download; pin CMDIME_SHA256 yourself to also
+# guard against a replaced release asset.
+if [[ -z "$EXPECTED_SHA256" ]]; then
+  PUBLISHED="$(curl -fsSL "$ZIP_URL.sha256" 2>/dev/null | awk '{print $1}')" || PUBLISHED=""
+  if [[ "$PUBLISHED" =~ ^[0-9a-f]{64}$ ]]; then
+    EXPECTED_SHA256="$PUBLISHED"
+  fi
+fi
 if [[ -n "$EXPECTED_SHA256" ]]; then
   if [[ "$ACTUAL_SHA256" != "$EXPECTED_SHA256" ]]; then
     echo "error: checksum mismatch for $APP_NAME $VERSION." >&2
