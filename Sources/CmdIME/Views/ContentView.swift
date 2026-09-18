@@ -12,7 +12,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 14) {
                 SettingsHeader(status: runtimeStatus, onPrimaryAction: performHeaderAction, onRefresh: refreshMethods)
                 PermissionsCard(model: model, status: runtimeStatus)
-                SwitchSlotsSection(
+                SlotBoardSection(
                     model: model,
                     triggerDrafts: $triggerDrafts,
                     triggerTypeDrafts: $triggerTypeDrafts,

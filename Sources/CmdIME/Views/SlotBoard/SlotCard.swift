@@ -2,174 +2,383 @@ import AppKit
 import KeyboardSwitcherCore
 import SwiftUI
 
-struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, InputSourceControl: View>: View {
+struct SlotCard: View {
     @Environment(\.slotLook) private var slotLook
-    let role: InputRole
-    let presentation: InputSourcePresentation
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AccessibilityFocusState private var nameFocused: Bool
+    @StateObject private var renameSession = SlotRenameSession()
+    let slot: SwitchSlot
     let source: InputSourceInfo?
     let isActive: Bool
     let isDuplicate: Bool
+    /// Zero-based position in the slot list.
+    let position: Int
+    let count: Int
     let triggerText: String
-    let sourceStatus: String
-    let bindingWarning: String?
+    let hasTrigger: Bool
+    let warning: String?
+    let isRenaming: Bool
+    let onRename: () -> Void
+    let onCommitRename: (String) -> Bool
+    let onCancelRename: () -> Void
+    let onRenameCommitChanged: ((() -> Bool)?) -> Void
     let onTest: () -> Void
-    let onFix: () -> Void
-    @ViewBuilder let triggerTypeControl: () -> TriggerTypeControl
-    @ViewBuilder let triggerControl: () -> TriggerControl
-    @ViewBuilder let inputSourceControl: () -> InputSourceControl
+    let onMove: (Int) -> Void
+    let onRemove: () -> Void
+    let triggerControls: AnyView
+    let inputSourceControl: AnyView
+    var seatProgress: CGFloat = 1
+    var focusName: Bool = false
+
+    private var presentation: InputSourcePresentation { InputSourcePresentation(source: source, slot: slot) }
+    private var tint: Color { slotLook.tint(for: slot.id) }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            RoleBadge(role: role, symbol: presentation.symbol, size: 31, isActive: isActive)
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(slotLook.name(for: role))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(DesignTokens.Colors.textPrimary)
-                    statusChip
-                }
-
-                if source == nil {
-                    HStack(spacing: 6) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.caption2.weight(.bold))
-                            Text("Not matched")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .foregroundStyle(DesignTokens.Colors.warning)
-                        // Without this an unmatched slot is a dead end: a user whose input
-                        // sources are not Chinese or Japanese could never assign one here.
-                        inputSourceControl()
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Text(presentation.detail)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(DesignTokens.Colors.textMuted)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.80)
-                        inputSourceControl()
-                    }
-                }
-
-                if let bindingWarning {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2.weight(.bold))
-                        Text(bindingWarning)
-                            .font(.caption2.weight(.semibold))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .foregroundStyle(DesignTokens.Colors.warning)
-                    .help(bindingWarning)
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(bindingWarning)
-                }
-            }
-            .frame(width: 210, alignment: .leading)
-
-            Spacer(minLength: 0)
-
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                if source == nil {
-                    TriggerKeycapSequence(role: role, triggerText: triggerText, isActive: isActive)
-                        .frame(width: 92, alignment: .leading)
-                    Text(sourceStatus)
-                        .font(.caption)
+                // Reserve the future drag handle's seat without advertising an inert control.
+                Color.clear.frame(width: 14, height: 14).accessibilityHidden(true)
+                RoleBadge(role: slot.id, symbol: presentation.symbol, size: 31, isActive: isActive)
+                HStack(spacing: 4) {
+                    name
+                    Text("·")
                         .foregroundStyle(DesignTokens.Colors.textMuted)
-                        .lineLimit(1)
-                        .frame(width: 150, alignment: .leading)
-                    Button("Fix", action: onFix)
-                        .buttonStyle(ConsoleButtonStyle(prominent: true))
-                        .frame(width: 58)
-                } else {
-                    triggerTypeControl()
-                        .frame(width: 158)
-                    triggerControl()
-                        .frame(width: 126, alignment: .center)
-                    Button("Test", action: onTest)
-                        .buttonStyle(ConsoleButtonStyle())
-                        .frame(width: 58)
+                        .accessibilityHidden(true)
+                    Group {
+                        if source == nil {
+                            Label("Not matched", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(DesignTokens.Colors.warning)
+                        } else {
+                            Text(presentation.detail)
+                                .foregroundStyle(DesignTokens.Colors.textMuted)
+                        }
+                    }
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .layoutPriority(-1)
+                    inputSourceControl
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(-1)
+                Button("Test") { perform(onTest) }
+                    .buttonStyle(ConsoleButtonStyle())
+                    .frame(width: 58)
+                    .disabled(source == nil)
+                SlotOverflowMenu(position: position, count: count,
+                                 onRename: { perform(onRename) },
+                                 onMove: { offset in perform { onMove(offset) } },
+                                 onRemove: { perform(onRemove) })
+                    .frame(width: 24)
             }
-            .frame(width: 362, alignment: .trailing)
+            HStack(spacing: 8) {
+                triggerControls
+                Spacer(minLength: 0)
+                statusChip
+            }
+            .padding(.leading, 22)
+            if let warning {
+                Label {
+                    Text(warning).fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(DesignTokens.Colors.warning)
+                .padding(.leading, 22)
+                .help(warning)
+                .accessibilityElement(children: .combine)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .background(
+        .background {
             RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
                 .fill(DesignTokens.Colors.surfaceRaised)
-                .overlay(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
-                        .stroke(slotStrokeColor, lineWidth: isActive ? 1.4 : 1)
-                )
-                .shadow(color: isActive ? slotLook.tint(for: role).opacity(0.26) : .clear, radius: 14, y: 5)
-        )
+        }
+        .modifier(SlotCardOutline(progress: seatProgress, tint: tint, reduceMotion: reduceMotion,
+                                  stroke: strokeColor, isActive: isActive))
+        .onAppear { nameFocused = focusName }
+        .onChange(of: focusName) { nameFocused = $0 }
+        .contextMenu { menuItems }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(slotLook.name(for: role)) switch slot")
+        .accessibilityLabel("\(slot.name) slot, position \(position + 1) of \(count)")
         .accessibilityValue(isActive ? "Current" : (source == nil ? "Not matched" : "Configured"))
     }
 
-    @ViewBuilder
-    private var statusChip: some View {
-        if bindingWarning != nil {
-            Text("Warning")
-                .slotChip(color: DesignTokens.Colors.warning)
-        } else if isActive {
-            Text("Current")
-                .slotChip(color: slotLook.tint(for: role))
-        } else if isDuplicate {
-            Text("Duplicate")
-                .slotChip(color: DesignTokens.Colors.warning)
-        }
-    }
-
-    private var slotStrokeColor: Color {
-        if isActive {
-            return slotLook.tint(for: role).opacity(0.74)
-        }
-        if source == nil || isDuplicate || bindingWarning != nil {
-            return DesignTokens.Colors.warning.opacity(0.35)
-        }
-        return slotLook.tint(for: role).opacity(0.22)
-    }
-}
-
-private struct TriggerKeycapSequence: View {
-    let role: InputRole
-    let triggerText: String
-    let isActive: Bool
-
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(Array(keycaps.enumerated()), id: \.offset) { index, keycap in
-                if index > 0 {
-                    Text("+")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(DesignTokens.Colors.textMuted)
-                }
-                KeycapView(keycap.label, detail: keycap.detail, role: role, isPressed: isActive)
-                    .font(.caption)
+    private var name: some View {
+        Group {
+            if isRenaming {
+                SlotNameField(name: slot.name, tint: tint, session: renameSession,
+                              onCommit: onCommitRename, onCancel: onCancelRename,
+                              onCommitChanged: onRenameCommitChanged)
+                    .transition(.opacity)
+            } else {
+                Text(slot.name)
+                    .foregroundStyle(DesignTokens.Colors.textPrimary)
+                    .lineLimit(1)
+                    .help(slot.name)
+                    .accessibilityFocused($nameFocused)
+                    .onTapGesture(count: 2, perform: onRename)
+                    .accessibilityActions {
+                        Button("Rename", action: onRename)
+                        if position > 0 { Button("Move Up") { perform { onMove(-1) } } }
+                        if position + 1 < count { Button("Move Down") { perform { onMove(1) } } }
+                        if count > 1 { Button("Remove Slot") { perform(onRemove) } }
+                    }
+                    .transition(.opacity)
             }
         }
+        .font(.caption.weight(.semibold))
+        .animation(DesignTokens.Motion.stateChange, value: isRenaming)
     }
 
-    private var keycaps: [LiveKeycap] {
-        if triggerText.isEmpty {
-            return [LiveKeycap(label: role.defaultSymbol, detail: nil)]
-        }
+    private var menuItems: some View {
+        SlotMenuItems(position: position, count: count, onRename: { perform(onRename) },
+                      onMove: { offset in perform { onMove(offset) } }, onRemove: { perform(onRemove) })
+    }
 
-        let parts = triggerText.split(separator: "+").map { String($0) }
-        if parts.count == 1 {
-            return [LiveKeycap(keyName: parts[0])]
+    private func perform(_ action: () -> Void) {
+        guard renameSession.commit?() ?? true else { return }
+        action()
+    }
+
+    @ViewBuilder private var statusChip: some View {
+        if warning != nil {
+            Label("Warning", systemImage: "exclamationmark.triangle.fill").slotChip(color: DesignTokens.Colors.warning)
+        } else if isActive {
+            Label("Current", systemImage: "checkmark.circle.fill").slotChip(color: tint)
+        } else if isDuplicate {
+            Label("Duplicate", systemImage: "square.on.square").slotChip(color: DesignTokens.Colors.warning)
+        } else if !hasTrigger {
+            Label("No trigger", systemImage: "keyboard").slotChip(color: DesignTokens.Colors.textMuted)
         }
-        return parts.map { LiveKeycap(keyName: $0) }
+    }
+
+    private var strokeColor: Color {
+        if isActive { return tint.opacity(0.74) }
+        if source == nil || isDuplicate || warning != nil { return DesignTokens.Colors.warning.opacity(0.35) }
+        return tint.opacity(0.22)
     }
 }
 
-extension SwitchSlotsSection {
+/// Keeping the branch inside an animatable modifier lets the pulse finish before
+/// restoring the resting outline, even though the parent's target is already one.
+private struct SlotCardOutline: ViewModifier, @preconcurrency Animatable {
+    var progress: CGFloat
+    let tint: Color
+    let reduceMotion: Bool
+    let stroke: Color
+    let isActive: Bool
+
+    var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            Group {
+                if progress < 1 {
+                    Color.clear
+                        .modifier(SeatPulse(progress: progress, tint: tint, reduceMotion: reduceMotion))
+                } else {
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                        .stroke(stroke, lineWidth: isActive ? 1.4 : 1)
+                        .shadow(color: isActive ? tint.opacity(0.26) : .clear, radius: 14, y: 5)
+                }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+    }
+}
+
+private struct SlotMenuItems: View {
+    let position: Int
+    let count: Int
+    let onRename: () -> Void
+    let onMove: (Int) -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        Button("Rename", action: onRename)
+        if position > 0 { Button("Move Up") { onMove(-1) } }
+        if position + 1 < count { Button("Move Down") { onMove(1) } }
+        Divider()
+        Button("Remove Slot", role: .destructive, action: onRemove)
+            .disabled(count <= 1)
+            .help(count <= 1 ? (SlotError.lastSlot.errorDescription ?? "Keep at least one slot.") : "Remove this slot")
+    }
+}
+
+struct SlotOverflowMenu: View {
+    let position: Int
+    let count: Int
+    let onRename: () -> Void
+    let onMove: (Int) -> Void
+    let onRemove: () -> Void
+
+    var body: some View {
+        Menu {
+            SlotMenuItems(position: position, count: count, onRename: onRename, onMove: onMove, onRemove: onRemove)
+        } label: {
+            Image(systemName: "ellipsis").frame(width: 24, height: 24)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .accessibilityLabel("Slot actions")
+        .help("Slot actions")
+    }
+}
+
+@MainActor
+final class SlotRenameSession: ObservableObject {
+    var commit: (() -> Bool)?
+}
+
+struct SlotNameField: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @FocusState private var focused: Bool
+    @State private var draft = ""
+    @State private var invalid = false
+    @State private var shakeProgress: CGFloat = 0
+    @State private var shakeGeneration = 0
+    @State private var appeared = false
+    @State private var finished = false
+    @State private var rejectedInCurrentEvent = false
+    let name: String
+    let tint: Color
+    let session: SlotRenameSession
+    let onCommit: (String) -> Bool
+    let onCancel: () -> Void
+    let onCommitChanged: ((() -> Bool)?) -> Void
+
+    var body: some View {
+        TextField("Slot name", text: $draft)
+            .textFieldStyle(.plain)
+            .focused($focused)
+            .accessibilityLabel("Slot name")
+            .onSubmit { if !isComposing { _ = commit() } }
+            .onExitCommand {
+                guard !isComposing else { return }
+                finished = true
+                session.commit = nil
+                onCommitChanged(nil)
+                onCancel()
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(invalid ? DesignTokens.Colors.warning : tint)
+                    .frame(height: 1)
+                    .scaleEffect(x: appeared || reduceMotion ? 1 : 0, y: 1, anchor: .leading)
+                    .animation(reduceMotion ? nil : DesignTokens.Motion.expandCollapse, value: appeared)
+                    .animation(DesignTokens.Motion.stateChange, value: invalid)
+            }
+            .modifier(Shake(progress: shakeProgress, amplitude: reduceMotion ? 0 : 5))
+            .background(SlotRenameOutsideMonitor(onOutside: { _ = commit() }))
+            .onAppear {
+                draft = name
+                session.commit = commit
+                onCommitChanged(commit)
+                focused = true
+                appeared = true
+            }
+            .onChange(of: draft) { _ in
+                session.commit = commit
+                onCommitChanged(commit)
+            }
+            .onDisappear {
+                session.commit = nil
+                onCommitChanged(nil)
+            }
+    }
+
+    private var isComposing: Bool {
+        (NSApp.keyWindow?.firstResponder as? NSTextView)?.hasMarkedText() == true
+    }
+
+    @discardableResult private func commit() -> Bool {
+        guard !finished else { return true }
+        guard !isComposing, !rejectedInCurrentEvent else { return false }
+        if onCommit(draft) {
+            finished = true
+            session.commit = nil
+            onCommitChanged(nil)
+            return true
+        }
+        // The outside-click monitor returns the event; its menu/button action
+        // must not immediately retry the reverted draft and erase this reason.
+        rejectedInCurrentEvent = true
+        DispatchQueue.main.async { rejectedInCurrentEvent = false }
+        draft = name
+        invalid = true
+        focused = true
+        shakeGeneration += 1
+        shakeProgress = 0
+        let generation = shakeGeneration
+        if !reduceMotion {
+            DispatchQueue.main.async {
+                guard generation == shakeGeneration, !finished else { return }
+                withAnimation(DesignTokens.Motion.rejectShake) { shakeProgress = 1 }
+            }
+        }
+        return false
+    }
+}
+
+private struct SlotRenameOutsideMonitor: NSViewRepresentable {
+    let onOutside: () -> Void
+
+    func makeNSView(context: Context) -> MonitorView {
+        let view = MonitorView()
+        view.onOutside = onOutside
+        return view
+    }
+
+    func updateNSView(_ view: MonitorView, context: Context) { view.onOutside = onOutside }
+    static func dismantleNSView(_ view: MonitorView, coordinator: ()) { view.stop() }
+
+    final class MonitorView: NSView {
+        var onOutside: (() -> Void)?
+        private var monitor: Any?
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            stop()
+            guard window != nil else { return }
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+                MainActor.assumeIsolated {
+                    guard let self, let window = self.window else { return }
+                    if event.window !== window || !self.bounds.contains(self.convert(event.locationInWindow, from: nil)) {
+                        self.onOutside?()
+                    }
+                }
+                return event
+            }
+        }
+
+        func stop() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+        }
+    }
+}
+
+private extension View {
+    func slotChip(color: Color) -> some View {
+        self
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(color)
+            .lineLimit(1)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(RoundedRectangle(cornerRadius: 4, style: .continuous).fill(color.opacity(0.16)))
+    }
+}
+
+extension SlotBoardSection {
     func inputSourcePicker(for role: InputRole, source: InputSourceInfo?) -> some View {
         Menu {
             if source == nil {
@@ -178,7 +387,9 @@ extension SwitchSlotsSection {
             }
             ForEach(model.selectableSources, id: \.id) { candidate in
                 Button(model.inputSourceMenuTitle(candidate, for: role)) {
+                    guard commitPendingRename() else { return }
                     model.setInputSourceID(candidate.id, for: role)
+                    if let notice = model.slotNotices[role] { announce(notice) }
                 }
                 .disabled(!model.inputSourceSelection(candidate, for: role).isEnabled)
             }
@@ -198,21 +409,5 @@ extension SwitchSlotsSection {
             )
         }
         .menuStyle(.borderlessButton)
-    }
-
-}
-
-private extension Text {
-    func slotChip(color: Color) -> some View {
-        self
-            .font(.caption2.weight(.bold))
-            .textCase(.uppercase)
-            .foregroundStyle(color)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .fill(color.opacity(0.16))
-            )
     }
 }

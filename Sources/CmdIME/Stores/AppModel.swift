@@ -21,7 +21,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var slotNotices: [InputRole: String] = [:]
 
     @Published private(set) var boardNotice: BoardNotice?
-    private var pendingUndo: RemovedSlot?
+    @Published private(set) var canUndoRemoval = false
+    private var pendingUndo: RemovedSlot? {
+        didSet { canUndoRemoval = pendingUndo != nil }
+    }
 
     private let configStore: ConfigStore
     private let inputSources = MacInputSourceService()
@@ -545,8 +548,14 @@ final class AppModel: ObservableObject {
         }
 
         // Validate before upsert: its replacement semantics also serve the CLI.
+        var next = config
+        next.upsertSwitchBinding(trigger: trigger, role: role)
+        guard next != config else {
+            clearSlotNotice(for: role)
+            return
+        }
         invalidateUndo()
-        config.upsertSwitchBinding(trigger: trigger, role: role)
+        config = next
         if save() {
             clearSlotNotice(for: role)
         } else {

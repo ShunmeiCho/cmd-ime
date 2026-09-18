@@ -2,7 +2,7 @@ import AppKit
 import KeyboardSwitcherCore
 import SwiftUI
 
-extension SwitchSlotsSection {
+extension SlotBoardSection {
     func triggerTypePicker(for role: InputRole) -> some View {
         ConsoleSegmentedControl(
             options: BindingTriggerType.allCases.map { ConsoleSegmentOption(value: $0, label: $0.displayName) },
@@ -27,6 +27,7 @@ extension SwitchSlotsSection {
                     text.split(separator: "+").map { LiveKeycap(keyName: String($0)).label }.joined()
                 },
                 onCommit: { shortcut in
+                    guard commitPendingRename() else { return }
                     model.setBindingText(shortcut, for: role)
                     resetDrafts()
                 },
@@ -46,6 +47,7 @@ extension SwitchSlotsSection {
                         excluding: role
                     )
                     Button {
+                        guard commitPendingRename() else { return }
                         let gesture = triggerType(for: role).gesture ?? .tap
                         model.setOneShotBinding(
                             keyCode: choice.keyCode,
@@ -71,6 +73,7 @@ extension SwitchSlotsSection {
     }
 
     private func setTriggerType(_ type: BindingTriggerType, for role: InputRole) {
+        guard commitPendingRename() else { return }
         switch type {
         case .shortcut:
             triggerTypeDrafts[role] = .shortcut
