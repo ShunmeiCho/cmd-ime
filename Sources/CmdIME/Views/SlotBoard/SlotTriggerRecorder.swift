@@ -10,6 +10,8 @@ struct SlotTriggerRecorder: View {
     let onUpdated: () -> Void
     @StateObject private var session = TriggerRecordingSession()
     @State private var presented = false
+    @State private var hovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.slotLook) private var slotLook
 
     private var trigger: KeyTrigger? { model.trigger(for: role) }
@@ -22,12 +24,29 @@ struct SlotTriggerRecorder: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            TriggerRecorderAnchor(title: session.isRecording ? "Recording…" : trigger.map(TriggerKeycapText.summary) ?? "Record Hotkey",
-                                  accessibilityTitle: "Record trigger for \(slotLook.name(for: role))",
-                                  accessibilityValue: trigger?.displayName ?? "No trigger",
-                                  tint: NSColor(slotLook.tint(for: role)), hasTrigger: trigger != nil,
-                                  isGhost: isGhost, onOpen: open)
-                .frame(width: 180, height: 28)
+            recorderLabel
+                .padding(6)
+                .frame(minHeight: DesignTokens.Layout.fieldHeight)
+                .background {
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.control)
+                        .fill(hovered ? DesignTokens.Colors.surfaceRaised : DesignTokens.Colors.surfaceInset)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.control)
+                                .stroke(hovered ? slotLook.tint(for: role) : DesignTokens.Colors.separatorStrong, lineWidth: 1)
+                        }
+                }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .overlay {
+                    TriggerRecorderAnchor(title: "",
+                                          accessibilityTitle: "Record trigger for \(slotLook.name(for: role))",
+                                          accessibilityValue: trigger?.displayName ?? "No trigger",
+                                          tint: NSColor(slotLook.tint(for: role)), hasTrigger: trigger != nil,
+                                          isGhost: isGhost, onOpen: open)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .onHover { if !isGhost { hovered = $0 } }
+                .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.quickFade, reduceMotion: reduceMotion), value: hovered)
                 .popover(isPresented: presentation, arrowEdge: .bottom) {
                     let generation = session.sessionID
                     TriggerRecorderPopover(session: session, role: role, name: slotLook.name(for: role))
@@ -51,6 +70,27 @@ struct SlotTriggerRecorder: View {
         .allowsHitTesting(!isGhost)
         .accessibilityHidden(isGhost)
         .onDisappear { session.end(reason: .disappeared) }
+    }
+
+    @ViewBuilder private var recorderLabel: some View {
+        if session.isRecording {
+            Text("Recording…").font(DesignTokens.Typography.body)
+        } else if let trigger {
+            let keys = trigger.modifiers.map(\.rawValue) + [trigger.keyName]
+            TriggerKeycapFlow {
+                ForEach(Array(keys.enumerated()), id: \.offset) { _, key in
+                    let cap = TriggerKeycapText.keycap(key)
+                    KeycapView(cap.label, detail: cap.detail, role: role, appearance: .display)
+                }
+                if trigger.gesture == .doubleTap {
+                    Text("×2").font(DesignTokens.Typography.auxiliary.weight(.bold))
+                }
+            }
+        } else {
+            Text("Record Hotkey")
+                .font(DesignTokens.Typography.body.weight(.semibold))
+                .lineLimit(1)
+        }
     }
 
     private func open(in window: NSWindow) {
