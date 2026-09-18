@@ -120,7 +120,7 @@ extension SwitcherConfig {
 
     public func migrated() -> SwitcherConfig {
         var result = self
-        result.version = Self.currentVersion
+        result.version = max(version, Self.currentVersion)
         return result
     }
 
