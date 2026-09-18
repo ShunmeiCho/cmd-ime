@@ -39,9 +39,10 @@ struct SourceListColumn: View {
                     }
                 }
                 if model.unassignedSources.isEmpty {
-                    Text("All input sources are in slots.")
+                    Text("All input sources are in slots. Add more in System Settings.")
                         .font(DesignTokens.Typography.auxiliary)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                     keyboardSettingsButton
                 }
             }
@@ -60,7 +61,14 @@ struct SourceListColumn: View {
     }
 
     private var keyboardSettingsButton: some View {
-        Button("Open Keyboard Settings…", action: onOpenSettings).buttonStyle(ConsoleButtonStyle())
+        // One line at the narrow column width; the long title used to wrap into a two-line slab.
+        Button(action: onOpenSettings) {
+            Label("Keyboard Settings…", systemImage: "arrow.up.forward.app")
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(ConsoleButtonStyle())
+        .accessibilityLabel("Open Keyboard Settings")
     }
 }
 
