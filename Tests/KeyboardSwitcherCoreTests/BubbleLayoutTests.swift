@@ -107,4 +107,22 @@ final class BubbleLayoutTests: XCTestCase {
                                               bubbleWidth: 150, bubbleHeight: 50, visible: offset)
         XCTAssertEqual(pointer, BubblePlacement(originX: -1432, originY: 518, anchor: .bottomLeading))
     }
+
+    func testAResizedBubbleKeepsItsAnchorCornerAndStaysOnScreen() {
+        let old = BubblePlacement.Rect(x: 400, y: 300, width: 120, height: 50)
+        XCTAssertEqual(
+            BubblePlacement.resized(from: old, anchor: .bottomLeading, width: 200, height: 60, visible: screen),
+            BubblePlacement.Rect(x: 400, y: 300, width: 200, height: 60)
+        )
+        XCTAssertEqual(
+            BubblePlacement.resized(from: old, anchor: .topLeading, width: 200, height: 60, visible: screen),
+            BubblePlacement.Rect(x: 400, y: 290, width: 200, height: 60)
+        )
+
+        let atTheEdge = BubblePlacement.Rect(x: 1440 - 8 - 120, y: 12, width: 120, height: 50)
+        XCTAssertEqual(
+            BubblePlacement.resized(from: atTheEdge, anchor: .topLeading, width: 200, height: 60, visible: screen),
+            BubblePlacement.Rect(x: 1440 - 8 - 200, y: 8, width: 200, height: 60)
+        )
+    }
 }

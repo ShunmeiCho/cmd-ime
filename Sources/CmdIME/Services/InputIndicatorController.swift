@@ -81,20 +81,21 @@ final class InputIndicatorController {
         let pointer = NSEvent.mouseLocation
         let newTarget = caret.map { CGPoint(x: $0.midX, y: $0.maxY) } ?? pointer
         let visible = screen(containing: newTarget).visibleFrame
+        let visibleRect = BubblePlacement.Rect(x: visible.minX, y: visible.minY, width: visible.width, height: visible.height)
         let placement = BubblePlacement.resolve(
             caret: caret.map { BubblePlacement.Rect(x: $0.minX, y: $0.minY, width: $0.width, height: $0.height) },
             pointerX: pointer.x,
             pointerY: pointer.y,
             bubbleWidth: size.width,
             bubbleHeight: size.height,
-            visible: BubblePlacement.Rect(x: visible.minX, y: visible.minY, width: visible.width, height: visible.height)
+            visible: visibleRect
         )
         let placed = CGRect(x: placement.originX, y: placement.originY, width: size.width, height: size.height)
 
         generation += 1
         let wasVisible = phase == .appearing || phase == .holding
         let movedFar = hypot(newTarget.x - target.x, newTarget.y - target.y) > BubbleMotion.repositionThreshold
-        let frame = wasVisible && !movedFar ? keepingAnchorCorner(of: bubbleFrame, size: size) : placed
+        let frame = wasVisible && !movedFar ? keepingAnchorCorner(of: bubbleFrame, size: size, visible: visibleRect) : placed
         if !wasVisible || movedFar {
             anchor = placement.anchor
             target = newTarget
@@ -135,6 +136,7 @@ final class InputIndicatorController {
         let current = generation
         let duration = reduceMotion ? BubbleMotion.reducedFadeIn : BubbleMotion.appearDuration
         let model = state.model
+        resizePanelAtOnce(to: panelFrame(for: frame, travel: 0).size)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
             context.timingFunction = BubbleMotion.easeOutTimingFunction
@@ -214,9 +216,26 @@ final class InputIndicatorController {
         return bubble.insetBy(dx: -margin, dy: -margin).offsetBy(dx: 0, dy: towardCaret)
     }
 
-    private func keepingAnchorCorner(of old: CGRect, size: CGSize) -> CGRect {
-        let y = anchor == .bottomLeading ? old.minY : old.maxY - size.height
-        return CGRect(x: old.minX, y: y, width: size.width, height: size.height)
+    /// The glass takes its new size at once, so the panel must too: animating the size
+    /// would slide the centred SwiftUI edges away from the glass. Only origin and
+    /// alpha are animated.
+    private func resizePanelAtOnce(to size: CGSize) {
+        let current = panel.frame
+        guard current.size != size else { return }
+        let y = anchor == .bottomLeading ? current.minY : current.maxY - size.height
+        panel.setFrame(CGRect(x: current.minX, y: y, width: size.width, height: size.height), display: true)
+    }
+
+    /// A larger bubble grows from the corner nearest the caret and stays on screen.
+    private func keepingAnchorCorner(of old: CGRect, size: CGSize, visible: BubblePlacement.Rect) -> CGRect {
+        let resized = BubblePlacement.resized(
+            from: BubblePlacement.Rect(x: old.minX, y: old.minY, width: old.width, height: old.height),
+            anchor: anchor,
+            width: size.width,
+            height: size.height,
+            visible: visible
+        )
+        return CGRect(x: resized.x, y: resized.y, width: resized.width, height: resized.height)
     }
 
     private func screen(containing point: NSPoint) -> NSScreen {

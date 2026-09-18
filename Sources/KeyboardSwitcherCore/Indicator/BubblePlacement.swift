@@ -60,6 +60,24 @@ public struct BubblePlacement: Equatable, Sendable {
         )
     }
 
+    /// A re-trigger while the bubble is showing: the new size grows from the anchor
+    /// corner of the old frame, then is kept inside the visible frame like a fresh one.
+    public static func resized(
+        from old: Rect,
+        anchor: Anchor,
+        width: Double,
+        height: Double,
+        visible: Rect
+    ) -> Rect {
+        let y = anchor == .bottomLeading ? old.y : old.maxY - height
+        return Rect(
+            x: clamped(old.x, low: visible.x + screenMargin, high: visible.maxX - screenMargin - width),
+            y: clamped(y, low: visible.y + screenMargin, high: visible.maxY - screenMargin - height),
+            width: width,
+            height: height
+        )
+    }
+
     /// The low bound wins when the bubble is larger than the space between the margins.
     private static func clamped(_ value: Double, low: Double, high: Double) -> Double {
         max(min(value, high), low)
