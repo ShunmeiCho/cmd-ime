@@ -13,6 +13,7 @@ final class AppModel: ObservableObject {
     @Published var permissions = MacPermissionStatus.current()
     @Published var loginItem = LoginItemService().snapshot()
     @Published var updateStatus: UpdateStatus
+    @Published private(set) var slotNotices: [InputRole: String] = [:]
 
     private let configStore: ConfigStore
     private let inputSources = MacInputSourceService()
@@ -20,6 +21,28 @@ final class AppModel: ObservableObject {
     private let switchIndicator = InputIndicatorController()
     private let updates = UpdateService()
     private var monitor: EventTapMonitor?
+    private var recordingRole: InputRole?
+
+    func setShortcutRecording(_ recording: Bool, for role: InputRole) {
+        if recording {
+            recordingRole = role
+            clearSlotNotice(for: role)
+        } else if recordingRole == role {
+            recordingRole = nil
+        }
+        monitor?.isCapturingShortcut = recordingRole != nil
+    }
+
+    private func clearSlotNotice(for role: InputRole) {
+        if slotNotices[role] != nil {
+            slotNotices[role] = nil
+        }
+    }
+
+    private func reportSlotFailure(_ message: String, for role: InputRole) {
+        statusText = message
+        slotNotices[role] = message
+    }
 
     private static var currentVersion: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
@@ -277,6 +300,7 @@ final class AppModel: ObservableObject {
         do {
             config = try config.selectingInputSource(source, for: role, sources: sources)
             if save() {
+                clearSlotNotice(for: role)
                 statusText = "Switch slot set to \(source.localizedName)"
             }
         } catch {
@@ -315,18 +339,19 @@ final class AppModel: ObservableObject {
                 scan()
             }
             guard let source = matchedSource(for: role) else {
-                statusText = "No input method matched this switch slot"
+                reportSlotFailure("No input source matched this slot", for: role)
                 return
             }
             let current = try inputSources.selectInputSourceAndConfirm(id: source.id)
             guard current?.id == source.id else {
-                statusText = InputSourceInfo.verificationMessage(requested: source, current: current)
+                reportSlotFailure(InputSourceInfo.verificationMessage(requested: source, current: current), for: role)
                 return
             }
             showSwitchIndicator(for: role, source: source)
+            clearSlotNotice(for: role)
             statusText = "Selected \(source.localizedName)"
         } catch {
-            statusText = error.localizedDescription
+            reportSlotFailure(error.localizedDescription, for: role)
         }
     }
 
@@ -351,22 +376,39 @@ final class AppModel: ObservableObject {
             let trigger = try ShortcutParser.parse(text)
             setBindingTrigger(trigger, for: role)
         } catch {
-            statusText = error.localizedDescription
+            reportSlotFailure(error.localizedDescription, for: role)
         }
     }
 
     func setBindingTrigger(_ trigger: KeyTrigger, for role: InputRole) {
         guard !trigger.isReservedMacInputSourceShortcut else {
-            statusText = "\(trigger.displayName) is reserved by macOS input source switching"
+            reportSlotFailure("\(trigger.displayName) is reserved by macOS input source switching", for: role)
             return
         }
         if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
-            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))"
+            reportSlotFailure("\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))", for: role)
+            return
+        }
+        if let conflict = config.conflictingBinding(for: trigger, excluding: role) {
+            let owner: String
+            if conflict.action.type == .switchInputSource, let otherRole = conflict.action.role {
+                owner = config.displayName(for: otherRole)
+            } else if conflict.action.type == .sendKey {
+                owner = "a key remap"
+            } else {
+                owner = "another binding"
+            }
+            reportSlotFailure("\(trigger.displayName) is already used by \(owner)", for: role)
             return
         }
 
+        // Validate before upsert: its replacement semantics also serve the CLI.
         config.upsertSwitchBinding(trigger: trigger, role: role)
-        save()
+        if save() {
+            clearSlotNotice(for: role)
+        } else {
+            reportSlotFailure(statusText, for: role)
+        }
     }
 
     func setOneShotBinding(keyCode: Int, keyName: String, gesture: TriggerGesture, for role: InputRole) {
@@ -384,16 +426,11 @@ final class AppModel: ObservableObject {
             return
         }
         if gesture == .doubleTap, trigger.kind != .oneShotModifier {
-            statusText = "Double tap requires a single modifier key"
+            reportSlotFailure("Double tap requires a single modifier key", for: role)
             return
         }
         trigger.gesture = gesture
-        if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
-            statusText = "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))"
-            return
-        }
-        config.upsertSwitchBinding(trigger: trigger, role: role)
-        save()
+        setBindingTrigger(trigger, for: role)
     }
 
     func oneShotConflictRole(forKeyCode keyCode: Int, keyName: String, excluding role: InputRole) -> InputRole? {
@@ -425,6 +462,7 @@ final class AppModel: ObservableObject {
 
         do {
             let nextMonitor = EventTapMonitor(config: config, inputSources: inputSources)
+            nextMonitor.isCapturingShortcut = recordingRole != nil
             nextMonitor.onMessage = { [weak self] message in
                 DispatchQueue.main.async {
                     self?.statusText = message

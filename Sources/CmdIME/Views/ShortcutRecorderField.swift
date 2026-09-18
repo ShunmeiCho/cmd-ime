@@ -4,7 +4,9 @@ import SwiftUI
 
 struct ShortcutRecorderField: NSViewRepresentable {
     @Binding var text: String
+    var displayText: (String) -> String
     var onCommit: (String) -> Void
+    var onRecordingChanged: (Bool) -> Void
 
     func makeNSView(context: Context) -> RecorderTextField {
         let field = RecorderTextField()
@@ -13,15 +15,31 @@ struct ShortcutRecorderField: NSViewRepresentable {
         field.focusRingType = .default
         field.bezelStyle = .roundedBezel
         field.delegate = context.coordinator
-        field.onShortcut = { shortcut in
-            text = shortcut
-            onCommit(shortcut)
-        }
+        field.setAccessibilityElement(true)
+        field.setAccessibilityRole(.textField)
+        field.setAccessibilityLabel("Trigger shortcut")
+        field.setAccessibilityHelp("Press a key combination. Escape cancels. Tab moves to the next control.")
+        updateField(field)
         return field
     }
 
+    private func updateField(_ field: RecorderTextField) {
+        field.onRecordingChanged = onRecordingChanged
+        field.onShortcut = { [weak field] shortcut in
+            text = shortcut
+            onCommit(shortcut)
+            field?.setCommittedText(text, displayText: displayText(text))
+        }
+        field.setCommittedText(text, displayText: displayText(text))
+    }
+
     func updateNSView(_ nsView: RecorderTextField, context: Context) {
-        nsView.stringValue = text
+        updateField(nsView)
+    }
+
+    static func dismantleNSView(_ nsView: RecorderTextField, coordinator: Coordinator) {
+        nsView.endRecording()
+        NotificationCenter.default.removeObserver(nsView)
     }
 
     func makeCoordinator() -> Coordinator {
@@ -33,6 +51,67 @@ struct ShortcutRecorderField: NSViewRepresentable {
 
 final class RecorderTextField: NSTextField {
     var onShortcut: ((String) -> Void)?
+    var onRecordingChanged: ((Bool) -> Void)?
+    private(set) var isRecording = false
+    private var committedText = ""
+    private var committedDisplayText = ""
+
+    func setCommittedText(_ text: String, displayText: String) {
+        committedText = text
+        committedDisplayText = displayText
+        updatePresentation()
+    }
+
+    private func updatePresentation() {
+        stringValue = isRecording ? "" : committedDisplayText
+        placeholderString = isRecording ? "Press shortcut" : "Click to record"
+    }
+
+    override func accessibilityValue() -> String? {
+        isRecording ? "Press shortcut" : committedText
+    }
+
+    private func setRecording(_ recording: Bool) {
+        guard recording != isRecording else { return }
+        isRecording = recording
+        updatePresentation()
+        onRecordingChanged?(recording)
+    }
+
+    func endRecording() {
+        if window?.firstResponder === self {
+            window?.makeFirstResponder(nil)
+        }
+        setRecording(false)
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow !== window {
+            endRecording()
+            NotificationCenter.default.removeObserver(self)
+        }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        NotificationCenter.default.removeObserver(self)
+        if let window {
+            let center = NotificationCenter.default
+            center.addObserver(self, selector: #selector(windowBecameKey), name: NSWindow.didBecomeKeyNotification, object: window)
+            center.addObserver(self, selector: #selector(windowEndedRecording), name: NSWindow.didResignKeyNotification, object: window)
+            center.addObserver(self, selector: #selector(windowEndedRecording), name: NSWindow.willCloseNotification, object: window)
+        }
+        setRecording(window?.isKeyWindow == true && window?.firstResponder === self)
+    }
+
+    @objc private func windowBecameKey(_ notification: Notification) {
+        setRecording(window?.isKeyWindow == true && window?.firstResponder === self)
+    }
+
+    @objc private func windowEndedRecording(_ notification: Notification) {
+        endRecording()
+    }
 
     override var acceptsFirstResponder: Bool {
         true
@@ -41,9 +120,18 @@ final class RecorderTextField: NSTextField {
     override func becomeFirstResponder() -> Bool {
         let became = super.becomeFirstResponder()
         if became {
-            placeholderString = "Press shortcut"
+            // AppKit installs the first responder after this method returns.
+            setRecording(window?.isKeyWindow == true)
         }
         return became
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned {
+            setRecording(false)
+        }
+        return resigned
     }
 
     override func mouseDown(with event: NSEvent) {
@@ -52,8 +140,24 @@ final class RecorderTextField: NSTextField {
     }
 
     override func keyDown(with event: NSEvent) {
+        guard isRecording else {
+            super.keyDown(with: event)
+            return
+        }
+        if event.keyCode == 48,
+           event.modifierFlags.intersection([.command, .option, .control]).isEmpty {
+            if event.modifierFlags.contains(.shift) {
+                window?.selectPreviousKeyView(self)
+            } else {
+                window?.selectNextKeyView(self)
+            }
+            if window?.firstResponder === self {
+                endRecording()
+            }
+            return
+        }
         if event.keyCode == 53 {
-            window?.makeFirstResponder(nil)
+            endRecording()
             return
         }
 
@@ -62,9 +166,8 @@ final class RecorderTextField: NSTextField {
             return
         }
 
-        stringValue = shortcut
         onShortcut?(shortcut)
-        window?.makeFirstResponder(nil)
+        endRecording()
     }
 
     private func shortcutString(from event: NSEvent) -> String? {

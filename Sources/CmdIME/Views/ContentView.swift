@@ -295,7 +295,7 @@ private struct SwitchSlotsSection: View {
             isDuplicate: duplicate,
             triggerText: model.bindingText(for: role),
             sourceStatus: sourceStatus(source, for: role),
-            bindingWarning: model.oneShotConflictWarning(for: role),
+            bindingWarning: model.slotNotices[role] ?? model.oneShotConflictWarning(for: role),
             onTest: { model.switchRole(role) },
             onFix: {
                 model.initializeFromScan()
@@ -330,12 +330,18 @@ private struct SwitchSlotsSection: View {
                     get: { triggerDrafts[role] ?? model.bindingText(for: role) },
                     set: { triggerDrafts[role] = $0 }
                 ),
+                displayText: { text in
+                    text.split(separator: "+").map { LiveKeycap(keyName: String($0)).label }.joined()
+                },
                 onCommit: { shortcut in
                     model.setBindingText(shortcut, for: role)
                     resetDrafts()
+                },
+                onRecordingChanged: { recording in
+                    model.setShortcutRecording(recording, for: role)
                 }
             )
-            .frame(width: 88, height: DesignTokens.Layout.fieldHeight)
+            .frame(width: 126, height: DesignTokens.Layout.fieldHeight)
         case .singleTap, .doubleTap:
             let selected = OneShotModifierChoice(trigger: model.trigger(for: role))
                 ?? defaultOneShotChoice() ?? .leftCommand
@@ -515,15 +521,17 @@ private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, In
                 }
 
                 if let bindingWarning {
-                    HStack(spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.caption2.weight(.bold))
                         Text(bindingWarning)
                             .font(.caption2.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.78)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .foregroundStyle(DesignTokens.Colors.warning)
+                    .help(bindingWarning)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(bindingWarning)
                 }
             }
             .frame(width: 210, alignment: .leading)
@@ -573,7 +581,7 @@ private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, In
     @ViewBuilder
     private var statusChip: some View {
         if bindingWarning != nil {
-            Text("Conflict")
+            Text("Warning")
                 .slotChip(color: DesignTokens.Colors.warning)
         } else if isActive {
             Text("Current")

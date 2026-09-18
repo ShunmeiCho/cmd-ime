@@ -135,6 +135,26 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertNil(config.conflictingBinding(for: try ShortcutParser.parse("command+k"), excluding: .chinese))
     }
 
+    func testChordConflictIdentifiesOtherSlotAndRemapWithoutChangingBindings() throws {
+        let chord = try ShortcutParser.parse("command+option+k")
+        let slotBinding = KeyBinding(trigger: chord, action: .switchInputSource(.chinese))
+        var config = SwitcherConfig.default
+        config.bindings.append(slotBinding)
+        let original = config
+
+        XCTAssertEqual(config.conflictingBinding(for: chord, excluding: .english), slotBinding)
+        XCTAssertNil(config.conflictingBinding(for: chord, excluding: .chinese))
+        XCTAssertEqual(config, original)
+
+        let remap = KeyBinding(trigger: chord, action: .sendKey(try ShortcutParser.parse("a")))
+        config.bindings = [remap]
+        XCTAssertEqual(config.conflictingBinding(for: chord, excluding: .english), remap)
+        XCTAssertEqual(config.conflictingBinding(for: chord, excluding: .chinese), remap)
+        XCTAssertNil(config.conflictingBinding(for: try ShortcutParser.parse("command+k"), excluding: .english))
+        config.bindings[0].enabled = false
+        XCTAssertNil(config.conflictingBinding(for: chord, excluding: .english))
+    }
+
     func testLookupExactIDPrecedesAmbiguousNamesAndCaseInsensitiveRequiresUnique() {
         var config = SwitcherConfig.default
         config.slots[1].name = "english"
