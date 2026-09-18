@@ -105,7 +105,7 @@ struct SlotCard: View {
         .contextMenu { menuItems }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(slot.name) slot, position \(position + 1) of \(count)")
-        .accessibilityValue(isActive ? "Current" : (source == nil ? "Not matched" : "Configured"))
+        .accessibilityValue(accessibilityStatus)
         .allowsHitTesting(!isGhost)
         .accessibilityHidden(isGhost)
     }
@@ -153,16 +153,31 @@ struct SlotCard: View {
         action()
     }
 
-    @ViewBuilder private var statusChip: some View {
-        if warning != nil {
-            Label("Warning", systemImage: "exclamationmark.triangle.fill").slotChip(color: DesignTokens.Colors.warning)
-        } else if isActive {
-            Label("Current", systemImage: "checkmark.circle.fill").slotChip(color: tint)
-        } else if isDuplicate {
-            Label("Duplicate", systemImage: "square.on.square").slotChip(color: DesignTokens.Colors.warning)
-        } else if !hasTrigger {
-            Label("No trigger", systemImage: "keyboard").slotChip(color: DesignTokens.Colors.textMuted)
+    private var accessibilityStatus: String {
+        var values = [isActive ? "Current" : "Not current"]
+        if source == nil { values.append("Not matched") }
+        if isDuplicate { values.append("Duplicate") }
+        if !hasTrigger { values.append("No trigger") }
+        if let warning { values.append(warning) }
+        return values.joined(separator: ", ")
+    }
+
+    private var statusChip: some View {
+        VStack(alignment: .trailing, spacing: 4) {
+            if isActive {
+                Label("Current", systemImage: "checkmark.circle.fill").slotChip(color: tint)
+            }
+            if warning != nil {
+                Label("Warning", systemImage: "exclamationmark.triangle.fill").slotChip(color: DesignTokens.Colors.warning)
+            }
+            if isDuplicate {
+                Label("Duplicate", systemImage: "square.on.square").slotChip(color: DesignTokens.Colors.warning)
+            }
+            if !hasTrigger {
+                Label("No trigger", systemImage: "keyboard").slotChip(color: DesignTokens.Colors.textMuted)
+            }
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var strokeColor: Color {
