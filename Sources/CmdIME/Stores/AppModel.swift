@@ -26,6 +26,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var canUndoRemoval = false
     @Published private(set) var newSourceIDs: Set<String> = []
     @Published private(set) var sourceRefreshMessage: String?
+    private var selectedSourceObserver: InputSourceChangeObserver?
     private var sourceChangeObserver: InputSourceChangeObserver?
     private var settingsWindowSubscriptions: Set<AnyCancellable> = []
     private var hasSourceBaseline = false
@@ -112,7 +113,16 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func refreshCurrentRole() {
+        let selected = try? inputSources.currentInputSource()
+        activeRole = InputSourceMatcher.slotID(forSelectedSourceID: selected?.id, sources: sources, config: config)
+    }
+
     private func observeInputSourceChanges() {
+        selectedSourceObserver = InputSourceChangeObserver(change: .selectedSourceChanged) { [weak self] in
+            self?.refreshCurrentRole()
+        }
+        refreshCurrentRole()
         sourceChangeObserver = InputSourceChangeObserver { [weak self] in
             self?.scan()
         }
@@ -152,6 +162,7 @@ final class AppModel: ObservableObject {
             hasSourceBaseline = true
             reconcileNewSources()
             monitor?.updateConfig(config)
+            refreshCurrentRole()
             statusText = "Found \(sources.count) input sources"
             return true
         } catch {
@@ -338,7 +349,7 @@ final class AppModel: ObservableObject {
             invalidateUndo()
             config = rebuilt
             reconcileNewSources()
-            activeRole = nil
+            refreshCurrentRole()
             monitor?.updateConfig(rebuilt)
             statusText = "Rebuilt \(rebuilt.slots.count) slots from installed input sources"
         } catch {
@@ -496,6 +507,7 @@ final class AppModel: ObservableObject {
             config = next
             reconcileNewSources()
             monitor?.updateConfig(next)
+            refreshCurrentRole()
             return true
         } catch {
             if let failureSlot {
@@ -544,6 +556,7 @@ final class AppModel: ObservableObject {
         do {
             try configStore.save(config)
             monitor?.updateConfig(config)
+            refreshCurrentRole()
             statusText = "Saved \(configStore.url.path)"
             return true
         } catch {

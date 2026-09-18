@@ -43,6 +43,7 @@ struct SlotCard: View {
                 dragHandle.accessibilityHidden(true)
                 Button { openColor() } label: {
                     RoleBadge(role: slot.id, symbol: presentation.symbol, size: 31, isActive: isActive)
+                        .accessibilityValue(isActive ? "Current" : "Available")
                 }
                 .buttonStyle(ConsoleControlButtonStyle(tint: tint))
                 .help("Change slot color")
