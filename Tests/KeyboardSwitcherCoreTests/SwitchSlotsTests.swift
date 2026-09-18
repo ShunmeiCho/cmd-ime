@@ -33,7 +33,11 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertEqual(renamed.slots.last?.id, result.slot.id)
         XCTAssertThrowsError(try moved.renamingSlot(result.slot.id, to: " \n"))
         XCTAssertThrowsError(try moved.renamingSlot(InputRole(rawValue: "missing"), to: "X"))
-        XCTAssertEqual(original.slots, SwitchSlot.legacyDefaults)
+        XCTAssertEqual(moved.bindings, result.config.bindings)
+        XCTAssertEqual(moved.inputSources, result.config.inputSources)
+        XCTAssertEqual(renamed.bindings, moved.bindings)
+        XCTAssertEqual(renamed.inputSources, moved.inputSources)
+        XCTAssertEqual(renamed.slots.map(\.tintHex), moved.slots.map(\.tintHex))
     }
 
     func testNormalizationDeduplicatesAndRestoresDisabledOrphans() throws {
@@ -64,9 +68,25 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertNil(removed.inputSources["chinese"])
         XCTAssertNil(removed.switchIndicatorCustomRoleColorHexes["chinese"])
         XCTAssertTrue(removed.bindings.contains(remap))
+        XCTAssertFalse(removed.bindings.contains { $0.action.type == .switchInputSource && $0.action.role == .chinese })
+        XCTAssertEqual(removed.bindings, config.bindings.filter { $0.action.role != .chinese })
+        let reloaded = try JSONDecoder().decode(SwitcherConfig.self, from: JSONEncoder().encode(removed))
+        XCTAssertEqual(reloaded.slots.map(\.id), [.english, .japanese])
+        XCTAssertEqual(reloaded.bindings, removed.bindings)
         XCTAssertThrowsError(try removed.removingSlot(.chinese))
         let last = try removed.removingSlot(.japanese)
         XCTAssertThrowsError(try last.removingSlot(.english))
+    }
+
+    func testRemovalOfDisabledBindingSurvivesRoundTrip() throws {
+        var config = SwitcherConfig.default
+        let index = try XCTUnwrap(config.bindings.firstIndex { $0.action.role == .chinese })
+        config.bindings[index].enabled = false
+        let removed = try config.removingSlot(.chinese)
+        XCTAssertFalse(removed.bindings.contains { $0.action.type == .switchInputSource && $0.action.role == .chinese })
+        let reloaded = try JSONDecoder().decode(SwitcherConfig.self, from: JSONEncoder().encode(removed))
+        XCTAssertEqual(reloaded.slots.map(\.id), [.english, .japanese])
+        XCTAssertEqual(reloaded.bindings, config.bindings.filter { $0.action.role != .chinese })
     }
 
     func testPreferredAssignmentUniquenessUsesOnlyOtherFirstIDs() throws {
@@ -89,11 +109,15 @@ final class SwitchSlotsTests: XCTestCase {
         var config = SwitcherConfig.default
         let abc = source("com.apple.keylayout.ABC", "en")
         config.inputSources["chinese"]?.preferredIDs.append(abc.id)
-        XCTAssertEqual(InputSourceMatcher.bestMatch(for: .english, sources: [abc], config: config), abc)
-        XCTAssertEqual(InputSourceMatcher.bestMatch(for: .chinese, sources: [abc], config: config), abc)
-        XCTAssertEqual(config.duplicateSlotIDs(for: .english, sources: [abc]), [.chinese])
-        XCTAssertEqual(config.duplicateSlotIDs(for: .chinese, sources: [abc]), [.english])
-        XCTAssertEqual(config.duplicateSlotIDs(for: .japanese, sources: [abc]), [])
+        config.inputSources["japanese"]?.preferredIDs.append(abc.id)
+        config.slots = [config.slots[2], config.slots[1], config.slots[0]]
+        for role in InputRole.legacy {
+            XCTAssertEqual(InputSourceMatcher.bestMatch(for: role, sources: [abc], config: config), abc)
+        }
+        XCTAssertEqual(config.duplicateSlotIDs(for: .english, sources: [abc]), [.japanese, .chinese])
+        XCTAssertEqual(config.duplicateSlotIDs(for: .chinese, sources: [abc]), [.japanese, .english])
+        XCTAssertEqual(config.duplicateSlotIDs(for: .japanese, sources: [abc]), [.chinese, .english])
+        XCTAssertEqual(SwitcherConfig.default.duplicateSlotIDs(for: .japanese, sources: [abc]), [])
         XCTAssertEqual(SwitcherConfig.default.duplicateSlotIDs(for: .english, sources: [abc]), [])
     }
 
