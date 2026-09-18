@@ -88,6 +88,12 @@ public enum InputSourceMatcher {
         sources.filter { $0.isSelectCapable && !isAuxiliaryInputSource($0) }
     }
 
+    /// Newly appearing IDs that are selectable, preserving the current scan's order.
+    public static func newSelectableSources(previous: [InputSourceInfo], current: [InputSourceInfo]) -> [InputSourceInfo] {
+        let previousIDs = Set(previous.map(\.id))
+        return selectableSources(from: current).filter { !previousIDs.contains($0.id) }
+    }
+
     public static func isAuxiliaryInputSource(_ source: InputSourceInfo) -> Bool {
         let id = source.id.lowercased()
         let name = source.localizedName.lowercased()
