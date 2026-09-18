@@ -33,11 +33,14 @@ CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
 swift build --product "$APP_NAME"
+swift build --product keyboardctl
 BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 cp "$BUILD_BINARY" "$APP_BINARY"
+# The settings window lists input sources through this helper (fresh process, no stale TIS list).
+cp "$(dirname "$BUILD_BINARY")/keyboardctl" "$APP_MACOS/keyboardctl"
 chmod +x "$APP_BINARY"
 if [[ -f "$ICON_SOURCE" ]]; then
   cp "$ICON_SOURCE" "$APP_RESOURCES/AppIcon.icns"
