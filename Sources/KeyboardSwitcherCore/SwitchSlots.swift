@@ -66,6 +66,7 @@ public enum SlotError: Error, Equatable, LocalizedError, Sendable {
     /// A supplied name is empty after trimming whitespace and newlines.
     case invalidName
     case duplicateName
+    case invalidTintHex(String)
     case unknownSlot(InputRole)
     case slotAlreadyExists(InputRole)
     /// The source has an empty ID, is not selectable, or is an auxiliary source.
@@ -77,6 +78,7 @@ public enum SlotError: Error, Equatable, LocalizedError, Sendable {
         case .lastSlot: "The last slot cannot be removed."
         case .invalidName: "A slot name cannot be empty."
         case .duplicateName: "Another slot already uses this name. Choose a different name."
+        case let .invalidTintHex(input): "Invalid slot color \(input.debugDescription). Use six hexadecimal digits, such as #4D8CFF."
         case let .unknownSlot(id): "Unknown slot \"\(id.rawValue)\"."
         case let .slotAlreadyExists(id): "Slot \"\(id.rawValue)\" already exists."
         case .invalidSource: "Choose a selectable input source."
@@ -338,6 +340,25 @@ extension SwitcherConfig {
         return result
     }
 
+    /// Sets only the slot's tint, normalized to uppercase #RRGGBB.
+    public func settingSlotTint(_ hex: String, for id: InputRole) throws(SlotError) -> SwitcherConfig {
+        guard let index = slots.firstIndex(where: { $0.id == id }) else { throw .unknownSlot(id) }
+        let normalized = try Self.normalizedSlotTint(hex)
+        var result = self
+        result.slots[index].tintHex = normalized
+        return result
+    }
+
+    private static func normalizedSlotTint(_ input: String) throws(SlotError) -> String {
+        var hex = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if hex.hasPrefix("#") { hex.removeFirst() }
+        guard hex.utf8.count == 6,
+              hex.utf8.allSatisfy({ (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0) }) else {
+            throw .invalidTintHex(input)
+        }
+        return "#" + hex.uppercased()
+    }
+
     private func validateSource(_ source: InputSourceInfo, excluding role: InputRole?) throws(SlotError) {
         guard !source.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !InputSourceMatcher.selectableSources(from: [source]).isEmpty else { throw .invalidSource }
@@ -379,4 +400,3 @@ public extension SwitcherConfig {
         }
     }
 }
-
