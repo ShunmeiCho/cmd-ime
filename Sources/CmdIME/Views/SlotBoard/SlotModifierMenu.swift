@@ -26,13 +26,12 @@ struct SlotModifierMenu: View {
     }
 
     var body: some View {
-        HStack(spacing: DesignTokens.Layout.rowGap) {
-            Text(category == .single ? "Single" : "Double")
+        VStack(alignment: .leading, spacing: 4) {
+            Text(category == .single ? "Single tap" : "Double tap")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
                 .accessibilityHidden(true)
-            ConsoleMenuButton(title: "\(title) for \(name): \(value)",
-                              valueLabel: AnyView(valueLabel.accessibilityHidden(true)),
+            ConsoleMenuButton(title: shortValue,
                               tint: SlotLook(slots: model.config.slots).tint(for: role)) {
                 Button("None") { select(nil) }
                     .accessibilityLabel("No \(title.lowercased()) trigger for \(name)")
@@ -53,22 +52,20 @@ struct SlotModifierMenu: View {
                 Text("Many Chinese input methods use Shift to switch between Chinese and English.")
                     .font(DesignTokens.Typography.auxiliary)
             }
-            .fixedSize()
+            .frame(maxWidth: .infinity)
+            .opacity(trigger == nil ? 0.7 : 1)
             .disabled(isGhost)
             .accessibilityLabel("\(title) for \(name)")
             .accessibilityValue(value)
         }
     }
 
-    @ViewBuilder private var valueLabel: some View {
-        if let trigger {
-            let cap = LiveKeycap(keyName: trigger.keyName)
-            KeycapView(cap.label,
-                       detail: TriggerKeycapText.detail(cap.detail, doubleTap: category == .double),
-                       role: role, appearance: .display)
-        } else {
-            Text("None").font(DesignTokens.Typography.body)
-        }
+    /// Same text voice as the input-source menu above it: glyph plus side, no raised keycap.
+    private var shortValue: String {
+        guard let trigger else { return "None" }
+        let cap = LiveKeycap(keyName: trigger.keyName)
+        let side = cap.detail == "L" ? "Left" : cap.detail == "R" ? "Right" : nil
+        return [cap.label, side].compactMap { $0 }.joined(separator: " ")
     }
 
     private func candidate(for key: String) -> KeyTrigger? {

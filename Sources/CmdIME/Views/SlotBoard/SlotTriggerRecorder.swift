@@ -34,8 +34,12 @@ struct SlotTriggerRecorder: View {
     private var recorderControl: some View {
         HStack(spacing: 6) {
             recorderLabel
-                .padding(6)
+                .font(DesignTokens.Typography.body.weight(.semibold))
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DesignTokens.Spacing.sm)
                 .frame(minHeight: DesignTokens.Layout.fieldHeight)
+                .opacity(trigger == nil && !session.isRecording ? 0.7 : 1)
                 .background {
                     RoundedRectangle(cornerRadius: DesignTokens.Radius.control)
                         .fill(hovered ? DesignTokens.Colors.surfaceRaised : DesignTokens.Colors.surfaceInset)
@@ -83,20 +87,12 @@ struct SlotTriggerRecorder: View {
 
     @ViewBuilder private var recorderLabel: some View {
         if session.isRecording {
-            Text("Recording…").font(DesignTokens.Typography.body)
+            Text("Recording…")
         } else if let trigger {
             let keys = trigger.modifiers.map(\.rawValue) + [trigger.keyName]
-            TriggerKeycapFlow {
-                ForEach(Array(keys.enumerated()), id: \.offset) { _, key in
-                    let cap = TriggerKeycapText.keycap(key)
-                    KeycapView(cap.label, detail: TriggerKeycapText.detail(cap.detail, doubleTap: trigger.gesture == .doubleTap),
-                               role: role, appearance: .display)
-                }
-            }
+            Text(keys.map { TriggerKeycapText.keycap($0).label }.joined(separator: " "))
         } else {
-            Text("Record")
-                .font(DesignTokens.Typography.body.weight(.semibold))
-                .lineLimit(1)
+            Text("Record…")
         }
     }
 

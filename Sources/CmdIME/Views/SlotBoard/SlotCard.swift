@@ -47,7 +47,8 @@ struct SlotCard: View {
                     RoleBadge(role: slot.id, symbol: presentation.symbol, size: 31, isActive: isActive)
                         .accessibilityValue(isActive ? "Current" : "Available")
                 }
-                .buttonStyle(ConsoleControlButtonStyle(tint: tint))
+                // The badge tile is the control; a second chrome box around it read as a nested frame.
+                .buttonStyle(SlotBadgeButtonStyle())
                 .help("Change slot color")
                 .accessibilityLabel("Color for \(slot.name)")
                 .popover(isPresented: $showingColor) {
@@ -57,7 +58,11 @@ struct SlotCard: View {
                     }, onClose: { showingColor = false }, warning: warning)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    name
+                    HStack(spacing: 8) {
+                        name
+                        Spacer(minLength: 0)
+                        statusChip
+                    }
                     inputSourceControl
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -75,12 +80,8 @@ struct SlotCard: View {
                                  onRemove: { perform(onRemove) })
                     .frame(width: 32)
             }
-            HStack(spacing: 8) {
-                triggerControls
-                Spacer(minLength: 0)
-                statusChip
-            }
-            .padding(.leading, 22)
+            triggerControls
+                .padding(.leading, 22)
             if !hasTrigger {
                 Label("No trigger yet - record one", systemImage: "keyboard")
                     .font(DesignTokens.Typography.auxiliary)
@@ -173,7 +174,7 @@ struct SlotCard: View {
     }
 
     private var statusChip: some View {
-        VStack(alignment: .trailing, spacing: 4) {
+        HStack(spacing: 4) {
             if isActive {
                 Label("Current", systemImage: "checkmark.circle.fill").slotChip(color: tint)
             }
@@ -433,5 +434,13 @@ extension SlotBoardSection {
         }
         .disabled(isGhost)
         .help(source?.localizedName ?? "Choose input source")
+    }
+}
+
+private struct SlotBadgeButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .contentShape(Rectangle())
     }
 }

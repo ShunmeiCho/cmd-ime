@@ -9,13 +9,15 @@ extension SlotBoardSection {
     }
 
     func triggerControl(for role: InputRole, isGhost: Bool = false) -> some View {
-        TriggerKeycapFlow(spacing: 8) {
+        HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
             ForEach([SlotTriggerCategory.single, .double], id: \.self) { category in
                 SlotModifierMenu(model: model, role: role, category: category, isGhost: isGhost,
                                  onWillChange: commitPendingRename, onUpdated: resetDrafts)
+                    .frame(maxWidth: .infinity)
             }
             SlotTriggerRecorder(model: model, role: role, isGhost: isGhost,
                                 onWillOpen: commitPendingRename, onUpdated: resetDrafts)
+                .frame(maxWidth: .infinity)
         }
     }
 }

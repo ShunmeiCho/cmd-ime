@@ -347,7 +347,7 @@ struct RoleBadge: View {
 
     var body: some View {
         Text(symbol)
-            .font(.system(size: size * 0.48, weight: .semibold, design: .monospaced))
+            .font(.system(size: size * 0.48, weight: .semibold))
             .foregroundStyle(slotLook.tint(for: role))
             .frame(width: size, height: size)
             .background(
