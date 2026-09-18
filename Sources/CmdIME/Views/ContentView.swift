@@ -262,35 +262,40 @@ private struct CompactLiveKeysStrip: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
-                    ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
-                    LiveStripKey("space")
-                    ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
+                VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+                    HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                        ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
+                        LiveStripKey("space")
+                        ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    if !model.config.chordTriggers.isEmpty {
+                        LiveKeyFlowLayout(spacing: DesignTokens.Layout.rowGap) { chordKeys }
+                    }
                 }
-                .fixedSize(horizontal: true, vertical: false)
+                // Narrow panel: chords share the second row instead of opening a third.
                 VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
                     HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
                         ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
                         LiveStripKey("space")
                     }
-                    HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                    LiveKeyFlowLayout(spacing: DesignTokens.Layout.rowGap) {
                         ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
+                        chordKeys
                     }
                 }
             }
+        }
+    }
 
-            if !model.config.chordTriggers.isEmpty {
-                LiveKeyFlowLayout(spacing: DesignTokens.Layout.rowGap) {
-                    ForEach(Array(model.config.chordTriggers.enumerated()), id: \.offset) { _, entry in
-                        LiveStripKey(
-                            Self.symbols(for: entry.trigger),
-                            role: entry.slot,
-                            isActive: model.activeRole == entry.slot
-                        )
-                        .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
-                    }
-                }
-            }
+    private var chordKeys: some View {
+        ForEach(Array(model.config.chordTriggers.enumerated()), id: \.offset) { _, entry in
+            LiveStripKey(
+                Self.symbols(for: entry.trigger),
+                role: entry.slot,
+                isActive: model.activeRole == entry.slot
+            )
+            .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
         }
     }
 
