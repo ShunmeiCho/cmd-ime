@@ -95,6 +95,38 @@ public struct ConfigStore {
         return backupURL
     }
 
+    /// Copies the current on-disk bytes before a reset, preserving all earlier backups.
+    /// An absent config needs no backup; a failed backup must prevent the reset.
+    public func backUpBeforeReset() throws -> URL? {
+        let fileManager = FileManager.default
+        guard fileManager.fileExists(atPath: url.path) else { return nil }
+
+        var backupURL = url.appendingPathExtension("before-reset.bak")
+        do {
+            if fileManager.fileExists(atPath: backupURL.path) {
+                let attributes = try fileManager.attributesOfItem(atPath: backupURL.path)
+                guard attributes[.type] as? FileAttributeType == .typeRegular else {
+                    throw CocoaError(.fileWriteFileExists)
+                }
+                repeat {
+                    backupURL = url.appendingPathExtension("before-reset.\(UUID().uuidString).bak")
+                } while fileManager.fileExists(atPath: backupURL.path)
+            }
+            try fileManager.copyItem(at: url, to: backupURL)
+            return backupURL
+        } catch {
+            throw ConfigStoreError.backupFailed(backupURL, underlying: error)
+        }
+    }
+
+    /// Returns the replacement only after both backup and persistence succeed.
+    public func resettingSlots(in config: SwitcherConfig, from sources: [InputSourceInfo]) throws -> SwitcherConfig {
+        _ = try backUpBeforeReset()
+        let replacement = config.rebuildingSlots(from: sources)
+        try save(replacement)
+        return replacement
+    }
+
     public func save(_ config: SwitcherConfig) throws {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),

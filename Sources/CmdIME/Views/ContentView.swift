@@ -244,6 +244,7 @@ private struct PermissionMiniStatus: View {
 
 private struct SwitchSlotsSection: View {
     @ObservedObject var model: AppModel
+    @State private var showsResetConfirmation = false
     @Binding var triggerDrafts: [InputRole: String]
     @Binding var triggerTypeDrafts: [InputRole: BindingTriggerType]
     let resetDrafts: () -> Void
@@ -254,8 +255,7 @@ private struct SwitchSlotsSection: View {
                 SectionLabel("Switch slots")
                 Spacer()
                 Button("Reset to Detected") {
-                    model.initializeFromScan()
-                    resetDrafts()
+                    showsResetConfirmation = true
                 }
                 .buttonStyle(ConsoleButtonStyle())
             }
@@ -265,6 +265,19 @@ private struct SwitchSlotsSection: View {
                     switchSlotCard(for: slot)
                 }
             }
+        }
+        .confirmationDialog(
+            "Rebuild slots from installed input sources?",
+            isPresented: $showsResetConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Replace All Slots and Triggers", role: .destructive) {
+                model.resetSlotsFromDetectedSources()
+                resetDrafts()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This replaces all slots and triggers, including key remaps, with one slot per installed primary language. Your current configuration will be backed up before replacement. General indicator settings are kept; slot-specific colors are reset.")
         }
     }
 

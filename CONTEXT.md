@@ -20,8 +20,12 @@ _Avoid_: Shortcut, hotkey
 
 The ordered `config.slots` collection stores stable `InputRole` string IDs,
 display names and tints. `InputRole` remains the internal type name; JSON keeps
-`role` and `inputSources`. Default initialization still uses English, Chinese,
-and Japanese with the existing triggers.
+`role` and `inputSources`. Fresh GUI setup and CLI `init` use
+`SwitcherConfig.detected(from:)`: one slot per primary language in system source
+order. The first five triggers are Left Command, Right Command, Left Option,
+Right Option and Left Control; later slots are unbound. If no selectable source
+has a usable primary language, `.default` retains the legacy English/Chinese/
+Japanese setup, including Option+J. Existing configurations remain unchanged.
 
 New slots pin one source and derive `fallbackLanguage` from its primary language.
 Legacy preference rules are preserved. Assignment rejects only another slot's
@@ -30,8 +34,16 @@ both keep working. CLI diagnosis exposes those duplicates. See ADR 0001.
 
 CLI supports listing, adding and removing slots and querying by ID or unique
 case-insensitive name. The GUI renders dynamic slots; GUI management/notice is
-PR2 and source-detected first-run defaults are PR3. Added slots get the first
+PR2; PR3 implements source-detected first-run defaults. Added slots get the first
 free Command/Option/Left Control tap, never automatic Shift or Right Control.
+
+GUI Reset to Detected confirms replacement of all slots and triggers while
+preserving unrelated settings, including general indicator preferences. It
+backs up the original file to `config.json.before-reset.bak` (unique subsequent
+backups) before saving; failure leaves the reset unapplied. CLI `init --force`
+replaces the entire config with detected defaults through the existing save
+path, without an additional before-reset backup. Plain `init` refuses to
+overwrite an existing config. Refreshing sources never rebuilds existing slots.
 
 Migration is in-memory until save. Before overwriting a file lacking `slots`,
 ConfigStore preserves it once as `config.json.v1.bak`; backup failure aborts the

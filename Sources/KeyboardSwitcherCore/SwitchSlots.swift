@@ -73,6 +73,34 @@ extension InputSourceInfo {
 }
 
 extension SwitcherConfig {
+    /// Builds one slot per primary language, keeping the first eligible source in system order.
+    /// If no slots can be detected, retains the legacy default configuration.
+    public static func detected(from sources: [InputSourceInfo]) -> SwitcherConfig {
+        var result = SwitcherConfig(slots: [], bindings: [], inputSources: [:])
+        var languages: Set<String> = []
+        for source in InputSourceMatcher.selectableSources(from: sources) {
+            guard let language = source.primaryLanguage,
+                  !languages.contains(language),
+                  let added = try? result.addingSlot(for: source) else { continue }
+            result = added.config
+            languages.insert(language)
+        }
+        return result.slots.isEmpty ? .default : result
+    }
+
+    /// Replaces all slot-owned data, including remaps and custom slot colors,
+    /// while retaining global settings. The original configuration is unchanged.
+    public func rebuildingSlots(from sources: [InputSourceInfo]) -> SwitcherConfig {
+        let detected = Self.detected(from: sources)
+        var result = self
+        result.version = Self.currentVersion
+        result.slots = detected.slots
+        result.bindings = detected.bindings
+        result.inputSources = detected.inputSources
+        result.switchIndicatorCustomRoleColorHexes = [:]
+        return result
+    }
+
     public func slot(_ id: InputRole) -> SwitchSlot? {
         slots.first { $0.id == id }
     }

@@ -64,8 +64,11 @@ checks.
   trigger-conflict rejection, data-driven LiveKeys, adaptive custom-color grid,
   No trigger labels, and the one-time migration banner. Unmatched slots already
   expose Choose source; source-assignment conflicts are rejected in PR1.
-- PR3: source-detected first-run defaults and `keyboardctl init`; decide the
-  third default trigger separately. Until then preserve legacy defaults.
+- PR3 implements source-detected first-run defaults and `keyboardctl init`:
+  first five slots use Left/Right Command, Left/Right Option, Left Control;
+  later slots are unbound. Existing configs remain unchanged; empty detection
+  falls back to legacy defaults (Japanese stays Option+J). GUI reset confirms
+  replacement of slots/triggers and backs up the original config first.
 - Collect real Korean/German/Russian scan fixtures for primary-language fallback.
 - Configuration file watching/hot reload remains deferred; the running GUI can
   overwrite CLI edits.

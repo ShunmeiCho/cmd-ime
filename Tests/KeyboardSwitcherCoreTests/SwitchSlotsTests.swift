@@ -174,4 +174,112 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertEqual(config.unassignedSources(from: [abc, source(), emoji]), [source()])
         XCTAssertThrowsError(try config.addingSlot(for: emoji))
     }
+
+    func testDetectionOfEnglishAndKoreanDoesNotSeedLegacySlots() {
+        let sources = [source("com.apple.keylayout.ABC", "en"), source()]
+        let config = SwitcherConfig.detected(from: sources)
+        XCTAssertEqual(config.slots.map(\.id.rawValue), ["english", "korean"])
+        XCTAssertEqual(config.slots.map(\.name), ["English", "Korean"])
+        XCTAssertEqual(config.slots.map(\.tintHex), Array(SlotPalette.colors.prefix(2)))
+        XCTAssertNil(config.slot(.chinese))
+        XCTAssertNil(config.inputSources["chinese"])
+        XCTAssertEqual(config.preference(for: .english), RoleInputSourcePreference(preferredIDs: [sources[0].id], fallbackLanguage: "en"))
+        XCTAssertEqual(config.preference(for: InputRole(rawValue: "korean")), RoleInputSourcePreference(preferredIDs: [sources[1].id], fallbackLanguage: "ko"))
+        XCTAssertEqual(config.bindings.map(\.trigger.keyName), ["left-command", "right-command"])
+        XCTAssertEqual(config.version, SwitcherConfig.currentVersion)
+    }
+
+    func testDetectionOfEnglishGermanAndRussianInSystemOrder() {
+        let config = SwitcherConfig.detected(from: [source("com.apple.keylayout.ABC", "en"), source("de.one", "de"), source("ru.one", "ru")])
+        XCTAssertEqual(config.slots.map(\.id.rawValue), ["english", "german", "russian"])
+        XCTAssertEqual(config.slots.map(\.name), ["English", "German", "Russian"])
+        XCTAssertEqual(config.bindings.map(\.trigger.keyName), ["left-command", "right-command", "left-option"])
+        let reversed = SwitcherConfig.detected(from: [source("ru.one", "ru"), source("de.one", "de"), source("com.apple.keylayout.ABC", "en")])
+        XCTAssertEqual(reversed.slots.map(\.id.rawValue), ["russian", "german", "english"])
+    }
+
+    func testDetectionAssignsFiveOneShotsAndLeavesSixthUnbound() {
+        let sources = ["en", "de", "ru", "ko", "ja", "zh"].map { source("source.\($0)", $0) }
+        for count in [5, 6] {
+            let config = SwitcherConfig.detected(from: Array(sources.prefix(count)))
+            XCTAssertEqual(config.slots.count, count)
+            XCTAssertEqual(config.inputSources.count, count)
+            XCTAssertEqual(config.bindings.map(\.trigger.keyName), ["left-command", "right-command", "left-option", "right-option", "left-control"])
+            XCTAssertTrue(config.bindings.allSatisfy { $0.enabled && $0.trigger.kind == .oneShotModifier })
+            XCTAssertEqual(config.bindings.map(\.action.role), config.slots.prefix(5).map { Optional($0.id) })
+        }
+    }
+
+    func testDetectionKeepsFirstSourcePerPrimaryLanguageIncludingChineseVariants() {
+        var multilingual = source("first", "de-DE")
+        multilingual.languages = ["de-DE", "en"]
+        let config = SwitcherConfig.detected(from: [multilingual, source("de.second", "de"), source("zh.first", "zh_Hant"), source("zh.second", "zh-Hans"), source("en.first", "en-US"), source("en.second", "en")])
+        XCTAssertEqual(config.slots.map(\.id.rawValue), ["german", "chinese", "english"])
+        XCTAssertEqual(config.slots.map { config.preference(for: $0.id).preferredIDs }, [["first"], ["zh.first"], ["en.first"]])
+        XCTAssertEqual(config.preference(for: .chinese).fallbackLanguage, "zh")
+    }
+
+    func testDetectionSkipsAuxiliaryNonselectableAndInvalidSources() {
+        var nonselectable = source("disabled", "en")
+        nonselectable.isSelectCapable = false
+        let config = SwitcherConfig.detected(from: [source("com.apple.CharacterPaletteIM", "en"), source("com.apple.PressAndHold", "en"), source("com.apple.dictation", "en"), nonselectable, source("  ", "en"), source("valid", "en")])
+        XCTAssertEqual(config.slots.map(\.id), [.english])
+        XCTAssertEqual(config.preference(for: .english).preferredIDs, ["valid"])
+        XCTAssertEqual(SwitcherConfig.detected(from: [nonselectable]), .default)
+    }
+
+    func testDetectionFallsBackToDefaultForEmptyOrMissingPrimaryLanguages() {
+        XCTAssertEqual(SwitcherConfig.detected(from: []), .default)
+        var noLanguages = source("none")
+        noLanguages.languages = []
+        var emptyFirst = source("empty")
+        emptyFirst.languages = ["  ", "en"]
+        XCTAssertEqual(SwitcherConfig.detected(from: [noLanguages, emptyFirst]), .default)
+        let config = SwitcherConfig.detected(from: [noLanguages, emptyFirst, source()])
+        XCTAssertEqual(config.slots.map(\.id.rawValue), ["korean"])
+    }
+
+    func testDetectionWithRealShapedEnglishChineseJapaneseFixture() {
+        let sources = [
+            InputSourceInfo(id: "com.apple.keylayout.ABC", localizedName: "ABC", languages: ["en", "de"], isSelectCapable: true),
+            InputSourceInfo(id: "com.tencent.inputmethod.wetype.pinyin", localizedName: "微信输入法", languages: ["zh-Hans"], isSelectCapable: true),
+            InputSourceInfo(id: "dev.ensan.inputmethod.azooKeyMac.Japanese", localizedName: "azooKey (日本語)", languages: ["ja"], isSelectCapable: true),
+            InputSourceInfo(id: "com.apple.CharacterPaletteIM", localizedName: "Emoji & Symbols", languages: [], isSelectCapable: true),
+        ]
+        let config = SwitcherConfig.detected(from: sources)
+        XCTAssertEqual(config.slots, SwitchSlot.legacyDefaults)
+        XCTAssertEqual(config.slots.map { config.preference(for: $0.id).preferredIDs }, sources.prefix(3).map { [$0.id] })
+        XCTAssertEqual(config.slots.map { config.preference(for: $0.id).fallbackLanguage }, ["en", "zh", "ja"])
+        XCTAssertEqual(config.bindings.map(\.trigger.keyName), ["left-command", "right-command", "left-option"])
+        // This machine currently enumerates Japanese before Chinese; detection
+        // must honor either order rather than imposing the legacy slot order.
+        let systemOrder = SwitcherConfig.detected(from: [sources[0], sources[2], sources[1], sources[3]])
+        XCTAssertEqual(systemOrder.slots.map(\.id.rawValue), ["english", "japanese", "chinese"])
+    }
+
+    func testRebuildingReplacesAllSlotDataPreservesGlobalSettingsAndIsPure() throws {
+        var original = try SwitcherConfig.default.addingSlot(for: source("old.ko")).config
+        original.showSwitchIndicator = false
+        original.switchIndicatorSize = .large
+        original.switchIndicatorScale = 1.23
+        original.switchIndicatorColorStyle = .custom
+        original.switchIndicatorContentStyle = .textOnly
+        original.switchIndicatorCustomColorHex = "#123456"
+        original.switchIndicatorCustomRoleColorHexes = ["english": "#ABCDEF", "korean": "#654321"]
+        original.inputSources["orphan"] = RoleInputSourcePreference(preferredIDs: ["old.orphan"])
+        original.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("right-option"), action: .sendKey(try ShortcutParser.parse("a"))))
+        let snapshot = original
+        for sources in [[source("new.en", "en"), source("new.de", "de")], []] {
+            let detected = SwitcherConfig.detected(from: sources)
+            let rebuilt = original.rebuildingSlots(from: sources)
+            var expected = snapshot
+            expected.slots = detected.slots
+            expected.bindings = detected.bindings
+            expected.inputSources = detected.inputSources
+            expected.switchIndicatorCustomRoleColorHexes = [:]
+            expected.version = SwitcherConfig.currentVersion
+            XCTAssertEqual(rebuilt, expected)
+            XCTAssertEqual(original, snapshot)
+        }
+    }
 }

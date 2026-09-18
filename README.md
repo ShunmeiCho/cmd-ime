@@ -17,19 +17,30 @@ slot you want and CmdIME selects the matching macOS input source.
 ## What It Does
 
 CmdIME scans the input sources already installed in macOS instead of hardcoding
-one keyboard layout. The default setup targets English, Chinese, and Japanese,
-and the bindings are configurable. Each slot can be pointed at any installed
+one keyboard layout. On a fresh setup, it creates one slot per primary language,
+using the first selectable source for that language in system order. Sources
+without a primary language are skipped. Each slot can be pointed at any installed
 input source from its card, including a slot that shows "Not matched".
 
-| Slot | Default trigger | Action |
-| --- | --- | --- |
-| English | Left Command | Switch to the matched English input source |
-| Chinese | Right Command | Switch to the matched Chinese input source |
-| Japanese | Option+J | Switch to the matched Japanese input source |
+| Detected slot | Default trigger |
+| --- | --- |
+| First | Left Command |
+| Second | Right Command |
+| Third | Left Option |
+| Fourth | Right Option |
+| Fifth | Left Control |
+| Sixth and later | No trigger (assign manually) |
 
-[![CmdIME default switching demo](demo-videos/renders/preview-default-switching.gif)](demo-videos/renders/cmdime-default-switching-demo.mp4)
+Existing configurations and their triggers are unchanged. If no selectable
+source has a usable primary language, initialization uses the legacy defaults:
+English on Left Command, Chinese on Right Command, Japanese on **Option+J**.
 
-[Open the full default switching demo](demo-videos/renders/cmdime-default-switching-demo.mp4)
+The demo below shows an example legacy English/Chinese/Japanese mapping, not
+the source-detected defaults for every Mac.
+
+[![CmdIME example switching demo](demo-videos/renders/preview-default-switching.gif)](demo-videos/renders/cmdime-default-switching-demo.mp4)
+
+[Open the full example switching demo](demo-videos/renders/cmdime-default-switching-demo.mp4)
 
 ## Distribution Status
 
@@ -193,6 +204,9 @@ auxiliary kana palette, not the normal Hiragana input method.
 
 ## CLI
 
+Slot IDs depend on your detected sources. These examples assume slots named
+`english`, `chinese`, and `japanese`; run `keyboardctl slots` for your actual IDs.
+
 ```sh
 swift run keyboardctl scan
 swift run keyboardctl init
@@ -212,6 +226,11 @@ swift run keyboardctl quit
 swift run keyboardctl listen
 ```
 
+- `keyboardctl init`: creates source-detected defaults using the same detection
+  as the GUI's first launch. An existing config is left untouched unless you
+  pass `--force`, which replaces the entire configuration with detected defaults.
+  Back up custom settings before forcing a reset; it does not create the GUI's
+  before-reset backup (the legacy migration backup below still applies).
 - `keyboardctl switch <slot>`: selects the matched input source for a slot and
   confirms that macOS applied the switch. If macOS does not apply the selection,
   it prints an error message to `stderr` and exits non-zero.
@@ -240,8 +259,15 @@ New slots prefer the chosen source and fall back by its **primary** language.
 An input source cannot be assigned as two slots' first preferred source, but
 fallbacks and legacy rules may resolve multiple slots to it: both still work,
 and `diagnose` reports `duplicate with: <ids>`. Existing matching rules remain
-unchanged. `init` still creates the legacy English/Chinese/Japanese defaults;
-source-detected first-run defaults and GUI add/remove controls are deferred.
+unchanged. First launch detects slots only when the config is missing; refreshing
+sources does not replace existing slots or triggers.
+
+In Settings, **Reset to Detected** asks for confirmation before
+replacing all slots and triggers with detected defaults. Unrelated settings,
+including general indicator preferences, are preserved. Before saving, the GUI
+backs up the original file to `config.json.before-reset.bak` beside the config;
+subsequent resets use unique backup names rather than overwriting earlier ones.
+If backup or save fails, the reset is not applied.
 
 Quit the GUI before editing configuration with the CLI, then reopen it: the
 running GUI does not watch the file and could overwrite CLI changes.

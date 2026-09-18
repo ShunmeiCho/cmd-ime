@@ -171,13 +171,8 @@ struct CLI {
             return
         }
 
-        var config = SwitcherConfig.default
         let sources = try service.listInputSources()
-        for role in InputRole.legacy {
-            if let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) {
-                config.pinInputSourceID(source.id, for: role)
-            }
-        }
+        let config = SwitcherConfig.detected(from: sources)
         try save(config, to: store)
         print("Wrote \(configURL.path)")
         #else
@@ -491,7 +486,7 @@ struct CLI {
               keyboardctl quit
               keyboardctl path
 
-            Examples:
+            Examples (slot IDs depend on detected sources; run keyboardctl slots):
               keyboardctl init
               keyboardctl bind left-command english
               keyboardctl bind right-command chinese

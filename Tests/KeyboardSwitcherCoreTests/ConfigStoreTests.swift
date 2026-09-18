@@ -312,6 +312,127 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(preferences["korean"]?["fallbackLanguage"] as? String, "ko")
     }
 
+    private var resetSources: [InputSourceInfo] {
+        [InputSourceInfo(id: "korean.source", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)]
+    }
+
+    func testBeforeResetBackupCopiesExactBytesWithoutWritingConfig() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+
+        let backup = try XCTUnwrap(store.backUpBeforeReset())
+
+        XCTAssertEqual(backup, store.url.appendingPathExtension("before-reset.bak"))
+        XCTAssertEqual(try Data(contentsOf: backup), legacyJSON)
+        XCTAssertEqual(try Data(contentsOf: store.url), legacyJSON)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.legacyBackupURL.path))
+    }
+
+    func testResetBacksUpLegacyBytesBeforeMigrationAndSavesDetectedSlotsWithGlobalSettings() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        let config = try store.loadOrRecover().config
+        let original = config
+
+        let result = try store.resettingSlots(in: config, from: resetSources)
+
+        XCTAssertEqual(config, original)
+        XCTAssertEqual(try Data(contentsOf: store.url.appendingPathExtension("before-reset.bak")), legacyJSON)
+        XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), legacyJSON)
+        XCTAssertEqual(try store.load(), result)
+        let detected = SwitcherConfig.detected(from: resetSources)
+        XCTAssertEqual(result.slots, detected.slots)
+        XCTAssertEqual(result.bindings, detected.bindings)
+        XCTAssertEqual(result.inputSources, detected.inputSources)
+        XCTAssertEqual(result.switchIndicatorCustomRoleColorHexes, [:])
+        XCTAssertEqual(result.showSwitchIndicator, config.showSwitchIndicator)
+        XCTAssertEqual(result.switchIndicatorSize, config.switchIndicatorSize)
+        XCTAssertEqual(result.switchIndicatorScale, config.switchIndicatorScale)
+        XCTAssertEqual(result.switchIndicatorColorStyle, config.switchIndicatorColorStyle)
+        XCTAssertEqual(result.switchIndicatorContentStyle, config.switchIndicatorContentStyle)
+        XCTAssertEqual(result.switchIndicatorCustomColorHex, config.switchIndicatorCustomColorHex)
+    }
+
+    func testRepeatedResetsPreserveEveryPreResetFile() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try store.save(.default)
+        let firstBytes = try Data(contentsOf: store.url)
+        let first = try store.resettingSlots(in: .default, from: resetSources)
+        let secondBytes = try Data(contentsOf: store.url)
+        XCTAssertNotEqual(firstBytes, secondBytes)
+
+        _ = try store.resettingSlots(in: first, from: [])
+
+        let canonical = store.url.appendingPathExtension("before-reset.bak")
+        XCTAssertEqual(try Data(contentsOf: canonical), firstBytes)
+        let backups = try FileManager.default.contentsOfDirectory(at: store.url.deletingLastPathComponent(), includingPropertiesForKeys: nil)
+            .filter { $0.lastPathComponent.hasPrefix("config.json.before-reset.") && $0.lastPathComponent != canonical.lastPathComponent }
+        XCTAssertEqual(backups.count, 1)
+        let secondBackup = try XCTUnwrap(backups.first)
+        let uuid = secondBackup.lastPathComponent
+            .replacingOccurrences(of: "config.json.before-reset.", with: "")
+            .replacingOccurrences(of: ".bak", with: "")
+        XCTAssertNotNil(UUID(uuidString: uuid))
+        XCTAssertEqual(try Data(contentsOf: secondBackup), secondBytes)
+    }
+
+    func testResetBackupDirectoryFailureLeavesDiskAndInputConfigUntouched() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        let config = try store.loadOrRecover().config
+        let original = config
+        XCTAssertNotEqual(config.rebuildingSlots(from: resetSources), config)
+        let backup = store.url.appendingPathExtension("before-reset.bak")
+        try FileManager.default.createDirectory(at: backup, withIntermediateDirectories: false)
+
+        XCTAssertThrowsError(try store.resettingSlots(in: config, from: resetSources)) { error in
+            guard case let ConfigStoreError.backupFailed(url, _) = error else {
+                return XCTFail("Expected backupFailed, got \(error)")
+            }
+            XCTAssertEqual(url, backup)
+        }
+
+        XCTAssertEqual(config, original)
+        XCTAssertEqual(try Data(contentsOf: store.url), legacyJSON)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.legacyBackupURL.path))
+    }
+
+    func testResetWithoutExistingFileCreatesNoBackup() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        XCTAssertNil(try store.backUpBeforeReset())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: store.url.deletingLastPathComponent().path))
+
+        let result = try store.resettingSlots(in: .default, from: resetSources)
+
+        XCTAssertEqual(result, SwitcherConfig.detected(from: resetSources))
+        XCTAssertEqual(try store.load(), result)
+        let files = try FileManager.default.contentsOfDirectory(atPath: store.url.deletingLastPathComponent().path)
+        XCTAssertEqual(files, ["config.json"])
+    }
+
+    func testResetStillRefusesToOverwriteLegacyFileWhenMigrationBackupFails() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        try FileManager.default.createDirectory(at: store.legacyBackupURL, withIntermediateDirectories: false)
+        let config = try store.loadOrRecover().config
+
+        XCTAssertThrowsError(try store.resettingSlots(in: config, from: resetSources)) { error in
+            guard case let ConfigStoreError.backupFailed(url, _) = error else {
+                return XCTFail("Expected backupFailed, got \(error)")
+            }
+            XCTAssertEqual(url, store.legacyBackupURL)
+        }
+
+        XCTAssertEqual(try Data(contentsOf: store.url), legacyJSON)
+        XCTAssertEqual(try Data(contentsOf: store.url.appendingPathExtension("before-reset.bak")), legacyJSON)
+    }
+
     private func uniqueConfigURL() -> URL {
         FileManager.default
             .temporaryDirectory

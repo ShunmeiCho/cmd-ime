@@ -29,10 +29,12 @@ final class AppModel: ObservableObject {
         self.configStore = configStore
 
         var initialConfig: SwitcherConfig
+        var isFirstRun = false
         var recoveryMessage: String?
         do {
             let result = try configStore.loadOrRecover()
             initialConfig = result.config
+            isFirstRun = result.isFirstRun
             if let backupURL = result.recoveredBackupURL {
                 recoveryMessage = "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults."
             }
@@ -43,7 +45,19 @@ final class AppModel: ObservableObject {
 
         self.config = initialConfig
         self.updateStatus = .idle(currentVersion: Self.currentVersion)
-        scan()
+        let scanSucceeded = scan()
+        if isFirstRun {
+            if scanSucceeded {
+                config = SwitcherConfig.detected(from: sources)
+                do {
+                    try configStore.save(config)
+                } catch {
+                    recoveryMessage = "Could not save detected slots: \(error.localizedDescription)"
+                }
+            } else {
+                recoveryMessage = statusText
+            }
+        }
         refreshRuntimeStatus()
         startListeningIfReady()
         if let recoveryMessage {
@@ -51,12 +65,15 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func scan() {
+    @discardableResult
+    func scan() -> Bool {
         do {
             sources = try inputSources.listInputSources()
             statusText = "Found \(sources.count) input sources"
+            return true
         } catch {
             statusText = error.localizedDescription
+            return false
         }
     }
 
@@ -192,6 +209,20 @@ final class AppModel: ObservableObject {
         }
         NSWorkspace.shared.open(url)
         statusText = "Opened CmdIME release page"
+    }
+
+    func resetSlotsFromDetectedSources() {
+        guard scan() else { return }
+        do {
+            let rebuilt = try configStore.resettingSlots(in: config, from: sources)
+            config = rebuilt
+            activeRole = nil
+            monitor?.updateConfig(rebuilt)
+            statusText = "Rebuilt \(rebuilt.slots.count) slots from installed input sources"
+        } catch {
+            // Keep the live config and monitor untouched if backup or save fails.
+            statusText = "Could not rebuild slots: \(error.localizedDescription)"
+        }
     }
 
     func initializeFromScan() {
