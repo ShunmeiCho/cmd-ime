@@ -163,6 +163,37 @@ outside-click commit. Editing-menu shortcuts depend on the separate hidden main
 menu work. Full Keyboard Access and VoiceOver have explicit menus and actions;
 real-device focus, announcements, IME and 720-point layout checks remain required.
 
+## Decision record — 2026-09-18: First-run setup guide
+
+The setup guide card is an addition on top of the frozen layout, not a rework of
+it. The permission onboarding architecture, slot card architecture, live keys
+strip and indicator style are unchanged; the guide explains them and steps aside.
+
+The card sits between the header and the Keyboard control section and is built
+only from existing parts: `CompactSection`, keycaps, `RoleBadge`, `StatusPill`,
+`ConsoleButtonStyle` and the existing colour, radius and motion tokens. It shows
+three steps (allow keyboard access, check what was detected, try it). The current
+step is derived in `KeyboardSwitcherCore` (`SetupGuideState`); the only stored
+fact is `hasCompletedSetup`.
+
+While the stored flag is false, the sections below the card fold into one-line
+bars with the section label and a Show button. Bars are buttons, so every section,
+Quit included, stays reachable. Change in step 2 unfolds the slot board and
+scrolls to it. Finish or Skip stores the flag, unfolds everything and lets the
+card shrink toward the header status pill. Returning users never see folded
+sections: Runtime > Setup guide replays the card for the session only.
+
+Permission copy keeps the existing rule: CmdIME never implies it can grant a
+privacy permission. Actions are Open Settings, Request Permissions, Try Again and
+Relaunch CmdIME (Quit CmdIME when the process has no app bundle to reopen).
+The privacy sentence describes the event tap as implemented: key down, key up
+and modifier events are inspected in memory by key code and modifier state.
+
+Step and fold changes reuse `expandCollapse`; tried marks reuse `stateChange`.
+Reduce Motion gets instant layout changes and a plain fade instead of the shrink.
+Real-device checks of focus order, announcements, the relaunch path, trigger
+firing while Settings is key, and the 720-point layout remain required.
+
 ## Verification
 
 - `swift test`
