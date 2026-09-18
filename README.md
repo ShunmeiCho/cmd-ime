@@ -18,7 +18,8 @@ slot you want and CmdIME selects the matching macOS input source.
 
 CmdIME scans the input sources already installed in macOS instead of hardcoding
 one keyboard layout. The default setup targets English, Chinese, and Japanese,
-and the bindings are configurable.
+and the bindings are configurable. Each slot can be pointed at any installed
+input source from its card, including a slot that shows "Not matched".
 
 | Slot | Default trigger | Action |
 | --- | --- | --- |

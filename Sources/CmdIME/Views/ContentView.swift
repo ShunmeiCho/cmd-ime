@@ -367,7 +367,7 @@ private struct SwitchSlotsSection: View {
                 }
             }
         } label: {
-            Text("Change")
+            Text(source == nil ? "Choose" : "Change")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textMuted)
             .padding(.horizontal, 7)
@@ -477,13 +477,18 @@ private struct SwitchSlotCard<TriggerTypeControl: View, TriggerControl: View, In
                 }
 
                 if source == nil {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2.weight(.bold))
-                        Text("Not matched")
-                            .font(.caption.weight(.semibold))
+                    HStack(spacing: 6) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption2.weight(.bold))
+                            Text("Not matched")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(DesignTokens.Colors.warning)
+                        // Without this an unmatched slot is a dead end: a user whose input
+                        // sources are not Chinese or Japanese could never assign one here.
+                        inputSourceControl()
                     }
-                    .foregroundStyle(DesignTokens.Colors.warning)
                 } else {
                     HStack(spacing: 6) {
                         Text(presentation.detail)
