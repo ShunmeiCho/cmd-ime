@@ -249,6 +249,10 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertEqual(SetupTriggerPhrase(trigger: doubleTap).instruction, "Double-tap Right Option alone")
         XCTAssertEqual(SetupTriggerPhrase(trigger: chord).instruction, "Press Command + Option + J")
         XCTAssertEqual(SetupTriggerPhrase(trigger: functionKey).instruction, "Press Caps Lock + F1")
+        for (keyCode, keyName) in [(27, "-"), (24, "="), (33, "[")] {
+            let punctuation = KeyTrigger(kind: .keyPress, keyCode: keyCode, keyName: keyName, modifiers: [.control])
+            XCTAssertEqual(SetupTriggerPhrase(trigger: punctuation).instruction, "Press Control + \(keyName)")
+        }
         XCTAssertFalse(tap.isOneShotShift)
         XCTAssertTrue(KeyTrigger(kind: .oneShotModifier, keyCode: 60, keyName: "right-shift").isOneShotShift)
         XCTAssertFalse(KeyTrigger(kind: .keyPress, keyCode: 38, keyName: "j", modifiers: [.shift]).isOneShotShift)

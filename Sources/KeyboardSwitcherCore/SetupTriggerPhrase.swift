@@ -37,8 +37,10 @@ public struct SetupTriggerPhrase: Equatable, Sendable {
     }
 
     /// "left-command" -> "Left Command", "j" -> "J", "f1" -> "F1", "space" -> "Space".
+    /// The minus key is named "-": it has no words to split, so it stays as it is.
     private static func readableName(_ keyName: String) -> String {
-        keyName.split(separator: "-").map { $0.capitalized }.joined(separator: " ")
+        let words = keyName.split(separator: "-")
+        return words.isEmpty ? keyName : words.map { $0.capitalized }.joined(separator: " ")
     }
 }
 
