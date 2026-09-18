@@ -178,9 +178,12 @@ public struct SetupUnboundSlots: Equatable, Sendable {
 
 extension SwitcherConfig {
     /// The same configuration with the setup guide marked finished or skipped.
-    public func completingSetup() -> SwitcherConfig {
+    public func completingSetup(whatsNewVersion: String? = nil) -> SwitcherConfig {
         var result = self
         result.hasCompletedSetup = true
+        if let whatsNewVersion {
+            result.lastSeenWhatsNewVersion = whatsNewVersion
+        }
         return result
     }
 

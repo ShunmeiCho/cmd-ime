@@ -252,6 +252,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     /// False only while the first-run setup guide is pending. Files written before
     /// this key existed decode as true, so existing users never see the guide.
     public var hasCompletedSetup: Bool
+    public var lastSeenWhatsNewVersion: String?
     public var showSwitchIndicator: Bool
     public var switchIndicatorSize: SwitchIndicatorSize
     public var switchIndicatorScale: Double
@@ -265,6 +266,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public init(
         version: Int = SwitcherConfig.currentVersion,
         hasCompletedSetup: Bool = false,
+        lastSeenWhatsNewVersion: String? = nil,
         slots: [SwitchSlot] = SwitchSlot.legacyDefaults,
         showSwitchIndicator: Bool = true,
         switchIndicatorSize: SwitchIndicatorSize = .medium,
@@ -279,6 +281,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.slots = slots
         self.version = version
         self.hasCompletedSetup = hasCompletedSetup
+        self.lastSeenWhatsNewVersion = lastSeenWhatsNewVersion
         self.showSwitchIndicator = showSwitchIndicator
         self.switchIndicatorSize = switchIndicatorSize
         self.switchIndicatorScale = Self.clampedSwitchIndicatorScale(switchIndicatorScale)
@@ -427,6 +430,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case version
         case hasCompletedSetup
+        case lastSeenWhatsNewVersion
         case slots
         case showSwitchIndicator
         case switchIndicatorSize
@@ -443,6 +447,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         hasCompletedSetup = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? true
+        lastSeenWhatsNewVersion = try container.decodeIfPresent(String.self, forKey: .lastSeenWhatsNewVersion)
         showSwitchIndicator = try container.decodeIfPresent(Bool.self, forKey: .showSwitchIndicator) ?? true
         switchIndicatorSize = try container.decodeIfPresent(SwitchIndicatorSize.self, forKey: .switchIndicatorSize) ?? .medium
         switchIndicatorScale = Self.clampedSwitchIndicatorScale(
@@ -477,6 +482,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(version, forKey: .version)
         try container.encode(hasCompletedSetup, forKey: .hasCompletedSetup)
+        try container.encodeIfPresent(lastSeenWhatsNewVersion, forKey: .lastSeenWhatsNewVersion)
         try container.encode(slots, forKey: .slots)
         try container.encode(showSwitchIndicator, forKey: .showSwitchIndicator)
         try container.encode(switchIndicatorSize, forKey: .switchIndicatorSize)
