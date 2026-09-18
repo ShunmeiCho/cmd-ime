@@ -447,44 +447,46 @@ struct ConsoleMenuButton<Content: View>: View {
     private var effectiveTint: Color { warning ? DesignTokens.Colors.warning : tint }
 
     var body: some View {
-        Menu {
-            content
-        } label: {
-            HStack(spacing: DesignTokens.Spacing.xs) {
-                if let systemImage {
-                    Image(systemName: systemImage)
-                }
+        HStack(spacing: DesignTokens.Spacing.sm) {
+            if let systemImage {
+                Image(systemName: systemImage).fixedSize()
+            }
+            if !title.isEmpty {
                 Text(title)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .font(.caption.weight(.semibold))
-            .padding(.leading, DesignTokens.Spacing.sm)
-            .padding(.trailing, showsChevron ? DesignTokens.Spacing.lg : DesignTokens.Spacing.sm)
-            .frame(maxWidth: .infinity, minHeight: DesignTokens.Layout.fieldHeight, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .foregroundStyle(isEnabled ? (warning ? effectiveTint : DesignTokens.Colors.textPrimary) : DesignTokens.Colors.textMuted)
-        .frame(minHeight: DesignTokens.Layout.fieldHeight)
-        .background {
-            ConsoleControlChrome(tint: effectiveTint, highlighted: isEnabled && isHovered, warning: warning)
-        }
-        .overlay(alignment: .trailing) {
             if showsChevron {
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.system(size: 9, weight: .semibold))
+                    .frame(width: 12)
+                    .fixedSize()
                     .foregroundStyle(isEnabled && isHovered ? effectiveTint : DesignTokens.Colors.textMuted)
-                    .padding(.trailing, DesignTokens.Spacing.sm)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
             }
         }
-        .contentShape(Rectangle())
+        .font(DesignTokens.Typography.body.weight(.semibold))
+        .foregroundStyle(isEnabled ? (warning ? effectiveTint : DesignTokens.Colors.textPrimary) : DesignTokens.Colors.textMuted)
+        .padding(.horizontal, DesignTokens.Spacing.sm)
+        .frame(minHeight: DesignTokens.Layout.fieldHeight)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .background {
+            ConsoleControlChrome(tint: effectiveTint, highlighted: isEnabled && isHovered, warning: warning)
+        }
+        .overlay {
+            // Keep native menu activation/focus, but lay out all visible content
+            // outside its flattened label. The arrow owns a separate layout seat.
+            Menu { content } label: { Text(" ") }
+                .menuStyle(.borderlessButton)
+                .menuIndicator(.hidden)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .accessibilityLabel(title)
+        }
         .onHover { isHovered = $0 }
         .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.quickFade, reduceMotion: reduceMotion), value: isHovered)
         .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion), value: warning)
-        .accessibilityLabel(title)
     }
 }
 
