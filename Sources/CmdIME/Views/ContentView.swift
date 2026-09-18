@@ -29,16 +29,14 @@ struct ContentView: View {
                 )
                 .setupFold(.slotBoard)
 
-                HStack(alignment: .top, spacing: 14) {
-                    IndicatorSettingsCard(model: model)
-                        .setupFold(.indicator)
-                        .frame(maxWidth: .infinity)
-                    RuntimeSection(model: model) {
-                        SetupGuideNavigation.showGuide($setupSession, model: model, scroll: scroll)
-                    }
-                    .setupFold(.runtime)
-                    .frame(width: 286)
+                IndicatorSettingsCard(model: model)
+                    .setupFold(.indicator)
+                    .frame(maxWidth: .infinity)
+                RuntimeSection(model: model) {
+                    SetupGuideNavigation.showGuide($setupSession, model: model, scroll: scroll)
                 }
+                .setupFold(.runtime)
+                .frame(maxWidth: .infinity)
             }
             .padding(22)
             .frame(maxWidth: DesignTokens.Layout.contentMaxWidth, alignment: .leading)
@@ -656,102 +654,73 @@ private struct RuntimeSection: View {
     let onShowSetupGuide: () -> Void
 
     var body: some View {
-        CompactSection(title: "General") {
-            VStack(alignment: .leading, spacing: 0) {
-                RuntimeToggleRow(
-                    title: "Launch at login",
-                    isOn: Binding(
-                        get: { model.loginItem.isEnabled },
-                        set: { model.setLaunchAtLogin($0) }
-                    ),
-                    isDisabled: !model.loginItem.isAvailable
-                )
-
-                Divider().overlay(DesignTokens.Colors.separator)
-
-                RuntimeActionRow(title: "Updates", detail: model.updateStatus.message) {
-                    if model.updateStatus.releaseURL != nil {
-                        Button("Open") {
-                            model.openLatestRelease()
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+            SectionLabel("General")
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: DesignTokens.Layout.panelGap,
+                                        alignment: .topLeading)],
+                      alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+                group("Launch at login") {
+                    Toggle("Launch at login", isOn: Binding(
+                        get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(DesignTokens.Colors.success)
+                    .controlSize(.small)
+                    .disabled(!model.loginItem.isAvailable)
+                    .frame(minHeight: DesignTokens.Layout.fieldHeight, alignment: .leading)
+                }
+                group("Updates") {
+                    HStack(spacing: DesignTokens.Layout.rowGap) {
+                        if model.updateStatus.releaseURL != nil {
+                            Button("Open") { model.openLatestRelease() }
+                                .buttonStyle(ConsoleButtonStyle())
                         }
+                        Button(model.updateStatus.isChecking ? "Checking" : "Check") {
+                            model.checkForUpdates()
+                        }
+                        .disabled(model.updateStatus.isChecking)
                         .buttonStyle(ConsoleButtonStyle())
                     }
-                    Button(model.updateStatus.isChecking ? "Checking" : "Check") {
-                        model.checkForUpdates()
-                    }
-                    .disabled(model.updateStatus.isChecking)
-                    .buttonStyle(ConsoleButtonStyle())
+                    Text(model.updateStatus.message)
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-
-                Divider().overlay(DesignTokens.Colors.separator)
-
-                RuntimeActionRow(title: "Setup guide", detail: "Walk through the first-run steps again") {
+                group("Setup guide") {
                     Button("Show", action: onShowSetupGuide)
                         .buttonStyle(ConsoleButtonStyle())
+                        .help("Walk through the first-run steps again")
                         .accessibilityLabel("Show setup guide")
                 }
-
-                Divider().overlay(DesignTokens.Colors.separator)
-
-                RuntimeActionRow(title: "Quit CmdIME", detail: "Stop the background listener") {
-                    Button("Quit", role: .destructive) {
-                        model.quit()
-                    }
-                    .buttonStyle(ConsoleButtonStyle(prominent: false))
+                group("Quit CmdIME") {
+                    Button("Quit", role: .destructive) { model.quit() }
+                        .buttonStyle(ConsoleButtonStyle())
+                        .help("Stop the background listener")
+                        .accessibilityLabel("Quit CmdIME")
                 }
-
-                Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 12)
             }
+            Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(DesignTokens.Layout.panelInset)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
+            .fill(DesignTokens.Colors.surface))
     }
-}
 
-private struct RuntimeToggleRow: View {
-    let title: String
-    @Binding var isOn: Bool
-    var isDisabled = false
-
-    var body: some View {
-        HStack {
+    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
             Text(title)
                 .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
-            Spacer()
-            Toggle(title, isOn: $isOn)
-                .labelsHidden()
-                .toggleStyle(.switch)
-                .tint(DesignTokens.Colors.success)
-                .controlSize(.small)
-                .disabled(isDisabled)
+            content()
         }
-        .padding(.vertical, 8)
-    }
-}
-
-private struct RuntimeActionRow<Action: View>: View {
-    let title: String
-    let detail: String
-    @ViewBuilder let action: () -> Action
-
-    var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(DesignTokens.Typography.body.weight(.semibold))
-                    .foregroundStyle(DesignTokens.Colors.textPrimary)
-                Text(detail)
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer()
-            action()
-        }
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(title)
     }
 }
 
