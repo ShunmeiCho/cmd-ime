@@ -6,6 +6,7 @@ struct SourceListColumn: View {
     @ObservedObject var model: AppModel
     let onAdd: (String) -> Void
     let onRefresh: () -> Void
+    let onOpenSettings: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -31,6 +32,11 @@ struct SourceListColumn: View {
             }
         }
         .frame(width: 196, alignment: .leading)
+    }
+
+    private var keyboardSettingsButton: some View {
+        Button("Open Keyboard Settings…", action: onOpenSettings)
+            .buttonStyle(ConsoleButtonStyle())
     }
 }
 
@@ -103,12 +109,6 @@ struct SourceRow: View {
         .accessibilityAddTraits(isAvailable ? .isButton : [])
         .accessibilityAction { if isAvailable { onAdd() } }
     }
-}
-
-@MainActor
-var keyboardSettingsButton: some View {
-    Button("Open Keyboard Settings…", action: openKeyboardSettings)
-        .buttonStyle(ConsoleButtonStyle())
 }
 
 @MainActor

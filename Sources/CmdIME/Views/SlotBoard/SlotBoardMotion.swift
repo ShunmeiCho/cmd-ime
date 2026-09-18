@@ -57,9 +57,10 @@ struct MotionCompletion: ViewModifier, @preconcurrency Animatable {
     var animatableData: CGFloat {
         get { progress }
         set {
-            let previous = progress
             progress = newValue
-            if previous < 1, newValue >= 1 {
+            // SwiftUI interpolates value copies; the stored value may already
+            // be the destination. Observe arrival, not a previous-frame crossing.
+            if newValue >= 1 {
                 let callback = completion
                 DispatchQueue.main.async { callback() }
             }

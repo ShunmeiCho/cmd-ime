@@ -11,6 +11,7 @@ struct SlotBoardSection: View {
     @State private var focusedSlotID: InputRole?
     @State private var seatingID: InputRole?
     @State private var seatGeneration = 0
+    @State private var seatPhase = SeatPhase.idle
     @State private var settleProgress: CGFloat = 1
     @State private var seatProgress: CGFloat = 1
     @Binding var triggerDrafts: [InputRole: String]
@@ -19,12 +20,13 @@ struct SlotBoardSection: View {
 
     var body: some View {
         let generation = seatGeneration
+        let phase = seatPhase
         ScrollViewReader { proxy in
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
                     SectionLabel("Switch slots")
                     Spacer()
-                    AddSlotMenu(sources: model.unassignedSources, onAdd: add)
+                    AddSlotMenu(sources: model.unassignedSources, onAdd: add, onOpenSettings: showKeyboardSettings)
                     Button("Reset to Detected") {
                         guard commitPendingRename() else { return }
                         showsResetConfirmation = true
@@ -32,11 +34,11 @@ struct SlotBoardSection: View {
                     .buttonStyle(ConsoleButtonStyle())
                 }
                 HStack(alignment: .top, spacing: 14) {
-                    SourceListColumn(model: model, onAdd: add) {
+                    SourceListColumn(model: model, onAdd: add, onRefresh: {
                         guard commitPendingRename() else { return }
                         model.scan()
                         resetDrafts()
-                    }
+                    }, onOpenSettings: showKeyboardSettings)
                     SlotListColumn(slots: model.config.slots, notice: model.boardNotice,
                                    canUndo: model.canUndoRemoval, seatingID: seatingID, onUndo: undo, onDismiss: dismissNotice) { slot in
                         card(for: slot)
@@ -58,11 +60,18 @@ struct SlotBoardSection: View {
                 }
             }
         }
-        .modifier(MotionCompletion(progress: settleProgress) { beginPulse(generation: generation) })
+        .modifier(MotionCompletion(progress: settleProgress) {
+            guard phase == .settling else { return }
+            beginPulse(generation: generation)
+        })
         .modifier(MotionCompletion(progress: seatProgress) {
-            guard generation == seatGeneration else { return }
+            guard generation == seatGeneration, phase == .pulsing, seatPhase == .pulsing else { return }
+            seatPhase = .idle
             seatingID = nil
         })
+        .onChange(of: reduceMotion) { reduced in
+            if reduced { beginPulse(generation: seatGeneration) }
+        }
         .confirmationDialog(
             "Rebuild slots from installed input sources?",
             isPresented: $showsResetConfirmation,
@@ -136,6 +145,11 @@ struct SlotBoardSection: View {
         withAnimation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion), action)
     }
 
+    private func showKeyboardSettings() {
+        guard commitPendingRename() else { return }
+        openKeyboardSettings()
+    }
+
     private func add(_ sourceID: String) {
         guard commitPendingRename() else { return }
         var added: InputRole?
@@ -187,6 +201,7 @@ struct SlotBoardSection: View {
     private func seat(_ id: InputRole) {
         seatGeneration += 1
         seatingID = id
+        seatPhase = .settling
         seatProgress = 1
         if reduceMotion {
             beginPulse(generation: seatGeneration)
@@ -201,7 +216,8 @@ struct SlotBoardSection: View {
     }
 
     private func beginPulse(generation: Int) {
-        guard generation == seatGeneration, seatingID != nil else { return }
+        guard generation == seatGeneration, seatingID != nil, seatPhase == .settling else { return }
+        seatPhase = .pulsing
         seatProgress = 0
         DispatchQueue.main.async {
             guard generation == seatGeneration else { return }
@@ -216,15 +232,20 @@ struct SlotBoardSection: View {
     }
 }
 
+private enum SeatPhase {
+    case idle, settling, pulsing
+}
+
 private struct AddSlotMenu: View {
     let sources: [InputSourceInfo]
     let onAdd: (String) -> Void
+    let onOpenSettings: () -> Void
 
     var body: some View {
         Menu("Add Slot") {
             if sources.isEmpty {
                 Button("All input sources are in slots") {}.disabled(true)
-                Button("Open Keyboard Settings…", action: openKeyboardSettings)
+                Button("Open Keyboard Settings…", action: onOpenSettings)
             } else {
                 ForEach(sources, id: \.id) { source in
                     Button(source.localizedName) { onAdd(source.id) }
