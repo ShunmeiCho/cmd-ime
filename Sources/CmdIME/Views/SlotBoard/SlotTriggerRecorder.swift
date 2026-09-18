@@ -90,10 +90,8 @@ struct SlotTriggerRecorder: View {
             TriggerKeycapFlow {
                 ForEach(Array(keys.enumerated()), id: \.offset) { _, key in
                     let cap = TriggerKeycapText.keycap(key)
-                    KeycapView(cap.label, detail: cap.detail, role: role, appearance: .display)
-                }
-                if trigger.gesture == .doubleTap {
-                    Text("×2").font(DesignTokens.Typography.auxiliary.weight(.bold))
+                    KeycapView(cap.label, detail: TriggerKeycapText.detail(cap.detail, doubleTap: trigger.gesture == .doubleTap),
+                               role: role, appearance: .display)
                 }
             }
         } else {
@@ -139,11 +137,8 @@ private struct TriggerRecorderPopover: View {
                 } else {
                     ForEach(Array(session.liveKeyNames.enumerated()), id: \.offset) { _, key in
                         let cap = TriggerKeycapText.keycap(key)
-                        KeycapView(cap.label, detail: cap.detail, role: role,
-                                   isPressed: session.heldKeys.contains { $0.keyName == key }, appearance: .display)
-                    }
-                    if session.draft?.gesture == .doubleTap {
-                        Text("×2").font(DesignTokens.Typography.body.weight(.bold))
+                        KeycapView(cap.label, detail: TriggerKeycapText.detail(cap.detail, doubleTap: session.draft?.gesture == .doubleTap),
+                                   role: role, isPressed: session.heldKeys.contains { $0.keyName == key }, appearance: .display)
                     }
                 }
             }
@@ -206,6 +201,11 @@ private struct TriggerRecorderPopover: View {
 }
 
 private enum TriggerKeycapText {
+    static func detail(_ side: String?, doubleTap: Bool) -> String? {
+        let parts = [side, doubleTap ? "×2" : nil].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " ")
+    }
+
     static func keycap(_ key: String) -> (label: String, detail: String?) {
         switch key {
         case "left": return ("←", nil)

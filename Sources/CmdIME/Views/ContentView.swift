@@ -341,7 +341,7 @@ private struct CompactLiveKeysStrip: View {
             // distinguishes them even when their slot colors are identical.
             VStack(spacing: 4) {
                 ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
-                    let gesture = entry.trigger.gesture == .doubleTap ? "x2" : (entries.count > 1 ? "x1" : nil)
+                    let gesture = entry.trigger.gesture == .doubleTap ? "×2" : (entries.count > 1 ? "x1" : nil)
                     LiveStripKey(keycap.label, role: entry.slot,
                                  detail: [keycap.detail, gesture].compactMap { $0 }.joined(separator: " "),
                                  isActive: model.activeRole == entry.slot)
