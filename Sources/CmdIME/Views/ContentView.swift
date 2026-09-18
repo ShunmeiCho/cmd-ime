@@ -126,6 +126,7 @@ private struct SettingsHeader: View {
     let onPrimaryAction: () -> Void
     let onShowSetupGuide: () -> Void
     @State private var showsPermissionDetails = false
+    @State private var showsGeneral = false
 
     private var needsAttention: Bool {
         !model.permissions.isReady || model.keyboardControlStatus == "Failed"
@@ -182,33 +183,60 @@ private extension SettingsHeader {
         NSWorkspace.shared.open(url)
     }
 
-    /// Everything that used to sit in a General section at the bottom of the page.
+    /// Everything that used to sit in a General section at the bottom of the page. A popover
+    /// rather than a menu: the toggle, the update result and every button stay visible while
+    /// they act, which a closing menu cannot show.
     var generalMenu: some View {
-        ConsoleMenuButton(title: "General", systemImage: "gearshape") {
-            Toggle("Launch at Login", isOn: Binding(
-                get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
-            ))
-            .disabled(!model.loginItem.isAvailable)
-            Divider()
-            Text(model.updateStatus.message)
-            Button(model.updateStatus.isChecking ? "Checking for Updates…" : "Check for Updates") {
-                model.checkForUpdates()
-            }
-            .disabled(model.updateStatus.isChecking)
-            if model.updateStatus.releaseURL != nil {
-                Button("Open Release Page") { model.openLatestRelease() }
-            }
-            Divider()
-            Button("Show Setup Guide", action: onShowSetupGuide)
-            Divider()
-            Button("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
-            Button("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
-            Divider()
-            Button("Quit CmdIME", role: .destructive) { model.quit() }
+        Button { showsGeneral.toggle() } label: {
+            Label("General", systemImage: "gearshape")
         }
+        .buttonStyle(ConsoleButtonStyle())
         .fixedSize()
         .accessibilityLabel("General")
-        .help("Launch at login, updates, setup guide and Quit CmdIME")
+        .popover(isPresented: $showsGeneral, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+                Toggle("Launch at login", isOn: Binding(
+                    get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
+                ))
+                .toggleStyle(.switch)
+                .tint(DesignTokens.Colors.success)
+                .controlSize(.small)
+                .disabled(!model.loginItem.isAvailable)
+                Divider()
+                HStack(spacing: DesignTokens.Layout.rowGap) {
+                    Button(model.updateStatus.isChecking ? "Checking…" : "Check for Updates") {
+                        model.checkForUpdates()
+                    }
+                    .disabled(model.updateStatus.isChecking)
+                    if model.updateStatus.releaseURL != nil {
+                        Button("Open Release Page") { model.openLatestRelease() }
+                    }
+                }
+                Text(model.updateStatus.message)
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+                Divider()
+                Button("Show Setup Guide") {
+                    showsGeneral = false
+                    onShowSetupGuide()
+                }
+                HStack(spacing: DesignTokens.Layout.rowGap) {
+                    Button("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
+                    Button("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
+                }
+                Divider()
+                Button("Quit CmdIME", role: .destructive) { model.quit() }
+                    .help("Stop the background listener")
+            }
+            .buttonStyle(ConsoleButtonStyle())
+            .font(DesignTokens.Typography.body)
+            .foregroundStyle(DesignTokens.Colors.textPrimary)
+            .padding(16)
+            .frame(width: 300, alignment: .leading)
+            .background(DesignTokens.Colors.surfaceRaised)
+            .preferredColorScheme(.dark)
+        }
     }
 }
 
