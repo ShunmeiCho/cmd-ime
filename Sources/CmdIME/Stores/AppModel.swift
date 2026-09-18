@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Foundation
 import KeyboardSwitcherCore
 
@@ -25,6 +26,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var canUndoRemoval = false
     @Published private(set) var newSourceIDs: Set<String> = []
     @Published private(set) var sourceRefreshMessage: String?
+    private var sourceChangeObserver: InputSourceChangeObserver?
+    private var settingsWindowSubscriptions: Set<AnyCancellable> = []
     private var hasSourceBaseline = false
     private var refreshMessageTask: Task<Void, Never>?
 
@@ -101,6 +104,7 @@ final class AppModel: ObservableObject {
                 recoveryMessage = statusText
             }
         }
+        observeInputSourceChanges()
         refreshRuntimeStatus()
         startListeningIfReady()
         if let recoveryMessage {
@@ -108,16 +112,38 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private func observeInputSourceChanges() {
+        sourceChangeObserver = InputSourceChangeObserver { [weak self] in
+            self?.scan()
+        }
+        // The coordinator names its retained settings window "CmdIME". Observe
+        // here so setup folding cannot unmount the window lifecycle subscription.
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.willCloseNotification] {
+            NotificationCenter.default.publisher(for: name)
+                .sink { [weak self] notification in
+                    MainActor.assumeIsolated {
+                        guard let self, let window = notification.object as? NSWindow,
+                              window.title == "CmdIME" else { return }
+                        if notification.name == NSWindow.didBecomeKeyNotification {
+                            self.scan()
+                        } else {
+                            self.clearNewSourceMarkers()
+                        }
+                    }
+                }
+                .store(in: &settingsWindowSubscriptions)
+        }
+    }
+
     @discardableResult
     func scan() -> Bool {
         do {
-            let previousIDs = Set(sources.map(\.id))
+            let previous = sources
             let scanned = try inputSources.listInputSources()
             sources = scanned
             if hasSourceBaseline {
-                let discovered = selectableSources.filter {
-                    !previousIDs.contains($0.id) && sourceUsage(of: $0) == .available
-                }
+                let discovered = InputSourceMatcher.newSelectableSources(previous: previous, current: scanned)
+                    .filter { sourceUsage(of: $0) == .available }
                 newSourceIDs.formUnion(discovered.map(\.id))
                 if let source = discovered.first {
                     boardNotice = .found(sourceID: source.id, name: source.localizedName)

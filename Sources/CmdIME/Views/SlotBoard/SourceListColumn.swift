@@ -44,7 +44,6 @@ struct SourceListColumn: View {
             }
         }
         .frame(width: 196, alignment: .leading)
-        .background(SourceWindowCloseHook(model: model).frame(width: 0, height: 0))
     }
 
     private var keyboardSettingsButton: some View {
@@ -195,60 +194,4 @@ struct SourceRow: View {
 func openKeyboardSettings() {
     guard let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") else { return }
     NSWorkspace.shared.open(url)
-}
-
-/// Observe only this view's window closing; activation never triggers a scan.
-private struct SourceWindowCloseHook: NSViewRepresentable {
-    let model: AppModel
-
-    func makeNSView(context: Context) -> SourceWindowCloseView {
-        let view = SourceWindowCloseView()
-        view.model = model
-        return view
-    }
-
-    func updateNSView(_ nsView: SourceWindowCloseView, context: Context) {
-        nsView.model = model
-    }
-
-    static func dismantleNSView(_ nsView: SourceWindowCloseView, coordinator: ()) {
-        nsView.stopObserving()
-    }
-}
-
-private final class SourceWindowCloseView: NSView {
-    weak var model: AppModel?
-    private var closeObserver: SourceWindowCloseObservation?
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        stopObserving()
-        guard let window else { return }
-        let token = NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification, object: window, queue: .main
-        ) { [weak model] _ in
-            Task { @MainActor [weak model] in
-                model?.clearNewSourceMarkers()
-            }
-        }
-        closeObserver = SourceWindowCloseObservation(token: token)
-    }
-
-    func stopObserving() {
-        closeObserver = nil
-    }
-}
-
-/// Immutable token ownership; NotificationCenter permits removal from any thread.
-/// Keeping cleanup here avoids accessing non-Sendable state in NSView's deinit.
-private final class SourceWindowCloseObservation: @unchecked Sendable {
-    private let token: NSObjectProtocol
-
-    init(token: NSObjectProtocol) {
-        self.token = token
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(token)
-    }
 }
