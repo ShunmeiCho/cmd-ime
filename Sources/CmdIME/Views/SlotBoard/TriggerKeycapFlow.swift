@@ -24,7 +24,12 @@ struct TriggerKeycapFlow: Layout {
         var rowHeight: CGFloat = 0
         var usedWidth: CGFloat = 0
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            let natural = subview.sizeThatFits(.unspecified)
+            // A nested recorder may itself contain a long chord. Offer the
+            // row width so its inner keycaps can wrap instead of overflowing.
+            let size = limit.isFinite && natural.width > limit
+                ? subview.sizeThatFits(ProposedViewSize(width: max(1, limit), height: nil))
+                : natural
             if x > 0, x + size.width > limit {
                 x = 0
                 y += rowHeight + spacing

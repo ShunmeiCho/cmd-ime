@@ -44,15 +44,18 @@ final class AppModel: ObservableObject {
     private let updates = UpdateService()
     private var monitor: EventTapMonitor?
     private var recordingRole: InputRole?
+    private var recordingOwner: UUID?
 
     var isRecordingTrigger: Bool { recordingRole != nil }
 
-    func setShortcutRecording(_ recording: Bool, for role: InputRole) {
+    func setShortcutRecording(_ recording: Bool, for role: InputRole, owner: UUID) {
         if recording {
             recordingRole = role
+            recordingOwner = owner
             clearSlotNotice(for: role)
-        } else if recordingRole == role {
+        } else if recordingRole == role, recordingOwner == owner {
             recordingRole = nil
+            recordingOwner = nil
         }
         monitor?.isCapturingShortcut = recordingRole != nil
     }
@@ -602,6 +605,35 @@ final class AppModel: ObservableObject {
                 && binding.action.type == .switchInputSource
                 && binding.action.role == role
         }?.trigger
+    }
+
+    func trigger(for role: InputRole, category: SlotTriggerCategory) -> KeyTrigger? {
+        config.binding(for: role, category: category)?.trigger
+    }
+
+    @discardableResult
+    func commitRecordedTrigger(_ trigger: KeyTrigger?, for role: InputRole,
+                               category: SlotTriggerCategory) -> String? {
+        if let trigger, let reason = recordedTriggerConflict(trigger, for: role) {
+            reportSlotFailure(reason, for: role)
+            return reason
+        }
+        do {
+            let next = try config.replacingSwitchBinding(for: role, category: category, with: trigger)
+            if next != config {
+                guard commit(next) else {
+                    reportSlotFailure(statusText, for: role)
+                    return statusText
+                }
+                invalidateUndo()
+            }
+            clearSlotNotice(for: role)
+            statusText = trigger.map { "Saved trigger \($0.displayName)" } ?? "Removed trigger"
+            return nil
+        } catch {
+            reportSlotFailure(error.localizedDescription, for: role)
+            return error.localizedDescription
+        }
     }
 
     func setBindingText(_ text: String, for role: InputRole) {

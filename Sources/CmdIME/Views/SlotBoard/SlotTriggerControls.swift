@@ -9,8 +9,12 @@ extension SlotBoardSection {
     }
 
     func triggerControl(for role: InputRole, isGhost: Bool = false) -> some View {
-        SlotTriggerRecorder(model: model, role: role, isGhost: isGhost,
-                            onWillOpen: commitPendingRename, onUpdated: resetDrafts)
+        TriggerKeycapFlow(spacing: 8) {
+            ForEach(SlotTriggerCategory.allCases, id: \.self) { category in
+                SlotTriggerRecorder(model: model, role: role, category: category, isGhost: isGhost,
+                                    onWillOpen: commitPendingRename, onUpdated: resetDrafts)
+            }
+        }
     }
 }
 

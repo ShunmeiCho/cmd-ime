@@ -22,6 +22,7 @@ final class TriggerRecordingSession: ObservableObject {
 
     private weak var hostWindow: NSWindow?
     private var recognizer = TriggerRecognizer()
+    private var category: SlotTriggerCategory?
     private var initialOrdinaryKeys: Set<Int> = []
     private var resources = CaptureResources()
     private var onValidate: ((KeyTrigger) -> String?)?
@@ -57,6 +58,7 @@ final class TriggerRecordingSession: ObservableObject {
 
     func begin(
         in window: NSWindow,
+        category: SlotTriggerCategory,
         existingTrigger: KeyTrigger? = nil,
         onCaptureChanged: @escaping (Bool) -> Void,
         onValidate: @escaping (KeyTrigger) -> String?,
@@ -68,6 +70,7 @@ final class TriggerRecordingSession: ObservableObject {
         sessionID = UUID()
         let generation = sessionID
         hostWindow = window
+        self.category = category
         self.onValidate = onValidate
         self.onCommit = onCommit
         eligibility = TriggerRecordingDraftEligibility(existingTrigger: existingTrigger)
@@ -131,6 +134,7 @@ final class TriggerRecordingSession: ObservableObject {
         onDismiss = nil
         hostWindow = nil
         recognizer = TriggerRecognizer()
+        category = nil
         initialOrdinaryKeys = []
         draft = nil
         heldKeys = []
@@ -201,13 +205,16 @@ final class TriggerRecordingSession: ObservableObject {
         }
         switch intent {
         case let .chord(trigger):
-            guard !trigger.keyName.isEmpty else {
-                eligibility.reject()
-                reject("This key is not supported. Try another trigger.")
-                return
-            }
             captured(trigger)
-        case .tap, .doubleTap:
+        case .tap:
+            if category == .double {
+                // Keep the recognizer's first tap so its next release can form
+                // a double tap, without publishing or accepting a single tap.
+                reject("Tap the modifier again to record a double tap.")
+            } else if let trigger = recognizer.draft {
+                captured(trigger)
+            }
+        case .doubleTap:
             if let trigger = recognizer.draft { captured(trigger) }
         case .cancel:
             cancel()
@@ -228,6 +235,22 @@ final class TriggerRecordingSession: ObservableObject {
     }
 
     private func captured(_ trigger: KeyTrigger) {
+        guard let category else { return }
+        guard category.matches(trigger) else {
+            let accepted: String
+            switch category {
+            case .single: accepted = "single modifier taps"
+            case .double: accepted = "double modifier taps"
+            case .shortcut: accepted = "keyboard shortcuts"
+            }
+            reject("This recorder only accepts \(accepted).")
+            return
+        }
+        guard !trigger.keyName.isEmpty else {
+            eligibility.reject()
+            reject("This key is not supported. Try another trigger.")
+            return
+        }
         draft = trigger
         if trigger.kind == .oneShotModifier {
             liveKeyNames = [trigger.keyName]

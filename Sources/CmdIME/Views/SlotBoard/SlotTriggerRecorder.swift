@@ -5,6 +5,7 @@ import SwiftUI
 struct SlotTriggerRecorder: View {
     @ObservedObject var model: AppModel
     let role: InputRole
+    let category: SlotTriggerCategory
     let isGhost: Bool
     let onWillOpen: () -> Bool
     let onUpdated: () -> Void
@@ -14,7 +15,7 @@ struct SlotTriggerRecorder: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.slotLook) private var slotLook
 
-    private var trigger: KeyTrigger? { model.trigger(for: role) }
+    private var trigger: KeyTrigger? { model.trigger(for: role, category: category) }
     private var presentation: Binding<Bool> {
         Binding(get: { presented }, set: { visible in
             presented = visible
@@ -23,6 +24,15 @@ struct SlotTriggerRecorder: View {
     }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(category.label)
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textSecondary)
+            recorderControl
+        }
+    }
+
+    private var recorderControl: some View {
         HStack(spacing: 6) {
             recorderLabel
                 .padding(6)
@@ -39,7 +49,7 @@ struct SlotTriggerRecorder: View {
                 .accessibilityHidden(true)
                 .overlay {
                     TriggerRecorderAnchor(title: "",
-                                          accessibilityTitle: "Record trigger for \(slotLook.name(for: role))",
+                                          accessibilityTitle: "Record \(category.recordingName) for \(slotLook.name(for: role))",
                                           accessibilityValue: trigger?.displayName ?? "No trigger",
                                           tint: NSColor(slotLook.tint(for: role)), hasTrigger: trigger != nil,
                                           isGhost: isGhost, onOpen: open)
@@ -49,7 +59,7 @@ struct SlotTriggerRecorder: View {
                 .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.quickFade, reduceMotion: reduceMotion), value: hovered)
                 .popover(isPresented: presentation, arrowEdge: .bottom) {
                     let generation = session.sessionID
-                    TriggerRecorderPopover(session: session, role: role, name: slotLook.name(for: role))
+                    TriggerRecorderPopover(session: session, role: role, category: category, name: slotLook.name(for: role))
                         .environment(\.slotLook, slotLook)
                         .id(generation)
                         .onDisappear { session.end(reason: .disappeared, sessionID: generation) }
@@ -57,14 +67,14 @@ struct SlotTriggerRecorder: View {
             if trigger != nil {
                 Button {
                     guard !isGhost, onWillOpen() else { return }
-                    if model.commitRecordedTrigger(nil, for: role) == nil { onUpdated() }
+                    if model.commitRecordedTrigger(nil, for: role, category: category) == nil { onUpdated() }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                 }
                 .buttonStyle(.borderless)
-                .help("Immediately remove this slot’s trigger")
-                .accessibilityLabel("Immediately remove trigger for \(slotLook.name(for: role))")
+                .help("Immediately remove this slot’s \(category.recordingName)")
+                .accessibilityLabel("Immediately remove \(category.recordingName) for \(slotLook.name(for: role))")
             }
         }
         .allowsHitTesting(!isGhost)
@@ -87,7 +97,7 @@ struct SlotTriggerRecorder: View {
                 }
             }
         } else {
-            Text("Record Hotkey")
+            Text("Record")
                 .font(DesignTokens.Typography.body.weight(.semibold))
                 .lineLimit(1)
         }
@@ -95,11 +105,12 @@ struct SlotTriggerRecorder: View {
 
     private func open(in window: NSWindow) {
         guard !isGhost, onWillOpen() else { return }
-        session.begin(in: window, existingTrigger: trigger,
-                      onCaptureChanged: { model.setShortcutRecording($0, for: role) },
+        let captureOwner = UUID()
+        session.begin(in: window, category: category, existingTrigger: trigger,
+                      onCaptureChanged: { model.setShortcutRecording($0, for: role, owner: captureOwner) },
                       onValidate: { model.recordedTriggerConflict($0, for: role) },
                       onCommit: { draft in
-                          let error = model.commitRecordedTrigger(draft, for: role)
+                          let error = model.commitRecordedTrigger(draft, for: role, category: category)
                           if error == nil { onUpdated() }
                           return error
                       }, onDismiss: { presented = false })
@@ -110,6 +121,7 @@ struct SlotTriggerRecorder: View {
 private struct TriggerRecorderPopover: View {
     @ObservedObject var session: TriggerRecordingSession
     let role: InputRole
+    let category: SlotTriggerCategory
     let name: String
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var appeared = false
@@ -118,7 +130,7 @@ private struct TriggerRecorderPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Press a key combination or tap a modifier")
+            Text("Record \(category.recordingName) for \(name)")
                 .font(DesignTokens.Typography.title)
             HStack(spacing: 5) {
                 if session.liveKeyNames.isEmpty {
@@ -140,7 +152,7 @@ private struct TriggerRecorderPopover: View {
             .transition(reduceMotion ? .opacity : .scale(scale: 0.96).combined(with: .opacity))
             .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.keyRelease,
                        value: session.captureRevision)
-            Text("Tap a modifier twice for a double tap.\nReturn saves · Esc cancels · Delete clears the draft.")
+            Text("\(category.instruction)\nReturn saves · Esc cancels · Delete clears the draft.")
                 .font(DesignTokens.Typography.body)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
             if let warning = session.warning {
@@ -300,6 +312,22 @@ private struct TriggerRecorderAnchor: NSViewRepresentable {
                 outlineTint.setStroke()
                 NSBezierPath(roundedRect: bounds.insetBy(dx: 1, dy: 1), xRadius: 6, yRadius: 6).stroke()
             }
+        }
+    }
+}
+
+private extension SlotTriggerCategory {
+    var label: String {
+        switch self { case .single: "Single"; case .double: "Double"; case .shortcut: "Shortcut" }
+    }
+    var recordingName: String {
+        switch self { case .single: "single tap"; case .double: "double tap"; case .shortcut: "shortcut" }
+    }
+    var instruction: String {
+        switch self {
+        case .single: "Press and release one modifier key."
+        case .double: "Tap the same modifier twice. The first tap is not saved."
+        case .shortcut: "Press a modifier together with an ordinary key."
         }
     }
 }
