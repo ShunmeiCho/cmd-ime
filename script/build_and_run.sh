@@ -32,8 +32,14 @@ CODESIGN_IDENTITY="${CODESIGN_IDENTITY:--}"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
-swift build --product "$APP_NAME"
-swift build --product keyboardctl
+# See script/package_app.sh: record the real SDK version so macOS does not fall back to its
+# macOS 13 compatibility appearance. MIN_MACOS must match the platform in Package.swift.
+MIN_MACOS="13.0"
+SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+swift build --product "$APP_NAME" \
+  -Xlinker -platform_version -Xlinker macos -Xlinker "$MIN_MACOS" -Xlinker "$SDK_VERSION"
+swift build --product keyboardctl \
+  -Xlinker -platform_version -Xlinker macos -Xlinker "$MIN_MACOS" -Xlinker "$SDK_VERSION"
 BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
 
 rm -rf "$APP_BUNDLE"

@@ -108,9 +108,22 @@ require_distribution_signing
 rm -rf "$RELEASE_DIR" "$ZIP_PATH"
 mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 
-swift build -c release --product "$APP_NAME"
-swift build -c release --product keyboardctl
+# SwiftPM in Swift 6.4 records the deployment target as the linked SDK version. macOS then
+# renders the app in its macOS 13 compatibility appearance (flat materials, old shadows).
+# Record the real SDK version; MIN_MACOS must match the platform in Package.swift.
+MIN_MACOS="13.0"
+SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+LINK_FLAGS=(-Xlinker -platform_version -Xlinker macos -Xlinker "$MIN_MACOS" -Xlinker "$SDK_VERSION")
+
+swift build -c release --product "$APP_NAME" "${LINK_FLAGS[@]}"
+swift build -c release --product keyboardctl "${LINK_FLAGS[@]}"
 BUILD_BIN_DIR="$(swift build -c release --show-bin-path)"
+
+LINKED_SDK="$(vtool -show-build "$BUILD_BIN_DIR/$APP_NAME" | awk '$1 == "sdk" { print $2; exit }')"
+if [[ "$LINKED_SDK" != "$SDK_VERSION" ]]; then
+  echo "error: $APP_NAME records SDK $LINKED_SDK, expected $SDK_VERSION" >&2
+  exit 1
+fi
 
 cp "$BUILD_BIN_DIR/$APP_NAME" "$APP_MACOS/$APP_NAME"
 cp "$BUILD_BIN_DIR/keyboardctl" "$APP_MACOS/keyboardctl"
