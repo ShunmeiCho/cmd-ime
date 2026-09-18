@@ -417,6 +417,16 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
         if resolvedSources[role] == nil {
             refreshResolvedSources()
+        } else if resolvedSources[role]?.id != config.preference(for: role).preferredIDs.first {
+            // A fallback is provisional: the preferred source may have appeared
+            // since the last scan. Re-match only this slot; first-ID hits stay fast.
+            do {
+                let sources = try inputSources.listInputSources()
+                resolvedSources[role] = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config)
+            } catch {
+                resolvedSources[role] = nil
+                onMessage?("Input source refresh failed: \(error.localizedDescription)")
+            }
         }
         guard let source = resolvedSources[role] else {
             onMessage?("No input method matched this switch slot.")

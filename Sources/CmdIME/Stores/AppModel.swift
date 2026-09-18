@@ -69,6 +69,7 @@ final class AppModel: ObservableObject {
     func scan() -> Bool {
         do {
             sources = try inputSources.listInputSources()
+            monitor?.updateConfig(config)
             statusText = "Found \(sources.count) input sources"
             return true
         } catch {

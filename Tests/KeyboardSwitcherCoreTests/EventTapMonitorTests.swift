@@ -50,6 +50,76 @@ final class EventTapMonitorTests: XCTestCase {
     }
 
     #if DEBUG
+    func testCachedFallbackRecoversPreferredSourceWithoutRefreshingOtherSlots() {
+        let originalSources = makeSwitchSources()
+        let preferred = originalSources[1]
+        let fallback = InputSourceInfo(
+            id: "fallback.japanese", localizedName: "Fallback Japanese",
+            languages: ["ja"], isSelectCapable: true
+        )
+        let service = StubInputSourceService(sources: [originalSources[0], fallback])
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var reportedSources: [InputSourceInfo] = []
+        monitor.onSwitch = { _, source in reportedSources.append(source) }
+        monitor.updateConfig(.default)
+
+        triggerJapaneseSwitch(monitor)
+        XCTAssertEqual(service.selectedIDs, [fallback.id])
+        let readsBeforeRecovery = service.listCallCount
+
+        let renamedEnglish = InputSourceInfo(
+            id: originalSources[0].id, localizedName: "Renamed English",
+            languages: ["en"], isSelectCapable: true
+        )
+        service.sources = [renamedEnglish, fallback, preferred]
+        triggerJapaneseSwitch(monitor)
+        XCTAssertEqual(service.selectedIDs, [fallback.id, preferred.id])
+        XCTAssertEqual(service.listCallCount, readsBeforeRecovery + 1)
+
+        // Recovery must not replace even the metadata cached for unrelated slots.
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(reportedSources.last?.localizedName, originalSources[0].localizedName)
+        XCTAssertEqual(service.listCallCount, readsBeforeRecovery + 1)
+    }
+
+    func testCachedFirstPreferredIDDoesNotRelistSources() {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        monitor.updateConfig(.default)
+        let initialReads = service.listCallCount
+
+        triggerJapaneseSwitch(monitor)
+        triggerJapaneseSwitch(monitor)
+
+        XCTAssertEqual(service.selectedIDs, Array(repeating: makeSwitchSources()[1].id, count: 2))
+        XCTAssertEqual(service.listCallCount, initialReads)
+    }
+
+    func testCachedSecondaryPreferredIDKeepsStaticMatcherResult() {
+        let fallback = InputSourceInfo(
+            id: "com.apple.inputmethod.Kotoeri.RomajiTyping", localizedName: "Japanese",
+            languages: ["ja"], isSelectCapable: true
+        )
+        let service = StubInputSourceService(sources: [fallback])
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        monitor.updateConfig(.default)
+        let initialReads = service.listCallCount
+
+        triggerJapaneseSwitch(monitor)
+        triggerJapaneseSwitch(monitor)
+
+        XCTAssertEqual(service.selectedIDs, [fallback.id, fallback.id])
+        XCTAssertEqual(service.listCallCount, initialReads + 2)
+    }
+
+    private func triggerJapaneseSwitch(_ monitor: EventTapMonitor) {
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
+        XCTAssertNil(monitor.handleKeyUpForTesting(makeKeyboardEvent(keyCode: 38, keyDown: false)))
+        drainMainQueue()
+    }
+
     func testCustomSlotSwitchAndDuplicateIDsRemainSafe() throws {
         let source = InputSourceInfo(id: "custom.korean", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
         let added = try SwitcherConfig(bindings: [], inputSources: [:]).addingSlot(for: source)
@@ -389,7 +459,8 @@ private func makeSwitchSources() -> [InputSourceInfo] {
 }
 
 private final class StubInputSourceService: InputSourceService {
-    private let sources: [InputSourceInfo]
+    var sources: [InputSourceInfo]
+    private(set) var listCallCount = 0
     private var selectedID: String?
     private(set) var selectedIDs: [String] = []
     /// Per id, how many `currentInputSource()` reads after selecting it still return nil.
@@ -401,7 +472,8 @@ private final class StubInputSourceService: InputSourceService {
     }
 
     func listInputSources() throws -> [InputSourceInfo] {
-        sources
+        listCallCount += 1
+        return sources
     }
 
     func currentInputSource() throws -> InputSourceInfo? {
