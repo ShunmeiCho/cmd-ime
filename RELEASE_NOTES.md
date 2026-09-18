@@ -8,6 +8,7 @@ Layout fixes for the 0.4 settings window.
 - **No empty well under the source list.** The input sources panel and the slots panel share one height.
 - **Live keys is a small keyboard.** It spans the full width below the board: both Shift keys on the upper row with your shortcuts between them, and Control, Option, Command around the space bar on the lower row.
 - The sources panel's "Keyboard Settings…" button stays on one line, and its hint text wraps instead of being clipped.
+- The General menu also links to the project's support page and the GitHub repository.
 - README updated for the slot board, the three optional triggers, the setup guide and the new icon.
 
 ## CmdIME v0.4.0 Preview

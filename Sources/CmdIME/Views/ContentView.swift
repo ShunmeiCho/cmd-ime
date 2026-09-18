@@ -181,6 +181,11 @@ private struct SettingsHeader: View {
 }
 
 private extension SettingsHeader {
+    static func open(_ address: String) {
+        guard let url = URL(string: address) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
     /// Everything that used to sit in a General section at the bottom of the page.
     var generalMenu: some View {
         ConsoleMenuButton(title: "General", systemImage: "gearshape") {
@@ -199,6 +204,9 @@ private extension SettingsHeader {
             }
             Divider()
             Button("Show Setup Guide", action: onShowSetupGuide)
+            Divider()
+            Button("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
+            Button("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
             Divider()
             Button("Quit CmdIME", role: .destructive) { model.quit() }
         }
