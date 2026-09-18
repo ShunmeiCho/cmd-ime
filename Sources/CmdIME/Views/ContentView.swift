@@ -18,7 +18,9 @@ struct ContentView: View {
     private func page(scroll: ScrollViewProxy) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
-                SettingsHeader(model: model, status: runtimeStatus, onPrimaryAction: performHeaderAction)
+                SettingsHeader(model: model, status: runtimeStatus, onPrimaryAction: performHeaderAction) {
+                    SetupGuideNavigation.showGuide($setupSession, model: model, scroll: scroll)
+                }
                 WhatsNewNoticeBar(model: model, isSetupGuideReopened: setupSession.isReopened)
                 SetupGuideCard(model: model, session: $setupSession, scroll: scroll, resetDrafts: resetDrafts)
                 SlotBoardSection(
@@ -33,11 +35,6 @@ struct ContentView: View {
                 IndicatorSettingsCard(model: model)
                     .setupFold(.indicator)
                     .frame(maxWidth: .infinity)
-                RuntimeSection(model: model) {
-                    SetupGuideNavigation.showGuide($setupSession, model: model, scroll: scroll)
-                }
-                .setupFold(.runtime)
-                .frame(maxWidth: .infinity)
             }
             .padding(22)
             .frame(maxWidth: DesignTokens.Layout.contentMaxWidth, alignment: .leading)
@@ -131,6 +128,7 @@ private struct SettingsHeader: View {
     @ObservedObject var model: AppModel
     let status: RuntimeStatusPresentation
     let onPrimaryAction: () -> Void
+    let onShowSetupGuide: () -> Void
     @State private var showsPermissionDetails = false
 
     private var needsAttention: Bool {
@@ -159,7 +157,12 @@ private struct SettingsHeader: View {
                 Button(status.primaryActionTitle, action: onPrimaryAction)
                     .buttonStyle(ConsoleButtonStyle(prominent: status.primaryActionProminent))
                     .fixedSize(horizontal: true, vertical: false)
+                generalMenu
             }
+            Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
             if needsAttention || showsPermissionDetails {
                 Divider()
                 if needsAttention {
@@ -174,6 +177,34 @@ private struct SettingsHeader: View {
         .padding(DesignTokens.Layout.panelInset)
         .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
             .fill(DesignTokens.Colors.surface))
+    }
+}
+
+private extension SettingsHeader {
+    /// Everything that used to sit in a General section at the bottom of the page.
+    var generalMenu: some View {
+        ConsoleMenuButton(title: "General", systemImage: "gearshape") {
+            Toggle("Launch at Login", isOn: Binding(
+                get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
+            ))
+            .disabled(!model.loginItem.isAvailable)
+            Divider()
+            Text(model.updateStatus.message)
+            Button(model.updateStatus.isChecking ? "Checking for Updates…" : "Check for Updates") {
+                model.checkForUpdates()
+            }
+            .disabled(model.updateStatus.isChecking)
+            if model.updateStatus.releaseURL != nil {
+                Button("Open Release Page") { model.openLatestRelease() }
+            }
+            Divider()
+            Button("Show Setup Guide", action: onShowSetupGuide)
+            Divider()
+            Button("Quit CmdIME", role: .destructive) { model.quit() }
+        }
+        .fixedSize()
+        .accessibilityLabel("General")
+        .help("Launch at login, updates, setup guide and Quit CmdIME")
     }
 }
 
@@ -649,81 +680,6 @@ private struct IndicatorPreview: View {
         case .role:
             presentation.tint
         }
-    }
-}
-
-private struct RuntimeSection: View {
-    @ObservedObject var model: AppModel
-    let onShowSetupGuide: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
-            SectionLabel("General")
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: DesignTokens.Layout.panelGap,
-                                        alignment: .topLeading)],
-                      alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
-                group("Launch at login") {
-                    Toggle("Launch at login", isOn: Binding(
-                        get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .tint(DesignTokens.Colors.success)
-                    .controlSize(.small)
-                    .disabled(!model.loginItem.isAvailable)
-                    .frame(minHeight: DesignTokens.Layout.fieldHeight, alignment: .leading)
-                }
-                group("Updates") {
-                    HStack(spacing: DesignTokens.Layout.rowGap) {
-                        if model.updateStatus.releaseURL != nil {
-                            Button("Open") { model.openLatestRelease() }
-                                .buttonStyle(ConsoleButtonStyle())
-                        }
-                        Button(model.updateStatus.isChecking ? "Checking" : "Check") {
-                            model.checkForUpdates()
-                        }
-                        .disabled(model.updateStatus.isChecking)
-                        .buttonStyle(ConsoleButtonStyle())
-                    }
-                    Text(model.updateStatus.message)
-                        .font(DesignTokens.Typography.auxiliary)
-                        .foregroundStyle(DesignTokens.Colors.textMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                group("Setup guide") {
-                    Button("Show", action: onShowSetupGuide)
-                        .buttonStyle(ConsoleButtonStyle())
-                        .help("Walk through the first-run steps again")
-                        .accessibilityLabel("Show setup guide")
-                }
-                group("Quit CmdIME") {
-                    Button("Quit", role: .destructive) { model.quit() }
-                        .buttonStyle(ConsoleButtonStyle())
-                        .help("Stop the background listener")
-                        .accessibilityLabel("Quit CmdIME")
-                }
-            }
-            Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
-                .font(DesignTokens.Typography.auxiliary)
-                .foregroundStyle(DesignTokens.Colors.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(DesignTokens.Layout.panelInset)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
-            .fill(DesignTokens.Colors.surface))
-    }
-
-    private func group<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
-            Text(title)
-                .font(DesignTokens.Typography.body.weight(.semibold))
-                .foregroundStyle(DesignTokens.Colors.textPrimary)
-            content()
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(title)
     }
 }
 

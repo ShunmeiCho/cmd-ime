@@ -57,7 +57,7 @@ struct SetupGuideCard: View {
         CompactSection(title: "Setup guide") {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
-                    Text("Three short steps. Everything stays editable afterwards, and General > Setup guide shows this guide again.")
+                    Text("Three short steps. Everything stays editable afterwards, and General > Show Setup Guide at the top shows this guide again.")
                         .setupBodyText()
                     Spacer(minLength: 8)
                     StatusPill(
