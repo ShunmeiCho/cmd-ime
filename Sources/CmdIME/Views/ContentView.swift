@@ -178,6 +178,15 @@ private struct SettingsHeader: View {
 }
 
 private extension SettingsHeader {
+    /// Every action row spans the panel, so the left and right edges line up.
+    func generalRow(_ title: String, prominent: Bool = false, destructive: Bool = false,
+                    action: @escaping () -> Void) -> some View {
+        Button(role: destructive ? .destructive : nil, action: action) {
+            Text(title).frame(maxWidth: .infinity)
+        }
+        .buttonStyle(ConsoleButtonStyle(prominent: prominent))
+    }
+
     static func open(_ address: String) {
         guard let url = URL(string: address) else { return }
         NSWorkspace.shared.open(url)
@@ -195,44 +204,49 @@ private extension SettingsHeader {
         .accessibilityLabel("General")
         .popover(isPresented: $showsGeneral, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
-                Toggle("Launch at login", isOn: Binding(
-                    get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
-                ))
-                .toggleStyle(.switch)
-                .tint(DesignTokens.Colors.success)
-                .controlSize(.small)
-                .disabled(!model.loginItem.isAvailable)
-                Divider()
-                Button(model.updateStatus.isChecking ? "Checking…" : "Check for Updates") {
-                    model.checkForUpdates()
+                HStack {
+                    Text("Launch at login")
+                    Spacer(minLength: DesignTokens.Layout.rowGap)
+                    Toggle("Launch at login", isOn: Binding(
+                        get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(DesignTokens.Colors.success)
+                    .controlSize(.small)
+                    .disabled(!model.loginItem.isAvailable)
                 }
-                .disabled(model.updateStatus.isChecking)
-                // Only an available update gets a button; "up to date" is just the line below.
+                Divider()
+                HStack {
+                    Text(model.updateStatus.message)
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: DesignTokens.Layout.rowGap)
+                    Button(model.updateStatus.isChecking ? "Checking…" : "Check") { model.checkForUpdates() }
+                        .disabled(model.updateStatus.isChecking)
+                        .fixedSize()
+                }
+                // Only an available update gets a button; "up to date" is just the line above.
                 if case .available = model.updateStatus {
-                    Button("Open Release Page") { model.openLatestRelease() }
-                        .buttonStyle(ConsoleButtonStyle(prominent: true))
+                    generalRow("Open Release Page", prominent: true) { model.openLatestRelease() }
                 }
-                Text(model.updateStatus.message)
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
                 Divider()
-                Button("Show Setup Guide") {
+                generalRow("Show Setup Guide") {
                     showsGeneral = false
                     onShowSetupGuide()
                 }
-                Button("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
-                Button("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
+                generalRow("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
+                generalRow("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
                 Divider()
-                Button("Quit CmdIME", role: .destructive) { model.quit() }
+                generalRow("Quit CmdIME", destructive: true) { model.quit() }
                     .help("Stop the background listener")
             }
             .buttonStyle(ConsoleButtonStyle())
             .font(DesignTokens.Typography.body)
             .foregroundStyle(DesignTokens.Colors.textPrimary)
-            .fixedSize(horizontal: true, vertical: false)
             .padding(16)
-            .frame(minWidth: 240, alignment: .leading)
+            .frame(width: 260)
             .background(DesignTokens.Colors.surfaceRaised)
             .preferredColorScheme(.dark)
         }

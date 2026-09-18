@@ -17,6 +17,8 @@ struct IndicatorTypographyRows: View {
     @ObservedObject var library: IndicatorLibrary
     let theme: IndicatorTheme
     @Binding var isAdjusting: Bool
+    @State private var showsFonts = false
+    @State private var fontQuery = ""
 
     private var typography: IndicatorTypography { theme.typography }
 
@@ -83,36 +85,86 @@ struct IndicatorTypographyRows: View {
             .filter { !$0.hasPrefix(".") && !importedKeys.contains($0.lowercased()) }
             .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
 
-        return ConsoleMenuButton(title: currentFontName, warning: isFamilyMissing) {
-            ForEach(Self.designNames, id: \.1) { design, name in
-                Button(name) {
-                    model.editIndicatorTheme {
-                        $0.typography.displayFamily = nil
-                        $0.typography.displayDesign = design
+        // A searchable popover: several hundred installed families do not fit a menu.
+        let query = fontQuery.trimmingCharacters(in: .whitespaces).lowercased()
+        let matches: (String) -> Bool = { query.isEmpty || $0.lowercased().contains(query) }
+        return Button { showsFonts.toggle() } label: {
+            HStack(spacing: DesignTokens.Spacing.sm) {
+                Text(currentFontName).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+            }
+            .font(DesignTokens.Typography.body.weight(.semibold))
+            .foregroundStyle(isFamilyMissing ? DesignTokens.Colors.warning : DesignTokens.Colors.textPrimary)
+            .padding(.horizontal, DesignTokens.Spacing.sm)
+            .frame(minHeight: DesignTokens.Layout.fieldHeight)
+            .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+                .fill(DesignTokens.Colors.surfaceInset)
+                .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+                    .stroke(DesignTokens.Colors.separatorStrong, lineWidth: 1)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Font")
+        .accessibilityValue(currentFontName)
+        .popover(isPresented: $showsFonts, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Search fonts", text: $fontQuery)
+                    .textFieldStyle(.roundedBorder)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        fontGroup("System", Self.designNames.map(\.1).filter(matches)) { name in
+                            guard let design = Self.designNames.first(where: { $0.1 == name })?.0 else { return }
+                            model.editIndicatorTheme {
+                                $0.typography.displayFamily = nil
+                                $0.typography.displayDesign = design
+                            }
+                        }
+                        fontGroup("Presets", TypographyPreset.allCases.map { $0.rawValue.capitalized }.filter(matches)) { name in
+                            guard let preset = TypographyPreset.allCases.first(where: { $0.rawValue.capitalized == name }) else { return }
+                            model.editIndicatorTheme { theme in
+                                let scale = theme.typography.textScale
+                                theme.typography = preset.typography
+                                theme.typography.textScale = scale
+                            }
+                        }
+                        fontGroup("Imported", imported.filter(matches)) { select($0) }
+                        fontGroup("Installed", installed.filter(matches)) { select($0) }
                     }
                 }
+                .frame(height: 280)
             }
-            Divider()
-            ForEach(TypographyPreset.allCases, id: \.self) { preset in
-                Button("Preset: \(preset.rawValue.capitalized)") {
-                    model.editIndicatorTheme { theme in
-                        let scale = theme.typography.textScale
-                        theme.typography = preset.typography
-                        theme.typography.textScale = scale
+            .padding(12)
+            .frame(width: 280)
+            .preferredColorScheme(.dark)
+        }
+    }
+
+    @ViewBuilder
+    private func fontGroup(_ title: String, _ names: [String], pick: @escaping (String) -> Void) -> some View {
+        if !names.isEmpty {
+            Text(title.uppercased())
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .padding(.top, 8)
+                .padding(.bottom, 2)
+            ForEach(names, id: \.self) { name in
+                Button {
+                    pick(name)
+                    showsFonts = false
+                } label: {
+                    HStack {
+                        Text(name).lineLimit(1)
+                        Spacer(minLength: 4)
+                        if name == currentFontName { Image(systemName: "checkmark") }
                     }
+                    .font(DesignTokens.Typography.body)
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 6)
+                    .contentShape(Rectangle())
                 }
-            }
-            if !imported.isEmpty {
-                Section("Imported") {
-                    ForEach(imported, id: \.self) { family in
-                        Button(family) { select(family) }
-                    }
-                }
-            }
-            Section("Installed") {
-                ForEach(installed, id: \.self) { family in
-                    Button(family) { select(family) }
-                }
+                .buttonStyle(.plain)
             }
         }
     }
