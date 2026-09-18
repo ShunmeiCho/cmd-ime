@@ -29,13 +29,13 @@ struct SlotBoardSection: View {
                     SectionLabel("Switch slots")
                     Spacer()
                     AddSlotMenu(sources: model.unassignedSources, onAdd: add, onOpenSettings: showKeyboardSettings)
-                    Menu("Manage") {
+                    ConsoleMenuButton(title: "Manage") {
                         Button("Reset to Detected") {
                             guard commitPendingRename() else { return }
                             showsResetConfirmation = true
                         }
                     }
-                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                     .accessibilityLabel("Manage slots")
                 }
                 HStack(alignment: .top, spacing: 14) {
