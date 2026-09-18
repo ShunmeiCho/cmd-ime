@@ -31,6 +31,9 @@ struct SetupSlotSentenceRow: View {
                 .foregroundStyle(triggers.isEmpty ? DesignTokens.Colors.textMuted : DesignTokens.Colors.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
+                // Without priorities the two texts split the row evenly and the instruction
+                // wraps while the row still has room.
+                .layoutPriority(2)
 
             Image(systemName: "arrow.right")
                 .font(.caption.weight(.bold))
@@ -46,6 +49,7 @@ struct SetupSlotSentenceRow: View {
                 .foregroundStyle(source == nil ? DesignTokens.Colors.warning : DesignTokens.Colors.textSecondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(1)
 
             Spacer(minLength: 8)
 
@@ -63,7 +67,10 @@ struct SetupSlotSentenceRow: View {
 
     private var instruction: String {
         guard !triggers.isEmpty else { return "No key yet" }
-        return triggers.map { SetupTriggerPhrase(trigger: $0).instruction }.joined(separator: ", or ")
+        let phrases = triggers.map { SetupTriggerPhrase(trigger: $0).instruction }
+        // One sentence: only the first phrase keeps its capital.
+        return ([phrases[0]] + phrases.dropFirst().map { $0.prefix(1).lowercased() + $0.dropFirst() })
+            .joined(separator: ", or ")
     }
 
     /// "English (ABC)", or just the slot name when the source carries the same name.

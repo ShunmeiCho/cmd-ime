@@ -7,6 +7,8 @@ import SwiftUI
 enum IndicatorPreviewModel {
     /// Miniatures are drawn at the smallest scale the Scale setting allows.
     static let miniatureScale = 0.65
+    /// Display, Size and Color share one width so their segments line up down the column.
+    static let segmentedWidth: CGFloat = 330
 
     /// The appearance always comes from the system, as it does for the live panel:
     /// the preview must show the glass the user will really get over either page.
@@ -112,7 +114,7 @@ struct IndicatorSettingsSection: View {
                         set: { if supported.contains($0) { model.setSwitchIndicatorContentStyle($0) } }
                     )
                 )
-                .frame(width: 202)
+                .frame(width: IndicatorPreviewModel.segmentedWidth)
                 if supported.count < SwitchIndicatorContentStyle.allCases.count {
                     let names = supported.map(\.displayName).joined(separator: ", ")
                     Text("\(theme.name) shows \(names) only. \(Self.unsupportedDisplayHelp)")
@@ -134,7 +136,7 @@ struct IndicatorSettingsSection: View {
                     set: { model.setSwitchIndicatorSize($0) }
                 )
             )
-            .frame(width: 160)
+            .frame(width: IndicatorPreviewModel.segmentedWidth)
         }
     }
 
@@ -180,7 +182,7 @@ struct IndicatorSettingsSection: View {
                         set: { model.setSwitchIndicatorColorStyle($0) }
                     )
                 )
-                .frame(width: 202)
+                .frame(width: IndicatorPreviewModel.segmentedWidth)
                 .disabled(!usesSlotColor)
                 .opacity(usesSlotColor ? 1 : 0.45)
                 if !usesSlotColor {

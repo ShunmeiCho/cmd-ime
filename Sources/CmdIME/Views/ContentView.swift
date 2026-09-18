@@ -203,14 +203,14 @@ private extension SettingsHeader {
                 .controlSize(.small)
                 .disabled(!model.loginItem.isAvailable)
                 Divider()
-                HStack(spacing: DesignTokens.Layout.rowGap) {
-                    Button(model.updateStatus.isChecking ? "Checking…" : "Check for Updates") {
-                        model.checkForUpdates()
-                    }
-                    .disabled(model.updateStatus.isChecking)
-                    if model.updateStatus.releaseURL != nil {
-                        Button("Open Release Page") { model.openLatestRelease() }
-                    }
+                Button(model.updateStatus.isChecking ? "Checking…" : "Check for Updates") {
+                    model.checkForUpdates()
+                }
+                .disabled(model.updateStatus.isChecking)
+                // Only an available update gets a button; "up to date" is just the line below.
+                if case .available = model.updateStatus {
+                    Button("Open Release Page") { model.openLatestRelease() }
+                        .buttonStyle(ConsoleButtonStyle(prominent: true))
                 }
                 Text(model.updateStatus.message)
                     .font(DesignTokens.Typography.auxiliary)
@@ -221,10 +221,8 @@ private extension SettingsHeader {
                     showsGeneral = false
                     onShowSetupGuide()
                 }
-                HStack(spacing: DesignTokens.Layout.rowGap) {
-                    Button("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
-                    Button("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
-                }
+                Button("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
+                Button("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
                 Divider()
                 Button("Quit CmdIME", role: .destructive) { model.quit() }
                     .help("Stop the background listener")
@@ -232,8 +230,9 @@ private extension SettingsHeader {
             .buttonStyle(ConsoleButtonStyle())
             .font(DesignTokens.Typography.body)
             .foregroundStyle(DesignTokens.Colors.textPrimary)
+            .fixedSize(horizontal: true, vertical: false)
             .padding(16)
-            .frame(width: 300, alignment: .leading)
+            .frame(minWidth: 240, alignment: .leading)
             .background(DesignTokens.Colors.surfaceRaised)
             .preferredColorScheme(.dark)
         }
@@ -554,7 +553,10 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                     Text(option.label)
                         .font(DesignTokens.Typography.body.weight(.semibold))
                         .foregroundStyle(selection == option.value ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textMuted)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .fixedSize()
+                        // A label never touches its segment's edge, whatever width the row gives it.
+                        .padding(.horizontal, 12)
                         .frame(maxWidth: .infinity, minHeight: 24)
                         .contentShape(Rectangle())
                 }
