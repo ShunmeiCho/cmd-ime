@@ -44,13 +44,30 @@ public enum SlotPalette {
     }
 }
 
+/// An in-memory undo receipt. Offsets refer to the configuration before removal.
+/// Receipts are produced by removingSlotWithReceipt, not persisted in config JSON.
+public struct RemovedSlot: Equatable, Sendable {
+    public struct BindingEntry: Equatable, Sendable {
+        public let offset: Int
+        public let binding: KeyBinding
+    }
+
+    public let slot: SwitchSlot
+    public let index: Int
+    public let bindings: [BindingEntry]
+    public let preference: RoleInputSourcePreference?
+    public let customIndicatorColorHex: String?
+}
+
 /// Validation failures for pure slot edits. Unknown IDs never silently create slots.
 public enum SlotError: Error, Equatable, LocalizedError, Sendable {
     case sourceAlreadyUsed
     case lastSlot
     /// A supplied name is empty after trimming whitespace and newlines.
     case invalidName
+    case duplicateName
     case unknownSlot(InputRole)
+    case slotAlreadyExists(InputRole)
     /// The source has an empty ID, is not selectable, or is an auxiliary source.
     case invalidSource
 
@@ -59,7 +76,9 @@ public enum SlotError: Error, Equatable, LocalizedError, Sendable {
         case .sourceAlreadyUsed: "This input source is already preferred by another slot."
         case .lastSlot: "The last slot cannot be removed."
         case .invalidName: "A slot name cannot be empty."
+        case .duplicateName: "Another slot already uses this name. Choose a different name."
         case let .unknownSlot(id): "Unknown slot \"\(id.rawValue)\"."
+        case let .slotAlreadyExists(id): "Slot \"\(id.rawValue)\" already exists."
         case .invalidSource: "Choose a selectable input source."
         }
     }
@@ -246,6 +265,50 @@ extension SwitcherConfig {
         return result
     }
 
+    public func removingSlotWithReceipt(_ id: InputRole) throws(SlotError) -> (config: SwitcherConfig, removed: RemovedSlot) {
+        guard let index = slots.firstIndex(where: { $0.id == id }) else { throw .unknownSlot(id) }
+        let removed = RemovedSlot(
+            slot: slots[index],
+            index: index,
+            bindings: bindings.enumerated().compactMap { offset, binding in
+                guard binding.action.type == .switchInputSource, binding.action.role == id else { return nil }
+                return RemovedSlot.BindingEntry(offset: offset, binding: binding)
+            },
+            preference: inputSources[id.rawValue],
+            customIndicatorColorHex: switchIndicatorCustomRoleColorHexes[id.rawValue]
+        )
+        return (try removingSlot(id), removed)
+    }
+
+    /// Restores slot-owned data at its saved positions, clamping after intervening edits.
+    /// ID/source ownership conflicts reject the whole operation. Enabled bindings
+    /// whose triggers are now occupied are skipped and returned for a visible notice;
+    /// disabled bindings are preserved because they do not reserve a trigger.
+    public func restoringSlot(_ removed: RemovedSlot) throws(SlotError) -> (config: SwitcherConfig, skippedBindings: [RemovedSlot.BindingEntry]) {
+        let id = removed.slot.id
+        guard slot(id) == nil else { throw .slotAlreadyExists(id) }
+        if let preferredID = removed.preference?.preferredIDs.first,
+           slots.contains(where: { preference(for: $0.id).preferredIDs.first == preferredID }) {
+            throw .sourceAlreadyUsed
+        }
+
+        var result = self
+        result.slots.insert(removed.slot, at: min(max(removed.index, 0), result.slots.count))
+        result.inputSources[id.rawValue] = removed.preference
+        result.switchIndicatorCustomRoleColorHexes[id.rawValue] = removed.customIndicatorColorHex
+        var skipped: [RemovedSlot.BindingEntry] = []
+        for entry in removed.bindings {
+            if entry.binding.enabled,
+               result.conflictingBinding(for: entry.binding.trigger, excluding: id) != nil {
+                skipped.append(entry)
+                continue
+            }
+            let index = min(max(entry.offset - skipped.count, 0), result.bindings.count)
+            result.bindings.insert(entry.binding, at: index)
+        }
+        return (result, skipped)
+    }
+
     /// Destination is the final index, not an insertion index before removal.
     public func movingSlot(from source: Int, to destination: Int) -> SwitcherConfig {
         guard slots.indices.contains(source) else { return self }
@@ -255,10 +318,21 @@ extension SwitcherConfig {
         return result
     }
 
+    public func movingSlot(_ id: InputRole, by offset: Int) -> SwitcherConfig {
+        guard let index = slots.firstIndex(where: { $0.id == id }) else { return self }
+        // Clamp before adding so even Int.min/Int.max cannot overflow.
+        let step = min(max(offset, -index), slots.count - 1 - index)
+        return movingSlot(from: index, to: index + step)
+    }
+
     public func renamingSlot(_ id: InputRole, to name: String) throws(SlotError) -> SwitcherConfig {
         guard let index = slots.firstIndex(where: { $0.id == id }) else { throw .unknownSlot(id) }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw .invalidName }
+        guard !slots.contains(where: {
+            $0.id != id && $0.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                .caseInsensitiveCompare(trimmed) == .orderedSame
+        }) else { throw .duplicateName }
         var result = self
         result.slots[index].name = trimmed
         return result

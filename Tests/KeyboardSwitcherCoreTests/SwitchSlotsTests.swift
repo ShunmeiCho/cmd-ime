@@ -6,6 +6,220 @@ final class SwitchSlotsTests: XCTestCase {
         InputSourceInfo(id: id, localizedName: "Source \(id)", languages: [language], isSelectCapable: true)
     }
 
+    func testMovingEverySourceToEveryFinalIndexMatchesRemoveThenInsert() {
+        for count in 1...6 {
+            var config = SwitcherConfig.default
+            config.slots = (0..<count).map {
+                SwitchSlot(id: InputRole(rawValue: "slot-\($0)"), name: "Slot \($0)", tintHex: "#123456")
+            }
+            let snapshot = config
+            for source in 0..<count {
+                for destination in 0..<count {
+                    var expected = snapshot
+                    let movedSlot = expected.slots.remove(at: source)
+                    expected.slots.insert(movedSlot, at: destination)
+                    XCTAssertEqual(config.movingSlot(from: source, to: destination), expected,
+                                   "count=\(count), source=\(source), destination=\(destination)")
+                }
+            }
+            XCTAssertEqual(config, snapshot)
+        }
+    }
+
+    func testMovingSlotByOffsetClampsAndPreservesMetadata() {
+        let config = SwitcherConfig.default
+        for (offset, destination) in [(Int.min, 0), (-10, 0), (-1, 0), (0, 1), (1, 2), (10, 2), (Int.max, 2)] {
+            XCTAssertEqual(config.movingSlot(.chinese, by: offset), config.movingSlot(from: 1, to: destination))
+        }
+        XCTAssertEqual(config.movingSlot(.english, by: -1), config)
+        XCTAssertEqual(config.movingSlot(.japanese, by: 1), config)
+        XCTAssertEqual(config.movingSlot(InputRole(rawValue: "missing"), by: Int.max), config)
+        var single = config
+        single.slots = [config.slots[0]]
+        XCTAssertEqual(single.movingSlot(.english, by: Int.max), single)
+        XCTAssertEqual(single.movingSlot(.english, by: Int.min), single)
+        var empty = config
+        empty.slots = []
+        XCTAssertEqual(empty.movingSlot(.english, by: 1), empty)
+    }
+
+    func testRenamingRejectsCaseInsensitiveDuplicateNamesAfterTrimming() {
+        var config = SwitcherConfig.default
+        config.slots[1].name = "  Work Desk \n"
+        let snapshot = config
+        for name in ["Work Desk", "work desk", "WORK DESK", "\n  wOrK dEsK  "] {
+            XCTAssertThrowsError(try config.renamingSlot(.english, to: name)) { error in
+                XCTAssertEqual(error as? SlotError, .duplicateName)
+            }
+        }
+        XCTAssertEqual(config, snapshot)
+        XCTAssertEqual(SlotError.duplicateName.errorDescription, "Another slot already uses this name. Choose a different name.")
+    }
+
+    func testRenamingAllowsOwnNameAndCaseChangeWithoutChangingOtherData() throws {
+        let config = SwitcherConfig.default
+        XCTAssertEqual(try config.renamingSlot(.english, to: " \nEnglish "), config)
+        var expected = config
+        expected.slots[0].name = "ENGLISH"
+        XCTAssertEqual(try config.renamingSlot(.english, to: " ENGLISH\n"), expected)
+        XCTAssertThrowsError(try config.renamingSlot(.english, to: " \n")) { error in
+            XCTAssertEqual(error as? SlotError, .invalidName)
+        }
+        let unknown = InputRole(rawValue: "missing")
+        XCTAssertThrowsError(try config.renamingSlot(unknown, to: "English")) { error in
+            XCTAssertEqual(error as? SlotError, .unknownSlot(unknown))
+        }
+    }
+
+    func testRemovalReceiptRoundTripsSlotOrderBindingOffsetsPreferencesAndColors() throws {
+        var config = SwitcherConfig.default
+        config.slots[1].name = "Work"
+        config.slots[1].tintHex = "#123456"
+        config.showSwitchIndicator = false
+        config.switchIndicatorCustomColorHex = "#ABCDEF"
+        config.switchIndicatorCustomRoleColorHexes = ["chinese": "#654321", "english": "#FEDCBA"]
+        config.bindings.insert(KeyBinding(trigger: try ShortcutParser.parse("command+k"), action: .sendKey(try ShortcutParser.parse("a"))), at: 2)
+        config.bindings.insert(KeyBinding(trigger: try ShortcutParser.parse("option+l"), action: .switchInputSource(.chinese), enabled: false), at: 4)
+        config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("control+j"), action: .switchInputSource(.chinese)))
+        config.inputSources["chinese"] = RoleInputSourcePreference(preferredIDs: ["missing.first", "history"], languagePrefixes: ["zh"], nameContains: ["Chinese"], fallbackLanguage: "zh")
+        let snapshot = config
+
+        let removal = try config.removingSlotWithReceipt(.chinese)
+        XCTAssertEqual(removal.config, try config.removingSlot(.chinese))
+        XCTAssertEqual(removal.removed.slot, config.slots[1])
+        XCTAssertEqual(removal.removed.index, 1)
+        XCTAssertEqual(removal.removed.bindings.map(\.offset), [1, 4, 5])
+        XCTAssertEqual(removal.removed.bindings.map(\.binding), [config.bindings[1], config.bindings[4], config.bindings[5]])
+        XCTAssertEqual(removal.removed.preference, config.inputSources["chinese"])
+        XCTAssertEqual(removal.removed.customIndicatorColorHex, "#654321")
+        let restored = try removal.config.restoringSlot(removal.removed)
+        XCTAssertEqual(restored.config, snapshot)
+        XCTAssertEqual(restored.skippedBindings, [])
+        XCTAssertEqual(config, snapshot)
+    }
+
+    func testRemovalReceiptPreservesAbsentPreferenceColorAndBindings() throws {
+        var config = SwitcherConfig.default
+        config.inputSources["japanese"] = nil
+        config.bindings.removeAll { $0.action.role == .japanese }
+        config.switchIndicatorCustomColorHex = "#123456"
+        let removal = try config.removingSlotWithReceipt(.japanese)
+        XCTAssertNil(removal.removed.preference)
+        XCTAssertNil(removal.removed.customIndicatorColorHex)
+        XCTAssertEqual(removal.removed.bindings, [])
+        let restored = try removal.config.restoringSlot(removal.removed)
+        XCTAssertEqual(restored.config, config)
+        XCTAssertNil(restored.config.inputSources["japanese"])
+        XCTAssertNil(restored.config.switchIndicatorCustomRoleColorHexes["japanese"])
+    }
+
+    func testRemovalReceiptRejectsUnknownAndLastSlot() throws {
+        let unknown = InputRole(rawValue: "missing")
+        XCTAssertThrowsError(try SwitcherConfig.default.removingSlotWithReceipt(unknown)) { error in
+            XCTAssertEqual(error as? SlotError, .unknownSlot(unknown))
+        }
+        let onlyEnglish = try SwitcherConfig.default.removingSlot(.japanese).removingSlot(.chinese)
+        XCTAssertThrowsError(try onlyEnglish.removingSlotWithReceipt(.english)) { error in
+            XCTAssertEqual(error as? SlotError, .lastSlot)
+        }
+    }
+
+    func testRestoringRejectsReusedSlotIDWithoutChangingConfig() throws {
+        let original = SwitcherConfig.default
+        let removal = try original.removingSlotWithReceipt(.chinese)
+        XCTAssertThrowsError(try original.restoringSlot(removal.removed)) { error in
+            XCTAssertEqual(error as? SlotError, .slotAlreadyExists(.chinese))
+        }
+        XCTAssertEqual(original, .default)
+    }
+
+    func testRestoringRejectsPreferredSourceOwnedByAnotherSlot() throws {
+        let original = SwitcherConfig.default
+        let removal = try original.removingSlotWithReceipt(.chinese)
+        var changed = removal.config
+        let preferred = try XCTUnwrap(removal.removed.preference?.preferredIDs.first)
+        changed.pinInputSourceID(preferred, for: .english)
+        let snapshot = changed
+        XCTAssertThrowsError(try changed.restoringSlot(removal.removed)) { error in
+            XCTAssertEqual(error as? SlotError, .sourceAlreadyUsed)
+        }
+        XCTAssertEqual(changed, snapshot)
+    }
+
+    func testRestoringAllowsPreferredSourceInAnotherSlotsLegacyHistory() throws {
+        let original = SwitcherConfig.default
+        let removal = try original.removingSlotWithReceipt(.chinese)
+        var changed = removal.config
+        let preferred = try XCTUnwrap(removal.removed.preference?.preferredIDs.first)
+        changed.inputSources["english"]?.preferredIDs.append(preferred)
+        let restored = try changed.restoringSlot(removal.removed)
+        XCTAssertEqual(restored.config.preference(for: .chinese), original.preference(for: .chinese))
+        XCTAssertEqual(restored.config.preference(for: .english), changed.preference(for: .english))
+        XCTAssertEqual(restored.skippedBindings, [])
+    }
+
+    func testRestoringSkipsOccupiedTriggerButRestoresSlotAndOtherBindings() throws {
+        var original = SwitcherConfig.default
+        original.switchIndicatorCustomRoleColorHexes["chinese"] = "#123456"
+        original.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("command+k"), action: .switchInputSource(.chinese)))
+        original.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("option+l"), action: .switchInputSource(.chinese), enabled: false))
+        let removal = try original.removingSlotWithReceipt(.chinese)
+        var changed = removal.config
+        let occupant = KeyBinding(trigger: try ShortcutParser.parse("double-right-command"), action: .sendKey(try ShortcutParser.parse("a")))
+        changed.bindings.append(occupant)
+        let snapshot = changed
+
+        let restored = try changed.restoringSlot(removal.removed)
+        XCTAssertEqual(restored.config.slots, original.slots)
+        XCTAssertEqual(restored.config.inputSources, original.inputSources)
+        XCTAssertEqual(restored.config.switchIndicatorCustomRoleColorHexes, original.switchIndicatorCustomRoleColorHexes)
+        XCTAssertEqual(restored.skippedBindings, [removal.removed.bindings[0]])
+        XCTAssertEqual(restored.config.bindings, [original.bindings[0], original.bindings[2], original.bindings[3], original.bindings[4], occupant])
+        XCTAssertEqual(changed, snapshot)
+    }
+
+    func testRestoringSkipsChordOccupiedBySlotOrRemap() throws {
+        var original = SwitcherConfig.default
+        let chord = try ShortcutParser.parse("command+option+k")
+        original.upsertSwitchBinding(trigger: chord, role: .chinese)
+        let removal = try original.removingSlotWithReceipt(.chinese)
+        for action in [BindingAction.switchInputSource(.english), .sendKey(try ShortcutParser.parse("a"))] {
+            var changed = removal.config
+            var reorderedChord = chord
+            reorderedChord.modifiers.reverse()
+            let occupant = KeyBinding(trigger: reorderedChord, action: action)
+            changed.bindings.append(occupant)
+            let restored = try changed.restoringSlot(removal.removed)
+            XCTAssertEqual(restored.config.slots, original.slots)
+            XCTAssertEqual(restored.config.bindings, changed.bindings)
+            XCTAssertEqual(restored.skippedBindings, removal.removed.bindings)
+        }
+    }
+
+    func testRestoringPreservesDisabledBindingsAndIgnoresDisabledOccupants() throws {
+        for removedEnabled in [false, true] {
+            var original = SwitcherConfig.default
+            original.bindings[1].enabled = removedEnabled
+            let removal = try original.removingSlotWithReceipt(.chinese)
+            var changed = removal.config
+            let occupant = KeyBinding(trigger: original.bindings[1].trigger, action: .sendKey(try ShortcutParser.parse("a")), enabled: !removedEnabled)
+            changed.bindings.append(occupant)
+            let restored = try changed.restoringSlot(removal.removed)
+            XCTAssertEqual(restored.skippedBindings, [])
+            XCTAssertEqual(restored.config.bindings, original.bindings + [occupant])
+        }
+    }
+
+    func testRestoringClampsSavedPositionsAfterInterveningRemovals() throws {
+        let original = SwitcherConfig.default
+        let removal = try original.removingSlotWithReceipt(.japanese)
+        let changed = try removal.config.removingSlot(.chinese)
+        let restored = try changed.restoringSlot(removal.removed)
+        XCTAssertEqual(restored.config.slots.map(\.id), [.english, .japanese])
+        XCTAssertEqual(restored.config.bindings, [original.bindings[0], original.bindings[2]])
+        XCTAssertEqual(restored.skippedBindings, [])
+    }
+
     func testAddingGeneratesIdentityPreferenceColorAndTrigger() throws {
         let result = try SwitcherConfig.default.addingSlot(for: source())
         XCTAssertEqual(result.slot.id.rawValue, "korean")
