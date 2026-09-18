@@ -277,3 +277,32 @@ extension SwitcherConfig {
         return words.isEmpty ? "slot" : words.joined(separator: "-")
     }
 }
+
+public extension SwitcherConfig {
+    /// The slot whose enabled one-shot binding (tap or double tap) uses this physical
+    /// modifier key, such as "right-shift". Used to draw the live keys strip from the
+    /// real bindings instead of assuming the default ones.
+    func slotID(forOneShotKeyName keyName: String) -> InputRole? {
+        slotTriggers.first { $0.trigger.kind == .oneShotModifier && $0.trigger.keyName == keyName }?.slot
+    }
+
+    /// Enabled key-press (chord) triggers bound to existing slots, in slot order.
+    var chordTriggers: [(slot: InputRole, trigger: KeyTrigger)] {
+        slotTriggers.filter { $0.trigger.kind == .keyPress }
+    }
+
+    private var slotTriggers: [(slot: InputRole, trigger: KeyTrigger)] {
+        slots.flatMap { slot in
+            bindings.compactMap { binding -> (slot: InputRole, trigger: KeyTrigger)? in
+                guard binding.enabled,
+                      binding.action.type == .switchInputSource,
+                      binding.action.role == slot.id
+                else {
+                    return nil
+                }
+                return (slot.id, binding.trigger)
+            }
+        }
+    }
+}
+

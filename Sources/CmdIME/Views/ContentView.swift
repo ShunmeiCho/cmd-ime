@@ -682,22 +682,41 @@ private struct CompactLiveKeysStrip: View {
             HStack(alignment: .firstTextBaseline) {
                 SectionLabel("Live keys")
                 Spacer()
-                Text("Press a bound key - it lights up and switches")
+                Text("Bound keys take their slot's color - the active slot's key lights up")
                     .font(.caption)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
 
             HStack(spacing: 6) {
-                LiveStripKey("⌃")
-                LiveStripKey("⌥", role: .japanese, isActive: model.activeRole == .japanese)
-                LiveStripKey("⌘", role: .english, detail: "L", isActive: model.activeRole == .english)
+                ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
                 LiveStripKey("space")
                     .frame(maxWidth: .infinity)
-                LiveStripKey("⌘", role: .chinese, detail: "R", isActive: model.activeRole == .chinese)
-                LiveStripKey("⌥")
-                LiveStripKey("⌃")
+                ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
+                ForEach(model.config.chordTriggers, id: \.slot) { entry in
+                    LiveStripKey(
+                        Self.symbols(for: entry.trigger),
+                        role: entry.slot,
+                        isActive: model.activeRole == entry.slot
+                    )
+                }
             }
         }
+    }
+
+    // Physical one-shot modifier keys, ordered like the bottom row of a keyboard.
+    private static let leftModifierKeys = ["left-shift", "left-control", "left-option", "left-command"]
+    private static let rightModifierKeys = ["right-command", "right-option", "right-control", "right-shift"]
+
+    private func modifierKey(_ keyName: String) -> LiveStripKey {
+        let keycap = LiveKeycap(keyName: keyName)
+        guard let slot = model.config.slotID(forOneShotKeyName: keyName) else {
+            return LiveStripKey(keycap.label)
+        }
+        return LiveStripKey(keycap.label, role: slot, detail: keycap.detail, isActive: model.activeRole == slot)
+    }
+
+    private static func symbols(for trigger: KeyTrigger) -> String {
+        trigger.displayName.split(separator: "+").map { LiveKeycap(keyName: String($0)).label }.joined()
     }
 }
 
