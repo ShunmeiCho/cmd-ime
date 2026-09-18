@@ -20,6 +20,23 @@ public final class EventTapMonitor: @unchecked Sendable {
     private var resolvedSources: [InputRole: InputSourceInfo] = [:]
     private var pendingSingleTapTimer: Timer?
     private let eventTapConfirmationRetryDelays: [TimeInterval] = [0.01]
+    /// Physically held one-shot modifier keys, tracked per keyCode so a left/right
+    /// release is not misread while the sibling key keeps the aggregate flag set.
+    private var pressedModifierKeyCodes = Set<Int>()
+    /// Bumped on every switch request; a switch whose generation is no longer
+    /// current abandons its pending start and confirmation retries.
+    private var switchGeneration = 0
+
+    static func scheduleOnMainQueue(after delay: TimeInterval, _ work: @escaping () -> Void) {
+        // The event tap and all TIS calls live on the main thread, and `work` only
+        // ever runs there, so handing it to the main queue is safe.
+        nonisolated(unsafe) let work = work
+        if delay <= 0 {
+            DispatchQueue.main.async { work() }
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { work() }
+        }
+    }
 
     typealias GlobalMouseDownMonitorInstaller = (NSEvent.EventTypeMask, @escaping (NSEvent) -> Void) -> Any?
     typealias LocalMouseDownMonitorInstaller = (NSEvent.EventTypeMask, @escaping (NSEvent) -> NSEvent?) -> Any?
@@ -124,6 +141,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         pendingSingleTapTimer?.invalidate()
         pendingSingleTapTimer = nil
         consumedKeyDowns.removeAll()
+        pressedModifierKeyCodes.removeAll()
     }
 
     public func updateConfig(_ config: SwitcherConfig) {
@@ -217,6 +235,10 @@ public final class EventTapMonitor: @unchecked Sendable {
         oneShotState.modifierUp(trigger)
     }
 
+    var pressedModifierKeyCodesForTesting: Set<Int> {
+        pressedModifierKeyCodes
+    }
+
     @discardableResult
     func handleFlagsChangedForTesting(_ event: CGEvent) -> Unmanaged<CGEvent>? {
         handleFlagsChanged(event)
@@ -239,8 +261,12 @@ public final class EventTapMonitor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
 
-        if isModifierDown(for: keyCode, flags: event.flags) {
+        if recordModifierTransition(keyCode: keyCode, flags: event.flags) {
             oneShotState.modifierDown(trigger)
+            // Pressed while another modifier is physically held: a chord, not a tap.
+            if let heldKeyCode = pressedModifierKeyCodes.first(where: { $0 != keyCode }) {
+                oneShotState.keyDown(heldKeyCode)
+            }
             return Unmanaged.passUnretained(event)
         }
 
@@ -357,54 +383,100 @@ public final class EventTapMonitor: @unchecked Sendable {
     }
 
     private func perform(_ action: BindingAction) {
-        do {
-            switch action.type {
-            case .switchInputSource:
-                guard let role = action.role else {
-                    return
-                }
-                if resolvedSources[role] == nil {
-                    refreshResolvedSources()
-                }
-                guard let source = resolvedSources[role] else {
-                    onMessage?("No input method matched this switch slot.")
-                    return
-                }
-                do {
-                    try selectAndReport(source, role: role, prefix: nil)
-                } catch {
-                    let originalError = error
-                    refreshResolvedSources()
-                    guard let fallback = resolvedSources[role], fallback.id != source.id else {
-                        // No different source to fall back to; surface the real reason
-                        // instead of the generic "Action failed".
-                        onMessage?("Could not switch this slot: \(originalError.localizedDescription)")
-                        return
-                    }
-                    try selectAndReport(
-                        fallback,
-                        role: role,
-                        prefix: "\(source.localizedName) failed: \(originalError.localizedDescription)"
-                    )
-                }
-            case .sendKey:
-                guard let output = action.output else {
-                    return
-                }
-                postKey(output)
-            case .disable:
-                break
+        switch action.type {
+        case .switchInputSource:
+            guard let role = action.role else {
+                return
             }
-        } catch {
-            onMessage?("Action failed: \(error.localizedDescription)")
+            requestSwitch(to: role)
+        case .sendKey:
+            guard let output = action.output else {
+                return
+            }
+            postKey(output)
+        case .disable:
+            break
         }
     }
 
-    private func selectAndReport(_ source: InputSourceInfo, role: InputRole, prefix: String?) throws {
-        let current = try inputSources.selectInputSourceAndConfirm(
+    /// Called from the event tap callback: only records the request and returns, so
+    /// the callback never waits on TIS selection or confirmation retries.
+    private func requestSwitch(to role: InputRole) {
+        switchGeneration &+= 1
+        let generation = switchGeneration
+        Self.scheduleOnMainQueue(after: 0) { [weak self] in
+            self?.beginSwitch(to: role, generation: generation)
+        }
+    }
+
+    private func isCurrentSwitch(_ generation: Int) -> Bool {
+        generation == switchGeneration
+    }
+
+    private func beginSwitch(to role: InputRole, generation: Int) {
+        guard isCurrentSwitch(generation) else {
+            return
+        }
+        if resolvedSources[role] == nil {
+            refreshResolvedSources()
+        }
+        guard let source = resolvedSources[role] else {
+            onMessage?("No input method matched this switch slot.")
+            return
+        }
+        selectAndReport(source, role: role, generation: generation, prefix: nil) { [weak self] originalError in
+            guard let self else {
+                return
+            }
+            self.refreshResolvedSources()
+            guard let fallback = self.resolvedSources[role], fallback.id != source.id else {
+                // No different source to fall back to; surface the real reason
+                // instead of the generic "Action failed".
+                self.onMessage?("Could not switch this slot: \(originalError.localizedDescription)")
+                return
+            }
+            self.selectAndReport(
+                fallback,
+                role: role,
+                generation: generation,
+                prefix: "\(source.localizedName) failed: \(originalError.localizedDescription)"
+            ) { [weak self] error in
+                self?.onMessage?("Action failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Selects `source` and reports via `onSwitch` only once the selection is
+    /// confirmed. Runs on the main thread; retries are scheduled, not slept.
+    private func selectAndReport(
+        _ source: InputSourceInfo,
+        role: InputRole,
+        generation: Int,
+        prefix: String?,
+        onError: @escaping (Error) -> Void
+    ) {
+        inputSources.selectInputSourceAndConfirm(
             id: source.id,
-            retryDelays: eventTapConfirmationRetryDelays
+            retryDelays: eventTapConfirmationRetryDelays,
+            schedule: Self.scheduleOnMainQueue,
+            shouldContinue: { [weak self] in
+                self?.isCurrentSwitch(generation) ?? false
+            },
+            completion: { [weak self] result in
+                guard let self else {
+                    return
+                }
+                switch result {
+                case .success(let current):
+                    self.report(current: current, requested: source, role: role, prefix: prefix)
+                case .failure(let error):
+                    onError(error)
+                }
+            }
         )
+    }
+
+    private func report(current: InputSourceInfo?, requested source: InputSourceInfo, role: InputRole, prefix: String?) {
         guard current?.id == source.id else {
             onMessage?(InputSourceInfo.verificationMessage(requested: source, current: current))
             return
@@ -439,11 +511,24 @@ public final class EventTapMonitor: @unchecked Sendable {
         keyUp?.post(tap: .cghidEventTap)
     }
 
-    private func isModifierDown(for keyCode: Int, flags: CGEventFlags) -> Bool {
+    /// Updates `pressedModifierKeyCodes` for a `flagsChanged` event and returns true
+    /// when it is a press. The aggregate flag (e.g. `.maskCommand`) stays set while
+    /// either side is held, so it cannot tell a right-command release from a press
+    /// while left-command is down; the per-keyCode set can. A cleared aggregate flag
+    /// means every key of that family is up, which also resyncs after missed events.
+    private func recordModifierTransition(keyCode: Int, flags: CGEventFlags) -> Bool {
         guard let flag = modifierFlag(forKeyCode: keyCode) else {
             return false
         }
-        return flags.contains(flag)
+        guard flags.contains(flag) else {
+            pressedModifierKeyCodes = pressedModifierKeyCodes.filter { modifierFlag(forKeyCode: $0) != flag }
+            return false
+        }
+        if pressedModifierKeyCodes.remove(keyCode) != nil {
+            return false
+        }
+        pressedModifierKeyCodes.insert(keyCode)
+        return true
     }
 
     func eventFlags(_ flags: CGEventFlags, contain modifiers: [Modifier]) -> Bool {

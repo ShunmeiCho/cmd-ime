@@ -27,7 +27,78 @@ public extension InputSourceService {
 
         return try currentInputSource()
     }
+
+    /// Non-blocking variant of `selectInputSourceAndConfirm(id:retryDelays:)`.
+    /// Retries are handed to `schedule` instead of sleeping, so the caller's thread
+    /// (e.g. an event tap callback) is never blocked. `schedule` must run its work on
+    /// the thread that is allowed to make TIS calls (the main thread). Before each
+    /// retry `shouldContinue` is consulted; when it returns false the attempt is
+    /// abandoned and `completion` is never called.
+    func selectInputSourceAndConfirm(
+        id: String,
+        retryDelays: [TimeInterval],
+        schedule: @escaping InputSourceRetryScheduler,
+        shouldContinue: @escaping () -> Bool,
+        completion: @escaping (Result<InputSourceInfo?, Error>) -> Void
+    ) {
+        do {
+            try selectInputSource(id: id)
+            if let current = try currentInputSource(), current.id == id {
+                completion(.success(current))
+                return
+            }
+        } catch {
+            completion(.failure(error))
+            return
+        }
+        confirmAfterRetries(
+            id: id,
+            remainingDelays: retryDelays[...],
+            schedule: schedule,
+            shouldContinue: shouldContinue,
+            completion: completion
+        )
+    }
+
+    private func confirmAfterRetries(
+        id: String,
+        remainingDelays: ArraySlice<TimeInterval>,
+        schedule: @escaping InputSourceRetryScheduler,
+        shouldContinue: @escaping () -> Bool,
+        completion: @escaping (Result<InputSourceInfo?, Error>) -> Void
+    ) {
+        guard let delay = remainingDelays.first else {
+            completion(Result { try currentInputSource() })
+            return
+        }
+        schedule(delay) {
+            guard shouldContinue() else {
+                return
+            }
+            do {
+                if let current = try self.currentInputSource(), current.id == id {
+                    completion(.success(current))
+                    return
+                }
+                try self.selectInputSource(id: id)
+            } catch {
+                completion(.failure(error))
+                return
+            }
+            self.confirmAfterRetries(
+                id: id,
+                remainingDelays: remainingDelays.dropFirst(),
+                schedule: schedule,
+                shouldContinue: shouldContinue,
+                completion: completion
+            )
+        }
+    }
 }
+
+/// Runs `work` after `delay` seconds. Implementations used with TIS-backed services
+/// must run `work` on the main thread.
+public typealias InputSourceRetryScheduler = (_ delay: TimeInterval, _ work: @escaping () -> Void) -> Void
 
 public enum InputSourceServiceError: Error, LocalizedError, Equatable {
     case notFound(String)
