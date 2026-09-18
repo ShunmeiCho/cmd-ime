@@ -136,7 +136,13 @@ struct SourceRow: View {
         .animation(DesignTokens.Motion.stateChange, value: hover)
         .animation(DesignTokens.Motion.stateChange, value: usage)
         .animation(DesignTokens.Motion.stateChange, value: rejected)
-        .offset(offset)
+        .offset(reduceMotion ? .zero : offset)
+        .onChange(of: reduceMotion) { reduced in
+            guard reduced else { return }
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { offset = .zero }
+        }
         .opacity(!isGhost && drag.payload == .source(source.id) ? 0.35 : 1)
         .animation(DesignTokens.Motion.quickFade, value: drag.payload == .source(source.id))
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("slotBoard")) } action: {
