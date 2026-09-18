@@ -428,6 +428,7 @@ struct ConsoleMenuButton<Content: View>: View {
     @State private var isHovered = false
 
     private let title: String
+    private let valueLabel: AnyView?
     private let systemImage: String?
     private let tint: Color
     private let warning: Bool
@@ -436,6 +437,7 @@ struct ConsoleMenuButton<Content: View>: View {
 
     init(
         title: String,
+        valueLabel: AnyView? = nil,
         systemImage: String? = nil,
         tint: Color = DesignTokens.Colors.accent,
         warning: Bool = false,
@@ -443,6 +445,7 @@ struct ConsoleMenuButton<Content: View>: View {
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
+        self.valueLabel = valueLabel
         self.systemImage = systemImage
         self.tint = tint
         self.warning = warning
@@ -457,7 +460,9 @@ struct ConsoleMenuButton<Content: View>: View {
             if let systemImage {
                 Image(systemName: systemImage).fixedSize()
             }
-            if !title.isEmpty {
+            if let valueLabel {
+                valueLabel
+            } else if !title.isEmpty {
                 Text(title)
                     .lineLimit(1)
                     .truncationMode(.tail)

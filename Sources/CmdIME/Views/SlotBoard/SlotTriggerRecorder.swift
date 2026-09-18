@@ -200,7 +200,7 @@ private struct TriggerRecorderPopover: View {
     }
 }
 
-private enum TriggerKeycapText {
+enum TriggerKeycapText {
     static func detail(_ side: String?, doubleTap: Bool) -> String? {
         let parts = [side, doubleTap ? "×2" : nil].compactMap { $0 }
         return parts.isEmpty ? nil : parts.joined(separator: " ")
