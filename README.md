@@ -22,6 +22,23 @@ using the first selectable source for that language in system order. Sources
 without a primary language are skipped. Each slot can be pointed at any installed
 input source from its card, including a slot that shows "Not matched".
 
+Settings is a slot board. Installed input sources are listed on the left, your
+slots on the right:
+
+- Drag a source into the slot list, or use **Add Slot**, to create a slot. Drag a
+  slot's handle to reorder it; Esc cancels a drag. The "..." menu has Move Up,
+  Move Down, Rename, Color and Remove Slot, and the same actions work from the
+  keyboard and VoiceOver. A removed slot can be restored with **Undo** until the
+  next slot change.
+- Click a slot's badge to give it one color. The source list, Live keys and the
+  switch indicator follow that color.
+- The source list follows System Settings: adding or removing an input source
+  updates it without a relaunch, and a Refresh button is always there.
+- "Current" marks the input source macOS has selected, however it was selected.
+  **Switch** selects a slot's source directly; it does not test the trigger.
+- Live keys, below the board, is a small keyboard that lights up the keys bound
+  to the current slot.
+
 | Detected slot | Default trigger |
 | --- | --- |
 | First | Left Command |
@@ -113,6 +130,11 @@ global keyboard listening can work.
 
 ## First Launch And Permissions
 
+A new install opens with a three-step **Setup guide** at the top of Settings:
+allow keyboard access, check the detected slots, then try a switch. It can be
+skipped, and **General > Show Setup Guide** brings it back. Users updating from
+an earlier version see a one-line "New in 0.4" notice instead.
+
 CmdIME needs both macOS permissions:
 
 - Accessibility
@@ -159,7 +181,7 @@ packaged with `LSUIElement`, so the app does not appear in the Dock or app
 switcher.
 
 Open `CmdIME.app` again whenever you need Settings. To stop the background
-agent, use Settings > **Quit agent** or run:
+agent, use **General > Quit CmdIME** in the status bar at the top of Settings, or run:
 
 ```sh
 keyboardctl quit
@@ -173,12 +195,20 @@ pkill -x CmdIME
 
 ## Bindings
 
-Each switch slot can use one of three trigger types:
+Each slot has three optional triggers. Any one you set switches to that slot,
+and they can be combined (for example a single tap for daily use plus a shortcut
+as a fallback). Leave the rest empty.
 
-- `Shortcut`: click the recorder field, then press a real keyboard shortcut
-  such as `option+j`.
-- `Single tap`: choose a side-specific modifier from the list.
-- `Double tap`: choose a side-specific modifier from the list.
+- `Single tap`: choose one of the eight physical modifier keys (left or right
+  Command, Option, Control, Shift) from the menu.
+- `Double tap`: the same menu, for a double tap.
+- `Shortcut`: click **Record…**, press a modifier together with a key such as
+  `option+j`, then Save. Esc cancels; tap triggers are paused while recording.
+
+A key already used for the same gesture by another slot, or by a key remap, is
+shown as used and cannot be picked. The same key can be a single tap for one
+slot and a double tap for another. Many Chinese input methods use Shift to
+toggle Chinese and English, so CmdIME never assigns Shift automatically.
 
 Single-key modifier bindings and keyboard shortcuts are intentionally separate
 so common shortcuts such as `Command+C`, `Command+V`, `Command+Tab`, and
@@ -326,8 +356,8 @@ Mac App Store distribution needs a separate sandboxed App Store build. See
 ## Package And Release
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.4.0
-shasum -a 256 dist/CmdIME-0.4.0.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.4.1
+shasum -a 256 dist/CmdIME-0.4.1.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing
@@ -353,8 +383,8 @@ Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
 Homebrew cask. The cask links `keyboardctl` through `Contents/Resources`, which
 is a compatibility symlink to the signed helper in `Contents/MacOS`.
 
-CmdIME 0.1.11 and later can check recent GitHub Releases from Settings >
-Runtime > Updates, including explicitly labelled preview releases. When a new
+CmdIME can check recent GitHub Releases from **General > Check for Updates** in
+Settings, including explicitly labelled preview releases. When a new
 version is available, open the release page and reinstall with the one-line
 installer or update through Homebrew. Fully automatic in-app replacement is left
 to a future Sparkle-based updater so signing and macOS permission behavior stay

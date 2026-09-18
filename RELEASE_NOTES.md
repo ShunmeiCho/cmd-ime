@@ -1,3 +1,15 @@
+## CmdIME v0.4.1 Preview
+
+Layout fixes for the 0.4 settings window.
+
+### Fixes
+
+- **General moved to the top.** Launch at Login, Check for Updates, Show Setup Guide and Quit CmdIME are now a **General** menu in the status bar, so none of them needs scrolling to the bottom of the page. The "keeps running after this window closes" hint sits under the status bar.
+- **No empty well under the source list.** The input sources panel and the slots panel share one height.
+- **Live keys is a small keyboard.** It spans the full width below the board: both Shift keys on the upper row with your shortcuts between them, and Control, Option, Command around the space bar on the lower row.
+- The sources panel's "Keyboard Settings…" button stays on one line, and its hint text wraps instead of being clipped.
+- README updated for the slot board, the three optional triggers, the setup guide and the new icon.
+
 ## CmdIME v0.4.0 Preview
 
 The settings window becomes a slot board: add, reorder, rename and recolor slots directly, set Single tap, Double tap and Shortcut triggers side by side, and get a guided first run. The app icon is new.
