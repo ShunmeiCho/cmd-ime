@@ -274,12 +274,24 @@ final class AppModel: ObservableObject {
         }
 
         do {
-            config = try config.assigningInputSource(source, to: role)
+            config = try config.selectingInputSource(source, for: role, sources: sources)
             if save() {
                 statusText = "Switch slot set to \(source.localizedName)"
             }
         } catch {
             statusText = error.localizedDescription
+        }
+    }
+
+    func inputSourceSelection(_ source: InputSourceInfo, for role: InputRole) -> SlotSourceSelection {
+        config.inputSourceSelection(source, for: role, sources: sources)
+    }
+
+    func inputSourceMenuTitle(_ source: InputSourceInfo, for role: InputRole) -> String {
+        switch inputSourceSelection(source, for: role) {
+        case let .swap(other): "\(source.localizedName) — swap with \(config.displayName(for: other))"
+        case let .usedBy(other): "\(source.localizedName) — used by \(config.displayName(for: other))"
+        default: source.localizedName
         }
     }
 

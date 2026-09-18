@@ -378,9 +378,10 @@ private struct SwitchSlotsSection: View {
                     .disabled(true)
             }
             ForEach(model.selectableSources, id: \.id) { candidate in
-                Button(candidate.localizedName) {
+                Button(model.inputSourceMenuTitle(candidate, for: role)) {
                     model.setInputSourceID(candidate.id, for: role)
                 }
+                .disabled(!model.inputSourceSelection(candidate, for: role).isEnabled)
             }
         } label: {
             Text(source == nil ? "Choose" : "Change")
