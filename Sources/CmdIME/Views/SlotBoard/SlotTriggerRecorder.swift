@@ -106,7 +106,7 @@ struct SlotTriggerRecorder: View {
         let captureOwner = UUID()
         session.begin(in: window, category: category, existingTrigger: trigger,
                       onCaptureChanged: { model.setShortcutRecording($0, for: role, owner: captureOwner) },
-                      onValidate: { model.recordedTriggerConflict($0, for: role) },
+                      onValidate: { model.recordedTriggerConflict($0, for: role, category: category) },
                       onCommit: { draft in
                           let error = model.commitRecordedTrigger(draft, for: role, category: category)
                           if error == nil { onUpdated() }

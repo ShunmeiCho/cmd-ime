@@ -614,7 +614,7 @@ final class AppModel: ObservableObject {
     @discardableResult
     func commitRecordedTrigger(_ trigger: KeyTrigger?, for role: InputRole,
                                category: SlotTriggerCategory) -> String? {
-        if let trigger, let reason = recordedTriggerConflict(trigger, for: role) {
+        if let trigger, let reason = recordedTriggerConflict(trigger, for: role, category: category) {
             reportSlotFailure(reason, for: role)
             return reason
         }
@@ -642,6 +642,22 @@ final class AppModel: ObservableObject {
             setBindingTrigger(trigger, for: role)
         } catch {
             reportSlotFailure(error.localizedDescription, for: role)
+        }
+    }
+
+    func recordedTriggerConflict(_ trigger: KeyTrigger, for role: InputRole,
+                                 category: SlotTriggerCategory) -> String? {
+        if trigger.isReservedMacInputSourceShortcut {
+            return "\(trigger.displayName) is reserved by macOS input source switching"
+        }
+        do {
+            _ = try config.replacingSwitchBinding(for: role, category: category, with: trigger)
+            return nil
+        } catch SlotTriggerCategoryError.conflictingBinding(let binding) {
+            let owner = binding.action.role.map { config.displayName(for: $0) } ?? "another binding"
+            return "\(trigger.displayName) is already used by \(owner)"
+        } catch {
+            return error.localizedDescription
         }
     }
 

@@ -12,6 +12,39 @@ final class SlotTriggerCategoryTests: XCTestCase {
             .replacingSwitchBinding(for: .english, category: .shortcut, with: trigger("command+k"))
     }
 
+    func testThreeCategoriesPersistAndIndependentClearSurvivesReload() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ConfigStore(url: directory.appendingPathComponent("config.json"))
+        let original = try threeCategories()
+        try store.save(original)
+        let loaded = try store.loadOrRecover().config
+        XCTAssertEqual(loaded, original)
+        let cleared = try loaded.replacingSwitchBinding(for: .english, category: .double, with: nil)
+        try store.save(cleared)
+        let reloaded = try store.loadOrRecover().config
+        XCTAssertNil(reloaded.binding(for: .english, category: .double))
+        XCTAssertEqual(reloaded.binding(for: .english, category: .single), original.binding(for: .english, category: .single))
+        XCTAssertEqual(reloaded.binding(for: .english, category: .shortcut), original.binding(for: .english, category: .shortcut))
+    }
+
+    func testRuntimeSharedPhysicalKeyStillWaitsBeforeSingleAndSelectsDouble() throws {
+        let single = try trigger("left-command")
+        let config = try SwitcherConfig.default.replacingSwitchBinding(
+            for: .chinese, category: .double, with: trigger("double-left-command"))
+        XCTAssertNotNil(config.binding(for: .english, category: .single))
+        XCTAssertNotNil(config.binding(for: .chinese, category: .double))
+        var state = OneShotModifierState()
+        state.modifierDown(single)
+        XCTAssertEqual(state.modifierUp(single, hasDoubleTapBinding: true), .wait)
+        XCTAssertEqual(state.flushPendingSingleTap(), single)
+        state.modifierDown(single)
+        XCTAssertEqual(state.modifierUp(single, hasDoubleTapBinding: true), .wait)
+        state.modifierDown(single)
+        XCTAssertEqual(state.modifierUp(single, hasDoubleTapBinding: true), .trigger(try trigger("double-left-command")))
+        XCTAssertEqual(OneShotModifierState.doubleTapWindow, 0.22)
+    }
+
     func testThreeCategoriesCoexistAndRoundTripWithoutNewJSONFields() throws {
         let config = try threeCategories()
         for category in SlotTriggerCategory.allCases {
