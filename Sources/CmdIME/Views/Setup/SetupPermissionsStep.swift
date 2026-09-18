@@ -62,6 +62,17 @@ struct SetupPermissionsStep: View {
                     .buttonStyle(ConsoleButtonStyle())
                     relaunchButton(prominent: true)
                 }
+            } else if model.permissions.isReady, !model.isListening {
+                SetupNotice(
+                    systemImage: "pause.circle.fill",
+                    tone: .warning,
+                    text: "Permissions are ready, but the keyboard listener is not running. Start it before trying your triggers."
+                ) {
+                    Button(model.keyboardControlStatus == "Paused" ? "Resume" : "Start Listening") {
+                        model.startListeningIfReady()
+                    }
+                    .buttonStyle(ConsoleButtonStyle(prominent: true))
+                }
             } else if didOpenSettings, !model.permissions.isReady {
                 SetupNotice(
                     systemImage: "arrow.clockwise.circle.fill",

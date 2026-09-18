@@ -19,6 +19,7 @@ public enum SetupStep: Int, CaseIterable, Comparable, Sendable {
 public struct SetupGuideInput: Equatable, Sendable {
     public var accessibilityGranted: Bool
     public var inputMonitoringGranted: Bool
+    public var listenerRunning: Bool
     /// The keyboard listener could not start. With both permissions granted this
     /// usually means macOS wants the app restarted before the grant takes effect.
     public var listenerFailed: Bool
@@ -35,6 +36,7 @@ public struct SetupGuideInput: Equatable, Sendable {
     public init(
         accessibilityGranted: Bool,
         inputMonitoringGranted: Bool,
+        listenerRunning: Bool,
         listenerFailed: Bool = false,
         selectableSourceCount: Int,
         slotCount: Int,
@@ -45,6 +47,7 @@ public struct SetupGuideInput: Equatable, Sendable {
     ) {
         self.accessibilityGranted = accessibilityGranted
         self.inputMonitoringGranted = inputMonitoringGranted
+        self.listenerRunning = listenerRunning
         self.listenerFailed = listenerFailed
         self.selectableSourceCount = selectableSourceCount
         self.slotCount = slotCount
@@ -60,6 +63,7 @@ public struct SetupGuideInput: Equatable, Sendable {
         sources: [InputSourceInfo],
         accessibilityGranted: Bool,
         inputMonitoringGranted: Bool,
+        listenerRunning: Bool,
         listenerFailed: Bool = false,
         hasConfirmedSlots: Bool
     ) {
@@ -70,6 +74,7 @@ public struct SetupGuideInput: Equatable, Sendable {
         self.init(
             accessibilityGranted: accessibilityGranted,
             inputMonitoringGranted: inputMonitoringGranted,
+            listenerRunning: listenerRunning,
             listenerFailed: listenerFailed,
             selectableSourceCount: InputSourceMatcher.selectableSources(from: sources).count,
             slotCount: config.slots.count,
@@ -104,9 +109,8 @@ public struct SetupGuideState: Equatable, Sendable {
         let permissionsGranted = input.accessibilityGranted && input.inputMonitoringGranted
         if input.hasCompletedSetup {
             currentStep = nil
-        } else if !permissionsGranted || input.listenerFailed {
-            // A listener that cannot start keeps the guide on the permissions step:
-            // the later steps need working triggers.
+        } else if !permissionsGranted || !input.listenerRunning || input.listenerFailed {
+            // Permission grants alone do not prove the listener can receive triggers.
             currentStep = .permissions
         } else if !input.hasConfirmedSlots {
             currentStep = .review

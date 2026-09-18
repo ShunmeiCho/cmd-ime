@@ -24,6 +24,7 @@ extension AppModel {
             sources: sources,
             accessibilityGranted: permissions.accessibilityGranted,
             inputMonitoringGranted: permissions.inputMonitoringGranted,
+            listenerRunning: isListening,
             listenerFailed: didListenerFailToStart,
             hasConfirmedSlots: session.hasConfirmedSlots
         )

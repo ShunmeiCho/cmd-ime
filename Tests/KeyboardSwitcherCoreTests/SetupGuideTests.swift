@@ -15,6 +15,7 @@ final class SetupGuideTests: XCTestCase {
     private func input(
         accessibility: Bool = true,
         inputMonitoring: Bool = true,
+        listenerRunning: Bool = true,
         listenerFailed: Bool = false,
         sources: Int = 2,
         slots: Int = 2,
@@ -26,6 +27,7 @@ final class SetupGuideTests: XCTestCase {
         SetupGuideInput(
             accessibilityGranted: accessibility,
             inputMonitoringGranted: inputMonitoring,
+            listenerRunning: listenerRunning,
             listenerFailed: listenerFailed,
             selectableSourceCount: sources,
             slotCount: slots,
@@ -186,6 +188,21 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertNil(SetupGuideState(input(listenerFailed: true, completed: true)).currentStep)
     }
 
+    func testPausedListenerReturnsToPermissionsDespiteConfirmedSlots() {
+        let state = SetupGuideState(input(listenerRunning: false, confirmed: true))
+        XCTAssertEqual(state.currentStep, .permissions)
+        XCTAssertFalse(state.isComplete(.permissions))
+        XCTAssertFalse(state.shouldOfferRelaunch)
+    }
+
+    func testNotStartedListenerWaitsForRunningBeforeReview() {
+        var ready = input(listenerRunning: false)
+        XCTAssertEqual(SetupGuideState(ready).currentStep, .permissions)
+        ready.listenerRunning = true
+        XCTAssertEqual(SetupGuideState(ready).currentStep, .review)
+        XCTAssertTrue(SetupGuideState(ready).isComplete(.permissions))
+    }
+
     // MARK: Edge flags
 
     func testNeedsMoreSourcesBelowTwoSelectableSources() {
@@ -215,11 +232,11 @@ final class SetupGuideTests: XCTestCase {
         let single = SwitcherConfig.detected(from: sameLanguage)
 
         let unchanged = SetupGuideInput(config: single, sources: sameLanguage, accessibilityGranted: true,
-                                        inputMonitoringGranted: true, hasConfirmedSlots: false)
+                                        inputMonitoringGranted: true, listenerRunning: true, hasConfirmedSlots: false)
         let grown = SetupGuideInput(config: single, sources: sameLanguage + [source("ko")], accessibilityGranted: true,
-                                    inputMonitoringGranted: true, hasConfirmedSlots: false)
+                                    inputMonitoringGranted: true, listenerRunning: true, hasConfirmedSlots: false)
         let nothingDetectable = SetupGuideInput(config: single, sources: [], accessibilityGranted: true,
-                                                inputMonitoringGranted: true, hasConfirmedSlots: false)
+                                                inputMonitoringGranted: true, listenerRunning: true, hasConfirmedSlots: false)
 
         XCTAssertEqual(unchanged.selectableSourceCount, 2)
         XCTAssertEqual(unchanged.detectableSlotCount, 1)
@@ -255,6 +272,7 @@ final class SetupGuideTests: XCTestCase {
             sources: sources + [source("it", selectable: false)],
             accessibilityGranted: true,
             inputMonitoringGranted: false,
+            listenerRunning: true,
             hasConfirmedSlots: true
         )
 
@@ -263,7 +281,7 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertTrue(SetupGuideState(input).hasSlotsBeyondAutomaticTriggers)
         XCTAssertTrue(SetupGuideInput(
             config: config.completingSetup(), sources: sources,
-            accessibilityGranted: true, inputMonitoringGranted: true, hasConfirmedSlots: false
+            accessibilityGranted: true, inputMonitoringGranted: true, listenerRunning: true, hasConfirmedSlots: false
         ).hasCompletedSetup)
     }
 
