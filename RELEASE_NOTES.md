@@ -1,4 +1,4 @@
-## Unreleased
+## CmdIME v0.3.0 Preview
 
 Switch slots become a customizable, ordered collection: CmdIME detects them from the installed input sources on first run, migrates existing config files with a backup, and fixes the shortcut recorder.
 
@@ -15,6 +15,7 @@ Switch slots become a customizable, ordered collection: CmdIME detects them from
 - Choosing an input source that another slot already uses now swaps the two slots; for a slot with no source yet, used sources are shown as "used by <slot>" instead of failing silently.
 - The shortcut recorder no longer traps the keyboard (Tab and Shift+Tab leave it), shows "Press shortcut" while recording, and lets you record a chord that is already bound: it explains which slot or remap owns it instead of switching the input source. Rejected triggers, failed tests and rejected source assignments are explained on the slot card.
 - Input sources are labelled by their primary language, so layouts such as German or French are no longer shown as English.
+- The live keys strip is drawn from the real bindings: each bound modifier key takes its slot's color (left and right Shift are now shown), chord triggers appear as their own keycaps, and nothing is colored by default assumptions any more.
 - Quit the running GUI before CLI edits and reopen afterward; it does not hot-reload configuration and can overwrite those edits.
 
 ## CmdIME v0.2.1 Preview

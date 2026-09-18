@@ -540,4 +540,37 @@ final class SwitchSlotsTests: XCTestCase {
             XCTAssertEqual(original, snapshot)
         }
     }
+
+    func testLiveKeysFollowRealBindingsInsteadOfDefaults() throws {
+        var config = SwitcherConfig.default
+        let rightShift = KeyTrigger(kind: .oneShotModifier, keyCode: 60, keyName: "right-shift")
+        config.upsertSwitchBinding(trigger: rightShift, role: .japanese)
+
+        XCTAssertEqual(config.slotID(forOneShotKeyName: "left-command"), .english)
+        XCTAssertEqual(config.slotID(forOneShotKeyName: "right-command"), .chinese)
+        XCTAssertEqual(config.slotID(forOneShotKeyName: "right-shift"), .japanese)
+        XCTAssertNil(config.slotID(forOneShotKeyName: "left-option"))
+        XCTAssertTrue(config.chordTriggers.isEmpty)
+    }
+
+    func testLiveKeysListChordsAndIgnoreDisabledOrOrphanedBindings() throws {
+        var config = SwitcherConfig.default
+        XCTAssertEqual(config.chordTriggers.map(\.slot), [.japanese])
+        XCTAssertEqual(config.chordTriggers.first?.trigger.displayName, "option+j")
+
+        var doubleTap = KeyTrigger(kind: .oneShotModifier, keyCode: 58, keyName: "left-option")
+        doubleTap.gesture = .doubleTap
+        config.upsertSwitchBinding(trigger: doubleTap, role: .japanese)
+        XCTAssertEqual(config.slotID(forOneShotKeyName: "left-option"), .japanese)
+
+        config.bindings = config.bindings.map { binding in
+            var copy = binding
+            if copy.action.role == .english { copy.enabled = false }
+            return copy
+        }
+        XCTAssertNil(config.slotID(forOneShotKeyName: "left-command"))
+
+        let removed = try config.removingSlot(.chinese)
+        XCTAssertNil(removed.slotID(forOneShotKeyName: "right-command"))
+    }
 }
