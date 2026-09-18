@@ -161,6 +161,18 @@ public struct RoleInputSourcePreference: Codable, Equatable, Sendable {
         self.nameContains = nameContains
         self.fallbackLanguage = fallbackLanguage
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case preferredIDs, languagePrefixes, nameContains, fallbackLanguage
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        preferredIDs = try container.decodeIfPresent([String].self, forKey: .preferredIDs) ?? []
+        languagePrefixes = try container.decodeIfPresent([String].self, forKey: .languagePrefixes) ?? []
+        nameContains = try container.decodeIfPresent([String].self, forKey: .nameContains) ?? []
+        fallbackLanguage = try container.decodeIfPresent(String.self, forKey: .fallbackLanguage)
+    }
 }
 
 public enum SwitchIndicatorSize: String, Codable, CaseIterable, Identifiable, Sendable {

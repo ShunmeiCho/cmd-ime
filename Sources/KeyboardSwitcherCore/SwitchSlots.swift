@@ -11,6 +11,20 @@ public struct SwitchSlot: Codable, Equatable, Identifiable, Sendable {
         self.tintHex = tintHex
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case id, name, tintHex
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedID = try container.decode(InputRole.self, forKey: .id)
+        id = decodedID
+        name = try container.decodeIfPresent(String.self, forKey: .name)
+            ?? Self.legacyDefaults.first(where: { $0.id == decodedID })?.name ?? decodedID.rawValue
+        tintHex = try container.decodeIfPresent(String.self, forKey: .tintHex)
+            ?? SlotPalette.nextColor(for: id, used: [])
+    }
+
     public static let legacyDefaults: [SwitchSlot] = [
         SwitchSlot(id: .english, name: "English", tintHex: "#4D8CFF"),
         SwitchSlot(id: .chinese, name: "Chinese", tintHex: "#33A854"),
