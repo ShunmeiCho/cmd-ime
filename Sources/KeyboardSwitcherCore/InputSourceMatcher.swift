@@ -26,6 +26,16 @@ public struct InputSourceMatchResult: Equatable, Sendable {
 }
 
 public enum InputSourceMatcher {
+    /// TIS select capability is static; availability also requires current enablement.
+    static func isEnabledAndSelectCapable(isEnabled: Bool?, isSelectCapable: Bool?) -> Bool {
+        isEnabled == true && isSelectCapable == true
+    }
+
+    /// Decodes the existing keyboardctl scan --json array without changing its order.
+    public static func decodeScanJSON(_ data: Data) throws -> [InputSourceInfo] {
+        try JSONDecoder().decode([InputSourceInfo].self, from: data)
+    }
+
     /// Returns the first slot whose resolved source is selected, including fallback matches.
     public static func slotID(forSelectedSourceID selectedID: String?, sources: [InputSourceInfo], config: SwitcherConfig) -> InputRole? {
         guard let selectedID else { return nil }

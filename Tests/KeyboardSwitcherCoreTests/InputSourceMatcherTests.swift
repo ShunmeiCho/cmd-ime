@@ -6,6 +6,68 @@ final class InputSourceMatcherTests: XCTestCase {
         InputSourceInfo(id: id, localizedName: id, languages: ["en"], isSelectCapable: selectable)
     }
 
+    func testScanJSONPreservesSourceFieldsAndOrder() throws {
+        let json = #"[{"id":"z","localizedName":"First","languages":["ko"],"isSelectCapable":true},{"id":"a","localizedName":"Second","languages":["en","de"],"isSelectCapable":false}]"#
+        let decoded = try InputSourceMatcher.decodeScanJSON(Data(json.utf8))
+        XCTAssertEqual(decoded, [
+            InputSourceInfo(id: "z", localizedName: "First", languages: ["ko"], isSelectCapable: true),
+            InputSourceInfo(id: "a", localizedName: "Second", languages: ["en", "de"], isSelectCapable: false),
+        ])
+    }
+
+    func testScanJSONAcceptsEmptyList() throws {
+        XCTAssertEqual(try InputSourceMatcher.decodeScanJSON(Data("[]\n".utf8)), [])
+    }
+
+    func testScanJSONRejectsMalformedAndIncompleteOutput() {
+        for json in ["", "scanner failed", "{}", #"[{"id":"missing-fields"}]"#, "notice\n[]"] {
+            XCTAssertThrowsError(try InputSourceMatcher.decodeScanJSON(Data(json.utf8)), json)
+        }
+    }
+
+    func testSourceAvailabilityRequiresBothEnabledAndSelectCapable() {
+        XCTAssertTrue(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: true, isSelectCapable: true))
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: false, isSelectCapable: true))
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: true, isSelectCapable: false))
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: false, isSelectCapable: false))
+    }
+
+    func testSourceAvailabilityRejectsMissingProperties() {
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: nil, isSelectCapable: true))
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: true, isSelectCapable: nil))
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: nil, isSelectCapable: false))
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: false, isSelectCapable: nil))
+        XCTAssertFalse(InputSourceMatcher.isEnabledAndSelectCapable(isEnabled: nil, isSelectCapable: nil))
+    }
+
+    func testDisabledSourceIsRemovedEvenWhenEnumerationStillContainsItsID() {
+        let korean = InputSourceInfo(
+            id: "com.apple.inputmethod.Korean.2SetKorean", localizedName: "2-Set Korean",
+            languages: ["ko"], isSelectCapable: true
+        )
+        let english = source("com.apple.keylayout.ABC")
+        var config = SwitcherConfig.default
+        config.inputSources["english"] = RoleInputSourcePreference(preferredIDs: [korean.id, english.id])
+        let enumerated = [korean, english]
+        let scan = { (koreanEnabled: Bool) in
+            enumerated.filter {
+                InputSourceMatcher.isEnabledAndSelectCapable(
+                    isEnabled: $0.id == korean.id ? koreanEnabled : true,
+                    isSelectCapable: $0.isSelectCapable
+                )
+            }
+        }
+
+        let before = scan(true)
+        let after = scan(false)
+        XCTAssertEqual(before.map(\.id), [korean.id, english.id])
+        XCTAssertEqual(after.map(\.id), [english.id])
+        XCTAssertEqual(InputSourceMatcher.bestMatch(for: .english, sources: after, config: config)?.id, english.id)
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: before, current: after), [])
+        let reenabled = scan(true)
+        XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: after, current: reenabled), [korean])
+    }
+
     func testSelectedSourceSlotMatchesPreferredSource() {
         let preferred = source("preferred")
         var config = SwitcherConfig.default

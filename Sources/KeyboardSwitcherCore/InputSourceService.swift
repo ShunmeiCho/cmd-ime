@@ -100,6 +100,12 @@ public extension InputSourceService {
 /// must run `work` on the main thread.
 public typealias InputSourceRetryScheduler = (_ delay: TimeInterval, _ work: @escaping () -> Void) -> Void
 
+/// A refresh can still return an in-process list when the fresh scan fails.
+public struct InputSourceRefreshResult: Equatable, Sendable {
+    public let sources: [InputSourceInfo]
+    public let fallbackReason: String?
+}
+
 public enum InputSourceServiceError: Error, LocalizedError, Equatable {
     case notFound(String)
     case missingProperty(String)
@@ -142,11 +148,90 @@ struct InputSourceHandleCache<Handle> {
 
 #if os(macOS)
 import Carbon
+import Darwin
 
 public final class MacInputSourceService: InputSourceService {
+    public static let freshScanTimeout: Duration = .seconds(2)
     private var handleCache = InputSourceHandleCache<TISInputSource>()
 
     public init() {}
+
+    /// Call for enabled-source notifications and explicit refreshes, not key events.
+    /// Pass the bundled keyboardctl URL. A nil URL or failed helper uses the native
+    /// list and reports why; cancellation propagates without starting a fallback.
+    @MainActor
+    public func refreshedInputSources(using executableURL: URL?) async throws -> InputSourceRefreshResult {
+        try Task.checkCancellation()
+        handleCache.invalidate()
+        do {
+            guard let executableURL else {
+                throw FreshScanError.helperUnavailable
+            }
+            let data = try await Self.scanOutput(using: executableURL)
+            return InputSourceRefreshResult(
+                sources: try InputSourceMatcher.decodeScanJSON(data), fallbackReason: nil
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            return InputSourceRefreshResult(
+                sources: try listInputSources(), fallbackReason: error.localizedDescription
+            )
+        }
+    }
+
+    private enum FreshScanError: Error, LocalizedError {
+        case helperUnavailable
+        case timedOut
+        case unsuccessfulExit(Int32)
+
+        var errorDescription: String? {
+            switch self {
+            case .helperUnavailable: "The bundled keyboardctl scanner is unavailable."
+            case .timedOut: "The input-source scanner did not finish in time."
+            case let .unsuccessfulExit(status): "The input-source scanner exited with status \(status)."
+            }
+        }
+    }
+
+    @MainActor
+    private static func scanOutput(using executableURL: URL) async throws -> Data {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cmd-ime-source-scan-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let outputURL = directory.appendingPathComponent("sources.json")
+        try Data().write(to: outputURL)
+        let output = try FileHandle(forWritingTo: outputURL)
+        defer { try? output.close() }
+
+        // A file avoids pipe-buffer deadlock when a scanner writes a large list.
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = ["scan", "--json"]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        try process.run()
+        defer {
+            if process.isRunning {
+                // Only terminate the scanner started above, on timeout/cancellation.
+                kill(process.processIdentifier, SIGKILL)
+                process.waitUntilExit()
+            }
+        }
+        let deadline = ContinuousClock.now + freshScanTimeout
+        while process.isRunning {
+            try Task.checkCancellation()
+            guard ContinuousClock.now < deadline else { throw FreshScanError.timedOut }
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        try Task.checkCancellation()
+        guard process.terminationReason == .exit, process.terminationStatus == 0 else {
+            throw FreshScanError.unsuccessfulExit(process.terminationStatus)
+        }
+        return try Data(contentsOf: outputURL)
+    }
 
     public func listInputSources() throws -> [InputSourceInfo] {
         let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as NSArray
@@ -155,6 +240,7 @@ public final class MacInputSourceService: InputSourceService {
         handleCache.invalidate()
         return list.compactMap { item -> InputSourceInfo? in
             let source = item as! TISInputSource
+            guard isEnabledAndSelectCapable(source) else { return nil }
             return inputSourceInfo(from: source)
         }
     }
@@ -170,6 +256,7 @@ public final class MacInputSourceService: InputSourceService {
         // Fast path: reuse a cached handle so rapid switches avoid re-enumerating
         // every input source on each call.
         if let source = handleCache.handle(for: id, rebuild: handleMap),
+           isEnabledAndSelectCapable(source),
            TISSelectInputSource(source) == noErr {
             return
         }
@@ -190,11 +277,19 @@ public final class MacInputSourceService: InputSourceService {
         var map: [String: TISInputSource] = [:]
         for item in list {
             let source = item as! TISInputSource
+            guard isEnabledAndSelectCapable(source) else { continue }
             if let id = stringProperty(source, kTISPropertyInputSourceID) {
                 map[id] = source
             }
         }
         return map
+    }
+
+    private func isEnabledAndSelectCapable(_ source: TISInputSource) -> Bool {
+        InputSourceMatcher.isEnabledAndSelectCapable(
+            isEnabled: boolProperty(source, kTISPropertyInputSourceIsEnabled),
+            isSelectCapable: boolProperty(source, kTISPropertyInputSourceIsSelectCapable)
+        )
     }
 
     private func inputSourceInfo(from source: TISInputSource) -> InputSourceInfo? {
