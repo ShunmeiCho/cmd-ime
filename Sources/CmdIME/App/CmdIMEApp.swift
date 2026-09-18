@@ -24,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        Self.installMainMenu()
         AppWindowCoordinator.shared.setModel(model)
         if !Self.wasLaunchedAsLoginItem() {
             AppWindowCoordinator.shared.showSettings()
@@ -41,6 +42,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         AppWindowCoordinator.shared.showSettings()
         return true
+    }
+
+    /// Accessory apps still need a responder-chain menu for keyboard equivalents.
+    static func installMainMenu() {
+        let menu = NSMenu(title: "CmdIME")
+        let edit = NSMenu(title: "Edit")
+        let editItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: "")
+        editItem.submenu = edit
+        menu.addItem(editItem)
+        edit.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = edit.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        edit.addItem(.separator())
+        edit.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
+        edit.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
+        edit.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
+        edit.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
+
+        let windowMenu = NSMenu(title: "Window")
+        let windowItem = NSMenuItem(title: "Window", action: nil, keyEquivalent: "")
+        windowItem.submenu = windowMenu
+        menu.addItem(windowItem)
+        windowMenu.addItem(withTitle: "Close", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        NSApp.mainMenu = menu
     }
 
     private static func wasLaunchedAsLoginItem() -> Bool {
@@ -96,6 +122,7 @@ final class AppWindowCoordinator {
         window.title = "CmdIME"
         window.isReleasedWhenClosed = false
         window.center()
+        window.setFrameAutosaveName("CmdIMESettings")
         window.contentView = NSHostingView(
             rootView: ContentView(model: model)
                 .frame(minWidth: 720, minHeight: 640)
