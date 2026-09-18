@@ -161,39 +161,68 @@ private struct SettingsHeader: View {
 private struct PermissionsCard: View {
     @ObservedObject var model: AppModel
     let status: RuntimeStatusPresentation
+    @State private var showsDetails = false
+
+    private var needsAttention: Bool {
+        !model.permissions.isReady || model.keyboardControlStatus == "Failed"
+    }
 
     var body: some View {
-        CompactSection(title: "Keyboard control") {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(status.detail)
+        Group {
+            if needsAttention {
+                CompactSection(title: "Keyboard control") { details }
+            } else {
+                DisclosureGroup(isExpanded: $showsDetails) {
+                    details.padding(.top, 10)
+                } label: {
+                    Label("Keyboard access ready", systemImage: "checkmark.circle.fill")
                         .font(.callout)
-                        .foregroundStyle(DesignTokens.Colors.textSecondary)
-                        .lineLimit(2)
-                    Spacer()
-                    if !model.permissions.isReady {
-                        Button("Request Permissions") {
-                            model.requestPermissions()
-                        }
-                        .buttonStyle(ConsoleButtonStyle(prominent: true))
+                        .foregroundStyle(DesignTokens.Colors.textPrimary)
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                        .fill(DesignTokens.Colors.surfaceRaised)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
+                                .stroke(DesignTokens.Colors.separator, lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .onChange(of: needsAttention) { if !$0 { showsDetails = false } }
+    }
+
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text(status.detail)
+                    .font(.callout)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer()
+                if !model.permissions.isReady {
+                    Button("Request Permissions") {
+                        model.requestPermissions()
                     }
+                    .buttonStyle(ConsoleButtonStyle(prominent: true))
                 }
+            }
 
-                HStack(spacing: 10) {
-                    PermissionMiniStatus(
-                        title: "Accessibility",
-                        granted: model.permissions.accessibilityGranted,
-                        actionTitle: "Open",
-                        action: model.openAccessibilitySettings
-                    )
+            HStack(spacing: 10) {
+                PermissionMiniStatus(
+                    title: "Accessibility",
+                    granted: model.permissions.accessibilityGranted,
+                    actionTitle: "Open",
+                    action: model.openAccessibilitySettings
+                )
 
-                    PermissionMiniStatus(
-                        title: "Input Monitoring",
-                        granted: model.permissions.inputMonitoringGranted,
-                        actionTitle: "Open",
-                        action: model.openInputMonitoringSettings
-                    )
-                }
+                PermissionMiniStatus(
+                    title: "Input Monitoring",
+                    granted: model.permissions.inputMonitoringGranted,
+                    actionTitle: "Open",
+                    action: model.openInputMonitoringSettings
+                )
             }
         }
     }
@@ -635,7 +664,7 @@ private struct RuntimeSection: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        CompactSection(title: "Runtime", minHeight: SettingsLayout.bottomCardMinHeight) {
+        CompactSection(title: "General") {
             VStack(alignment: .leading, spacing: 0) {
                 RuntimeToggleRow(
                     title: "Launch at login",
@@ -664,13 +693,19 @@ private struct RuntimeSection: View {
 
                 Divider().overlay(DesignTokens.Colors.separator)
 
-                RuntimeActionRow(title: "Quit agent", detail: "Stop the background listener") {
+                RuntimeActionRow(title: "Quit CmdIME", detail: "Stop the background listener") {
                     Button("Quit") {
                         model.quit()
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: false))
                     .foregroundStyle(DesignTokens.Colors.danger)
                 }
+
+                Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
+                    .font(.caption)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 12)
             }
         }
     }
