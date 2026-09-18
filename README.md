@@ -231,7 +231,8 @@ chooser by accident.
 CmdIME switches input sources programmatically, so it does not invoke the
 private macOS input-source chooser. Enable `Show switch indicator` to show
 CmdIME's own lightweight confirmation bubble after a switch. In Settings the
-indicator can be disabled, given one of the built-in themes (glass, paper with
+indicator can be disabled, given one of the built-in themes (glass, Liquid Glass
+on macOS 26 and later, paper with
 one or two inks, text only, tile only, a single line, or a switcher that shows
 every slot), resized with presets and a scale slider, switched between icon/text
 display modes, and colored from each slot's own color, the system accent color
@@ -371,8 +372,8 @@ Mac App Store distribution needs a separate sandboxed App Store build. See
 ## Package And Release
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.4.1
-shasum -a 256 dist/CmdIME-0.4.1.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.5.0
+shasum -a 256 dist/CmdIME-0.5.0.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing

@@ -5,7 +5,7 @@ struct WhatsNewNoticeBar: View {
     @ObservedObject var model: AppModel
     let isSetupGuideReopened: Bool
 
-    private let message = "New in 0.4: add, reorder and recolor slots, and set Single, Double and Shortcut triggers separately."
+    private let message = "New in 0.5: switch indicator themes, including Glass, Liquid Glass and a slot switcher. Scroll to Switch indicator to pick one."
 
     var body: some View {
         if !isSetupGuideReopened && WhatsNewNotice.shouldShow(
