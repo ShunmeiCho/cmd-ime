@@ -71,7 +71,7 @@ Each release publishes a SHA-256 checksum. For the safest installer path, pin
 both the version and checksum from the GitHub Release notes:
 
 ```sh
-CMDIME_VERSION=0.3.0 CMDIME_SHA256=a1b9aed7287c9da58ddcc6c7ceca0d7027a53f808ad0732392a35721243d08b0 \
+CMDIME_VERSION=0.4.0 CMDIME_SHA256=c2a7b351b9cb7a2c227c052d1ea1328c529d5c30c1e338d6abc6167d84bf1758 \
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
 ```
 
