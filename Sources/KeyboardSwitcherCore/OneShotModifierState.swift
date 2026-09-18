@@ -1,6 +1,9 @@
 import Foundation
 
 public struct OneShotModifierState: Equatable, Sendable {
+    /// The window a single tap waits for a second tap.
+    public static let doubleTapWindow: TimeInterval = 0.22
+
     public enum Output: Equatable, Sendable {
         case wait
         case trigger(KeyTrigger)

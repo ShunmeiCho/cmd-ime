@@ -402,7 +402,7 @@ public final class EventTapMonitor: @unchecked Sendable {
 
     private func scheduleSingleTapFlush() {
         pendingSingleTapTimer?.invalidate()
-        pendingSingleTapTimer = Timer.scheduledTimer(withTimeInterval: 0.22, repeats: false) { [weak self] _ in
+        pendingSingleTapTimer = Timer.scheduledTimer(withTimeInterval: OneShotModifierState.doubleTapWindow, repeats: false) { [weak self] _ in
             guard let self, !self.isCapturingShortcut else {
                 return
             }
