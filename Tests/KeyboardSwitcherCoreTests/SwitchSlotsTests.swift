@@ -6,6 +6,70 @@ final class SwitchSlotsTests: XCTestCase {
         InputSourceInfo(id: id, localizedName: "Source \(id)", languages: [language], isSelectCapable: true)
     }
 
+    func testSettingSlotTintNormalizesAcceptedHexForms() throws {
+        for input in ["#A1B2CF", "#a1b2cf", "#a1B2cF", "A1B2CF", "a1b2cf", " \t#a1B2cF\n", "\n a1b2cf \t"] {
+            let updated = try SwitcherConfig.default.settingSlotTint(input, for: .chinese)
+            XCTAssertEqual(updated.slot(.chinese)?.tintHex, "#A1B2CF", "input=\(input.debugDescription)")
+        }
+        for input in ["000000", "ffffff"] {
+            XCTAssertEqual(try SwitcherConfig.default.settingSlotTint(input, for: .english).slot(.english)?.tintHex,
+                           "#" + input.uppercased())
+        }
+    }
+
+    func testSettingSlotTintRejectsInvalidFormsAndPreservesOriginalInput() {
+        let original = SwitcherConfig.default
+        let invalid = ["#ABC", "abc", "#11223344", "11223344", "#GG0000", "12x456", "", " \t\n",
+                       "#12345", "#1234567", "##123456", "0x123456", "#12 456", "#１２３４５６", "#aßcde"]
+        for input in invalid {
+            XCTAssertThrowsError(try original.settingSlotTint(input, for: .english)) { error in
+                XCTAssertEqual(error as? SlotError, .invalidTintHex(input))
+            }
+        }
+        XCTAssertEqual(original, .default)
+        XCTAssertEqual(SlotError.invalidTintHex("#GG0000").errorDescription,
+                       "Invalid slot color \"#GG0000\". Use six hexadecimal digits, such as #4D8CFF.")
+    }
+
+    func testSettingSlotTintRejectsUnknownSlotBeforeValidatingColor() {
+        let unknown = InputRole(rawValue: "missing")
+        for input in ["#123456", ""] {
+            XCTAssertThrowsError(try SwitcherConfig.default.settingSlotTint(input, for: unknown)) { error in
+                XCTAssertEqual(error as? SlotError, .unknownSlot(unknown))
+            }
+        }
+    }
+
+    func testSettingSlotTintChangesOnlyTargetTintAndLeavesOriginalUntouched() throws {
+        let added = try SwitcherConfig.default.addingSlot(for: source())
+        var original = added.config.movingSlot(added.slot.id, by: -2)
+        original.switchIndicatorCustomRoleColorHexes[added.slot.id.rawValue] = "#ABCDEF"
+        original.switchIndicatorCustomColorHex = "#654321"
+        original.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("command+k"), action: .sendKey(try ShortcutParser.parse("a"))))
+        let snapshot = original
+        var expected = snapshot
+        let index = try XCTUnwrap(expected.slots.firstIndex { $0.id == added.slot.id })
+        expected.slots[index].tintHex = "#12AB34"
+
+        let updated = try original.settingSlotTint(" 12ab34 ", for: added.slot.id)
+        XCTAssertEqual(updated, expected)
+        XCTAssertEqual(original, snapshot)
+    }
+
+    func testSettingSameSlotTintReturnsEqualConfig() throws {
+        let original = SwitcherConfig.default
+        XCTAssertEqual(try original.settingSlotTint("#4D8CFF", for: .english), original)
+        XCTAssertEqual(try original.settingSlotTint(" 4d8cff\n", for: .english), original)
+    }
+
+    func testSlotTintSurvivesConfigEncodingRoundTrip() throws {
+        let updated = try SwitcherConfig.default.settingSlotTint(" #1a2b3c ", for: .japanese)
+        let data = try JSONEncoder().encode(updated)
+        let decoded = try JSONDecoder().decode(SwitcherConfig.self, from: data)
+        XCTAssertEqual(decoded.slot(.japanese)?.tintHex, "#1A2B3C")
+        XCTAssertEqual(decoded, updated)
+    }
+
     func testMovingEverySourceToEveryFinalIndexMatchesRemoveThenInsert() {
         for count in 1...6 {
             var config = SwitcherConfig.default
