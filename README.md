@@ -201,7 +201,8 @@ or monochrome. Font family, weight and text size belong to the theme; editing a
 built-in theme makes a copy. Custom themes live as JSON files in
 `~/.config/cmd-ime/themes` and imported fonts in `~/.config/cmd-ime/fonts`
 (both beside the config file); fonts are registered for CmdIME only and nothing
-is installed system-wide.
+is installed system-wide. A theme file may have any name; removing a theme in
+Settings moves its file to the Trash.
 
 If Japanese opens a kana palette instead of switching to Hiragana, refresh input
 sources or update to CmdIME 0.1.10 or later. macOS exposes
