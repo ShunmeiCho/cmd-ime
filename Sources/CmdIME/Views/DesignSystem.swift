@@ -67,6 +67,10 @@ enum DesignTokens {
         static let stateChange = SwiftUI.Animation.easeOut(duration: normal)
         static let expandCollapse = SwiftUI.Animation.spring(response: 0.24, dampingFraction: 0.90)
 
+        static let dragLift = SwiftUI.Animation.spring(response: 0.22, dampingFraction: 0.78)
+        static let dragSettle = SwiftUI.Animation.spring(response: 0.28, dampingFraction: 0.80)
+        static let dragReturn = SwiftUI.Animation.spring(response: 0.32, dampingFraction: 0.90)
+
         static let quickFade = SwiftUI.Animation.easeOut(duration: fast)
         static let seatPulse = SwiftUI.Animation.easeOut(duration: slow)
         static let rejectShake = SwiftUI.Animation.linear(duration: slow)
