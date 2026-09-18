@@ -563,19 +563,25 @@ struct ConsoleButtonStyle: ButtonStyle {
 private struct ConsoleButtonBody: View {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isHovered = false
+    @State private var isPointerInside = false
     let configuration: ButtonStyleConfiguration
     let prominent: Bool
 
     private var isPressed: Bool { isEnabled && configuration.isPressed }
+    private var isHovered: Bool { isEnabled && isPointerInside }
+    private var usesProminentFill: Bool { prominent && configuration.role != .destructive }
 
     private var foreground: Color {
         if !isEnabled { return DesignTokens.Colors.textMuted.opacity(0.55) }
-        return prominent ? .white : DesignTokens.Colors.textPrimary
+        if configuration.role == .destructive {
+            // At least 5.68:1 on the raised surface plus the pressed button fill.
+            return Color(red: 1, green: 159 / 255, blue: 150 / 255)
+        }
+        return usesProminentFill ? .white : DesignTokens.Colors.textPrimary
     }
 
     private var fill: Color {
-        if prominent { return DesignTokens.Colors.actionFill.opacity(isEnabled ? 1 : 0.28) }
+        if usesProminentFill { return DesignTokens.Colors.actionFill.opacity(isEnabled ? 1 : 0.28) }
         return Color.white.opacity(!isEnabled ? 0.035 : (isPressed ? 0.11 : (isHovered ? 0.095 : 0.07)))
     }
 
@@ -589,7 +595,7 @@ private struct ConsoleButtonBody: View {
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
                     .fill(fill)
                     .overlay {
-                        if prominent && isEnabled {
+                        if usesProminentFill && isEnabled {
                             RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
                                 .fill(isPressed ? Color.black.opacity(0.10) : Color.white.opacity(isHovered ? 0.04 : 0))
                         }
@@ -603,8 +609,7 @@ private struct ConsoleButtonBody: View {
             .scaleEffect(isPressed && !reduceMotion ? 0.98 : 1)
             .animation(isEnabled && !reduceMotion ? DesignTokens.Motion.keyPress : nil, value: isPressed)
             .animation(isEnabled ? DesignTokens.Motion.stateChange : nil, value: isHovered)
-            .onHover { isHovered = isEnabled && $0 }
-            .onChange(of: isEnabled) { if !$0 { isHovered = false } }
+            .onHover { isPointerInside = $0 }
     }
 }
 

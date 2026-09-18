@@ -206,7 +206,6 @@ private struct PermissionsCard: View {
                 )
             }
         }
-        .onChange(of: needsAttention) { if !$0 { showsDetails = false } }
     }
 
     private var details: some View {
@@ -388,7 +387,9 @@ private struct LiveKeyFlowMetrics {
     init(sizes: [CGSize], availableWidth: CGFloat?, spacing: CGFloat) {
         self.sizes = sizes
         let idealWidth = sizes.reduce(0) { $0 + $1.width } + CGFloat(max(0, sizes.count - 1)) * spacing
-        let width = availableWidth.flatMap { $0.isFinite ? max(0, $0) : nil } ?? idealWidth
+        let proposedWidth = availableWidth.flatMap { $0.isFinite ? max(0, $0) : nil } ?? idealWidth
+        // Expand before wrapping so measurement and placement use the same width.
+        let width = max(proposedWidth, sizes.map(\.width).max() ?? 0)
         var origins: [CGPoint] = []
         var x: CGFloat = 0
         var y: CGFloat = 0
@@ -719,11 +720,10 @@ private struct RuntimeSection: View {
                 Divider().overlay(DesignTokens.Colors.separator)
 
                 RuntimeActionRow(title: "Quit CmdIME", detail: "Stop the background listener") {
-                    Button("Quit") {
+                    Button("Quit", role: .destructive) {
                         model.quit()
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: false))
-                    .foregroundStyle(DesignTokens.Colors.danger)
                 }
 
                 Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
