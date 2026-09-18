@@ -92,7 +92,7 @@ for broader public distribution:
 ### Recommended Preview Install
 
 ```sh
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash
 ```
 
 The installer resolves the latest release, downloads the zip, verifies it against
@@ -103,8 +103,8 @@ permissions.
 To pin an exact version and checksum yourself (copy both from the release notes):
 
 ```sh
-CMDIME_VERSION=0.4.1 CMDIME_SHA256=038a480649bc8110abcae4903f03def32dc7e259a9fcf6aef44fc26a77afc101 \
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh)"
+curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
+  CMDIME_VERSION=0.4.1 CMDIME_SHA256=038a480649bc8110abcae4903f03def32dc7e259a9fcf6aef44fc26a77afc101 bash
 ```
 
 After installation, open CmdIME and grant both **Accessibility** and
