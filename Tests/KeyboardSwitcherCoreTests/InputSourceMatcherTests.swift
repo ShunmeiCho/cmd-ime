@@ -98,6 +98,103 @@ final class InputSourceMatcherTests: XCTestCase {
         XCTAssertEqual(selectable.map(\.id), ["com.apple.keylayout.ABC"])
     }
 
+    func testMatchReportsPreferredIDTier() {
+        var config = SwitcherConfig.default
+        config.pinInputSourceID("custom.zh", for: .chinese)
+
+        let sources = [
+            InputSourceInfo(
+                id: "first.zh",
+                localizedName: "Chinese",
+                languages: ["zh-Hans"],
+                isSelectCapable: true
+            ),
+            InputSourceInfo(
+                id: "custom.zh",
+                localizedName: "My Pinyin",
+                languages: ["zh-Hans"],
+                isSelectCapable: true
+            ),
+        ]
+
+        let result = InputSourceMatcher.match(for: .chinese, sources: sources, config: config)
+
+        XCTAssertEqual(result.source?.id, "custom.zh")
+        XCTAssertEqual(result.tier, .preferredID)
+        XCTAssertEqual(result.matchedValue, "custom.zh")
+    }
+
+    func testMatchReportsLanguagePrefixTier() {
+        let sources = [
+            InputSourceInfo(
+                id: "emoji",
+                localizedName: "Emoji",
+                languages: ["en"],
+                isSelectCapable: false
+            ),
+            InputSourceInfo(
+                id: "jp",
+                localizedName: "Hiragana",
+                languages: ["ja"],
+                isSelectCapable: true
+            ),
+        ]
+
+        let result = InputSourceMatcher.match(for: .japanese, sources: sources, config: .default)
+
+        XCTAssertEqual(result.source?.id, "jp")
+        XCTAssertEqual(result.tier, .languagePrefix)
+        XCTAssertEqual(result.matchedValue, "ja")
+    }
+
+    func testMatchReportsNameContainsTier() {
+        var config = SwitcherConfig.default
+        config.inputSources[InputRole.chinese.rawValue] = RoleInputSourcePreference(
+            preferredIDs: [],
+            languagePrefixes: [],
+            nameContains: ["Pinyin"]
+        )
+
+        let sources = [
+            InputSourceInfo(
+                id: "custom.pinyin",
+                localizedName: "My Pinyin Method",
+                languages: [],
+                isSelectCapable: true
+            ),
+        ]
+
+        let result = InputSourceMatcher.match(for: .chinese, sources: sources, config: config)
+
+        XCTAssertEqual(result.source?.id, "custom.pinyin")
+        XCTAssertEqual(result.tier, .nameContains)
+        XCTAssertEqual(result.matchedValue, "pinyin")
+    }
+
+    func testMatchReportsNoneTierWhenNothingMatches() {
+        var config = SwitcherConfig.default
+        config.inputSources[InputRole.japanese.rawValue] = RoleInputSourcePreference(
+            preferredIDs: [],
+            languagePrefixes: [],
+            nameContains: []
+        )
+
+        let sources = [
+            InputSourceInfo(
+                id: "custom.zh",
+                localizedName: "My Pinyin",
+                languages: ["zh-Hans"],
+                isSelectCapable: true
+            ),
+        ]
+
+        let result = InputSourceMatcher.match(for: .japanese, sources: sources, config: config)
+
+        XCTAssertNil(result.source)
+        XCTAssertEqual(result.tier, .none)
+        XCTAssertNil(result.matchedValue)
+    }
+
     func testDisplayLanguagesTruncatesLongLanguageLists() {
         let source = InputSourceInfo(
             id: "abc",

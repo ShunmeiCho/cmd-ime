@@ -25,6 +25,52 @@ enum CLIError: Error, LocalizedError {
     }
 }
 
+/// A role's configured preference paired with the match `keyboardctl
+/// diagnose` computed for it, via the same `InputSourceMatcher.match` the
+/// switch pipeline uses.
+private struct RoleDiagnosis {
+    let role: InputRole
+    let preference: RoleInputSourcePreference
+    let result: InputSourceMatchResult
+}
+
+/// `--json` payload for `keyboardctl diagnose`.
+private struct DiagnosisReport: Encodable {
+    struct RoleEntry: Encodable {
+        let role: String
+        let preferredIDs: [String]
+        let languagePrefixes: [String]
+        let nameContains: [String]
+        let matchedSourceID: String?
+        let matchedSourceName: String?
+        let matchedSourceLanguages: [String]?
+        let matchTier: String
+        let matchedValue: String?
+    }
+
+    let currentInputSourceID: String?
+    let currentInputSourceName: String?
+    let roles: [RoleEntry]
+
+    init(current: InputSourceInfo?, roles: [RoleDiagnosis]) {
+        currentInputSourceID = current?.id
+        currentInputSourceName = current?.localizedName
+        self.roles = roles.map { diagnosis in
+            RoleEntry(
+                role: diagnosis.role.rawValue,
+                preferredIDs: diagnosis.preference.preferredIDs,
+                languagePrefixes: diagnosis.preference.languagePrefixes,
+                nameContains: diagnosis.preference.nameContains,
+                matchedSourceID: diagnosis.result.source?.id,
+                matchedSourceName: diagnosis.result.source?.localizedName,
+                matchedSourceLanguages: diagnosis.result.source?.languages,
+                matchTier: diagnosis.result.tier.rawValue,
+                matchedValue: diagnosis.result.matchedValue
+            )
+        }
+    }
+}
+
 struct CLI {
     var args: [String]
     var configURL: URL
@@ -62,6 +108,8 @@ struct CLI {
             try show()
         case "switch":
             try switchRole()
+        case "diagnose":
+            try diagnose(json: args.contains("--json"))
         case "listen":
             try listen()
         case "bind":
@@ -139,8 +187,53 @@ struct CLI {
         guard let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) else {
             throw InputSourceServiceError.notFound(role.rawValue)
         }
-        try service.selectInputSource(id: source.id)
+        let current = try service.selectInputSourceAndConfirm(id: source.id)
+        guard let current, current.id == source.id else {
+            fputs(InputSourceInfo.verificationMessage(requested: source, current: current) + "\n", stderr)
+            exit(1)
+        }
         print("Selected \(source.localizedName) for \(role.rawValue)")
+        #else
+        throw CLIError.unsupportedPlatform
+        #endif
+    }
+
+    private func diagnose(json: Bool) throws {
+        #if os(macOS)
+        let service = MacInputSourceService()
+        let config = try loadConfig()
+        let sources = try service.listInputSources()
+        let current = try service.currentInputSource()
+
+        let reports = InputRole.allCases.map { role -> RoleDiagnosis in
+            let preference = config.preference(for: role)
+            let result = InputSourceMatcher.match(for: role, sources: sources, config: config)
+            return RoleDiagnosis(role: role, preference: preference, result: result)
+        }
+
+        if json {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            let payload = DiagnosisReport(current: current, roles: reports)
+            print(String(decoding: try encoder.encode(payload), as: UTF8.self))
+            return
+        }
+
+        print("Current input source: \(current.map { "\($0.localizedName) (\($0.id))" } ?? "unknown")")
+        for report in reports {
+            print("")
+            print("[\(report.role.rawValue)]")
+            print("  preferredIDs: \(report.preference.preferredIDs.joined(separator: ", "))")
+            print("  languagePrefixes: \(report.preference.languagePrefixes.joined(separator: ", "))")
+            print("  nameContains: \(report.preference.nameContains.joined(separator: ", "))")
+            if let source = report.result.source {
+                print("  matched: \(source.localizedName) (\(source.id)) languages=\(source.languages.joined(separator: ","))")
+            } else {
+                print("  matched: none")
+            }
+            let matchedValueText = report.result.matchedValue.map { " (\($0))" } ?? ""
+            print("  reason: \(report.result.tier.rawValue)\(matchedValueText)")
+        }
         #else
         throw CLIError.unsupportedPlatform
         #endif
@@ -261,6 +354,7 @@ struct CLI {
               keyboardctl init [--force]
               keyboardctl show
               keyboardctl switch <english|chinese|japanese>
+              keyboardctl diagnose [--json]
               keyboardctl listen
               keyboardctl bind <trigger> <english|chinese|japanese>
               keyboardctl remap <trigger> <output>
