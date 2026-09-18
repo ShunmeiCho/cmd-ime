@@ -560,11 +560,12 @@ struct ConsoleButtonStyle: ButtonStyle {
 private struct ConsoleButtonBody: View {
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isHovered = false
+    @State private var isPointerInside = false
     let configuration: ButtonStyleConfiguration
     let prominent: Bool
 
     private var isPressed: Bool { isEnabled && configuration.isPressed }
+    private var isHovered: Bool { isEnabled && isPointerInside }
 
     private var foreground: Color {
         if !isEnabled { return DesignTokens.Colors.textMuted.opacity(0.55) }
@@ -600,8 +601,7 @@ private struct ConsoleButtonBody: View {
             .scaleEffect(isPressed && !reduceMotion ? 0.98 : 1)
             .animation(isEnabled && !reduceMotion ? DesignTokens.Motion.keyPress : nil, value: isPressed)
             .animation(isEnabled ? DesignTokens.Motion.stateChange : nil, value: isHovered)
-            .onHover { isHovered = isEnabled && $0 }
-            .onChange(of: isEnabled) { if !$0 { isHovered = false } }
+            .onHover { isPointerInside = $0 }
     }
 }
 
