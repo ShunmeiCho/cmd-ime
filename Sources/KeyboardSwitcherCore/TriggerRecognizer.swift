@@ -38,6 +38,10 @@ public struct TriggerRecognizer: Sendable {
         return result
     }()
 
+    /// Recording affordance only; runtime tap dispatch keeps its own shorter window.
+    public static let recordingDoubleTapWindow: TimeInterval = 0.45
+    private let doubleTapWindow: TimeInterval
+
     public private(set) var draft: KeyTrigger?
     public private(set) var pressedModifierKeyCodes: Set<Int>
     private var pressedKeys: Set<Int> = []
@@ -49,8 +53,10 @@ public struct TriggerRecognizer: Sendable {
     public init(
         existingTrigger: KeyTrigger? = nil,
         heldModifierKeyCodes: Set<Int> = [],
-        heldKeyCodes: Set<Int> = []
+        heldKeyCodes: Set<Int> = [],
+        doubleTapWindow: TimeInterval = OneShotModifierState.doubleTapWindow
     ) {
+        self.doubleTapWindow = doubleTapWindow
         draft = existingTrigger
         let modifierCodes = Set(Self.modifierTriggers.keys)
         pressedModifierKeyCodes = heldModifierKeyCodes.union(heldKeyCodes).intersection(modifierCodes)
@@ -123,7 +129,7 @@ public struct TriggerRecognizer: Sendable {
         tapCandidate = nil
         if let pendingTap, pendingTap.code == keyCode,
            timestamp >= pendingTap.timestamp,
-           timestamp - pendingTap.timestamp <= OneShotModifierState.doubleTapWindow {
+           timestamp - pendingTap.timestamp <= doubleTapWindow {
             self.pendingTap = nil
             trigger.gesture = .doubleTap
             draft = trigger

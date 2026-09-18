@@ -83,7 +83,8 @@ final class TriggerRecordingSession: ObservableObject {
         initialOrdinaryKeys = held.subtracting(heldModifiers)
         recognizer = TriggerRecognizer(existingTrigger: existingTrigger,
                                        heldModifierKeyCodes: heldModifiers,
-                                       heldKeyCodes: initialOrdinaryKeys)
+                                       heldKeyCodes: initialOrdinaryKeys,
+                                       doubleTapWindow: TriggerRecognizer.recordingDoubleTapWindow)
         draft = recognizer.draft
         updateHeldKeys()
         liveKeyNames = draft.map(Self.components) ?? heldKeys.map(\.keyName)
