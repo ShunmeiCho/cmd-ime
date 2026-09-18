@@ -6,25 +6,41 @@ struct ContentView: View {
     @ObservedObject var model: AppModel
     @State private var triggerDrafts: [InputRole: String] = [:]
     @State private var triggerTypeDrafts: [InputRole: BindingTriggerType] = [:]
+    @State private var setupSession = SetupGuideSession()
 
     var body: some View {
+        ScrollViewReader { scroll in
+            page(scroll: scroll)
+                .environment(\.setupFolds, SetupFolds(session: $setupSession, isActive: !model.config.hasCompletedSetup))
+        }
+    }
+
+    private func page(scroll: ScrollViewProxy) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 SettingsHeader(status: runtimeStatus, onPrimaryAction: performHeaderAction, onRefresh: refreshMethods)
+                SetupGuideCard(model: model, session: $setupSession, scroll: scroll, resetDrafts: resetDrafts)
                 PermissionsCard(model: model, status: runtimeStatus)
+                    .setupFold(.keyboardControl)
                 SlotBoardSection(
                     model: model,
                     triggerDrafts: $triggerDrafts,
                     triggerTypeDrafts: $triggerTypeDrafts,
                     resetDrafts: resetDrafts
                 )
+                .setupFold(.slotBoard)
                 CompactLiveKeysStrip(model: model)
+                    .setupFold(.liveKeys)
 
                 HStack(alignment: .top, spacing: 14) {
                     IndicatorSettingsCard(model: model)
+                        .setupFold(.indicator)
                         .frame(maxWidth: .infinity)
-                    RuntimeSection(model: model)
-                        .frame(width: 286)
+                    RuntimeSection(model: model) {
+                        SetupGuideNavigation.showGuide($setupSession, model: model, scroll: scroll)
+                    }
+                    .setupFold(.runtime)
+                    .frame(width: 286)
                 }
             }
             .padding(22)
@@ -104,7 +120,7 @@ private struct RuntimeStatusPresentation {
             tone = .warning
             primaryActionTitle = "Request Permissions"
             primaryActionProminent = true
-        } else if model.keyboardControlStatus == "Failed" {
+        } else if model.didListenerFailToStart {
             title = "Listener Failed"
             detail = "Keyboard listener could not start. Re-grant permissions, then try again."
             systemImage = "xmark.octagon.fill"
@@ -578,6 +594,7 @@ private struct IndicatorPreview: View {
 
 private struct RuntimeSection: View {
     @ObservedObject var model: AppModel
+    let onShowSetupGuide: () -> Void
 
     var body: some View {
         CompactSection(title: "Runtime", minHeight: SettingsLayout.bottomCardMinHeight) {
@@ -605,6 +622,14 @@ private struct RuntimeSection: View {
                     }
                     .disabled(model.updateStatus.isChecking)
                     .buttonStyle(ConsoleButtonStyle())
+                }
+
+                Divider().overlay(DesignTokens.Colors.separator)
+
+                RuntimeActionRow(title: "Setup guide", detail: "Walk through the first-run steps again") {
+                    Button("Show", action: onShowSetupGuide)
+                        .buttonStyle(ConsoleButtonStyle())
+                        .accessibilityLabel("Show setup guide")
                 }
 
                 Divider().overlay(DesignTokens.Colors.separator)
@@ -666,7 +691,7 @@ private struct RuntimeActionRow<Action: View>: View {
     }
 }
 
-private struct CompactSection<Content: View>: View {
+struct CompactSection<Content: View>: View {
     let title: String
     var minHeight: CGFloat?
     @ViewBuilder let content: () -> Content

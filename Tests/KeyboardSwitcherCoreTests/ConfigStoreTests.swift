@@ -128,7 +128,7 @@ final class ConfigStoreTests: XCTestCase {
 
         let result = try store.loadOrRecover()
 
-        XCTAssertEqual(result.config, .default)
+        XCTAssertEqual(result.config, SwitcherConfig.default.completingSetup())
         XCTAssertFalse(result.isFirstRun)
         XCTAssertNil(result.migratedFromVersion)
         let backupURL = try XCTUnwrap(result.recoveredBackupURL)

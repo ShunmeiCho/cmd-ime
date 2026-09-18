@@ -72,6 +72,7 @@ public struct ConfigStore {
     /// - File present but unreadable/corrupt: moves it aside to a unique
     ///   `<name>.corrupt.<uuid>` backup,
     ///   returns `.default`, and reports the backup URL so the caller can surface it.
+    ///   A file existed, so this is no first run: the setup guide stays finished.
     public func loadOrRecover() throws -> ConfigLoadResult {
         guard FileManager.default.fileExists(atPath: url.path) else {
             return ConfigLoadResult(config: .default, recoveredBackupURL: nil, isFirstRun: true)
@@ -85,7 +86,7 @@ public struct ConfigStore {
             )
         } catch {
             let backupURL = try backUpUnreadableFile()
-            return ConfigLoadResult(config: .default, recoveredBackupURL: backupURL)
+            return ConfigLoadResult(config: SwitcherConfig.default.completingSetup(), recoveredBackupURL: backupURL)
         }
     }
 

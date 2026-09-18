@@ -75,7 +75,8 @@ final class AppModel: ObservableObject {
                 recoveryMessage = "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults."
             }
         } catch {
-            initialConfig = .default
+            // A config file exists but could not be moved aside: not a first run.
+            initialConfig = SwitcherConfig.default.completingSetup()
             recoveryMessage = "Could not read config: \(error.localizedDescription). Using defaults."
         }
 
@@ -615,6 +616,12 @@ final class AppModel: ObservableObject {
             keyboardControlStatus = permissions.isReady ? "Failed" : "Needs permission"
             statusText = error.localizedDescription
         }
+    }
+
+    /// The listener could not start although both permissions read as granted. Kept
+    /// beside the assignment above: the status string itself is display copy.
+    var didListenerFailToStart: Bool {
+        keyboardControlStatus == "Failed"
     }
 
     func stopListening() {
