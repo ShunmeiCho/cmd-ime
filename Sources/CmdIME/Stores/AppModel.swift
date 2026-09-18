@@ -261,45 +261,6 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func initializeFromScan() {
-        var nextConfig = config
-        scan()
-        nextConfig.sanitizePreferredIDs(using: sources)
-
-        let legacySlots = config.slots.filter { slot in
-            let preference = config.preference(for: slot.id)
-            return preference.fallbackLanguage == nil
-                && (InputRole.legacy.contains(slot.id)
-                    || !preference.languagePrefixes.isEmpty
-                    || !preference.nameContains.isEmpty)
-        }
-        let legacyIDs = Set(legacySlots.map(\.id))
-        // Automatic scans must not replace a chosen preferred source with its fallback.
-        for slot in config.slots where !legacyIDs.contains(slot.id) {
-            nextConfig.inputSources[slot.id.rawValue] = config.inputSources[slot.id.rawValue]
-        }
-
-        var warnings: [String] = []
-        for slot in legacySlots {
-            guard let source = InputSourceMatcher.bestMatch(for: slot.id, sources: sources, config: nextConfig) else {
-                continue
-            }
-            do {
-                nextConfig = try nextConfig.assigningInputSource(source, to: slot.id)
-            } catch {
-                // Allowed resolution duplicates must not discard other scan updates.
-                nextConfig.inputSources[slot.id.rawValue] = config.inputSources[slot.id.rawValue]
-                warnings.append(error.localizedDescription)
-            }
-        }
-
-        invalidateUndo()
-        config = nextConfig
-        if save() {
-            statusText = (["Updated input sources from scan"] + warnings).joined(separator: ". ")
-        }
-    }
-
     var selectableSources: [InputSourceInfo] {
         InputSourceMatcher.selectableSources(from: sources)
     }

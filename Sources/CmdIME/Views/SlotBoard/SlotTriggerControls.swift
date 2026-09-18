@@ -155,11 +155,6 @@ struct LiveKeycap {
     let label: String
     let detail: String?
 
-    init(label: String, detail: String?) {
-        self.label = label
-        self.detail = detail
-    }
-
     init(keyName: String) {
         switch keyName {
         case "command", "left-command":
