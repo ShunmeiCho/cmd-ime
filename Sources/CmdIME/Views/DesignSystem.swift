@@ -14,7 +14,7 @@ enum DesignTokens {
         static let separatorStrong = Color.white.opacity(0.12)
         static let textPrimary = Color(red: 0.96, green: 0.96, blue: 0.97)
         static let textSecondary = Color(red: 0.72, green: 0.72, blue: 0.76)
-        static let textMuted = Color(red: 0.52, green: 0.52, blue: 0.56)
+        static let textMuted = Color(red: 154 / 255, green: 154 / 255, blue: 163 / 255)
         static let accent = Color(red: 0.21, green: 0.48, blue: 0.90)
         static let actionFill = Color(red: 40 / 255, green: 104 / 255, blue: 199 / 255)
         static let success = Color(red: 0.27, green: 0.77, blue: 0.42)
