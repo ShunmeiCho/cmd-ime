@@ -60,11 +60,11 @@ struct SetupReviewStep: View {
 
             SetupSlotSentenceList(model: model)
 
-            if state.hasSlotsBeyondAutomaticTriggers {
+            if let unboundNotice = SetupUnboundSlots(config: model.config).notice {
                 SetupNotice(
                     systemImage: "info.circle.fill",
                     tone: .neutral,
-                    text: "The first five slots got a key. The others have none yet: bind them on the slot board with Change."
+                    text: unboundNotice
                 )
             }
 

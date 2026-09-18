@@ -97,8 +97,8 @@ public struct SetupGuideState: Equatable, Sendable {
     public let currentStep: SetupStep?
     /// Fewer than two selectable sources: there is nothing to switch between yet.
     public let needsMoreSources: Bool
-    /// More slots than automatic triggers, and at least one slot is still unbound.
-    public let hasSlotsBeyondAutomaticTriggers: Bool
+    /// At least one current slot has no enabled switch trigger.
+    public let hasUnboundSlots: Bool
     /// Both permissions read as granted, yet the listener failed: offer a relaunch.
     public let shouldOfferRelaunch: Bool
     /// Detection left a single slot and would find more now. Counting sources is not
@@ -118,8 +118,7 @@ public struct SetupGuideState: Equatable, Sendable {
             currentStep = .tryIt
         }
         needsMoreSources = input.selectableSourceCount < Self.minimumSourceCount
-        hasSlotsBeyondAutomaticTriggers = input.slotCount > Self.automaticTriggerLimit
-            && input.boundSlotCount < input.slotCount
+        hasUnboundSlots = input.boundSlotCount < input.slotCount
         shouldOfferRelaunch = permissionsGranted && input.listenerFailed
         canDetectAgain = input.slotCount < Self.minimumSourceCount
             && input.detectableSlotCount > input.slotCount
@@ -133,6 +132,47 @@ public struct SetupGuideState: Equatable, Sendable {
     public func isComplete(_ step: SetupStep) -> Bool {
         guard let currentStep else { return true }
         return step < currentStep
+    }
+}
+
+/// The current slots that still need a switch trigger, in their visible order.
+/// This intentionally reports the live configuration instead of inferring why a
+/// key is absent from the first-run automatic assignment policy.
+public struct SetupUnboundSlots: Equatable, Sendable {
+    /// Names shown before the remaining slots are summarized by count.
+    public static let displayedNameLimit = 3
+
+    public let names: [String]
+    private let slotCount: Int
+
+    public init(config: SwitcherConfig) {
+        let boundIDs = Set(config.slotTriggers.map(\.slot))
+        names = config.slots.filter { !boundIDs.contains($0.id) }.map(\.name)
+        slotCount = config.slots.count
+    }
+
+    public var hasUnboundSlots: Bool {
+        !names.isEmpty
+    }
+
+    /// Setup-guide copy for the current missing bindings. The automatic limit is
+    /// described as first-run policy only; it never claims which slots received keys.
+    public var notice: String? {
+        guard !names.isEmpty else { return nil }
+
+        let namesText: String
+        if names.count <= Self.displayedNameLimit {
+            namesText = names.joined(separator: ", ")
+        } else {
+            namesText = "\(names.prefix(Self.displayedNameLimit).joined(separator: ", ")), and \(names.count - Self.displayedNameLimit) more"
+        }
+        let currentState = names.count == 1
+            ? "\(namesText) has no trigger yet."
+            : "\(names.count) slots have no trigger yet: \(namesText)."
+        let policy = slotCount > SetupGuideState.automaticTriggerLimit
+            ? " On first detection, CmdIME automatically assigns up to \(SetupGuideState.automaticTriggerLimit) keys."
+            : ""
+        return "\(currentState) Use Change to bind one.\(policy)"
     }
 }
 

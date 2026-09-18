@@ -212,11 +212,56 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertEqual(SetupGuideState(input(sources: 1)).currentStep, .review)
     }
 
-    func testSlotsBeyondAutomaticTriggersNeedsMoreThanFiveSlotsAndAnUnboundOne() {
-        XCTAssertTrue(SetupGuideState(input(sources: 6, slots: 6, bound: 5)).hasSlotsBeyondAutomaticTriggers)
-        XCTAssertFalse(SetupGuideState(input(sources: 6, slots: 6, bound: 6)).hasSlotsBeyondAutomaticTriggers)
-        XCTAssertFalse(SetupGuideState(input(sources: 5, slots: 5, bound: 5)).hasSlotsBeyondAutomaticTriggers)
-        XCTAssertFalse(SetupGuideState(input(sources: 8, slots: 3, bound: 2)).hasSlotsBeyondAutomaticTriggers)
+    func testUnboundSlotsReflectsTheCurrentConfigurationRatherThanTheAutomaticLimit() {
+        XCTAssertTrue(SetupGuideState(input(sources: 6, slots: 6, bound: 5)).hasUnboundSlots)
+        XCTAssertFalse(SetupGuideState(input(sources: 6, slots: 6, bound: 6)).hasUnboundSlots)
+        XCTAssertFalse(SetupGuideState(input(sources: 5, slots: 5, bound: 5)).hasUnboundSlots)
+        XCTAssertTrue(SetupGuideState(input(sources: 8, slots: 3, bound: 2)).hasUnboundSlots)
+    }
+
+    func testUnboundSlotNoticeNamesTheActuallyUnboundSlotAfterManualReassignment() {
+        let sources = ["en", "de", "ru", "ko", "ja", "zh"].map { source($0) }
+        var config = SwitcherConfig.detected(from: sources)
+        let first = config.slots[0]
+        let sixth = config.slots[5]
+
+        config.bindings.removeAll { $0.action.role == first.id }
+        config.bindings.append(KeyBinding(
+            trigger: KeyTrigger(kind: .keyPress, keyCode: 38, keyName: "j", modifiers: [.option]),
+            action: .switchInputSource(sixth.id)
+        ))
+
+        let summary = SetupUnboundSlots(config: config)
+
+        XCTAssertEqual(summary.names, [first.name])
+        XCTAssertEqual(summary.notice, "\(first.name) has no trigger yet. Use Change to bind one. On first detection, CmdIME automatically assigns up to 5 keys.")
+    }
+
+    func testUnboundSlotNoticePromptsForAnUnboundSlotWithinTheAutomaticLimit() {
+        var config = SwitcherConfig.detected(from: [source("en"), source("ko")])
+        let unbound = config.slots[1]
+        config.bindings.removeAll { $0.action.role == unbound.id }
+
+        XCTAssertEqual(SetupUnboundSlots(config: config).notice, "\(unbound.name) has no trigger yet. Use Change to bind one.")
+    }
+
+    func testUnboundSlotNoticeIsAbsentWhenEverySlotIsBound() {
+        let config = SwitcherConfig.detected(from: [source("en"), source("ko")])
+
+        XCTAssertFalse(SetupUnboundSlots(config: config).hasUnboundSlots)
+        XCTAssertNil(SetupUnboundSlots(config: config).notice)
+    }
+
+    func testUnboundSlotNoticeTruncatesNamesAndStatesTheTotal() {
+        let slots = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"].enumerated().map { index, name in
+            SwitchSlot(id: InputRole(rawValue: "slot-\(index)"), name: name, tintHex: "#4D8CFF")
+        }
+        let config = SwitcherConfig(slots: slots, bindings: [], inputSources: [:])
+
+        XCTAssertEqual(
+            SetupUnboundSlots(config: config).notice,
+            "6 slots have no trigger yet: Alpha, Bravo, Charlie, and 3 more. Use Change to bind one. On first detection, CmdIME automatically assigns up to 5 keys."
+        )
     }
 
     func testDetectAgainNeedsASingleSlotAndADetectionThatFindsMore() {
@@ -278,7 +323,7 @@ final class SetupGuideTests: XCTestCase {
 
         XCTAssertEqual(input, self.input(inputMonitoring: false, sources: 7, slots: 7, bound: 5, detectable: 7, confirmed: true))
         XCTAssertEqual(input.boundSlotCount, SetupGuideState.automaticTriggerLimit)
-        XCTAssertTrue(SetupGuideState(input).hasSlotsBeyondAutomaticTriggers)
+        XCTAssertTrue(SetupGuideState(input).hasUnboundSlots)
         XCTAssertTrue(SetupGuideInput(
             config: config.completingSetup(), sources: sources,
             accessibilityGranted: true, inputMonitoringGranted: true, listenerRunning: true, hasConfirmedSlots: false
