@@ -768,7 +768,19 @@ private struct CompactSettingRow<Content: View>: View {
                 .minimumScaleFactor(0.78)
                 .frame(width: 76, alignment: .leading)
             content()
+                .environment(\.consoleControlLabel, title)
         }
+    }
+}
+
+private struct ConsoleControlLabelKey: EnvironmentKey {
+    static let defaultValue = "Trigger type"
+}
+
+private extension EnvironmentValues {
+    var consoleControlLabel: String {
+        get { self[ConsoleControlLabelKey.self] }
+        set { self[ConsoleControlLabelKey.self] = newValue }
     }
 }
 
@@ -782,6 +794,7 @@ struct ConsoleSegmentOption<Value: Hashable>: Identifiable {
 }
 
 struct ConsoleSegmentedControl<Value: Hashable>: View {
+    @Environment(\.consoleControlLabel) private var groupLabel
     let options: [ConsoleSegmentOption<Value>]
     @Binding var selection: Value
 
@@ -800,6 +813,8 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(option.label)
+                .accessibilityAddTraits(selection == option.value ? .isSelected : [])
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
                         .fill(selection == option.value ? Color.white.opacity(0.12) : .clear)
@@ -823,6 +838,8 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                 )
         )
         .accessibilityElement(children: .contain)
+        .accessibilityLabel(groupLabel)
+        .accessibilityValue(options.first { $0.value == selection }?.label ?? "No selection")
     }
 }
 

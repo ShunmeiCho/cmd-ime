@@ -16,6 +16,7 @@ enum DesignTokens {
         static let textSecondary = Color(red: 0.72, green: 0.72, blue: 0.76)
         static let textMuted = Color(red: 0.52, green: 0.52, blue: 0.56)
         static let accent = Color(red: 0.21, green: 0.48, blue: 0.90)
+        static let actionFill = Color(red: 40 / 255, green: 104 / 255, blue: 199 / 255)
         static let success = Color(red: 0.27, green: 0.77, blue: 0.42)
         static let warning = Color(red: 0.77, green: 0.48, blue: 0.14)
         static let danger = Color(red: 0.89, green: 0.31, blue: 0.28)
@@ -406,21 +407,55 @@ struct ConsoleButtonStyle: ButtonStyle {
     var prominent = false
 
     func makeBody(configuration: Configuration) -> some View {
+        ConsoleButtonBody(configuration: configuration, prominent: prominent)
+    }
+}
+
+private struct ConsoleButtonBody: View {
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isHovered = false
+    let configuration: ButtonStyleConfiguration
+    let prominent: Bool
+
+    private var isPressed: Bool { isEnabled && configuration.isPressed }
+
+    private var foreground: Color {
+        if !isEnabled { return DesignTokens.Colors.textMuted.opacity(0.55) }
+        return prominent ? .white : DesignTokens.Colors.textPrimary
+    }
+
+    private var fill: Color {
+        if prominent { return DesignTokens.Colors.actionFill.opacity(isEnabled ? 1 : 0.28) }
+        return Color.white.opacity(!isEnabled ? 0.035 : (isPressed ? 0.11 : (isHovered ? 0.095 : 0.07)))
+    }
+
+    var body: some View {
         configuration.label
             .font(.caption.weight(.semibold))
-            .foregroundStyle(prominent ? Color.white : DesignTokens.Colors.textPrimary)
+            .foregroundStyle(foreground)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                    .fill(prominent ? DesignTokens.Colors.accent : Color.white.opacity(configuration.isPressed ? 0.11 : 0.07))
+                    .fill(fill)
+                    .overlay {
+                        if prominent && isEnabled {
+                            RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+                                .fill(isPressed ? Color.black.opacity(0.10) : Color.white.opacity(isHovered ? 0.04 : 0))
+                        }
+                    }
                     .overlay(
                         RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                            .stroke(Color.white.opacity(prominent ? 0.10 : 0.12), lineWidth: 1)
+                            .stroke(Color.white.opacity(isEnabled ? 0.12 : 0.05), lineWidth: 1)
                     )
             )
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(DesignTokens.Motion.keyPress, value: configuration.isPressed)
+            // Leave focus and activation to the enclosing native Button.
+            .scaleEffect(isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(isEnabled && !reduceMotion ? DesignTokens.Motion.keyPress : nil, value: isPressed)
+            .animation(isEnabled ? DesignTokens.Motion.stateChange : nil, value: isHovered)
+            .onHover { isHovered = isEnabled && $0 }
+            .onChange(of: isEnabled) { if !$0 { isHovered = false } }
     }
 }
 
