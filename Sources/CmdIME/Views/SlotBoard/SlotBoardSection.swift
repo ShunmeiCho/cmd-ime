@@ -44,7 +44,7 @@ struct SlotBoardSection: View {
                         guard commitPendingRename() else { return }
                         guard model.refreshSources() else { return }
                         resetDrafts()
-                    }, onOpenSettings: showKeyboardSettings)
+                    }, onOpenSettings: showKeyboardSettings, onLocate: locateSlot)
                     SlotListColumn(slots: model.config.slots, notice: model.boardNotice,
                                    canUndo: model.canUndoRemoval, seatingID: seatingID, drag: drag,
                                    insertionTint: dragTint, onUndo: undo, onDismiss: dismissNotice, onAdd: add) { slot in
@@ -153,6 +153,7 @@ struct SlotBoardSection: View {
                 triggerControl(for: slot.id, isGhost: isGhost)
             }),
             inputSourceControl: AnyView(inputSourcePicker(for: slot.id, source: source, isGhost: isGhost)),
+            matchNotice: AnyView(matchNotice(for: slot, isGhost: isGhost)),
             seatProgress: !isGhost && seatingID == slot.id ? seatProgress : 1,
             focusName: !isGhost && focusedSlotID == slot.id,
             isGhost: isGhost,
@@ -197,6 +198,30 @@ struct SlotBoardSection: View {
             return SlotLook(slots: [added.slot]).tint(for: added.slot.id)
         }
         return DesignTokens.Colors.accent
+    }
+
+    private func matchNotice(for slot: SwitchSlot, isGhost: Bool) -> some View {
+        let explanation = SlotMatchExplanation.resolve(for: slot.id, sources: model.sources, config: model.config)
+        let preferredID = model.config.preference(for: slot.id).preferredIDs.first
+        let preferredName = model.sources.first { $0.id == preferredID }?.localizedName
+        let source = model.matchedSource(for: slot.id)
+        var reason: String?
+        if let source, case let .owned(owner) = model.sourceUsage(of: source), owner != slot.id {
+            reason = "Already pinned to \(model.config.displayName(for: owner)). Choose another input source."
+        }
+        return SlotMatchNotice(explanation: explanation, preferredName: preferredName,
+                               pinUnavailableReason: reason) {
+            guard !isGhost, let source, commitPendingRename() else { return }
+            model.setInputSourceID(source.id, for: slot.id)
+        }
+        .allowsHitTesting(!isGhost)
+        .accessibilityHidden(isGhost)
+    }
+
+    private func locateSlot(_ id: InputRole) {
+        guard drag.payload == nil, commitPendingRename(), model.config.slot(id) != nil else { return }
+        focusedSlotID = id
+        revealRequest = (id, UUID())
     }
 
     private func beginDrag(_ payload: SlotDragPayload, value: DragGesture.Value) -> Bool {

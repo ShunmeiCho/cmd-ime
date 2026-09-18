@@ -9,6 +9,7 @@ struct SourceListColumn: View {
     let onAdd: (String) -> Void
     let onRefresh: () -> Void
     let onOpenSettings: () -> Void
+    let onLocate: (InputRole) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
@@ -33,7 +34,8 @@ struct SourceListColumn: View {
             } else {
                 ForEach(model.selectableSources, id: \.id) { source in
                     SourceRow(source: source, usage: model.sourceUsage(of: source), model: model,
-                              drag: drag, onBeginDrag: { onBeginDrag(source.id, $0) }) { onAdd(source.id) }
+                              drag: drag, onBeginDrag: { onBeginDrag(source.id, $0) },
+                              onAdd: { onAdd(source.id) }, onLocate: onLocate)
                 }
                 if model.unassignedSources.isEmpty {
                     Text("All input sources are in slots.")
@@ -59,6 +61,7 @@ struct SourceRow: View {
     let onBeginDrag: (DragGesture.Value) -> Bool
     let onAdd: () -> Void
     var isGhost = false
+    var onLocate: (InputRole) -> Void = { _ in }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @GestureState private var isDragging = false
     @State private var attempted = false
@@ -114,6 +117,17 @@ struct SourceRow: View {
                     .id(name).transition(.opacity)
             }
             Spacer(minLength: 0)
+            if case let .resolved(owner, _) = usage {
+                Button {
+                    guard !isGhost, !suppressClick, !isDragging, !attempted else { return }
+                    onLocate(owner)
+                } label: {
+                    Image(systemName: "arrow.right").frame(width: 22, height: 24)
+                }
+                .buttonStyle(ConsoleButtonStyle())
+                .help("Show \(model.config.displayName(for: owner)) slot")
+                .accessibilityLabel("Show \(model.config.displayName(for: owner)) slot")
+            }
             if isAvailable {
                 Button {
                     guard !isGhost, !suppressClick else { return }
@@ -185,6 +199,13 @@ struct SourceRow: View {
         .accessibilityValue(isNew ? "New, \(name)" : name)
         .accessibilityAddTraits(isAvailable ? .isButton : [])
         .accessibilityAction { if isAvailable && !isGhost { onAdd() } }
+        .accessibilityActions {
+            if case let .resolved(owner, _) = usage {
+                Button("Show \(model.config.displayName(for: owner)) slot") {
+                    if !isGhost { onLocate(owner) }
+                }
+            }
+        }
         .allowsHitTesting(!isGhost)
         .accessibilityHidden(isGhost)
     }

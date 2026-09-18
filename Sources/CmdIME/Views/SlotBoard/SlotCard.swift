@@ -30,6 +30,7 @@ struct SlotCard: View {
     let onColorSelect: (String) -> Void
     let triggerControls: AnyView
     let inputSourceControl: AnyView
+    let matchNotice: AnyView
     var seatProgress: CGFloat = 1
     var focusName: Bool = false
     var isGhost: Bool = false
@@ -87,6 +88,7 @@ struct SlotCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 22)
             }
+            matchNotice.padding(.leading, 22)
             if let warning {
                 Label {
                     Text(warning).fixedSize(horizontal: false, vertical: true)
