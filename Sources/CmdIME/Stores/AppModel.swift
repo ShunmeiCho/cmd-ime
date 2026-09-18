@@ -304,7 +304,7 @@ final class AppModel: ObservableObject {
                 statusText = "Switch slot set to \(source.localizedName)"
             }
         } catch {
-            statusText = error.localizedDescription
+            reportSlotFailure(error.localizedDescription, for: role)
         }
     }
 
