@@ -46,8 +46,10 @@ path, without an additional before-reset backup. Plain `init` refuses to
 overwrite an existing config. Refreshing sources never rebuilds existing slots.
 
 Migration is in-memory until save. Before overwriting a file lacking `slots`,
-ConfigStore preserves it once as `config.json.v1.bak`; backup failure aborts the
-save. Only successful CLI writes print the migration note, including version-2
-files missing `slots`. Restore the backup before downgrading: older binaries
+ConfigStore preserves it as `config.json.v1.bak`, or a fresh
+`config.json.v1.bak.<uuid>` when that backup exists; backups are never reused.
+Backup failure aborts the save. Only successful CLI writes print the migration
+note, including version-2 files missing `slots`. Restore the backup named in the
+latest migration note before downgrading: older binaries
 reject custom IDs or discard the collection. CLI edits require quitting and
 reopening the GUI because configuration hot reload is not implemented.

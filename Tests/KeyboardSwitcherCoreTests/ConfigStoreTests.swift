@@ -254,20 +254,70 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), data)
     }
 
-    func testSaveCopiesLegacyBytesOnlyOnce() throws {
+    func testSaveCopiesEveryLegacyStateToIndependentBackup() throws {
         let store = ConfigStore(url: uniqueConfigURL())
         defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
         try writeFixture(legacyJSON, to: store.url)
         let config = try store.loadOrRecover().config
-        try store.save(config)
+        let firstBackup = try XCTUnwrap(store.save(config))
+        XCTAssertEqual(firstBackup, store.legacyBackupURL)
         XCTAssertEqual(store.legacyBackupURL, store.url.appendingPathExtension("v1.bak"))
         XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), legacyJSON)
         XCTAssertFalse(store.needsSlotsMigration)
-        // Simulate an old binary dropping slots again: never replace the first backup.
-        try Data("{\"version\":2,\"bindings\":[],\"inputSources\":{}}".utf8).write(to: store.url)
-        try store.save(config)
+        // Simulate an old binary dropping slots again: preserve both legacy states.
+        let secondLegacy = Data("{\"version\":2,\"bindings\":[],\"inputSources\":{}}".utf8)
+        try secondLegacy.write(to: store.url)
+        let returnedSecondBackup = try XCTUnwrap(store.save(config))
         XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), legacyJSON)
         XCTAssertEqual(try store.load(), config)
+        let backups = try FileManager.default.contentsOfDirectory(
+            at: store.url.deletingLastPathComponent(), includingPropertiesForKeys: nil
+        ).filter { $0.lastPathComponent.hasPrefix("config.json.v1.bak.") }
+        XCTAssertEqual(backups.count, 1)
+        let secondBackup = try XCTUnwrap(backups.first)
+        XCTAssertEqual(returnedSecondBackup.resolvingSymlinksInPath(), secondBackup.resolvingSymlinksInPath())
+        XCTAssertEqual(try Data(contentsOf: secondBackup), secondLegacy)
+        XCTAssertNil(try store.save(config))
+    }
+
+    func testEmptyExistingMigrationBackupDoesNotSkipFreshBackup() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        try Data().write(to: store.legacyBackupURL)
+
+        let backup = try XCTUnwrap(store.save(store.loadOrRecover().config))
+
+        XCTAssertNotEqual(backup, store.legacyBackupURL)
+        XCTAssertTrue(backup.lastPathComponent.hasPrefix("config.json.v1.bak."))
+        XCTAssertEqual(try Data(contentsOf: backup), legacyJSON)
+        XCTAssertEqual(try Data(contentsOf: store.legacyBackupURL), Data())
+    }
+
+    func testIdenticalLegacyBytesStillGetIndependentMigrationBackup() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        try writeFixture(legacyJSON, to: store.url)
+        let config = try store.loadOrRecover().config
+        let firstBackup = try XCTUnwrap(store.save(config))
+        try legacyJSON.write(to: store.url)
+
+        let secondBackup = try XCTUnwrap(store.save(config))
+
+        XCTAssertNotEqual(firstBackup, secondBackup)
+        XCTAssertEqual(try Data(contentsOf: firstBackup), legacyJSON)
+        XCTAssertEqual(try Data(contentsOf: secondBackup), legacyJSON)
+    }
+
+    func testSaveVersionTwoCreatesNoMigrationBackup() throws {
+        let store = ConfigStore(url: uniqueConfigURL())
+        defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
+        XCTAssertNil(try store.save(.default))
+        XCTAssertNil(try store.save(.default))
+        let files = try FileManager.default.contentsOfDirectory(
+            at: store.url.deletingLastPathComponent(), includingPropertiesForKeys: nil
+        )
+        XCTAssertEqual(files.map(\.lastPathComponent), [store.url.lastPathComponent])
     }
 
     func testBackupFailureLeavesLegacyFileUntouched() throws {

@@ -127,7 +127,9 @@ public struct ConfigStore {
         return replacement
     }
 
-    public func save(_ config: SwitcherConfig) throws {
+    /// Returns the newly created migration backup, or nil when no migration was needed.
+    @discardableResult
+    public func save(_ config: SwitcherConfig) throws -> URL? {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(),
             withIntermediateDirectories: true
@@ -135,23 +137,27 @@ public struct ConfigStore {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         let data = try encoder.encode(config)
+        var createdBackupURL: URL?
         if needsSlotsMigration {
-            var isDirectory: ObjCBool = false
-            let backupExists = FileManager.default.fileExists(
-                atPath: legacyBackupURL.path, isDirectory: &isDirectory
-            )
+            let fileManager = FileManager.default
+            var backupURL = legacyBackupURL
             do {
-                // A directory is not a usable previous-settings backup.
-                if isDirectory.boolValue {
-                    throw CocoaError(.fileWriteFileExists)
+                if fileManager.fileExists(atPath: backupURL.path) {
+                    let attributes = try fileManager.attributesOfItem(atPath: backupURL.path)
+                    guard attributes[.type] as? FileAttributeType == .typeRegular else {
+                        throw CocoaError(.fileWriteFileExists)
+                    }
+                    repeat {
+                        backupURL = legacyBackupURL.appendingPathExtension(UUID().uuidString)
+                    } while fileManager.fileExists(atPath: backupURL.path)
                 }
-                if !backupExists {
-                    try FileManager.default.copyItem(at: url, to: legacyBackupURL)
-                }
+                try fileManager.copyItem(at: url, to: backupURL)
+                createdBackupURL = backupURL
             } catch {
-                throw ConfigStoreError.backupFailed(legacyBackupURL, underlying: error)
+                throw ConfigStoreError.backupFailed(backupURL, underlying: error)
             }
         }
         try data.write(to: url, options: .atomic)
+        return createdBackupURL
     }
 }

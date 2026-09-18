@@ -305,10 +305,8 @@ struct CLI {
     }
 
     private func save(_ config: SwitcherConfig, to store: ConfigStore) throws {
-        let migrating = store.needsSlotsMigration
-        try store.save(config)
-        if migrating {
-            fputs("note: config upgraded to version 2 (customizable slots); backup: \(store.legacyBackupURL.path); slot ids english/chinese/japanese unchanged. Run \"keyboardctl slots\".\n", stderr)
+        if let backupURL = try store.save(config) {
+            fputs("note: config upgraded to version \(config.version) (customizable slots); backup: \(backupURL.path); slot ids english/chinese/japanese unchanged. Run \"keyboardctl slots\".\n", stderr)
         }
     }
 

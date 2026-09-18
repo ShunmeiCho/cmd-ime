@@ -283,14 +283,18 @@ Config lives at:
 Version 2 stores an ordered `slots` collection with stable IDs, names and tints.
 Old configurations migrate in memory on load. `show`, `slots`, `diagnose`,
 `switch` and `listen` do not save the migration or print an upgrade notice.
-The first successful write (`bind`, `remap`, `slot add`, `slot remove`, or
+Each successful write (`bind`, `remap`, `slot add`, `slot remove`, or
 `init --force`) backs up a file lacking `slots` to `config.json.v1.bak` alongside
 it, then prints a note to stderr. This also covers version-2 files whose `slots`
-key was dropped by an older binary. The backup is not overwritten; backup
-failure prevents saving. Legacy IDs and bindings are preserved on migration.
+key was dropped by an older binary. If the backup already exists, a fresh
+`config.json.v1.bak.<uuid>` is created; earlier backups are never reused or
+overwritten. The note reports the new backup path. Backup failure prevents saving.
+Legacy IDs and bindings are preserved on migration.
 
-Before downgrading, quit CmdIME and restore the backup to `config.json` (keep a
-separate copy of your version-2 settings). Old binaries cannot decode custom
+Before downgrading, quit CmdIME and restore the backup named in the latest
+migration note to `config.json` (keep a separate copy of your version-2 settings).
+After repeated upgrades, that backup may have a UUID suffix; the original
+`config.json.v1.bak` still holds the first migration's settings. Old binaries cannot decode custom
 slot IDs and may move that config to `.corrupt.<uuid>` and reset it. Even with
 only legacy IDs, an old binary drops `slots` on save, losing names/tints and
 potentially restoring removed legacy slots on the next upgrade.
