@@ -12,10 +12,23 @@ struct SourceListColumn: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            SectionLabel("Input sources")
+            HStack {
+                SectionLabel("Input sources")
+                Spacer(minLength: 0)
+                Button(action: onRefresh) {
+                    Image(systemName: "arrow.clockwise").frame(width: 22, height: 24)
+                }
+                .buttonStyle(ConsoleControlButtonStyle())
+                .accessibilityLabel("Refresh input sources")
+                .help("Refresh installed input sources")
+            }
+            if let message = model.sourceRefreshMessage {
+                Text(message)
+                    .font(.caption2)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+            }
             if model.selectableSources.isEmpty {
                 Label("No input sources", systemImage: "keyboard").font(.caption)
-                Button("Refresh", action: onRefresh).buttonStyle(ConsoleButtonStyle())
                 keyboardSettingsButton
             } else {
                 ForEach(model.selectableSources, id: \.id) { source in
@@ -31,6 +44,7 @@ struct SourceListColumn: View {
             }
         }
         .frame(width: 196, alignment: .leading)
+        .background(SourceWindowCloseHook(model: model).frame(width: 0, height: 0))
     }
 
     private var keyboardSettingsButton: some View {
@@ -56,6 +70,7 @@ struct SourceRow: View {
     @State private var offset = CGSize.zero
 
     private var isAvailable: Bool { usage == .available }
+    private var isNew: Bool { isAvailable && model.newSourceIDs.contains(source.id) }
     private var name: String {
         switch usage {
         case .available: "Available"
@@ -88,6 +103,11 @@ struct SourceRow: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.textPrimary)
                     .lineLimit(2)
+                if isNew {
+                    Label("New", systemImage: "sparkles")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DesignTokens.Colors.textPrimary)
+                }
                 Label(name, systemImage: icon)
                     .font(.caption2)
                     .foregroundStyle(rejected ? DesignTokens.Colors.warning : (isAvailable ? DesignTokens.Colors.textMuted : tint))
@@ -155,7 +175,7 @@ struct SourceRow: View {
         .onDisappear { if attempted && !isGhost { drag.cancel() } }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(source.localizedName)
-        .accessibilityValue(name)
+        .accessibilityValue(isNew ? "New, \(name)" : name)
         .accessibilityAddTraits(isAvailable ? .isButton : [])
         .accessibilityAction { if isAvailable && !isGhost { onAdd() } }
         .allowsHitTesting(!isGhost)
@@ -167,4 +187,60 @@ struct SourceRow: View {
 func openKeyboardSettings() {
     guard let url = URL(string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension") else { return }
     NSWorkspace.shared.open(url)
+}
+
+/// Observe only this view's window closing; activation never triggers a scan.
+private struct SourceWindowCloseHook: NSViewRepresentable {
+    let model: AppModel
+
+    func makeNSView(context: Context) -> SourceWindowCloseView {
+        let view = SourceWindowCloseView()
+        view.model = model
+        return view
+    }
+
+    func updateNSView(_ nsView: SourceWindowCloseView, context: Context) {
+        nsView.model = model
+    }
+
+    static func dismantleNSView(_ nsView: SourceWindowCloseView, coordinator: ()) {
+        nsView.stopObserving()
+    }
+}
+
+private final class SourceWindowCloseView: NSView {
+    weak var model: AppModel?
+    private var closeObserver: SourceWindowCloseObservation?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        stopObserving()
+        guard let window else { return }
+        let token = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: window, queue: .main
+        ) { [weak model] _ in
+            Task { @MainActor [weak model] in
+                model?.clearNewSourceMarkers()
+            }
+        }
+        closeObserver = SourceWindowCloseObservation(token: token)
+    }
+
+    func stopObserving() {
+        closeObserver = nil
+    }
+}
+
+/// Immutable token ownership; NotificationCenter permits removal from any thread.
+/// Keeping cleanup here avoids accessing non-Sendable state in NSView's deinit.
+private final class SourceWindowCloseObservation: @unchecked Sendable {
+    private let token: NSObjectProtocol
+
+    init(token: NSObjectProtocol) {
+        self.token = token
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(token)
+    }
 }

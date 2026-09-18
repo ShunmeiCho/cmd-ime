@@ -10,6 +10,7 @@ struct SlotListColumn<Card: View>: View {
     let insertionTint: Color
     let onUndo: () -> Void
     let onDismiss: () -> Void
+    let onAdd: (String) -> Void
     @ViewBuilder let card: (SwitchSlot) -> Card
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -63,7 +64,7 @@ struct SlotListColumn<Card: View>: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if let notice {
-                SlotBoardNoticeBar(notice: notice, canUndo: canUndo, onUndo: onUndo, onDismiss: onDismiss)
+                SlotBoardNoticeBar(notice: notice, canUndo: canUndo, onUndo: onUndo, onDismiss: onDismiss, onAdd: onAdd)
                     .id("boardNotice")
                     .transition(SlotBoardMotion.noticeTransition(reduceMotion: reduceMotion))
             }

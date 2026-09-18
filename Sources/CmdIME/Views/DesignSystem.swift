@@ -390,6 +390,146 @@ struct StatusPill: View {
     }
 }
 
+/// Native menu semantics with chrome outside the label: macOS may flatten menu labels.
+/// The native control stays opaque so its keyboard handling/focus ring is not dimmed.
+/// The decorative chevron never intercepts clicks. Full-frame label/content shapes request
+/// a rectangular target; exact native hit testing and focus drawing still need macOS QA.
+struct ConsoleMenuButton<Content: View>: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
+
+    private let title: String
+    private let systemImage: String?
+    private let tint: Color
+    private let warning: Bool
+    private let showsChevron: Bool
+    private let content: Content
+
+    init(
+        title: String,
+        systemImage: String? = nil,
+        tint: Color = DesignTokens.Colors.accent,
+        warning: Bool = false,
+        showsChevron: Bool = true,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.systemImage = systemImage
+        self.tint = tint
+        self.warning = warning
+        self.showsChevron = showsChevron
+        self.content = content()
+    }
+
+    private var effectiveTint: Color { warning ? DesignTokens.Colors.warning : tint }
+
+    var body: some View {
+        Menu {
+            content
+        } label: {
+            HStack(spacing: DesignTokens.Spacing.xs) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                }
+                Text(title)
+                    .lineLimit(1)
+            }
+            .font(.caption.weight(.semibold))
+            .padding(.leading, DesignTokens.Spacing.sm)
+            .padding(.trailing, showsChevron ? DesignTokens.Spacing.lg : DesignTokens.Spacing.sm)
+            .frame(maxWidth: .infinity, minHeight: DesignTokens.Layout.fieldHeight, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .foregroundStyle(isEnabled ? (warning ? effectiveTint : DesignTokens.Colors.textPrimary) : DesignTokens.Colors.textMuted)
+        .frame(minHeight: DesignTokens.Layout.fieldHeight)
+        .background {
+            ConsoleControlChrome(tint: effectiveTint, highlighted: isEnabled && isHovered, warning: warning)
+        }
+        .overlay(alignment: .trailing) {
+            if showsChevron {
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(isEnabled && isHovered ? effectiveTint : DesignTokens.Colors.textMuted)
+                    .padding(.trailing, DesignTokens.Spacing.sm)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.quickFade, reduceMotion: reduceMotion), value: isHovered)
+        .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion), value: warning)
+        .accessibilityLabel(title)
+    }
+}
+
+/// Compact, color-only feedback for badge/refresh buttons; leaves activation to Button.
+struct ConsoleControlButtonStyle: ButtonStyle {
+    var tint: Color = DesignTokens.Colors.accent
+    var warning: Bool = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        ConsoleControlButtonBody(configuration: configuration, tint: tint, warning: warning)
+    }
+}
+
+private struct ConsoleControlButtonBody: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
+
+    let configuration: ButtonStyleConfiguration
+    let tint: Color
+    let warning: Bool
+
+    private var effectiveTint: Color { warning ? DesignTokens.Colors.warning : tint }
+
+    var body: some View {
+        configuration.label
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(isEnabled ? effectiveTint : DesignTokens.Colors.textMuted)
+            .padding(.horizontal, DesignTokens.Spacing.xs)
+            .frame(minWidth: DesignTokens.Layout.fieldHeight, minHeight: DesignTokens.Layout.fieldHeight)
+            .background {
+                ConsoleControlChrome(
+                    tint: effectiveTint,
+                    highlighted: isEnabled && (isHovered || configuration.isPressed),
+                    warning: warning,
+                    pressed: isEnabled && configuration.isPressed
+                )
+            }
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
+            .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.quickFade, reduceMotion: reduceMotion), value: isHovered)
+            .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion), value: configuration.isPressed)
+            .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion), value: warning)
+    }
+}
+
+private struct ConsoleControlChrome: View {
+    let tint: Color
+    let highlighted: Bool
+    let warning: Bool
+    var pressed = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+            .fill(highlighted ? DesignTokens.Colors.surfaceRaised : DesignTokens.Colors.surfaceInset)
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+                    .fill(tint.opacity(pressed ? 0.18 : 0))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
+                    .stroke(highlighted ? tint : (warning ? tint.opacity(0.5) : DesignTokens.Colors.separatorStrong), lineWidth: 1)
+            }
+            .allowsHitTesting(false)
+    }
+}
+
 struct ConsoleButtonStyle: ButtonStyle {
     var prominent = false
 

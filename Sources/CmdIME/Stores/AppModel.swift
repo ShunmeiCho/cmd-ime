@@ -5,6 +5,7 @@ import KeyboardSwitcherCore
 enum BoardNotice: Equatable {
     case rejected(String)
     case removed(slotName: String)
+    case found(sourceID: String, name: String)
 }
 
 @MainActor
@@ -22,6 +23,11 @@ final class AppModel: ObservableObject {
 
     @Published private(set) var boardNotice: BoardNotice?
     @Published private(set) var canUndoRemoval = false
+    @Published private(set) var newSourceIDs: Set<String> = []
+    @Published private(set) var sourceRefreshMessage: String?
+    private var hasSourceBaseline = false
+    private var refreshMessageTask: Task<Void, Never>?
+
     private var pendingUndo: RemovedSlot? {
         didSet { canUndoRemoval = pendingUndo != nil }
     }
@@ -104,7 +110,20 @@ final class AppModel: ObservableObject {
     @discardableResult
     func scan() -> Bool {
         do {
-            sources = try inputSources.listInputSources()
+            let previousIDs = Set(sources.map(\.id))
+            let scanned = try inputSources.listInputSources()
+            sources = scanned
+            if hasSourceBaseline {
+                let discovered = selectableSources.filter {
+                    !previousIDs.contains($0.id) && sourceUsage(of: $0) == .available
+                }
+                newSourceIDs.formUnion(discovered.map(\.id))
+                if let source = discovered.first {
+                    boardNotice = .found(sourceID: source.id, name: source.localizedName)
+                }
+            }
+            hasSourceBaseline = true
+            reconcileNewSources()
             monitor?.updateConfig(config)
             statusText = "Found \(sources.count) input sources"
             return true
@@ -112,6 +131,43 @@ final class AppModel: ObservableObject {
             statusText = error.localizedDescription
             return false
         }
+    }
+
+    /// Explicit user refresh only; ordinary scans do not show a success toast.
+    @discardableResult
+    func refreshSources() -> Bool {
+        refreshMessageTask?.cancel()
+        sourceRefreshMessage = nil
+        guard scan() else {
+            reportBoardFailure(statusText)
+            return false
+        }
+        sourceRefreshMessage = "Updated - \(sources.count) sources"
+        refreshMessageTask = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: 3_000_000_000) }
+            catch { return }
+            self?.sourceRefreshMessage = nil
+        }
+        return true
+    }
+
+    /// Wire to the settings window closing, not activation or key-window changes.
+    func clearNewSourceMarkers() {
+        newSourceIDs.removeAll()
+        refreshMessageTask?.cancel()
+        sourceRefreshMessage = nil
+        if case .found = boardNotice { restoreUndoNotice() }
+    }
+
+    private func reconcileNewSources() {
+        newSourceIDs.formIntersection(Set(selectableSources.filter { sourceUsage(of: $0) == .available }.map(\.id)))
+        if case let .found(id, _) = boardNotice, !newSourceIDs.contains(id) {
+            restoreUndoNotice()
+        }
+    }
+
+    private func restoreUndoNotice() {
+        boardNotice = pendingUndo.map { .removed(slotName: $0.slot.name) }
     }
 
     func refreshRuntimeStatus() {
@@ -254,6 +310,7 @@ final class AppModel: ObservableObject {
             let rebuilt = try configStore.resettingSlots(in: config, from: sources)
             invalidateUndo()
             config = rebuilt
+            reconcileNewSources()
             activeRole = nil
             monitor?.updateConfig(rebuilt)
             statusText = "Rebuilt \(rebuilt.slots.count) slots from installed input sources"
@@ -371,8 +428,8 @@ final class AppModel: ObservableObject {
     }
 
     func dismissBoardNotice() {
-        pendingUndo = nil
-        boardNotice = nil
+        if case .removed = boardNotice { pendingUndo = nil }
+        restoreUndoNotice()
     }
 
     private func invalidateUndo() {
@@ -389,14 +446,36 @@ final class AppModel: ObservableObject {
         boardNotice = .rejected(message)
     }
 
-    private func commit(_ next: SwitcherConfig) -> Bool {
+    @discardableResult
+    func setSlotTint(_ hex: String, for id: InputRole) -> Bool {
+        do {
+            let next = try config.settingSlotTint(hex, for: id)
+            if next != config {
+                guard commit(next, failureSlot: id) else { return false }
+                invalidateUndo()
+            }
+            clearSlotNotice(for: id)
+            statusText = "Updated tint for \(config.displayName(for: id))"
+            return true
+        } catch {
+            reportSlotFailure(error.localizedDescription, for: id)
+            return false
+        }
+    }
+
+    private func commit(_ next: SwitcherConfig, failureSlot: InputRole? = nil) -> Bool {
         do {
             try configStore.save(next)
             config = next
+            reconcileNewSources()
             monitor?.updateConfig(next)
             return true
         } catch {
-            reportBoardFailure(error.localizedDescription)
+            if let failureSlot {
+                reportSlotFailure(error.localizedDescription, for: failureSlot)
+            } else {
+                reportBoardFailure(error.localizedDescription)
+            }
             return false
         }
     }
@@ -412,6 +491,7 @@ final class AppModel: ObservableObject {
             if next != config { invalidateUndo() }
             config = next
             if save() {
+                reconcileNewSources()
                 clearSlotNotice(for: role)
                 statusText = "Switch slot set to \(source.localizedName)"
             }

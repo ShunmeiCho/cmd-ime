@@ -5,6 +5,7 @@ struct SlotBoardNoticeBar: View {
     let canUndo: Bool
     let onUndo: () -> Void
     let onDismiss: () -> Void
+    let onAdd: (String) -> Void
     @AccessibilityFocusState private var undoFocused: Bool
 
     var body: some View {
@@ -13,6 +14,11 @@ struct SlotBoardNoticeBar: View {
             case let .rejected(reason):
                 Label(reason, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(DesignTokens.Colors.warning)
+            case let .found(sourceID, name):
+                Label("Found \(name)", systemImage: "sparkles")
+                Button("Add Slot") { onAdd(sourceID) }
+                    .buttonStyle(ConsoleButtonStyle(prominent: true))
+                    .accessibilityLabel("Add slot for \(name)")
             case let .removed(name):
                 Label("Removed \(name)", systemImage: "trash")
             }

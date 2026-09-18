@@ -6,6 +6,7 @@ struct SlotCard: View {
     @Environment(\.slotLook) private var slotLook
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AccessibilityFocusState private var nameFocused: Bool
+    @State private var showingColor = false
     @StateObject private var renameSession = SlotRenameSession()
     let slot: SwitchSlot
     let source: InputSourceInfo?
@@ -25,6 +26,7 @@ struct SlotCard: View {
     let onTest: () -> Void
     let onMove: (Int) -> Void
     let onRemove: () -> Void
+    let onColorSelect: (String) -> Void
     let triggerControls: AnyView
     let inputSourceControl: AnyView
     var seatProgress: CGFloat = 1
@@ -39,24 +41,20 @@ struct SlotCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 dragHandle.accessibilityHidden(true)
-                RoleBadge(role: slot.id, symbol: presentation.symbol, size: 31, isActive: isActive)
+                Button { openColor() } label: {
+                    RoleBadge(role: slot.id, symbol: presentation.symbol, size: 31, isActive: isActive)
+                }
+                .buttonStyle(ConsoleControlButtonStyle(tint: tint))
+                .help("Change slot color")
+                .accessibilityLabel("Color for \(slot.name)")
+                .popover(isPresented: $showingColor) {
+                    SlotColorPopover(slot: slot, onSelect: { hex in
+                        guard !isGhost else { return }
+                        onColorSelect(hex)
+                    }, onClose: { showingColor = false }, warning: warning)
+                }
                 HStack(spacing: 4) {
                     name
-                    Text("·")
-                        .foregroundStyle(DesignTokens.Colors.textMuted)
-                        .accessibilityHidden(true)
-                    Group {
-                        if source == nil {
-                            Label("Not matched", systemImage: "exclamationmark.triangle.fill")
-                                .foregroundStyle(DesignTokens.Colors.warning)
-                        } else {
-                            Text(presentation.detail)
-                                .foregroundStyle(DesignTokens.Colors.textMuted)
-                        }
-                    }
-                    .font(.caption2)
-                    .lineLimit(1)
-                    .layoutPriority(-1)
                     inputSourceControl
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -67,9 +65,10 @@ struct SlotCard: View {
                     .disabled(source == nil)
                 SlotOverflowMenu(position: position, count: count,
                                  onRename: { perform(onRename) },
+                                 onColor: openColor, tint: tint,
                                  onMove: { offset in perform { onMove(offset) } },
                                  onRemove: { perform(onRemove) })
-                    .frame(width: 24)
+                    .frame(width: 32)
             }
             HStack(spacing: 8) {
                 triggerControls
@@ -124,6 +123,7 @@ struct SlotCard: View {
                     .onTapGesture(count: 2, perform: onRename)
                     .accessibilityActions {
                         Button("Rename", action: onRename)
+                        Button("Color…", action: openColor)
                         if position > 0 { Button("Move Up") { perform { onMove(-1) } } }
                         if position + 1 < count { Button("Move Down") { perform { onMove(1) } } }
                         if count > 1 { Button("Remove Slot") { perform(onRemove) } }
@@ -136,8 +136,13 @@ struct SlotCard: View {
     }
 
     private var menuItems: some View {
-        SlotMenuItems(position: position, count: count, onRename: { perform(onRename) },
+        SlotMenuItems(position: position, count: count, onRename: { perform(onRename) }, onColor: openColor,
                       onMove: { offset in perform { onMove(offset) } }, onRemove: { perform(onRemove) })
+    }
+
+    private func openColor() {
+        guard !isGhost else { return }
+        perform { showingColor = true }
     }
 
     private func perform(_ action: () -> Void) {
@@ -200,11 +205,13 @@ private struct SlotMenuItems: View {
     let position: Int
     let count: Int
     let onRename: () -> Void
+    let onColor: () -> Void
     let onMove: (Int) -> Void
     let onRemove: () -> Void
 
     var body: some View {
         Button("Rename", action: onRename)
+        Button("Color…", action: onColor)
         if position > 0 { Button("Move Up") { onMove(-1) } }
         if position + 1 < count { Button("Move Down") { onMove(1) } }
         Divider()
@@ -218,17 +225,16 @@ struct SlotOverflowMenu: View {
     let position: Int
     let count: Int
     let onRename: () -> Void
+    let onColor: () -> Void
+    let tint: Color
     let onMove: (Int) -> Void
     let onRemove: () -> Void
 
     var body: some View {
-        Menu {
-            SlotMenuItems(position: position, count: count, onRename: onRename, onMove: onMove, onRemove: onRemove)
-        } label: {
-            Image(systemName: "ellipsis").frame(width: 24, height: 24)
+        ConsoleMenuButton(title: "", systemImage: "ellipsis", tint: tint, showsChevron: false) {
+            SlotMenuItems(position: position, count: count, onRename: onRename,
+                          onColor: onColor, onMove: onMove, onRemove: onRemove)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
         .accessibilityLabel("Slot actions")
         .help("Slot actions")
     }
@@ -383,7 +389,9 @@ private extension View {
 
 extension SlotBoardSection {
     func inputSourcePicker(for role: InputRole, source: InputSourceInfo?, isGhost: Bool = false) -> some View {
-        Menu {
+        ConsoleMenuButton(title: source?.localizedName ?? "Choose input source",
+                          tint: SlotLook(slots: model.config.slots).tint(for: role),
+                          warning: source == nil) {
             if source == nil {
                 Button("Not matched") {}
                     .disabled(true)
@@ -396,21 +404,8 @@ extension SlotBoardSection {
                 }
                 .disabled(!model.inputSourceSelection(candidate, for: role).isEnabled)
             }
-        } label: {
-            Text(source == nil ? "Choose" : "Change")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(DesignTokens.Colors.textMuted)
-            .padding(.horizontal, 7)
-            .frame(height: 21)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color.white.opacity(0.035))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(DesignTokens.Colors.separator, lineWidth: 1)
-                    )
-            )
         }
-        .menuStyle(.borderlessButton)
+        .disabled(isGhost)
+        .help(source?.localizedName ?? "Choose input source")
     }
 }

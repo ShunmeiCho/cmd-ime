@@ -38,12 +38,12 @@ struct SlotBoardSection: View {
                     SourceListColumn(model: model, drag: drag,
                                      onBeginDrag: { beginDrag(.source($0), value: $1) }, onAdd: add, onRefresh: {
                         guard commitPendingRename() else { return }
-                        model.scan()
+                        guard model.refreshSources() else { return }
                         resetDrafts()
                     }, onOpenSettings: showKeyboardSettings)
                     SlotListColumn(slots: model.config.slots, notice: model.boardNotice,
                                    canUndo: model.canUndoRemoval, seatingID: seatingID, drag: drag,
-                                   insertionTint: dragTint, onUndo: undo, onDismiss: dismissNotice) { slot in
+                                   insertionTint: dragTint, onUndo: undo, onDismiss: dismissNotice, onAdd: add) { slot in
                         card(for: slot)
                     }
                 }
@@ -55,6 +55,7 @@ struct SlotBoardSection: View {
                 switch notice {
                 case let .rejected(reason): announce(reason)
                 case let .removed(name): announce("Removed slot \(name). Undo available.")
+                case let .found(_, name): announce("Found \(name). Add Slot available.")
                 }
                 // Drag rejection must not scroll the board under the held pointer.
                 guard drag.payload == nil else { return }
@@ -137,6 +138,10 @@ struct SlotBoardSection: View {
             },
             onMove: isGhost ? { _ in } : { move(slot.id, by: $0) },
             onRemove: isGhost ? {} : { remove(slot.id) },
+            onColorSelect: isGhost ? { _ in } : { hex in
+                guard commitPendingRename() else { return }
+                _ = model.setSlotTint(hex, for: slot.id)
+            },
             triggerControls: AnyView(HStack(spacing: 8) {
                 triggerTypePicker(for: slot.id, isGhost: isGhost)
                 triggerControl(for: slot.id, isGhost: isGhost)
@@ -338,7 +343,7 @@ private struct AddSlotMenu: View {
     let onOpenSettings: () -> Void
 
     var body: some View {
-        Menu("Add Slot") {
+        ConsoleMenuButton(title: "Add Slot", systemImage: "plus") {
             if sources.isEmpty {
                 Button("All input sources are in slots") {}.disabled(true)
                 Button("Open Keyboard Settings…", action: onOpenSettings)
@@ -348,7 +353,6 @@ private struct AddSlotMenu: View {
                 }
             }
         }
-        .menuStyle(.borderlessButton)
         .fixedSize()
         .accessibilityLabel("Add Slot")
     }
