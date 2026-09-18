@@ -2,6 +2,7 @@
   <img src="Assets/AppIcon.png" alt="CmdIME app icon" width="112">
   <h1>CmdIME</h1>
   <p><strong>Deterministic macOS input-source switching for multilingual typing.</strong></p>
+  <p><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a></p>
 
   <p>
     <a href="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml"><img alt="Swift" src="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml/badge.svg"></a>
