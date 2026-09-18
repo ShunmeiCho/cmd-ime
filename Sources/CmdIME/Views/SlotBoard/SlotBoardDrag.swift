@@ -144,7 +144,7 @@ final class SlotBoardDragController: ObservableObject {
         pointer.location = location
         state = .dragging
         installResources()
-        move(location: location)
+        move(location: location, sessionID: sessionToken)
         return true
     }
 
@@ -153,8 +153,8 @@ final class SlotBoardDragController: ObservableObject {
                width: originFrame.width, height: originFrame.height)
     }
 
-    func move(location: CGPoint) {
-        guard state == .dragging else { return }
+    func move(location: CGPoint, sessionID: UUID?) {
+        guard sessionID == sessionToken, state == .dragging else { return }
         pointer.location = location
         let reason = payload.flatMap { validateAction?($0) }
         if rejectionReason != reason { rejectionReason = reason }
@@ -169,11 +169,11 @@ final class SlotBoardDragController: ObservableObject {
         setInsertion(next)
     }
 
-    func drop() {
-        guard state == .dragging, payload != nil else { return }
+    func drop(sessionID: UUID?) {
+        guard sessionID == sessionToken, state == .dragging, payload != nil else { return }
         // Revalidate even if hover rejection previously closed the gap. Also
         // recover the index if the source became available without pointer motion.
-        move(location: pointer.location)
+        move(location: pointer.location, sessionID: sessionID)
         if let rejectionReason {
             rejectAction?(rejectionReason)
             rejectDrop()
@@ -191,8 +191,8 @@ final class SlotBoardDragController: ObservableObject {
 
     /// The gesture sentinel is the sole normal resource-cleanup point. Deferral
     /// makes both possible orderings of onEnded and @GestureState reset safe.
-    func gestureDidEnd() {
-        let token = sessionToken
+    func gestureDidEnd(sessionID: UUID?) {
+        guard let token = sessionID, token == sessionToken else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self, self.sessionToken == token else { return }
             if self.state == .dragging { self.requestCancel() }
@@ -220,7 +220,13 @@ final class SlotBoardDragController: ObservableObject {
     }
 
     /// Backstops (host disappearance / app resign) cannot rely on the sentinel.
-    func cancel() {
+    func cancel(sessionID: UUID?) {
+        guard sessionID == sessionToken else { return }
+        cancelCurrent()
+    }
+
+    /// App-wide backstops deliberately address the current session, not a host.
+    func cancelCurrent() {
         requestCancel()
         endResources()
     }
@@ -329,7 +335,7 @@ final class SlotBoardDragController: ObservableObject {
         resignObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didResignActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.cancel() }
+            MainActor.assumeIsolated { self?.cancelCurrent() }
         }
     }
 
@@ -354,7 +360,7 @@ struct SlotDragHandle: View {
     let onBegin: (DragGesture.Value) -> Bool
     @GestureState private var isDragging = false
     @State private var attempted = false
-    @State private var accepted = false
+    @State private var hostSessionID: UUID?
     @State private var hover = false
 
     var body: some View {
@@ -371,18 +377,18 @@ struct SlotDragHandle: View {
                 .onChanged { value in
                     if !attempted {
                         attempted = true
-                        accepted = onBegin(value)
+                        hostSessionID = onBegin(value) ? controller.sessionID : nil
                     }
-                    if accepted { controller.move(location: value.location) }
+                    controller.move(location: value.location, sessionID: hostSessionID)
                 }
-                .onEnded { _ in controller.drop() })
+                .onEnded { _ in controller.drop(sessionID: hostSessionID) })
             .onChange(of: isDragging) { active in
                 guard !active else { return }
-                controller.gestureDidEnd()
+                controller.gestureDidEnd(sessionID: hostSessionID)
                 attempted = false
-                accepted = false
+                // Keep the token until the next begin: onEnded may follow this sentinel.
             }
-            .onDisappear { if attempted { controller.cancel() } }
+            .onDisappear { controller.cancel(sessionID: hostSessionID) }
             .accessibilityHidden(true)
     }
 }

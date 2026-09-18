@@ -63,6 +63,7 @@ struct SourceRow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @GestureState private var isDragging = false
     @State private var attempted = false
+    @State private var hostSessionID: UUID?
     @State private var suppressClick = false
     @State private var gestureGeneration = 0
     @State private var rejected = false
@@ -149,6 +150,7 @@ struct SourceRow: View {
                     suppressClick = true
                     gestureGeneration += 1
                     rejected = !onBeginDrag(value)
+                    hostSessionID = rejected ? nil : drag.sessionID
                 }
                 if rejected {
                     if !reduceMotion {
@@ -156,13 +158,13 @@ struct SourceRow: View {
                                         height: min(max(value.translation.height * 0.25, -6), 6))
                     }
                 } else {
-                    drag.move(location: value.location)
+                    drag.move(location: value.location, sessionID: hostSessionID)
                 }
             }
-            .onEnded { _ in drag.drop() }, including: isGhost ? .none : .all)
+            .onEnded { _ in drag.drop(sessionID: hostSessionID) }, including: isGhost ? .none : .all)
         .onChange(of: isDragging) { active in
             guard !active, !isGhost else { return }
-            drag.gestureDidEnd()
+            drag.gestureDidEnd(sessionID: hostSessionID)
             attempted = false
             rejected = false
             // Keep the release event from also activating the nested + button.
@@ -172,7 +174,7 @@ struct SourceRow: View {
             }
             withAnimation(reduceMotion ? nil : DesignTokens.Motion.keyRelease) { offset = .zero }
         }
-        .onDisappear { if attempted && !isGhost { drag.cancel() } }
+        .onDisappear { if !isGhost { drag.cancel(sessionID: hostSessionID) } }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(source.localizedName)
         .accessibilityValue(isNew ? "New, \(name)" : name)
