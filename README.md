@@ -326,8 +326,8 @@ Mac App Store distribution needs a separate sandboxed App Store build. See
 ## Package And Release
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.3.0
-shasum -a 256 dist/CmdIME-0.3.0.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.4.0
+shasum -a 256 dist/CmdIME-0.4.0.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing
