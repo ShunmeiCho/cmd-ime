@@ -14,7 +14,7 @@ extension SlotBoardSection {
                 SlotModifierMenu(model: model, role: role, category: category, isGhost: isGhost,
                                  onWillChange: commitPendingRename, onUpdated: resetDrafts)
             }
-            SlotTriggerRecorder(model: model, role: role, category: .shortcut, isGhost: isGhost,
+            SlotTriggerRecorder(model: model, role: role, isGhost: isGhost,
                                 onWillOpen: commitPendingRename, onUpdated: resetDrafts)
         }
     }

@@ -38,8 +38,6 @@ public struct TriggerRecognizer: Sendable {
         return result
     }()
 
-    /// Recording affordance only; runtime tap dispatch keeps its own shorter window.
-    public static let recordingDoubleTapWindow: TimeInterval = 0.45
     private let doubleTapWindow: TimeInterval
 
     public private(set) var draft: KeyTrigger?

@@ -2,9 +2,9 @@ import XCTest
 @testable import KeyboardSwitcherCore
 
 final class TriggerRecognizerTests: XCTestCase {
-    func testRecordingWindowAcceptsThreeTenthsWhileDefaultRemainsSingle() throws {
+    func testCustomWindowAcceptsThreeTenthsWhileDefaultRemainsSingle() throws {
         let key = try ShortcutParser.parse("left-command")
-        var recording = TriggerRecognizer(doubleTapWindow: TriggerRecognizer.recordingDoubleTapWindow)
+        var recording = TriggerRecognizer(doubleTapWindow: 0.45)
         var standard = TriggerRecognizer()
         _ = tap(&recording, key, at: 0)
         _ = tap(&standard, key, at: 0)
@@ -12,13 +12,12 @@ final class TriggerRecognizerTests: XCTestCase {
         XCTAssertEqual(tap(&standard, key, at: 0.3), .tap(key.keyName))
         XCTAssertEqual(recording.draft?.gesture, .doubleTap)
         XCTAssertEqual(standard.draft?.gesture, .tap)
-        XCTAssertEqual(TriggerRecognizer.recordingDoubleTapWindow, 0.45)
         XCTAssertEqual(OneShotModifierState.doubleTapWindow, 0.22)
     }
 
-    func testRecordingWindowStillRejectsLateSecondTap() throws {
+    func testCustomWindowStillRejectsLateSecondTap() throws {
         let key = try ShortcutParser.parse("right-option")
-        var state = TriggerRecognizer(doubleTapWindow: TriggerRecognizer.recordingDoubleTapWindow)
+        var state = TriggerRecognizer(doubleTapWindow: 0.45)
         _ = tap(&state, key, at: 0)
         XCTAssertEqual(tap(&state, key, at: 0.46), .tap(key.keyName))
     }
