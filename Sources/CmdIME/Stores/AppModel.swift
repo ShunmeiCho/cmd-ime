@@ -180,7 +180,7 @@ final class AppModel: ObservableObject {
             reportBoardFailure(statusText)
             return false
         }
-        sourceRefreshMessage = "Updated - \(sources.count) sources"
+        sourceRefreshMessage = "Updated - \(selectableSources.count) input sources"
         refreshMessageTask = Task { [weak self] in
             do { try await Task.sleep(nanoseconds: 3_000_000_000) }
             catch { return }
