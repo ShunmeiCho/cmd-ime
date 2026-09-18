@@ -19,6 +19,8 @@ final class TriggerRecordingSession: ObservableObject {
     @Published private(set) var captureRevision = 0
     @Published private(set) var rejectionRevision = 0
     private(set) var sessionID = UUID()
+    var controlHasFocus = false
+    private var navigationKeys: Set<Int> = []
 
     private weak var hostWindow: NSWindow?
     private var recognizer = TriggerRecognizer()
@@ -90,6 +92,7 @@ final class TriggerRecordingSession: ObservableObject {
         resources.monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
                 guard let self, self.isRecording, self.sessionID == generation else { return false }
+                guard !self.passesThroughNavigation(event) else { return false }
                 self.receive(event)
                 return true
             }
@@ -107,7 +110,7 @@ final class TriggerRecordingSession: ObservableObject {
             },
         ]
         onCaptureChanged(true)
-        announce("Recording. Press a trigger. Return saves; Escape cancels; Delete clears the draft.")
+        announce("Recording. Press a trigger. Return saves; Escape cancels; Delete clears the draft. Tab moves to buttons; Space or Return activates the focused button.")
         if let draft, let error = onValidate(draft) { reject(error) }
     }
 
@@ -132,6 +135,8 @@ final class TriggerRecordingSession: ObservableObject {
         hostWindow = nil
         recognizer = TriggerRecognizer()
         initialOrdinaryKeys = []
+        navigationKeys = []
+        controlHasFocus = false
         draft = nil
         heldKeys = []
         liveKeyNames = []
@@ -148,6 +153,40 @@ final class TriggerRecordingSession: ObservableObject {
         } else {
             Task { @MainActor in resources.cleanup() }
         }
+    }
+
+    /// Leave native focus, button activation and VoiceOver commands to AppKit.
+    /// Remember the down/up pair even if modifiers or focus change in between.
+    private func passesThroughNavigation(_ event: NSEvent) -> Bool {
+        let code = Int(event.keyCode)
+        let flags = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
+        let voiceOver = NSWorkspace.shared.isVoiceOverEnabled
+        let tab = code == kVK_Tab && flags.subtracting(.shift).isEmpty
+        let nativeButtonFocused = event.window !== hostWindow && event.window?.firstResponder is NSButton
+        let activation = flags.isEmpty && (controlHasFocus || nativeButtonFocused)
+            && [kVK_Space, kVK_Return, kVK_ANSI_KeypadEnter].contains(code)
+        // Caps Lock is an alternative VO modifier. Unmodified arrows support
+        // Quick Nav; reserve these only while VoiceOver is running.
+        let capsLockHeld = CGEventSource.keyState(.combinedSessionState, key: CGKeyCode(kVK_CapsLock))
+        let voiceOverCommand = voiceOver && (
+            flags.contains([.control, .option]) || capsLockHeld
+                || (flags.isEmpty && [kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow].contains(code))
+                || event.type == .flagsChanged)
+        let paired = navigationKeys.contains(code)
+        guard tab || activation || voiceOverCommand || paired else { return false }
+        if event.type == .keyDown { navigationKeys.insert(code) }
+        if event.type == .keyUp { navigationKeys.remove(code) }
+
+        // Navigation must not create a draft or leave a pending modifier tap
+        // (notably Shift-Tab and VO's Control-Option releases).
+        let heldModifiers = Set(TriggerRecognizer.modifierTriggers.keys.filter {
+            CGEventSource.keyState(.combinedSessionState, key: CGKeyCode($0))
+        })
+        recognizer = TriggerRecognizer(existingTrigger: draft, heldModifierKeyCodes: heldModifiers,
+                                       heldKeyCodes: initialOrdinaryKeys)
+        updateHeldKeys()
+        liveKeyNames = draft.map(Self.components) ?? []
+        return true
     }
 
     private func receive(_ event: NSEvent) {

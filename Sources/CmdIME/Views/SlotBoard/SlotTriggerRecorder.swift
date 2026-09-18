@@ -123,6 +123,9 @@ private struct TriggerRecorderPopover: View {
     @State private var appeared = false
     @State private var shake: CGFloat = 0
     @State private var rejectionGeneration = 0
+    @FocusState private var focusedControl: Control?
+
+    private enum Control: Hashable { case cancel, save }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -141,11 +144,14 @@ private struct TriggerRecorderPopover: View {
                 }
             }
             .frame(minHeight: 36)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Shortcut draft for \(name)")
+            .accessibilityValue(session.liveKeyNames.isEmpty ? "Waiting for keys" : session.liveKeyNames.joined(separator: " + "))
             .id(session.captureRevision)
             .transition(reduceMotion ? .opacity : .scale(scale: 0.96).combined(with: .opacity))
             .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.keyRelease,
                        value: session.captureRevision)
-            Text("Press a modifier together with an ordinary key.\nReturn saves · Esc cancels · Delete clears the draft.")
+            Text("Press a modifier together with an ordinary key.\nReturn saves · Esc cancels · Delete clears the draft.\nTab moves to buttons; Space or Return activates the focused button.")
                 .font(DesignTokens.Typography.body)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
             if let warning = session.warning {
@@ -157,6 +163,7 @@ private struct TriggerRecorderPopover: View {
             Divider()
             HStack(spacing: 8) {
                 RoleBadge(role: role, symbol: role.defaultSymbol, size: 24, isActive: false)
+                    .accessibilityHidden(true)
                 Text(name)
                     .font(DesignTokens.Typography.body.weight(.semibold))
                     .lineLimit(1)
@@ -168,13 +175,17 @@ private struct TriggerRecorderPopover: View {
                     .lineLimit(1)
                     .buttonStyle(ConsoleButtonStyle())
                     .fixedSize(horizontal: true, vertical: false)
-                    .accessibilityLabel("Cancel recording")
+                    .focused($focusedControl, equals: .cancel)
+                    .keyboardShortcut(focusedControl == .cancel ? .defaultAction : .cancelAction)
+                    .accessibilityLabel("Cancel recording for \(name)")
                 Button("Save · Return", action: session.save)
                     .lineLimit(1)
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
                     .fixedSize(horizontal: true, vertical: false)
                     .disabled(!session.canSave)
-                    .accessibilityLabel("Save trigger")
+                    .focused($focusedControl, equals: .save)
+                    .keyboardShortcut(focusedControl == .cancel ? nil : .defaultAction)
+                    .accessibilityLabel("Save shortcut for \(name)")
             }
         }
         .padding(16)
@@ -186,6 +197,7 @@ private struct TriggerRecorderPopover: View {
         .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.expandCollapse, value: appeared)
         .modifier(Shake(progress: shake, amplitude: reduceMotion ? 0 : 5))
         .onAppear { appeared = true }
+        .onChange(of: focusedControl) { session.controlHasFocus = $0 != nil }
         .onChange(of: session.rejectionRevision) { _ in
             rejectionGeneration += 1
             let generation = rejectionGeneration
@@ -260,6 +272,7 @@ private struct TriggerRecorderAnchor: NSViewRepresentable {
         button.contentTintColor = hasTrigger ? NSColor(DesignTokens.Colors.textPrimary) : NSColor(DesignTokens.Colors.textMuted)
         button.outlineTint = tint
         button.onOpen = isGhost ? nil : onOpen
+        button.isEnabled = !isGhost
         button.setAccessibilityLabel(accessibilityTitle)
         button.setAccessibilityValue(accessibilityValue)
         button.setAccessibilityHidden(isGhost)
@@ -280,7 +293,8 @@ private struct TriggerRecorderAnchor: NSViewRepresentable {
             onOpen?(window)
         }
         override func keyDown(with event: NSEvent) {
-            if event.keyCode == 36 || event.keyCode == 49 {
+            let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift, .function])
+            if modifiers.isEmpty && (event.keyCode == 36 || event.keyCode == 76 || event.keyCode == 49) {
                 performClick(nil)
             } else { super.keyDown(with: event) }
         }
