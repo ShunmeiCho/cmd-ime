@@ -172,7 +172,8 @@ struct CLI {
         }
 
         let sources = try service.listInputSources()
-        let config = SwitcherConfig.detected(from: sources)
+        // A config written by the CLI is not a GUI first run: keep the setup guide hidden.
+        let config = SwitcherConfig.detected(from: sources).completingSetup()
         try save(config, to: store)
         print("Wrote \(configURL.path)")
         #else
@@ -461,7 +462,10 @@ struct CLI {
                 stderr
             )
         }
-        return result.config
+        // Starting from defaults (no file, or an unreadable one): whatever the CLI
+        // writes from here is not a GUI first run either.
+        let isCreatedByCLI = result.isFirstRun || result.recoveredBackupURL != nil
+        return isCreatedByCLI ? result.config.completingSetup() : result.config
     }
 
     private func printUsage() {
