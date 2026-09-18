@@ -132,6 +132,37 @@ Small implementation adjustments are allowed:
 5. Add compact live keys strip.
 6. Polish indicator preview and runtime cards.
 
+## Decision record — 2026-09-18: Slot board PR1
+
+The owner explicitly approves replacing the frozen single-row slot card
+architecture with a two-column board: installed input sources on the left and
+ordered, two-row slot cards on the right. The source column is 196 points, the
+gap is 14, and cards stay flexible at the existing 720-point window minimum.
+There is only page scrolling, not a nested list scroller or collapse breakpoint.
+
+Keep the dark keyboard-console surfaces, tactile keycaps, existing tokens,
+slot-specific tints and icon-plus-text status labels. Source usage distinguishes
+preferred ownership from fallback resolution; fallback-only rows cannot add a
+slot. Unmatched cards keep Choose and trigger editing; Test is disabled. The old
+Fix action is removed. Card overflow/context menus provide Rename, Move Up/Down
+and Remove; the board notice below the cards provides Undo and Dismiss.
+
+PR1 adds only non-pointer management and its feedback. The future drag handle's
+14-point seat is reserved but exposes no inert control. Drag interaction is PR2.
+The existing segmented trigger picker, modifier menu and recorder stay in row two;
+bubble recording belongs to a separate delivery. LiveKeys is unchanged.
+
+Structural edits reuse expandCollapse. Added/reordered/restored cards receive a
+seat pulse bounded by the frozen active stroke 0.74 and shadow 0.26. Reduce Motion
+uses instant layout changes, opacity fades and a stroke-only pulse; invalid rename
+uses warning colour rather than shake. No indicator-style or activation-motion
+redesign is authorized by this increment.
+
+A standard SwiftUI TextField supports inline rename, Return/Escape and guarded
+outside-click commit. Editing-menu shortcuts depend on the separate hidden main
+menu work. Full Keyboard Access and VoiceOver have explicit menus and actions;
+real-device focus, announcements, IME and 720-point layout checks remain required.
+
 ## Verification
 
 - `swift test`

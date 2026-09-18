@@ -60,10 +60,22 @@ checks.
 - PR1 implements the dynamic slot collection, migration/backup, CLI management,
   same-primary-language fallback and duplicate diagnostics; GUI renders the
   configured collection. This is no longer out of scope.
-- PR2: GUI Add/Remove, drag-to-add, reordering and renaming, fallback notices,
-  trigger-conflict rejection, data-driven LiveKeys, adaptive custom-color grid,
-  No trigger labels, and the one-time migration banner. Unmatched slots already
-  expose Choose source; source-assignment conflicts are rejected in PR1.
+- Slot board PR1 implements two-column source/slot management, Add/Remove,
+  menu-based reordering, inline rename with duplicate rejection, targeted Undo,
+  usage labels and No trigger status. The three-part trigger controls remain.
+- Slot board PR1 verification: real-device 720-point layout with always-visible
+  scrollbars, Full Keyboard Access/VoiceOver, IME rename and outside-click commit,
+  Reduce Motion, and save-failure/Undo recovery. Edit shortcuts depend on the
+  separately delivered hidden main menu; bubble recording is a later integration.
+- Slot board PR2: drag gate prototype, drag-to-add/reorder, insertion feedback
+  and cancellation. No drag implementation is included in PR1.
+- Slot board PR3: activation and indicator motion; preserve frozen glow peaks.
+- Remaining dynamic-slot follow-ups: card-level fallback notices (ADR 0001;
+  source rows already show Fallback for), data-driven LiveKeys, adaptive custom-
+  color grid and the one-time migration banner. Unmatched cards expose Choose;
+  source assignment supports explicit swaps and rejects invalid ownership.
+- Make existing source/trigger assignment save-before-assign, matching new board
+  intents; these pre-existing paths can still leave unsaved live edits on failure.
 - PR3 implements source-detected first-run defaults and `keyboardctl init`:
   first five slots use Left/Right Command, Left/Right Option, Left Control;
   later slots are unbound. Existing configs remain unchanged; empty detection

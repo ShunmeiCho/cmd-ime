@@ -33,9 +33,29 @@ first preferred ID; fallback/legacy resolution may duplicate another slot and
 both keep working. CLI diagnosis exposes those duplicates. See ADR 0001.
 
 CLI supports listing, adding and removing slots and querying by ID or unique
-case-insensitive name. The GUI renders dynamic slots; GUI management/notice is
-PR2; PR3 implements source-detected first-run defaults. Added slots get the first
-free Command/Option/Left Control tap, never automatic Shift or Right Control.
+case-insensitive name. The GUI slot board provides Add Slot, source-row +,
+Move Up/Down, inline Rename, Remove and targeted Undo without dragging.
+Source rows distinguish available, preferred ownership (In use), and fallback
+resolution (Fallback for); only available sources can be added. Added slots get
+the first free Command/Option/Left Control tap, never automatic Shift or Right Control.
+
+The board retains the 720-point window minimum, with a 196-point source column
+and flexible two-row slot cards. Unmatched cards keep Choose and trigger editing;
+Test is disabled and the old Fix action is removed. No trigger is shown for
+unbound slots. Names reject case-insensitive duplicates.
+
+New board edits save before replacing live configuration. Remove Undo restores
+only the removed slot's data, so indicator changes survive. Actual slot mutations
+invalidate the receipt; no-op edits do not. A failed save keeps Undo available.
+If restoration skips a now-conflicting trigger, a visible warning names it.
+Existing source/trigger assignment paths still assign before saving; rollback for
+those paths remains follow-up work.
+
+Keyboard management uses Full Keyboard Access or VoiceOver menus/actions. Inline
+rename is a standard TextField; Edit-menu shortcuts depend on the separately
+implemented hidden main menu. Dragging, bubble recording, activation/indicator
+motion and data-driven LiveKeys are not part of this board increment. Reduce
+Motion removes structural movement and shake, retaining fades and stroke feedback.
 
 GUI Reset to Detected confirms replacement of all slots and triggers while
 preserving unrelated settings, including general indicator preferences. It
