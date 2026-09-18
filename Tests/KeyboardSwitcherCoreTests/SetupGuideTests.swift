@@ -9,6 +9,7 @@ final class SetupGuideTests: XCTestCase {
     private func input(
         accessibility: Bool = true,
         inputMonitoring: Bool = true,
+        listenerFailed: Bool = false,
         sources: Int = 2,
         slots: Int = 2,
         bound: Int = 2,
@@ -18,6 +19,7 @@ final class SetupGuideTests: XCTestCase {
         SetupGuideInput(
             accessibilityGranted: accessibility,
             inputMonitoringGranted: inputMonitoring,
+            listenerFailed: listenerFailed,
             selectableSourceCount: sources,
             slotCount: slots,
             boundSlotCount: bound,
@@ -116,6 +118,17 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertFalse(tryIt.isFinished)
     }
 
+    func testFailedListenerHoldsTheGuideAtPermissionsAndOffersRelaunch() {
+        let failed = SetupGuideState(input(listenerFailed: true, confirmed: true))
+        let missing = SetupGuideState(input(accessibility: false, listenerFailed: true))
+
+        XCTAssertEqual(failed.currentStep, .permissions)
+        XCTAssertTrue(failed.shouldOfferRelaunch)
+        XCTAssertFalse(missing.shouldOfferRelaunch)
+        XCTAssertFalse(SetupGuideState(input()).shouldOfferRelaunch)
+        XCTAssertNil(SetupGuideState(input(listenerFailed: true, completed: true)).currentStep)
+    }
+
     // MARK: Edge flags
 
     func testNeedsMoreSourcesBelowTwoSelectableSources() {
@@ -167,5 +180,45 @@ final class SetupGuideTests: XCTestCase {
             config: config.completingSetup(), sources: sources,
             accessibilityGranted: true, inputMonitoringGranted: true, hasConfirmedSlots: false
         ).hasCompletedSetup)
+    }
+
+    // MARK: Trigger phrases and try-it progress
+
+    func testPhrasesCoverTapDoubleTapAndChord() {
+        let tap = KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command")
+        let doubleTap = KeyTrigger(kind: .oneShotModifier, keyCode: 61, keyName: "right-option", gesture: .doubleTap)
+        let chord = KeyTrigger(kind: .keyPress, keyCode: 38, keyName: "j", modifiers: [.option, .command])
+        let functionKey = KeyTrigger(kind: .keyPress, keyCode: 122, keyName: "f1", modifiers: [.capsLock])
+
+        XCTAssertEqual(SetupTriggerPhrase(trigger: tap).instruction, "Tap Left Command alone")
+        XCTAssertEqual(SetupTriggerPhrase(trigger: doubleTap).instruction, "Double-tap Right Option alone")
+        XCTAssertEqual(SetupTriggerPhrase(trigger: chord).instruction, "Press Command + Option + J")
+        XCTAssertEqual(SetupTriggerPhrase(trigger: functionKey).instruction, "Press Caps Lock + F1")
+        XCTAssertFalse(tap.isOneShotShift)
+        XCTAssertTrue(KeyTrigger(kind: .oneShotModifier, keyCode: 60, keyName: "right-shift").isOneShotShift)
+        XCTAssertFalse(KeyTrigger(kind: .keyPress, keyCode: 38, keyName: "j", modifiers: [.shift]).isOneShotShift)
+    }
+
+    func testTryItProgressWalksBoundSlotsInSlotOrder() throws {
+        var config = SwitcherConfig.detected(from: ["en", "ko", "ja"].map { source($0) })
+        let ids = config.slots.map(\.id)
+        config.bindings.removeAll { $0.action.role == ids[1] }
+        config.bindings.append(KeyBinding(
+            trigger: KeyTrigger(kind: .keyPress, keyCode: 38, keyName: "j", modifiers: [.option]),
+            action: .switchInputSource(ids[0])
+        ))
+
+        let start = SetupTryItProgress(config: config, tried: [])
+        let partial = SetupTryItProgress(config: config, tried: [ids[0], InputRole(rawValue: "removed")])
+        let done = SetupTryItProgress(config: config, tried: [ids[0], ids[2]])
+
+        XCTAssertEqual(start.boundSlots, [ids[0], ids[2]])
+        XCTAssertEqual(start.nextSlot, ids[0])
+        XCTAssertEqual(partial.triedSlots, [ids[0]])
+        XCTAssertEqual(partial.nextSlot, ids[2])
+        XCTAssertFalse(partial.isComplete)
+        XCTAssertTrue(done.isComplete)
+        config.bindings.removeAll()
+        XCTAssertFalse(SetupTryItProgress(config: config, tried: []).isComplete)
     }
 }

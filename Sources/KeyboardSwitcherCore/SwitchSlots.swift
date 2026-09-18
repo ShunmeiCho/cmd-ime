@@ -365,7 +365,8 @@ public extension SwitcherConfig {
         slotTriggers.filter { $0.trigger.kind == .keyPress }
     }
 
-    private var slotTriggers: [(slot: InputRole, trigger: KeyTrigger)] {
+    /// Every enabled switch trigger bound to an existing slot, in slot order.
+    var slotTriggers: [(slot: InputRole, trigger: KeyTrigger)] {
         slots.flatMap { slot in
             bindings.compactMap { binding -> (slot: InputRole, trigger: KeyTrigger)? in
                 guard binding.enabled,

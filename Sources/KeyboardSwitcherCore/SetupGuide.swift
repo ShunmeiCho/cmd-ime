@@ -19,6 +19,9 @@ public enum SetupStep: Int, CaseIterable, Comparable, Sendable {
 public struct SetupGuideInput: Equatable, Sendable {
     public var accessibilityGranted: Bool
     public var inputMonitoringGranted: Bool
+    /// The keyboard listener could not start. With both permissions granted this
+    /// usually means macOS wants the app restarted before the grant takes effect.
+    public var listenerFailed: Bool
     public var selectableSourceCount: Int
     public var slotCount: Int
     /// Slots that have at least one enabled switch trigger.
@@ -30,6 +33,7 @@ public struct SetupGuideInput: Equatable, Sendable {
     public init(
         accessibilityGranted: Bool,
         inputMonitoringGranted: Bool,
+        listenerFailed: Bool = false,
         selectableSourceCount: Int,
         slotCount: Int,
         boundSlotCount: Int,
@@ -38,6 +42,7 @@ public struct SetupGuideInput: Equatable, Sendable {
     ) {
         self.accessibilityGranted = accessibilityGranted
         self.inputMonitoringGranted = inputMonitoringGranted
+        self.listenerFailed = listenerFailed
         self.selectableSourceCount = selectableSourceCount
         self.slotCount = slotCount
         self.boundSlotCount = boundSlotCount
@@ -51,6 +56,7 @@ public struct SetupGuideInput: Equatable, Sendable {
         sources: [InputSourceInfo],
         accessibilityGranted: Bool,
         inputMonitoringGranted: Bool,
+        listenerFailed: Bool = false,
         hasConfirmedSlots: Bool
     ) {
         let boundSlotIDs = Set(config.bindings.compactMap { binding -> InputRole? in
@@ -60,6 +66,7 @@ public struct SetupGuideInput: Equatable, Sendable {
         self.init(
             accessibilityGranted: accessibilityGranted,
             inputMonitoringGranted: inputMonitoringGranted,
+            listenerFailed: listenerFailed,
             selectableSourceCount: InputSourceMatcher.selectableSources(from: sources).count,
             slotCount: config.slots.count,
             boundSlotCount: config.slots.filter { boundSlotIDs.contains($0.id) }.count,
@@ -82,11 +89,16 @@ public struct SetupGuideState: Equatable, Sendable {
     public let needsMoreSources: Bool
     /// More slots than automatic triggers, and at least one slot is still unbound.
     public let hasSlotsBeyondAutomaticTriggers: Bool
+    /// Both permissions read as granted, yet the listener failed: offer a relaunch.
+    public let shouldOfferRelaunch: Bool
 
     public init(_ input: SetupGuideInput) {
+        let permissionsGranted = input.accessibilityGranted && input.inputMonitoringGranted
         if input.hasCompletedSetup {
             currentStep = nil
-        } else if !(input.accessibilityGranted && input.inputMonitoringGranted) {
+        } else if !permissionsGranted || input.listenerFailed {
+            // A listener that cannot start keeps the guide on the permissions step:
+            // the later steps need working triggers.
             currentStep = .permissions
         } else if !input.hasConfirmedSlots {
             currentStep = .review
@@ -96,6 +108,7 @@ public struct SetupGuideState: Equatable, Sendable {
         needsMoreSources = input.selectableSourceCount < Self.minimumSourceCount
         hasSlotsBeyondAutomaticTriggers = input.slotCount > Self.automaticTriggerLimit
             && input.boundSlotCount < input.slotCount
+        shouldOfferRelaunch = permissionsGranted && input.listenerFailed
     }
 
     public var isFinished: Bool {
