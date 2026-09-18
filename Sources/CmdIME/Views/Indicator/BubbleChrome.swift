@@ -17,7 +17,7 @@ extension BubbleRenderModel {
     /// text colour tells which appearance the model was resolved for.
     var isDarkSurface: Bool {
         switch substrate {
-        case let .glass(isDark, _): isDark
+        case let .glass(isDark, _), let .liquidGlass(isDark): isDark
         case let .paper(hex), let .solid(hex): Self.isDark(hex)
         case .none: !Self.isDark(detailHex)
         }
@@ -30,7 +30,7 @@ extension BubbleRenderModel {
 
     var isGlassLike: Bool {
         switch substrate {
-        case .glass, .solid: true
+        case .glass, .liquidGlass, .solid: true
         case .paper, .none: false
         }
     }
@@ -85,6 +85,18 @@ struct BubbleSubstrateFill: View {
                     isDark ? BubbleChrome.darkMaterialStandIn : BubbleChrome.lightMaterialStandIn
                 }
                 (isDark ? BubbleChrome.darkGlassBase : BubbleChrome.lightGlassBase).opacity(washOpacity)
+            }
+        case let .liquidGlass(isDark):
+            // Live: NSGlassEffectView (or the glass fallback) sits under the hosting view.
+            // Previews and miniatures cannot render the system material, so they approximate it.
+            if isLive {
+                Color.clear
+            } else {
+                ZStack {
+                    isDark ? BubbleChrome.darkMaterialStandIn : BubbleChrome.lightMaterialStandIn
+                    LinearGradient(colors: [.white.opacity(0.18), .white.opacity(0.02)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
             }
         case let .paper(hex), let .solid(hex):
             Color(bubbleHex: hex)

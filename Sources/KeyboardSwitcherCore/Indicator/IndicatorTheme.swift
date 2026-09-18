@@ -6,6 +6,8 @@ public enum BubbleArchetype: String, Codable, CaseIterable, Sendable {
 
 public enum IndicatorSurface: String, Codable, CaseIterable, Sendable {
     case glass, paper, none
+    /// The system's Liquid Glass on macOS 26 and later; the app falls back to `glass` elsewhere.
+    case liquidGlass
 }
 
 public enum IndicatorAppearance: String, Codable, CaseIterable, Sendable {

@@ -9,6 +9,8 @@ import SwiftUI
 final class BubbleContainerView: NSView {
     struct Glass: Equatable {
         let isDark: Bool
+        /// Ask for the system's Liquid Glass; honoured on macOS 26 and later only.
+        var isLiquid = false
         /// The bubble inside the container, in the container's coordinates.
         let frame: CGRect
         let cornerRadius: CGFloat
@@ -21,6 +23,8 @@ final class BubbleContainerView: NSView {
 
     private let hostingView: NSHostingView<LiveBubbleRoot>
     private let glassView = NSVisualEffectView()
+    /// An `NSGlassEffectView`; typed loosely because the class only exists on macOS 26+.
+    private var liquidView: NSView?
     private var maskCache: (key: MaskKey, image: NSImage)?
 
     init(state: BubbleState) {
@@ -52,8 +56,22 @@ final class BubbleContainerView: NSView {
     func setGlass(_ glass: Glass?) {
         guard let glass else {
             glassView.removeFromSuperview()
+            liquidView?.removeFromSuperview()
             return
         }
+        if glass.isLiquid, #available(macOS 26.0, *) {
+            glassView.removeFromSuperview()
+            let liquid = (liquidView as? NSGlassEffectView) ?? NSGlassEffectView()
+            liquid.cornerRadius = glass.cornerRadius
+            liquid.appearance = NSAppearance(named: glass.isDark ? .darkAqua : .aqua)
+            liquid.frame = glass.frame
+            if liquid.superview == nil {
+                addSubview(liquid, positioned: .below, relativeTo: hostingView)
+            }
+            liquidView = liquid
+            return
+        }
+        liquidView?.removeFromSuperview()
         glassView.material = glass.isDark ? .hudWindow : .popover
         glassView.appearance = NSAppearance(named: glass.isDark ? .vibrantDark : .vibrantLight)
         glassView.frame = glass.frame

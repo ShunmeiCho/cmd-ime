@@ -84,7 +84,7 @@ final class IndicatorThemeStoreTests: XCTestCase {
     }
 
     func testSaveExportImportRoundTripAndRemove() throws {
-        var theme = store.duplicate(of: BuiltInIndicatorThemes.all[3], existing: BuiltInIndicatorThemes.all)
+        var theme = store.duplicate(of: try XCTUnwrap(BuiltInIndicatorThemes.all.first { $0.id == "builtin.paper-two-inks" }), existing: BuiltInIndicatorThemes.all)
         theme.typography.textScale = 1.3
         let saved = try store.saving(theme)
         XCTAssertEqual(saved.lastPathComponent, "paper-two-inks-copy.json")

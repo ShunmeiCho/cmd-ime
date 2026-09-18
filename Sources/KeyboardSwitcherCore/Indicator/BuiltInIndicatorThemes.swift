@@ -6,11 +6,22 @@ public enum BuiltInIndicatorThemes {
     public static let defaultID = "builtin.glass"
 
     public static let all: [IndicatorTheme] = [
-        glass, classic, paperOneInk, paperTwoInks, paperSlotInks, typographic, tile, line, switcher, switcherTint,
+        glass, liquidGlass, classic, paperOneInk, paperTwoInks, paperSlotInks, typographic, tile, line, switcher, switcherTint, switcherLiquid,
     ]
 
     /// Translucent glass, an opaque slot-coloured tile, a bright title over a dimmer source name.
     static let glass = IndicatorTheme(id: defaultID, name: "Glass")
+
+    /// The macOS 26 system material. No wash or drawn highlight: the material supplies both.
+    static let liquidGlass = IndicatorTheme(
+        id: "builtin.liquid-glass", name: "Liquid Glass", surface: .liquidGlass,
+        washOpacity: 0, highlightStrength: 0
+    )
+
+    static let switcherLiquid = IndicatorTheme(
+        id: "builtin.switcher-liquid", name: "Switcher, Liquid", archetype: .switcher, surface: .liquidGlass,
+        washOpacity: 0, highlightStrength: 0
+    )
 
     /// The bubble as it looked before themes: no wash, no top highlight, rounder corners.
     static let classic = IndicatorTheme(

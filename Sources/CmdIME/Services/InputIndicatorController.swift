@@ -197,9 +197,15 @@ final class InputIndicatorController {
     private func configurePanel(for model: BubbleRenderModel, bubbleSize: CGSize) {
         if panel.contentView !== container { panel.contentView = container }
         let margin = model.metrics.shadowMargin.points
-        if case let .glass(isDark, _) = model.substrate {
+        let glass: (isDark: Bool, isLiquid: Bool)? = switch model.substrate {
+        case let .glass(isDark, _): (isDark, false)
+        case let .liquidGlass(isDark): (isDark, true)
+        default: nil
+        }
+        if let glass {
             container.setGlass(.init(
-                isDark: isDark,
+                isDark: glass.isDark,
+                isLiquid: glass.isLiquid,
                 frame: CGRect(origin: CGPoint(x: margin, y: margin), size: bubbleSize),
                 cornerRadius: model.metrics.bubbleRadius.points
             ))

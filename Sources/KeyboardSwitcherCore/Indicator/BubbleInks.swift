@@ -47,10 +47,16 @@ struct BubbleInks {
         let neutralHex = isDark ? Self.darkNeutralHex : Self.lightNeutralHex
 
         switch theme.surface {
-        case .glass:
+        case .glass, .liquidGlass:
             let base = isDark ? Self.darkGlassBaseHex : Self.lightGlassBaseHex
             let isSolid = context.reduceTransparency || context.increaseContrast
-            substrate = isSolid ? .solid(hex: base) : .glass(isDark: isDark, washOpacity: theme.washOpacity)
+            if isSolid {
+                substrate = .solid(hex: base)
+            } else if theme.surface == .liquidGlass {
+                substrate = .liquidGlass(isDark: isDark)
+            } else {
+                substrate = .glass(isDark: isDark, washOpacity: theme.washOpacity)
+            }
             surfaceHex = base
             textHex = theme.textInkHex ?? neutralHex
             detailOpacity = context.increaseContrast ? 1 : (isDark ? Self.darkDetailOpacity : Self.lightDetailOpacity)

@@ -23,6 +23,8 @@ public struct IndicatorRenderContext: Equatable, Sendable {
 
 public enum BubbleSubstrate: Equatable, Sendable {
     case glass(isDark: Bool, washOpacity: Double)
+    /// No wash: the system material does its own lensing and adapts to what is behind it.
+    case liquidGlass(isDark: Bool)
     case paper(hex: String)
     /// Glass under Reduce Transparency or Increase Contrast.
     case solid(hex: String)
