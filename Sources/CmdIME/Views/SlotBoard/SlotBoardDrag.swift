@@ -15,7 +15,7 @@ final class DragPointer: ObservableObject {
 
 @MainActor
 final class SlotBoardDragController: ObservableObject {
-    enum State: Equatable { case idle, dragging, settling, returning, rejecting }
+    enum State: Equatable { case idle, dragging, settling, handoff, returning, rejecting }
 
     @Published private(set) var state: State = .idle
     @Published private(set) var insertionIndex: Int?
@@ -198,8 +198,10 @@ final class SlotBoardDragController: ObservableObject {
         targetFrame = CGRect(x: frozenColumn.minX, y: y, width: originFrame.width, height: originFrame.height)
         if reduceMotion {
             guard performCommit() else { rejectDrop(); return }
+            completeSettling()
+        } else {
+            startMotion(.settling)
         }
-        startMotion(.settling)
     }
 
     /// The gesture sentinel is the sole normal resource-cleanup point. Deferral
@@ -225,7 +227,7 @@ final class SlotBoardDragController: ObservableObject {
         reduceMotion = reduced
         if reduced, state == .settling {
             guard performCommit() else { rejectDrop(); return }
-            startMotion(.settling)
+            completeSettling()
         } else if reduced, state == .returning || state == .rejecting {
             targetFrame = originFrame
             startMotion(.returning)
@@ -262,12 +264,23 @@ final class SlotBoardDragController: ObservableObject {
         switch state {
         case .settling:
             guard performCommit() else { rejectDrop(); return }
-            clearSession()
+            completeSettling()
+        case .handoff: clearSession()
         case .rejecting:
             targetFrame = originFrame
             startMotion(.returning)
         case .returning: clearSession()
         case .idle, .dragging: break
+        }
+    }
+
+    /// The real card exists before the source ghost begins fading out.
+    private func completeSettling() {
+        if case .source = payload {
+            insertionIndex = nil
+            startMotion(.handoff)
+        } else {
+            clearSession()
         }
     }
 
@@ -281,7 +294,7 @@ final class SlotBoardDragController: ObservableObject {
 
     private func startMotion(_ phase: State) {
         motionToken = UUID()
-        motionDuration = reduceMotion ? DesignTokens.Motion.fast : DesignTokens.Motion.slow
+        motionDuration = reduceMotion || phase == .handoff ? DesignTokens.Motion.fast : DesignTokens.Motion.slow
         motionProgress = 0
         state = phase
         let token = motionToken
@@ -461,7 +474,7 @@ struct SlotDragGhost<Content: View>: View {
     }
     private var faded: Bool {
         !appeared || (controller.reduceMotion && controller.state != .dragging)
-            || (isSource && controller.state == .settling)
+            || (isSource && controller.state == .handoff)
     }
     private var flight: Animation? {
         guard !controller.reduceMotion else { return nil }
