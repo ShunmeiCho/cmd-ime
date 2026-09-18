@@ -26,6 +26,14 @@ public struct InputSourceMatchResult: Equatable, Sendable {
 }
 
 public enum InputSourceMatcher {
+    /// Returns the first slot whose resolved source is selected, including fallback matches.
+    public static func slotID(forSelectedSourceID selectedID: String?, sources: [InputSourceInfo], config: SwitcherConfig) -> InputRole? {
+        guard let selectedID else { return nil }
+        return config.slots.first {
+            bestMatch(for: $0.id, sources: sources, config: config)?.id == selectedID
+        }?.id
+    }
+
     public static func bestMatch(
         for role: InputRole,
         sources: [InputSourceInfo],

@@ -6,6 +6,61 @@ final class InputSourceMatcherTests: XCTestCase {
         InputSourceInfo(id: id, localizedName: id, languages: ["en"], isSelectCapable: selectable)
     }
 
+    func testSelectedSourceSlotMatchesPreferredSource() {
+        let preferred = source("preferred")
+        var config = SwitcherConfig.default
+        config.pinInputSourceID(preferred.id, for: .chinese)
+        XCTAssertEqual(InputSourceMatcher.slotID(forSelectedSourceID: preferred.id, sources: [preferred], config: config), .english)
+        // Explicitly select a source that no earlier slot resolves to.
+        config.inputSources["english"] = RoleInputSourcePreference()
+        XCTAssertEqual(InputSourceMatcher.slotID(forSelectedSourceID: preferred.id, sources: [preferred], config: config), .chinese)
+    }
+
+    func testSelectedSourceSlotMatchesFallbackThroughExistingMatcherTiers() {
+        let fallback = source("chosen.english")
+        let preferences = [
+            RoleInputSourcePreference(preferredIDs: ["missing"], fallbackLanguage: "en"),
+            RoleInputSourcePreference(preferredIDs: ["missing", fallback.id]),
+            RoleInputSourcePreference(languagePrefixes: ["en"]),
+            RoleInputSourcePreference(nameContains: ["chosen"]),
+        ]
+        for preference in preferences {
+            var config = SwitcherConfig.default
+            config.inputSources["english"] = preference
+            XCTAssertEqual(InputSourceMatcher.slotID(forSelectedSourceID: fallback.id, sources: [fallback], config: config), .english)
+        }
+    }
+
+    func testSelectedSourceSlotReturnsNilForUnmatchedOrUnavailableSelection() {
+        let preferred = source("preferred")
+        let other = source("other")
+        var config = SwitcherConfig.default
+        config.inputSources["english"] = RoleInputSourcePreference(preferredIDs: [preferred.id])
+        let sources = [preferred, other]
+        XCTAssertNil(InputSourceMatcher.slotID(forSelectedSourceID: other.id, sources: sources, config: config))
+        XCTAssertNil(InputSourceMatcher.slotID(forSelectedSourceID: "missing", sources: sources, config: config))
+        XCTAssertNil(InputSourceMatcher.slotID(forSelectedSourceID: nil, sources: sources, config: config))
+        XCTAssertNil(InputSourceMatcher.slotID(forSelectedSourceID: preferred.id, sources: [], config: config))
+        XCTAssertNil(InputSourceMatcher.slotID(forSelectedSourceID: preferred.id, sources: [source(preferred.id, selectable: false)], config: config))
+    }
+
+    func testSelectedSourceSlotChoosesFirstResolvedSlotInConfigOrder() {
+        let shared = source("shared")
+        var config = SwitcherConfig.default
+        config.inputSources["english"] = RoleInputSourcePreference(fallbackLanguage: "en")
+        config.inputSources["chinese"] = RoleInputSourcePreference(preferredIDs: [shared.id])
+        XCTAssertEqual(config.duplicateSlotIDs(for: .english, sources: [shared]), [.chinese])
+        XCTAssertEqual(InputSourceMatcher.slotID(forSelectedSourceID: shared.id, sources: [shared], config: config), .english)
+        config.slots.swapAt(0, 1)
+        XCTAssertEqual(InputSourceMatcher.slotID(forSelectedSourceID: shared.id, sources: [shared], config: config), .chinese)
+    }
+
+    func testSelectedSourceSlotReturnsNilForEmptyConfig() {
+        let selected = source("selected")
+        let empty = SwitcherConfig(slots: [], bindings: [], inputSources: [:])
+        XCTAssertNil(InputSourceMatcher.slotID(forSelectedSourceID: selected.id, sources: [selected], config: empty))
+    }
+
     func testNewSelectableSourcesIgnoresExistingIDsAndMetadataChanges() {
         let existing = source("existing")
         XCTAssertEqual(InputSourceMatcher.newSelectableSources(previous: [existing], current: [existing]), [])
