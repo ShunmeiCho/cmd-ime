@@ -35,6 +35,12 @@ enum DesignTokens {
         }
     }
 
+    enum Typography {
+        static let title = Font.system(size: 13, weight: .semibold)
+        static let body = Font.system(size: 12)
+        static let auxiliary = Font.system(size: 11)
+    }
+
     enum Radius {
         static let windowSurface: CGFloat = 14
         static let surface: CGFloat = 12
@@ -232,10 +238,10 @@ struct KeycapView: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(label)
-                .font(.system(.callout, design: .monospaced).weight(.semibold))
+                .font(DesignTokens.Typography.body.monospaced().weight(.semibold))
             if let detail {
                 Text(detail)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(DesignTokens.Typography.auxiliary.monospaced().weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .padding(.top, 2)
             }
@@ -432,7 +438,7 @@ private struct ConsoleButtonBody: View {
 
     var body: some View {
         configuration.label
-            .font(.caption.weight(.semibold))
+            .font(DesignTokens.Typography.body.weight(.semibold))
             .foregroundStyle(foreground)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)

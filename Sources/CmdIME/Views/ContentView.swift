@@ -134,12 +134,12 @@ private struct SettingsHeader: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("CmdIME")
-                    .font(.title2.weight(.semibold))
+                    .font(DesignTokens.Typography.title)
                     .foregroundStyle(DesignTokens.Colors.textPrimary)
                 Text("A precision instrument for input switching")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer()
@@ -176,7 +176,7 @@ private struct PermissionsCard: View {
                     details.padding(.top, 10)
                 } label: {
                     Label("Keyboard access ready", systemImage: "checkmark.circle.fill")
-                        .font(.callout)
+                        .font(DesignTokens.Typography.body)
                         .foregroundStyle(DesignTokens.Colors.textPrimary)
                 }
                 .padding(12)
@@ -197,7 +197,7 @@ private struct PermissionsCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(status.detail)
-                    .font(.callout)
+                    .font(DesignTokens.Typography.body)
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
@@ -237,18 +237,18 @@ private struct PermissionMiniStatus: View {
     var body: some View {
         HStack(spacing: 9) {
             Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .font(.caption.weight(.bold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(granted ? DesignTokens.Colors.success : DesignTokens.Colors.warning)
 
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
 
             Spacer()
 
             if granted {
                 Text("Ready")
-                    .font(.caption.weight(.semibold))
+                    .font(DesignTokens.Typography.body.weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.success)
             } else {
                 Button(actionTitle, action: action)
@@ -280,7 +280,7 @@ private struct CompactLiveKeysStrip: View {
                 SectionLabel("Live keys")
                 Spacer()
                 Text("Bound keys take their slot's color - the active slot's key lights up")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
 
@@ -702,7 +702,7 @@ private struct RuntimeSection: View {
                 }
 
                 Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 12)
@@ -719,7 +719,7 @@ private struct RuntimeToggleRow: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
             Spacer()
             Toggle(title, isOn: $isOn)
@@ -742,12 +742,12 @@ private struct RuntimeActionRow<Action: View>: View {
         HStack(alignment: .center) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.caption.weight(.semibold))
+                    .font(DesignTokens.Typography.body.weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.textPrimary)
                 Text(detail)
-                    .font(.caption)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer()
             action()
@@ -797,10 +797,9 @@ private struct CompactSettingRow<Content: View>: View {
     var body: some View {
         HStack(spacing: 10) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(width: 76, alignment: .leading)
             content()
                 .environment(\.consoleControlLabel, title)
@@ -840,10 +839,9 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                     selection = option.value
                 } label: {
                     Text(option.label)
-                        .font(.caption.weight(.semibold))
+                        .font(DesignTokens.Typography.body.weight(.semibold))
                         .foregroundStyle(selection == option.value ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textMuted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+                        .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, minHeight: 24)
                         .contentShape(Rectangle())
                 }
@@ -960,9 +958,8 @@ struct SectionLabel: View {
 
     var body: some View {
         Text(title.uppercased())
-            .font(.caption2.weight(.bold))
-            .monospaced()
-            .tracking(2.2)
+            .font(DesignTokens.Typography.auxiliary.weight(.semibold))
+            .tracking(1.4)
             .foregroundStyle(DesignTokens.Colors.textMuted)
             .accessibilityAddTraits(.isHeader)
     }
