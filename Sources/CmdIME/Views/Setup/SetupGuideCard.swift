@@ -44,7 +44,7 @@ struct SetupGuideCard: View {
         CompactSection(title: "Setup guide") {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
-                    Text("Three short steps. Everything stays editable afterwards.")
+                    Text("Three short steps. Everything stays editable afterwards, and Runtime > Setup guide shows this guide again.")
                         .setupBodyText()
                     Spacer(minLength: 8)
                     StatusPill(
@@ -56,6 +56,13 @@ struct SetupGuideCard: View {
                         complete(announcement: session.isReopened ? "Setup guide closed." : "Setup skipped. The guide stays available under Runtime.")
                     }
                     .buttonStyle(ConsoleButtonStyle())
+                }
+
+                if current != .tryIt {
+                    // "Try it" closes with the same answer; the earlier steps send the
+                    // user to System Settings, or let them skip, before they get there.
+                    Text("CmdIME runs in the background with no Dock or menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use Runtime > Quit agent.")
+                        .setupNoteText()
                 }
 
                 ForEach(SetupStep.allCases, id: \.self) { step in

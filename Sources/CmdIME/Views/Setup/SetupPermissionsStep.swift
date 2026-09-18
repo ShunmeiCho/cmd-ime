@@ -74,8 +74,8 @@ struct SetupPermissionsStep: View {
 
             if showsQuitInsteadOfRelaunch {
                 Text(model.config.hasCompletedSetup
-                    ? "After quitting, open CmdIME again from Launchpad or Spotlight."
-                    : "After quitting, open CmdIME again from Launchpad or Spotlight. The guide continues where it stopped.")
+                    ? "After quitting, open CmdIME again from Spotlight or the Applications folder."
+                    : "After quitting, open CmdIME again from Spotlight or the Applications folder. The guide continues where it stopped.")
                     .setupNoteText()
             }
 
@@ -155,6 +155,9 @@ private struct SetupPermissionRow: View {
                 StatusPill(text: "Ready", systemImage: "checkmark", tone: .success)
                     .accessibilityHidden(true)
             } else {
+                // The restart hint refers to this word, and status is never icon-only.
+                StatusPill(text: "Missing", systemImage: "exclamationmark.triangle.fill", tone: .warning)
+                    .accessibilityHidden(true)
                 Button("Open Settings", action: onOpenSettings)
                     .buttonStyle(ConsoleButtonStyle())
                     .accessibilityLabel("Open \(title) settings")

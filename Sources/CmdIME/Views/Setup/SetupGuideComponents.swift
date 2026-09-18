@@ -16,6 +16,12 @@ extension Text {
     }
 }
 
+enum SetupGuideCopy {
+    /// How to get the settings window back. Launchpad is gone from macOS 26 on, so
+    /// the hint names only what every supported system has.
+    static let reopenHint = "To come back to this window, open CmdIME again from Spotlight or the Applications folder."
+}
+
 /// The inset surface used by permission rows and notices.
 struct SetupInsetBackground: View {
     var stroke = DesignTokens.Colors.separator
