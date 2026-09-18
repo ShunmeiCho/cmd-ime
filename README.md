@@ -14,6 +14,13 @@ CmdIME is a macOS input-source switcher built around configurable switch slots
 and direct target switching. Instead of cycling through input sources, press the
 slot you want and CmdIME selects the matching macOS input source.
 
+Why not just use the built-in `Control+Space`? It cycles, so with three or more
+input sources you have to look at where you landed, and many users find that a
+press is occasionally delayed or seems to do nothing. CmdIME gives every input
+source its own key, confirms that macOS really made the switch (retrying when it
+did not), and shows a small indicator near the caret so you know where you are
+without looking at the menu bar.
+
 ## What It Does
 
 CmdIME scans the input sources already installed in macOS instead of hardcoding
