@@ -255,17 +255,23 @@ private struct CompactLiveKeysStrip: View {
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
 
-            HStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 6) {
                 ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
                 LiveStripKey("space")
                     .frame(maxWidth: .infinity)
                 ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
-                ForEach(model.config.chordTriggers, id: \.slot) { entry in
-                    LiveStripKey(
-                        Self.symbols(for: entry.trigger),
-                        role: entry.slot,
-                        isActive: model.activeRole == entry.slot
-                    )
+            }
+
+            if !model.config.chordTriggers.isEmpty {
+                LiveKeyFlowLayout(spacing: 6) {
+                    ForEach(Array(model.config.chordTriggers.enumerated()), id: \.offset) { _, entry in
+                        LiveStripKey(
+                            Self.symbols(for: entry.trigger),
+                            role: entry.slot,
+                            isActive: model.activeRole == entry.slot
+                        )
+                        .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
+                    }
                 }
             }
         }
@@ -275,16 +281,87 @@ private struct CompactLiveKeysStrip: View {
     private static let leftModifierKeys = ["left-shift", "left-control", "left-option", "left-command"]
     private static let rightModifierKeys = ["right-command", "right-option", "right-control", "right-shift"]
 
-    private func modifierKey(_ keyName: String) -> LiveStripKey {
+    @ViewBuilder
+    private func modifierKey(_ keyName: String) -> some View {
         let keycap = LiveKeycap(keyName: keyName)
-        guard let slot = model.config.slotID(forOneShotKeyName: keyName) else {
-            return LiveStripKey(keycap.label)
+        let entries = model.config.slots.flatMap { slot in
+            model.config.bindings.filter {
+                $0.enabled && $0.action.type == .switchInputSource && $0.action.role == slot.id
+                    && $0.trigger.kind == .oneShotModifier && $0.trigger.keyName == keyName
+            }.map { (slot: slot.id, trigger: $0.trigger) }
         }
-        return LiveStripKey(keycap.label, role: slot, detail: keycap.detail, isActive: model.activeRole == slot)
+        if entries.isEmpty {
+            LiveStripKey(keycap.label)
+        } else {
+            // Multiple bindings keep the same physical key column. Gesture text
+            // distinguishes them even when their slot colors are identical.
+            VStack(spacing: 4) {
+                ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
+                    let gesture = entry.trigger.gesture == .doubleTap ? "x2" : (entries.count > 1 ? "x1" : nil)
+                    LiveStripKey(keycap.label, role: entry.slot,
+                                 detail: [keycap.detail, gesture].compactMap { $0 }.joined(separator: " "),
+                                 isActive: model.activeRole == entry.slot)
+                        .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
+                }
+            }
+        }
     }
 
     private static func symbols(for trigger: KeyTrigger) -> String {
         trigger.displayName.split(separator: "+").map { LiveKeycap(keyName: String($0)).label }.joined()
+    }
+}
+
+/// Keeps the physical keyboard row separate from a variable number of chords.
+private struct LiveKeyFlowLayout: Layout {
+    let spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        metrics(for: subviews, width: proposal.width).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let metrics = metrics(for: subviews, width: bounds.width)
+        for (index, subview) in subviews.enumerated() {
+            subview.place(at: CGPoint(x: bounds.minX + metrics.origins[index].x,
+                                     y: bounds.minY + metrics.origins[index].y),
+                          anchor: .topLeading, proposal: ProposedViewSize(metrics.sizes[index]))
+        }
+    }
+
+    private func metrics(for subviews: Subviews, width: CGFloat?) -> LiveKeyFlowMetrics {
+        LiveKeyFlowMetrics(sizes: subviews.map { $0.sizeThatFits(.unspecified) },
+                           availableWidth: width, spacing: spacing)
+    }
+}
+
+private struct LiveKeyFlowMetrics {
+    let sizes: [CGSize]
+    let origins: [CGPoint]
+    let size: CGSize
+
+    init(sizes: [CGSize], availableWidth: CGFloat?, spacing: CGFloat) {
+        self.sizes = sizes
+        let idealWidth = sizes.reduce(0) { $0 + $1.width } + CGFloat(max(0, sizes.count - 1)) * spacing
+        let width = availableWidth.flatMap { $0.isFinite ? max(0, $0) : nil } ?? idealWidth
+        var origins: [CGPoint] = []
+        var x: CGFloat = 0
+        var y: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var usedWidth: CGFloat = 0
+        for item in sizes {
+            if x > 0 && x + item.width > width {
+                x = 0
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            origins.append(CGPoint(x: x, y: y))
+            usedWidth = max(usedWidth, x + item.width)
+            rowHeight = max(rowHeight, item.height)
+            x += item.width + spacing
+        }
+        self.origins = origins
+        size = CGSize(width: max(width, usedWidth), height: sizes.isEmpty ? 0 : y + rowHeight)
     }
 }
 
