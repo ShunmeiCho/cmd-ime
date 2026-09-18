@@ -26,6 +26,8 @@ public struct SetupGuideInput: Equatable, Sendable {
     public var slotCount: Int
     /// Slots that have at least one enabled switch trigger.
     public var boundSlotCount: Int
+    /// Slots a fresh detection would create from the installed sources right now.
+    public var detectableSlotCount: Int
     /// Session-only: the user pressed "Looks right" in the review step. Never persisted.
     public var hasConfirmedSlots: Bool
     public var hasCompletedSetup: Bool
@@ -37,6 +39,7 @@ public struct SetupGuideInput: Equatable, Sendable {
         selectableSourceCount: Int,
         slotCount: Int,
         boundSlotCount: Int,
+        detectableSlotCount: Int,
         hasConfirmedSlots: Bool,
         hasCompletedSetup: Bool
     ) {
@@ -46,6 +49,7 @@ public struct SetupGuideInput: Equatable, Sendable {
         self.selectableSourceCount = selectableSourceCount
         self.slotCount = slotCount
         self.boundSlotCount = boundSlotCount
+        self.detectableSlotCount = detectableSlotCount
         self.hasConfirmedSlots = hasConfirmedSlots
         self.hasCompletedSetup = hasCompletedSetup
     }
@@ -70,6 +74,7 @@ public struct SetupGuideInput: Equatable, Sendable {
             selectableSourceCount: InputSourceMatcher.selectableSources(from: sources).count,
             slotCount: config.slots.count,
             boundSlotCount: config.slots.filter { boundSlotIDs.contains($0.id) }.count,
+            detectableSlotCount: SwitcherConfig.detectableSlotCount(from: sources),
             hasConfirmedSlots: hasConfirmedSlots,
             hasCompletedSetup: config.hasCompletedSetup
         )
@@ -91,6 +96,9 @@ public struct SetupGuideState: Equatable, Sendable {
     public let hasSlotsBeyondAutomaticTriggers: Bool
     /// Both permissions read as granted, yet the listener failed: offer a relaunch.
     public let shouldOfferRelaunch: Bool
+    /// Detection left a single slot and would find more now. Counting sources is not
+    /// enough: several sources of one language still detect as one slot.
+    public let canDetectAgain: Bool
 
     public init(_ input: SetupGuideInput) {
         let permissionsGranted = input.accessibilityGranted && input.inputMonitoringGranted
@@ -109,6 +117,8 @@ public struct SetupGuideState: Equatable, Sendable {
         hasSlotsBeyondAutomaticTriggers = input.slotCount > Self.automaticTriggerLimit
             && input.boundSlotCount < input.slotCount
         shouldOfferRelaunch = permissionsGranted && input.listenerFailed
+        canDetectAgain = input.slotCount < Self.minimumSourceCount
+            && input.detectableSlotCount > input.slotCount
     }
 
     public var isFinished: Bool {
@@ -128,6 +138,13 @@ extension SwitcherConfig {
         var result = self
         result.hasCompletedSetup = true
         return result
+    }
+
+    /// How many slots `detected(from:)` would create from these sources. Zero when
+    /// it would fall back to the legacy defaults, which is not a detection result.
+    public static func detectableSlotCount(from sources: [InputSourceInfo]) -> Int {
+        let fresh = detected(from: sources)
+        return fresh == .default ? 0 : fresh.slots.count
     }
 }
 

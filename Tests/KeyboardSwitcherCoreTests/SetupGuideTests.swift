@@ -19,6 +19,7 @@ final class SetupGuideTests: XCTestCase {
         sources: Int = 2,
         slots: Int = 2,
         bound: Int = 2,
+        detectable: Int? = nil,
         confirmed: Bool = false,
         completed: Bool = false
     ) -> SetupGuideInput {
@@ -29,6 +30,7 @@ final class SetupGuideTests: XCTestCase {
             selectableSourceCount: sources,
             slotCount: slots,
             boundSlotCount: bound,
+            detectableSlotCount: detectable ?? slots,
             hasConfirmedSlots: confirmed,
             hasCompletedSetup: completed
         )
@@ -200,6 +202,34 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertFalse(SetupGuideState(input(sources: 8, slots: 3, bound: 2)).hasSlotsBeyondAutomaticTriggers)
     }
 
+    func testDetectAgainNeedsASingleSlotAndADetectionThatFindsMore() {
+        XCTAssertTrue(SetupGuideState(input(sources: 2, slots: 1, bound: 1, detectable: 2)).canDetectAgain)
+        // Two sources of one language: detection would rebuild the same single slot.
+        XCTAssertFalse(SetupGuideState(input(sources: 2, slots: 1, bound: 1, detectable: 1)).canDetectAgain)
+        XCTAssertFalse(SetupGuideState(input(sources: 3, slots: 2, bound: 2, detectable: 3)).canDetectAgain)
+        XCTAssertFalse(SetupGuideState(input(sources: 0, slots: 1, bound: 1, detectable: 0)).canDetectAgain)
+    }
+
+    func testDetectableSlotCountFollowsDetectionNotTheSourceCount() {
+        let sameLanguage = [source("en", id: "abc"), source("en-GB", id: "british")]
+        let single = SwitcherConfig.detected(from: sameLanguage)
+
+        let unchanged = SetupGuideInput(config: single, sources: sameLanguage, accessibilityGranted: true,
+                                        inputMonitoringGranted: true, hasConfirmedSlots: false)
+        let grown = SetupGuideInput(config: single, sources: sameLanguage + [source("ko")], accessibilityGranted: true,
+                                    inputMonitoringGranted: true, hasConfirmedSlots: false)
+        let nothingDetectable = SetupGuideInput(config: single, sources: [], accessibilityGranted: true,
+                                                inputMonitoringGranted: true, hasConfirmedSlots: false)
+
+        XCTAssertEqual(unchanged.selectableSourceCount, 2)
+        XCTAssertEqual(unchanged.detectableSlotCount, 1)
+        XCTAssertFalse(SetupGuideState(unchanged).canDetectAgain)
+        XCTAssertEqual(grown.detectableSlotCount, 2)
+        XCTAssertTrue(SetupGuideState(grown).canDetectAgain)
+        // Without a usable language detection falls back to the legacy slots: not a finding.
+        XCTAssertEqual(nothingDetectable.detectableSlotCount, 0)
+    }
+
     // MARK: Input from the live configuration
 
     func testInputCountsSelectableSourcesSlotsAndBoundSlots() throws {
@@ -228,7 +258,7 @@ final class SetupGuideTests: XCTestCase {
             hasConfirmedSlots: true
         )
 
-        XCTAssertEqual(input, self.input(inputMonitoring: false, sources: 7, slots: 7, bound: 5, confirmed: true))
+        XCTAssertEqual(input, self.input(inputMonitoring: false, sources: 7, slots: 7, bound: 5, detectable: 7, confirmed: true))
         XCTAssertEqual(input.boundSlotCount, SetupGuideState.automaticTriggerLimit)
         XCTAssertTrue(SetupGuideState(input).hasSlotsBeyondAutomaticTriggers)
         XCTAssertTrue(SetupGuideInput(

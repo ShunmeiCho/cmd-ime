@@ -16,7 +16,7 @@ struct SetupReviewStep: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Each line below is a slot, a switch target: fire its trigger and that input source becomes active. On first launch CmdIME creates one slot per installed language.")
+            Text(introText)
                 .setupBodyText()
 
             if state.needsMoreSources {
@@ -35,7 +35,7 @@ struct SetupReviewStep: View {
                 SetupNotice(
                     systemImage: "plus.circle.fill",
                     tone: .neutral,
-                    text: "CmdIME now sees \(model.selectableSources.count) input sources, but the slots were detected earlier. Detect Again replaces the current slots and triggers with one slot per installed language."
+                    text: "A fresh detection would now create more slots than are set up here. Detect Again replaces the current slots and triggers with one slot per installed language."
                 ) {
                     Button("Detect Again") {
                         model.resetSlotsFromDetectedSources()
@@ -45,6 +45,12 @@ struct SetupReviewStep: View {
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
                     refreshButton
                 }
+            } else if model.config.slots.count < SetupGuideState.minimumSourceCount {
+                SetupNotice(
+                    systemImage: "info.circle.fill",
+                    tone: .neutral,
+                    text: "Detection makes one slot per language, so input sources that share a language share one slot. To switch between them, add a slot on the slot board with Change."
+                )
             }
 
             if let lastActionMessage {
@@ -82,9 +88,11 @@ struct SetupReviewStep: View {
 
     private var refreshButton: some View {
         Button("Refresh") {
-            model.scan()
+            // The model's own line counts every TIS entry, palettes and input-mode
+            // parents included; the guide only ever talks about selectable sources.
+            let didScan = model.scan()
             resetDrafts()
-            report(model.statusText)
+            report(didScan ? Self.foundMessage(count: model.selectableSources.count) : model.statusText)
         }
         .buttonStyle(ConsoleButtonStyle())
         .accessibilityLabel("Refresh input sources")
@@ -95,10 +103,24 @@ struct SetupReviewStep: View {
         SetupGuideNavigation.announce(message)
     }
 
-    /// First run only: a source was added after detection left a single slot. Returning
+    /// First run only: detection left a single slot and would find more now. Returning
     /// users rebuild through the slot board's confirmed Reset to Detected instead.
     private var canDetectAgain: Bool {
-        !model.config.hasCompletedSetup && model.config.slots.count < SetupGuideState.minimumSourceCount
+        !model.config.hasCompletedSetup && state.canDetectAgain
+    }
+
+    /// Only a pending first run shows detected slots; a replay shows the user's own.
+    private var introText: String {
+        let slots = "Each line below is a slot, a switch target: fire its trigger and that input source becomes active."
+        return model.config.hasCompletedSetup
+            ? slots
+            : "\(slots) On first launch CmdIME creates one slot per installed language."
+    }
+
+    private static func foundMessage(count: Int) -> String {
+        count == 1
+            ? "Found 1 input source you can switch to."
+            : "Found \(count) input sources you can switch to."
     }
 
     private var usesOneShotShift: Bool {
