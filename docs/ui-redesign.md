@@ -236,3 +236,44 @@ the Scale slider's accessibility label/value. Its view bodies stay untouched by
 this window increment. On-device acceptance includes 0, 2 and 8 chords at the
 720-point minimum width, permission disclosure, disabled buttons, Full Keyboard
 Access and VoiceOver. This increment does not claim that those UI checks ran.
+
+## Decision record — 2026-09-19: Switch indicator redesign
+
+The owner explicitly approves redesigning "Indicator style", which is on the
+frozen list above. The freeze still holds for the settings window: the indicator
+section keeps the console components (`CompactSection`, `CompactSettingRow`,
+`ConsoleSegmentedControl`, `ConsoleMenuButton`, `ConsoleButtonStyle`) and the dark
+console look. The new design language applies to the bubble and its preview only.
+
+- One SwiftUI view draws the live panel, the settings preview and the theme
+  miniatures. The duplicate preview drawing is gone.
+- The bubble is drawn from a theme (data): a closed set of layout archetypes, a
+  surface (glass, paper, none), a colour source (slot or the theme's own inks),
+  shape and type. Ten built-ins ship; Glass is the default for new and existing
+  users and Classic keeps the previous look. Display, Size, Scale and Color keep
+  their stored values and compose with the theme; a Display value a theme cannot
+  show is coerced for drawing only.
+- Colour and type voice follow the mono-color system (exact substrate and ink
+  hex values, approved pairs, each ink one job, paper stays visible, flat type,
+  one display voice plus one utility voice). Motion, materials, depth and
+  spacing follow the apple-design and animate references: opacity, a few points
+  of travel and a three percent content settle; a strong ease-out for entering
+  and leaving; critically damped springs; a re-trigger never restarts from
+  invisible; Reduce Motion, Reduce Transparency and Increase Contrast are three
+  separate signals.
+- A slot has one colour, `slot.tintHex`. The per-slot custom indicator colours
+  are retired and migrated into it. Swatches and cells show selection with a
+  fixed high-contrast ring and a checkmark, never with the option's own colour.
+- The indicator card's minimum height is removed and the Scale slider has an
+  accessibility label and value, as assigned to this redesign above.
+
+Handoff to the slot board: the slot badge, colour popover and live keys strip
+should adopt `DisplayTint.adjusted(tint, against: surface, minimum: 3.0)` and the
+fixed-ring selection affordance; `RoleBadge`, `SetupSlotSentenceRow` and the live
+keys strip should read `SlotSymbolResolver` and `SlotTitleResolver`, because until
+then the window and the bubble can disagree for languages outside en / zh / ja / ko.
+
+None of the on-device checks ran (vibrancy in a never-key panel, text contrast
+over a white page at wash 0.45, re-trigger and dismiss reversal, thumb
+retargeting, imported fonts in the live panel). Offscreen renders approximate
+glass with a translucent fill and no blur.
