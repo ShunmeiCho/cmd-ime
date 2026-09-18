@@ -24,11 +24,10 @@ struct ContentView: View {
                     model: model,
                     triggerDrafts: $triggerDrafts,
                     triggerTypeDrafts: $triggerTypeDrafts,
-                    resetDrafts: resetDrafts
+                    resetDrafts: resetDrafts,
+                    footer: AnyView(CompactLiveKeysStrip(model: model).setupFold(.liveKeys))
                 )
                 .setupFold(.slotBoard)
-                CompactLiveKeysStrip(model: model)
-                    .setupFold(.liveKeys)
 
                 HStack(alignment: .top, spacing: 14) {
                     IndicatorSettingsCard(model: model)
@@ -257,24 +256,32 @@ private struct CompactLiveKeysStrip: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(alignment: .firstTextBaseline) {
-                SectionLabel("Live keys")
-                Spacer()
-                Text("Bound keys take their slot's color - the active slot's key lights up")
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-            }
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+            Text("Live keys · Bound keys light up for the current slot")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
 
-            HStack(alignment: .top, spacing: 6) {
-                ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
-                LiveStripKey("space")
-                    .frame(maxWidth: .infinity)
-                ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                    ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
+                    LiveStripKey("space")
+                    ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
+                }
+                .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+                    HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                        ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0) }
+                        LiveStripKey("space")
+                    }
+                    HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                        ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0) }
+                    }
+                }
             }
 
             if !model.config.chordTriggers.isEmpty {
-                LiveKeyFlowLayout(spacing: 6) {
+                LiveKeyFlowLayout(spacing: DesignTokens.Layout.rowGap) {
                     ForEach(Array(model.config.chordTriggers.enumerated()), id: \.offset) { _, entry in
                         LiveStripKey(
                             Self.symbols(for: entry.trigger),

@@ -12,7 +12,7 @@ enum SetupFoldSection: String, Hashable, Sendable {
     var title: String {
         switch self {
         case .keyboardControl: "Keyboard control"
-        case .slotBoard: "Switch slots"
+        case .slotBoard: "Slots"
         case .liveKeys: "Live keys"
         case .indicator: "Switch indicator"
         case .runtime: "General"

@@ -12,8 +12,8 @@ struct SourceListColumn: View {
     let onLocate: (InputRole) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+            HStack(spacing: DesignTokens.Layout.rowGap) {
                 SectionLabel("Input sources")
                 Spacer(minLength: 0)
                 Button(action: onRefresh) {
@@ -23,19 +23,20 @@ struct SourceListColumn: View {
                 .accessibilityLabel("Refresh input sources")
                 .help("Refresh installed input sources")
             }
-            if let message = model.sourceRefreshMessage {
-                Text(message)
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-            }
+            .frame(height: DesignTokens.Layout.panelHeaderHeight)
             if model.selectableSources.isEmpty {
                 Label("No input sources", systemImage: "keyboard").font(DesignTokens.Typography.body)
                 keyboardSettingsButton
             } else {
-                ForEach(model.selectableSources, id: \.id) { source in
-                    SourceRow(source: source, usage: model.sourceUsage(of: source), model: model,
-                              drag: drag, onBeginDrag: { onBeginDrag(source.id, $0) },
-                              onAdd: { onAdd(source.id) }, onLocate: onLocate)
+                VStack(spacing: 0) {
+                    ForEach(model.selectableSources, id: \.id) { source in
+                        if source.id != model.selectableSources.first?.id {
+                            Divider().overlay(DesignTokens.Colors.separator)
+                        }
+                        SourceRow(source: source, usage: model.sourceUsage(of: source), model: model,
+                                  drag: drag, onBeginDrag: { onBeginDrag(source.id, $0) },
+                                  onAdd: { onAdd(source.id) }, onLocate: onLocate)
+                    }
                 }
                 if model.unassignedSources.isEmpty {
                     Text("All input sources are in slots.")
@@ -44,8 +45,18 @@ struct SourceListColumn: View {
                     keyboardSettingsButton
                 }
             }
+            if let message = model.sourceRefreshMessage {
+                Text(message)
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+            }
         }
-        .frame(width: 196, alignment: .leading)
+        .padding(DesignTokens.Layout.panelInset)
+        .frame(width: DesignTokens.Layout.sourcePanelWidth, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
+            .fill(DesignTokens.Colors.surfaceInset))
+        .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
+            .stroke(DesignTokens.Colors.separator, lineWidth: 1))
     }
 
     private var keyboardSettingsButton: some View {
@@ -99,9 +110,9 @@ struct SourceRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: DesignTokens.Layout.rowGap) {
             Circle().fill(tint).frame(width: 6, height: 6).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
                 Text(source.localizedName)
                     .font(DesignTokens.Typography.body.weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.textPrimary)
@@ -139,11 +150,9 @@ struct SourceRow: View {
                 .help("Add \(source.localizedName) as a slot")
             }
         }
-        .padding(9)
-        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
-            .fill(DesignTokens.Colors.surfaceRaised)
-            .overlay(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
-                .fill(Color.white.opacity(hover && isAvailable ? 0.07 : 0.035))))
+        .padding(.vertical, DesignTokens.Layout.rowGap)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Rectangle().fill(Color.white.opacity(hover && isAvailable ? 0.07 : 0)))
         .contentShape(Rectangle())
         .onHover { if !isGhost { hover = $0 } }
         .animation(DesignTokens.Motion.stateChange, value: hover)

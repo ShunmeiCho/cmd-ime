@@ -19,38 +19,46 @@ struct SlotBoardSection: View {
     @Binding var triggerDrafts: [InputRole: String]
     @Binding var triggerTypeDrafts: [InputRole: BindingTriggerType]
     let resetDrafts: () -> Void
+    var footer: AnyView = AnyView(EmptyView())
 
     var body: some View {
         let generation = seatGeneration
         let phase = seatPhase
         ScrollViewReader { proxy in
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    SectionLabel("Switch slots")
-                    Spacer()
-                    AddSlotMenu(sources: model.unassignedSources, onAdd: add, onOpenSettings: showKeyboardSettings)
-                    ConsoleMenuButton(title: "Manage") {
-                        Button("Reset to Detected") {
-                            guard commitPendingRename() else { return }
-                            showsResetConfirmation = true
+            HStack(alignment: .top, spacing: DesignTokens.Layout.panelGap) {
+                SourceListColumn(model: model, drag: drag,
+                                 onBeginDrag: { beginDrag(.source($0), value: $1) }, onAdd: add, onRefresh: {
+                    guard commitPendingRename() else { return }
+                    guard model.refreshSources() else { return }
+                    resetDrafts()
+                }, onOpenSettings: showKeyboardSettings, onLocate: locateSlot)
+                VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+                    HStack(spacing: DesignTokens.Layout.rowGap) {
+                        SectionLabel("Slots")
+                        Spacer(minLength: 0)
+                        AddSlotMenu(sources: model.unassignedSources, onAdd: add, onOpenSettings: showKeyboardSettings)
+                        ConsoleMenuButton(title: "Manage") {
+                            Button("Reset to Detected") {
+                                guard commitPendingRename() else { return }
+                                showsResetConfirmation = true
+                            }
                         }
+                        .fixedSize()
+                        .accessibilityLabel("Manage slots")
                     }
-                    .fixedSize()
-                    .accessibilityLabel("Manage slots")
-                }
-                HStack(alignment: .top, spacing: 14) {
-                    SourceListColumn(model: model, drag: drag,
-                                     onBeginDrag: { beginDrag(.source($0), value: $1) }, onAdd: add, onRefresh: {
-                        guard commitPendingRename() else { return }
-                        guard model.refreshSources() else { return }
-                        resetDrafts()
-                    }, onOpenSettings: showKeyboardSettings, onLocate: locateSlot)
+                    .frame(height: DesignTokens.Layout.panelHeaderHeight)
                     SlotListColumn(slots: model.config.slots, notice: model.boardNotice,
                                    canUndo: model.canUndoRemoval, seatingID: seatingID, drag: drag,
                                    insertionTint: dragTint, onUndo: undo, onDismiss: dismissNotice, onAdd: add) { slot in
                         card(for: slot)
                     }
+                    Divider()
+                    footer
                 }
+                .padding(DesignTokens.Layout.panelInset)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
+                    .fill(DesignTokens.Colors.surface))
             }
             .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion),
                        value: model.boardNotice)
