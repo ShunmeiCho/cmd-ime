@@ -463,6 +463,18 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertEqual(SlotPalette.colors.count, 8)
     }
 
+    func testPaletteCyclesOnceEveryColorIsTaken() {
+        var used: [String] = []
+        for ordinal in 1...17 {
+            let color = SlotPalette.nextColor(for: InputRole(rawValue: "slot-\(ordinal)"), used: used)
+            if [9, 10, 17].contains(ordinal) {
+                XCTAssertEqual(color, SlotPalette.colors[(ordinal - 1) % SlotPalette.colors.count], "slot \(ordinal)")
+            }
+            used.append(color)
+        }
+        XCTAssertEqual(Array(used.prefix(8)), SlotPalette.colors)
+    }
+
     func testDisabledBindingsDoNotReserveTriggersAndInvalidAssignmentFails() throws {
         var config = SwitcherConfig.default
         config.bindings[0].enabled = false
