@@ -1,4 +1,4 @@
-## Unreleased
+## CmdIME v0.3.0 Preview
 
 Switch slots become a customizable, ordered collection: CmdIME detects them from the installed input sources on first run, migrates existing config files with a backup, and fixes the shortcut recorder.
 
