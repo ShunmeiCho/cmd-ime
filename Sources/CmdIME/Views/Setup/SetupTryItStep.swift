@@ -2,7 +2,7 @@ import KeyboardSwitcherCore
 import SwiftUI
 
 /// Step 3: a scratch field to try the triggers in. A slot counts as tried when the
-/// model reports a confirmed switch to it; the guide adds no event tap of its own.
+/// event tap reports a successful trigger; direct and system switches do not count.
 struct SetupTryItStep: View {
     @ObservedObject var model: AppModel
     @Binding var session: SetupGuideSession
@@ -90,12 +90,9 @@ struct SetupTryItStep: View {
                 isFieldFocused = true
             }
         }
-        // `activeRole` is assigned on every confirmed switch, the same slot twice
-        // included. `dropFirst` skips the value replayed on subscription, so a switch
-        // made before this step does not count.
-        .onReceive(model.$activeRole.dropFirst()) { role in
-            guard let role else { return }
-            markTried(role)
+        // A passthrough event is not replayed on entering the step.
+        .onReceive(model.triggeredSwitches) { event in
+            markTried(event.slotID)
         }
     }
 

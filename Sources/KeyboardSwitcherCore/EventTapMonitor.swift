@@ -7,6 +7,8 @@ public final class EventTapMonitor: @unchecked Sendable {
     public var config: SwitcherConfig
     public var onMessage: ((String) -> Void)?
     public var onSwitch: ((InputRole, InputSourceInfo) -> Void)?
+    /// A confirmed event-tap switch, including the binding that actually fired.
+    public var onTriggeredSwitch: ((InputRole, InputSourceInfo, KeyTrigger) -> Void)?
 
     /// The event tap runs on the main run loop; recording state must change there too.
     public var isCapturingShortcut: Bool {
@@ -311,7 +313,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             pendingSingleTapTimer?.invalidate()
             pendingSingleTapTimer = nil
             if let binding = binding(for: output) {
-                perform(binding.action)
+                perform(binding.action, trigger: binding.trigger)
             }
         case .wait:
             if binding(for: trigger) != nil || hasDoubleTapBinding(for: trigger) {
@@ -334,7 +336,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             return Unmanaged.passUnretained(event)
         }
 
-        perform(binding.action)
+        perform(binding.action, trigger: binding.trigger)
         consumedKeyDowns.insert(keyCode)
         return nil
     }
@@ -407,19 +409,19 @@ public final class EventTapMonitor: @unchecked Sendable {
                 return
             }
             if let trigger = self.oneShotState.flushPendingSingleTap(), let binding = self.binding(for: trigger) {
-                self.perform(binding.action)
+                self.perform(binding.action, trigger: binding.trigger)
             }
             self.pendingSingleTapTimer = nil
         }
     }
 
-    private func perform(_ action: BindingAction) {
+    private func perform(_ action: BindingAction, trigger: KeyTrigger) {
         switch action.type {
         case .switchInputSource:
             guard let role = action.role else {
                 return
             }
-            requestSwitch(to: role)
+            requestSwitch(to: role, trigger: trigger)
         case .sendKey:
             guard let output = action.output else {
                 return
@@ -432,11 +434,11 @@ public final class EventTapMonitor: @unchecked Sendable {
 
     /// Called from the event tap callback: only records the request and returns, so
     /// the callback never waits on TIS selection or confirmation retries.
-    private func requestSwitch(to role: InputRole) {
+    private func requestSwitch(to role: InputRole, trigger: KeyTrigger) {
         switchGeneration &+= 1
         let generation = switchGeneration
         Self.scheduleOnMainQueue(after: 0) { [weak self] in
-            self?.beginSwitch(to: role, generation: generation)
+            self?.beginSwitch(to: role, generation: generation, trigger: trigger)
         }
     }
 
@@ -444,7 +446,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         generation == switchGeneration
     }
 
-    private func beginSwitch(to role: InputRole, generation: Int) {
+    private func beginSwitch(to role: InputRole, generation: Int, trigger: KeyTrigger) {
         guard isCurrentSwitch(generation) else {
             return
         }
@@ -465,7 +467,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             onMessage?("No input method matched this switch slot.")
             return
         }
-        selectAndReport(source, role: role, generation: generation, prefix: nil) { [weak self] originalError in
+        selectAndReport(source, role: role, generation: generation, trigger: trigger, prefix: nil) { [weak self] originalError in
             guard let self else {
                 return
             }
@@ -480,6 +482,7 @@ public final class EventTapMonitor: @unchecked Sendable {
                 fallback,
                 role: role,
                 generation: generation,
+                trigger: trigger,
                 prefix: "\(source.localizedName) failed: \(originalError.localizedDescription)"
             ) { [weak self] error in
                 self?.onMessage?("Action failed: \(error.localizedDescription)")
@@ -493,6 +496,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         _ source: InputSourceInfo,
         role: InputRole,
         generation: Int,
+        trigger: KeyTrigger,
         prefix: String?,
         onError: @escaping (Error) -> Void
     ) {
@@ -509,7 +513,7 @@ public final class EventTapMonitor: @unchecked Sendable {
                 }
                 switch result {
                 case .success(let current):
-                    self.report(current: current, requested: source, role: role, prefix: prefix)
+                    self.report(current: current, requested: source, role: role, trigger: trigger, prefix: prefix)
                 case .failure(let error):
                     onError(error)
                 }
@@ -517,12 +521,15 @@ public final class EventTapMonitor: @unchecked Sendable {
         )
     }
 
-    private func report(current: InputSourceInfo?, requested source: InputSourceInfo, role: InputRole, prefix: String?) {
+    private func report(current: InputSourceInfo?, requested source: InputSourceInfo, role: InputRole, trigger: KeyTrigger, prefix: String?) {
         guard current?.id == source.id else {
             onMessage?(InputSourceInfo.verificationMessage(requested: source, current: current))
             return
         }
         onSwitch?(role, source)
+        if !isCapturingShortcut {
+            onTriggeredSwitch?(role, source, trigger)
+        }
         if let prefix {
             onMessage?("\(prefix). Selected refreshed input method \(source.localizedName).")
         } else {

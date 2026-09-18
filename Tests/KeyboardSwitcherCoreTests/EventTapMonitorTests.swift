@@ -50,6 +50,71 @@ final class EventTapMonitorTests: XCTestCase {
     }
 
     #if DEBUG
+    func testTriggeredSwitchReportsActualSingleTapAfterConfirmation() throws {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var events: [SetupTriggeredSwitch] = []
+        var legacyCalls = 0
+        monitor.onSwitch = { _, _ in legacyCalls += 1 }
+        monitor.onTriggeredSwitch = { slot, source, trigger in
+            XCTAssertTrue(Thread.isMainThread)
+            XCTAssertEqual(legacyCalls, 1)
+            events.append(SetupTriggeredSwitch(slotID: slot, sourceID: source.id, trigger: trigger))
+        }
+        tapLeftCommand(monitor)
+        XCTAssertTrue(events.isEmpty)
+        drainMainQueue()
+        XCTAssertEqual(events, [SetupTriggeredSwitch(slotID: .english, sourceID: "com.apple.keylayout.ABC", trigger: try ShortcutParser.parse("left-command"))])
+    }
+
+    func testTriggeredSwitchReportsActualDoubleTap() throws {
+        var config = SwitcherConfig.default
+        let trigger = try ShortcutParser.parse("double-left-command")
+        config.bindings.append(KeyBinding(trigger: trigger, action: .switchInputSource(.english)))
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var triggers: [KeyTrigger] = []
+        monitor.onTriggeredSwitch = { _, _, trigger in triggers.append(trigger) }
+        tapLeftCommand(monitor)
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(triggers, [trigger])
+    }
+
+    func testTriggeredSwitchReportsActualChordWhenSlotHasOtherBindings() throws {
+        var config = SwitcherConfig.default
+        let chord = try ShortcutParser.parse("option+j")
+        // A first-binding lookup would incorrectly report Left Command for English.
+        config.bindings.removeAll { $0.trigger == chord }
+        config.bindings.append(KeyBinding(trigger: chord, action: .switchInputSource(.english)))
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var events: [SetupTriggeredSwitch] = []
+        monitor.onTriggeredSwitch = { slot, source, trigger in
+            events.append(SetupTriggeredSwitch(slotID: slot, sourceID: source.id, trigger: trigger))
+        }
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
+        XCTAssertNil(monitor.handleKeyUpForTesting(makeKeyboardEvent(keyCode: 38, keyDown: false)))
+        drainMainQueue()
+        XCTAssertEqual(events, [SetupTriggeredSwitch(slotID: .english, sourceID: "com.apple.keylayout.ABC", trigger: chord)])
+    }
+
+    func testTriggeredSwitchDoesNotReportDuringRecording() throws {
+        var config = SwitcherConfig.default
+        config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("double-left-command"), action: .switchInputSource(.english)))
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var count = 0
+        monitor.onTriggeredSwitch = { _, _, _ in count += 1 }
+        monitor.isCapturingShortcut = true
+        tapLeftCommand(monitor)
+        tapLeftCommand(monitor)
+        let chord = makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])
+        XCTAssertTrue(monitor.handleKeyDownForTesting(chord)?.takeUnretainedValue() === chord)
+        drainSingleTapTimer()
+        XCTAssertEqual(count, 0)
+        monitor.isCapturingShortcut = false
+        drainSingleTapTimer()
+        XCTAssertEqual(count, 0)
+    }
+
     func testShortcutCaptureSuppressesModifierTapAndResumesFirstTap() {
         let service = StubInputSourceService(sources: makeSwitchSources())
         let monitor = EventTapMonitor(config: .default, inputSources: service)

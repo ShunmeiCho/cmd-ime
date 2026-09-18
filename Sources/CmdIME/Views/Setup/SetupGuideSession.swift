@@ -1,6 +1,9 @@
 import AppKit
+import Combine
 import KeyboardSwitcherCore
 import SwiftUI
+
+typealias SetupTriggerEvents = PassthroughSubject<SetupTriggeredSwitch, Never>
 
 /// Session-only state of the setup guide. Nothing here is persisted; the only stored
 /// fact is `SwitcherConfig.hasCompletedSetup`.

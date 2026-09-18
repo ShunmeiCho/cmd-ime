@@ -16,6 +16,7 @@ final class AppModel: ObservableObject {
     @Published var statusText = "Ready"
     @Published var isListening = false
     @Published var activeRole: InputRole?
+    let triggeredSwitches = SetupTriggerEvents()
     @Published var keyboardControlStatus = "Starting"
     @Published var permissions = MacPermissionStatus.current()
     @Published var loginItem = LoginItemService().snapshot()
@@ -723,6 +724,11 @@ final class AppModel: ObservableObject {
             nextMonitor.onSwitch = { [weak self] role, source in
                 DispatchQueue.main.async {
                     self?.showSwitchIndicator(for: role, source: source)
+                }
+            }
+            nextMonitor.onTriggeredSwitch = { [weak self] role, source, trigger in
+                MainActor.assumeIsolated {
+                    self?.triggeredSwitches.send(SetupTriggeredSwitch(slotID: role, sourceID: source.id, trigger: trigger))
                 }
             }
             try nextMonitor.start()
