@@ -179,7 +179,7 @@ struct SlotBoardSection: View {
     }
 
     private func beginDrag(_ payload: SlotDragPayload, value: DragGesture.Value) -> Bool {
-        guard commitPendingRename(), drag.prepareForBegin() else { return false }
+        guard !model.isRecordingTrigger, commitPendingRename(), drag.prepareForBegin() else { return false }
         return drag.begin(payload: payload, startLocation: value.startLocation, location: value.location,
                           config: model.config, sources: model.selectableSources, reduceMotion: reduceMotion,
                           commit: commitDrop, reject: model.rejectSlotDrop,

@@ -34,6 +34,8 @@ final class AppModel: ObservableObject {
     private var monitor: EventTapMonitor?
     private var recordingRole: InputRole?
 
+    var isRecordingTrigger: Bool { recordingRole != nil }
+
     func setShortcutRecording(_ recording: Bool, for role: InputRole) {
         if recording {
             recordingRole = role
@@ -490,14 +492,12 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func setBindingTrigger(_ trigger: KeyTrigger, for role: InputRole) {
-        guard !trigger.isReservedMacInputSourceShortcut else {
-            reportSlotFailure("\(trigger.displayName) is reserved by macOS input source switching", for: role)
-            return
+    func recordedTriggerConflict(_ trigger: KeyTrigger, for role: InputRole) -> String? {
+        if trigger.isReservedMacInputSourceShortcut {
+            return "\(trigger.displayName) is reserved by macOS input source switching"
         }
         if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
-            reportSlotFailure("\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))", for: role)
-            return
+            return "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))"
         }
         if let conflict = config.conflictingBinding(for: trigger, excluding: role) {
             let owner: String
@@ -508,24 +508,39 @@ final class AppModel: ObservableObject {
             } else {
                 owner = "another binding"
             }
-            reportSlotFailure("\(trigger.displayName) is already used by \(owner)", for: role)
-            return
+            return "\(trigger.displayName) is already used by \(owner)"
         }
+        return nil
+    }
 
-        // Validate before upsert: its replacement semantics also serve the CLI.
+    /// Recorder drafts never mutate configuration; only an explicit commit reaches here.
+    @discardableResult
+    func commitRecordedTrigger(_ trigger: KeyTrigger?, for role: InputRole) -> String? {
+        guard config.slot(role) != nil else { return SlotError.unknownSlot(role).localizedDescription }
+        if let trigger, let reason = recordedTriggerConflict(trigger, for: role) {
+            reportSlotFailure(reason, for: role)
+            return reason
+        }
         var next = config
-        next.upsertSwitchBinding(trigger: trigger, role: role)
-        guard next != config else {
-            clearSlotNotice(for: role)
-            return
-        }
-        invalidateUndo()
-        config = next
-        if save() {
-            clearSlotNotice(for: role)
+        if let trigger {
+            next.upsertSwitchBinding(trigger: trigger, role: role)
         } else {
-            reportSlotFailure(statusText, for: role)
+            next.bindings.removeAll { $0.action.type == .switchInputSource && $0.action.role == role }
         }
+        if next != config {
+            guard commit(next) else {
+                reportSlotFailure(statusText, for: role)
+                return statusText
+            }
+            invalidateUndo()
+        }
+        clearSlotNotice(for: role)
+        statusText = trigger.map { "Saved trigger \($0.displayName)" } ?? "Removed trigger"
+        return nil
+    }
+
+    func setBindingTrigger(_ trigger: KeyTrigger, for role: InputRole) {
+        commitRecordedTrigger(trigger, for: role)
     }
 
     func setOneShotBinding(keyCode: Int, keyName: String, gesture: TriggerGesture, for role: InputRole) {
