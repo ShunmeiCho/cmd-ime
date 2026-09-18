@@ -60,9 +60,11 @@ struct SlotCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(-1)
-                Button("Test") { perform(onTest) }
+                Button("Switch") { perform(onTest) }
+                    .help("Switch to this input source now. This does not test the trigger.")
+                    .accessibilityLabel("Switch to this input source now. This does not test the trigger.")
                     .buttonStyle(ConsoleButtonStyle())
-                    .frame(width: 58)
+                    .frame(width: 68)
                     .disabled(source == nil)
                 SlotOverflowMenu(position: position, count: count,
                                  onRename: { perform(onRename) },
