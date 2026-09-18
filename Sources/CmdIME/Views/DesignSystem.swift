@@ -90,6 +90,12 @@ enum DesignTokens {
     }
 
     enum Layout {
+        static let sectionGap: CGFloat = 20
+        static let panelInset: CGFloat = 12
+        static let panelGap: CGFloat = 12
+        static let rowGap: CGFloat = 8
+        static let panelHeaderHeight: CGFloat = 32
+        static let sourcePanelWidth: CGFloat = 196
         static let slotRowGap: CGFloat = 9
         static let contentMaxWidth: CGFloat = 720
         static let labelColumn: CGFloat = 132

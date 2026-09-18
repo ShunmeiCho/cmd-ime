@@ -17,11 +17,9 @@ struct ContentView: View {
 
     private func page(scroll: ScrollViewProxy) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                SettingsHeader(status: runtimeStatus, onPrimaryAction: performHeaderAction, onRefresh: refreshMethods)
+            VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
+                SettingsHeader(model: model, status: runtimeStatus, onPrimaryAction: performHeaderAction)
                 SetupGuideCard(model: model, session: $setupSession, scroll: scroll, resetDrafts: resetDrafts)
-                PermissionsCard(model: model, status: runtimeStatus)
-                    .setupFold(.keyboardControl)
                 SlotBoardSection(
                     model: model,
                     triggerDrafts: $triggerDrafts,
@@ -60,20 +58,13 @@ struct ContentView: View {
     }
 
     private func performHeaderAction() {
-        if model.permissions.isReady && model.sources.isEmpty {
-            refreshMethods()
-        } else if model.isListening {
+        if model.isListening {
             model.stopListening()
         } else if model.permissions.isReady {
             model.startListeningIfReady()
         } else {
             model.requestPermissions()
         }
-    }
-
-    private func refreshMethods() {
-        model.scan()
-        resetDrafts()
     }
 
     private func resetDrafts() {
@@ -104,8 +95,8 @@ private struct RuntimeStatusPresentation {
             detail = "No input methods are available. Refresh methods or add an input source in System Settings."
             systemImage = "keyboard.badge.ellipsis"
             tone = .warning
-            primaryActionTitle = "Refresh Methods"
-            primaryActionProminent = true
+            primaryActionTitle = model.isListening ? "Pause" : "Resume"
+            primaryActionProminent = !model.isListening
         } else if model.isListening {
             title = "Active"
             detail = "Listening for your configured shortcuts."
@@ -139,77 +130,62 @@ private struct RuntimeStatusPresentation {
 }
 
 private struct SettingsHeader: View {
-    let status: RuntimeStatusPresentation
-    let onPrimaryAction: () -> Void
-    let onRefresh: () -> Void
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            KeycapView("⌘", appearance: .display)
-                .frame(width: 44, height: 44)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("CmdIME")
-                    .font(DesignTokens.Typography.title)
-                    .foregroundStyle(DesignTokens.Colors.textPrimary)
-                Text("A precision instrument for input switching")
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 8) {
-                StatusPill(text: status.title, systemImage: status.systemImage, tone: status.tone)
-
-                HStack(spacing: 8) {
-                    Button(status.primaryActionTitle, action: onPrimaryAction)
-                        .buttonStyle(ConsoleButtonStyle(prominent: status.primaryActionProminent))
-                    Button("Refresh Methods", action: onRefresh)
-                        .buttonStyle(ConsoleButtonStyle())
-                }
-            }
-        }
-    }
-}
-
-private struct PermissionsCard: View {
     @ObservedObject var model: AppModel
     let status: RuntimeStatusPresentation
-    @State private var showsDetails = false
+    let onPrimaryAction: () -> Void
+    @State private var showsPermissionDetails = false
 
     private var needsAttention: Bool {
         !model.permissions.isReady || model.keyboardControlStatus == "Failed"
     }
 
     var body: some View {
-        Group {
-            if needsAttention {
-                CompactSection(title: "Keyboard control") { details }
-            } else {
-                DisclosureGroup(isExpanded: $showsDetails) {
-                    details.padding(.top, 10)
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+            HStack(spacing: DesignTokens.Layout.rowGap) {
+                Text("CmdIME")
+                    .font(DesignTokens.Typography.title)
+                    .foregroundStyle(DesignTokens.Colors.textPrimary)
+                StatusPill(text: status.title, systemImage: status.systemImage, tone: status.tone)
+                Spacer(minLength: DesignTokens.Layout.rowGap)
+                Button {
+                    showsPermissionDetails.toggle()
                 } label: {
-                    Label("Keyboard access ready", systemImage: "checkmark.circle.fill")
-                        .font(DesignTokens.Typography.body)
-                        .foregroundStyle(DesignTokens.Colors.textPrimary)
+                    Label(needsAttention ? "Keyboard access needs attention" : "Keyboard access ready",
+                          systemImage: needsAttention ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                        .font(DesignTokens.Typography.auxiliary)
                 }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
-                        .fill(DesignTokens.Colors.surfaceRaised)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DesignTokens.Radius.card, style: .continuous)
-                                .stroke(DesignTokens.Colors.separator, lineWidth: 1)
-                        )
-                )
+                .buttonStyle(ConsoleButtonStyle())
+                .disabled(needsAttention)
+                .help(needsAttention ? status.detail : "Show or hide keyboard permission details")
+                .accessibilityValue(needsAttention || showsPermissionDetails ? "Expanded" : "Collapsed")
+                Button(status.primaryActionTitle, action: onPrimaryAction)
+                    .buttonStyle(ConsoleButtonStyle(prominent: status.primaryActionProminent))
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            if needsAttention || showsPermissionDetails {
+                Divider()
+                if needsAttention {
+                    PermissionsCard(model: model, status: status)
+                        .id(SetupFoldSection.keyboardControl)
+                } else {
+                    PermissionsCard(model: model, status: status)
+                        .setupFold(.keyboardControl)
+                }
             }
         }
+        .padding(DesignTokens.Layout.panelInset)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
+            .fill(DesignTokens.Colors.surface))
     }
+}
+
+private struct PermissionsCard: View {
+    @ObservedObject var model: AppModel
+    let status: RuntimeStatusPresentation
+    var body: some View { details }
 
     private var details: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
             HStack {
                 Text(status.detail)
                     .font(DesignTokens.Typography.body)
@@ -224,7 +200,7 @@ private struct PermissionsCard: View {
                 }
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: DesignTokens.Layout.panelGap) {
                 PermissionMiniStatus(
                     title: "Accessibility",
                     granted: model.permissions.accessibilityGranted,
@@ -250,7 +226,7 @@ private struct PermissionMiniStatus: View {
     let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 9) {
+        HStack(spacing: DesignTokens.Layout.rowGap) {
             Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(granted ? DesignTokens.Colors.success : DesignTokens.Colors.warning)
@@ -270,17 +246,8 @@ private struct PermissionMiniStatus: View {
                     .buttonStyle(ConsoleButtonStyle())
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.vertical, DesignTokens.Layout.rowGap)
         .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(DesignTokens.Colors.surfaceInset)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(DesignTokens.Colors.separator, lineWidth: 1)
-                )
-        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title), \(granted ? "ready" : "missing")")
     }
