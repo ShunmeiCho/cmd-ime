@@ -90,9 +90,11 @@ struct SetupReviewStep: View {
         Button("Refresh") {
             // The model's own line counts every TIS entry, palettes and input-mode
             // parents included; the guide only ever talks about selectable sources.
-            let didScan = model.scan()
-            resetDrafts()
-            report(didScan ? Self.foundMessage(count: model.selectableSources.count) : model.statusText)
+            Task {
+                let didScan = await model.refreshSources()
+                resetDrafts()
+                report(didScan ? Self.foundMessage(count: model.selectableSources.count) : model.statusText)
+            }
         }
         .buttonStyle(ConsoleButtonStyle())
         .accessibilityLabel("Refresh input sources")

@@ -29,8 +29,10 @@ struct SlotBoardSection: View {
                 SourceListColumn(model: model, drag: drag,
                                  onBeginDrag: { beginDrag(.source($0), value: $1) }, onAdd: add, onRefresh: {
                     guard commitPendingRename() else { return }
-                    guard model.refreshSources() else { return }
-                    resetDrafts()
+                    Task {
+                        guard await model.refreshSources(announce: true) else { return }
+                        resetDrafts()
+                    }
                 }, onOpenSettings: showKeyboardSettings, onLocate: locateSlot)
                 VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
                     HStack(spacing: DesignTokens.Layout.rowGap) {

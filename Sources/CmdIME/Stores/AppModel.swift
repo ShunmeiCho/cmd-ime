@@ -31,6 +31,7 @@ final class AppModel: ObservableObject {
     private var sourceChangeObserver: InputSourceChangeObserver?
     private var settingsWindowSubscriptions: Set<AnyCancellable> = []
     private var hasSourceBaseline = false
+    private var sourceRefreshGeneration = 0
     private var refreshMessageTask: Task<Void, Never>?
 
     private var pendingUndo: RemovedSlot? {
@@ -128,7 +129,7 @@ final class AppModel: ObservableObject {
         }
         refreshCurrentRole()
         sourceChangeObserver = InputSourceChangeObserver { [weak self] in
-            self?.scan()
+            Task { await self?.refreshSources() }
         }
         // The coordinator names its retained settings window "CmdIME". Observe
         // here so setup folding cannot unmount the window lifecycle subscription.
@@ -139,7 +140,7 @@ final class AppModel: ObservableObject {
                         guard let self, let window = notification.object as? NSWindow,
                               window.title == "CmdIME" else { return }
                         if notification.name == NSWindow.didBecomeKeyNotification {
-                            self.scan()
+                            Task { await self.refreshSources() }
                         } else {
                             self.clearNewSourceMarkers()
                         }
@@ -149,25 +150,12 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// In-process scan. A long-running process can keep seeing sources the user
+    /// already removed, so everything after launch goes through `refreshSources`.
     @discardableResult
     func scan() -> Bool {
         do {
-            let previous = sources
-            let scanned = try inputSources.listInputSources()
-            sources = scanned
-            if hasSourceBaseline {
-                let discovered = InputSourceMatcher.newSelectableSources(previous: previous, current: scanned)
-                    .filter { sourceUsage(of: $0) == .available }
-                newSourceIDs.formUnion(discovered.map(\.id))
-                if let source = discovered.first {
-                    boardNotice = .found(sourceID: source.id, name: source.localizedName)
-                }
-            }
-            hasSourceBaseline = true
-            reconcileNewSources()
-            monitor?.updateConfig(config)
-            refreshCurrentRole()
-            statusText = "Found \(sources.count) input sources"
+            apply(scanned: try inputSources.listInputSources())
             return true
         } catch {
             statusText = error.localizedDescription
@@ -175,22 +163,60 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Explicit user refresh only; ordinary scans do not show a success toast.
+    private func apply(scanned: [InputSourceInfo]) {
+        let previous = sources
+        sources = scanned
+        if hasSourceBaseline {
+            let discovered = InputSourceMatcher.newSelectableSources(previous: previous, current: scanned)
+                .filter { sourceUsage(of: $0) == .available }
+            newSourceIDs.formUnion(discovered.map(\.id))
+            if let source = discovered.first {
+                boardNotice = .found(sourceID: source.id, name: source.localizedName)
+            }
+        }
+        hasSourceBaseline = true
+        reconcileNewSources()
+        monitor?.updateConfig(config)
+        refreshCurrentRole()
+        statusText = "Found \(sources.count) input sources"
+    }
+
+    private static let scannerURL = Bundle.main.executableURL?
+        .deletingLastPathComponent()
+        .appendingPathComponent("keyboardctl")
+
+    /// Replaces the list with a snapshot taken by a fresh keyboardctl process.
+    /// A newer request supersedes this one; a superseded request reports false.
     @discardableResult
-    func refreshSources() -> Bool {
-        refreshMessageTask?.cancel()
-        sourceRefreshMessage = nil
-        guard scan() else {
-            reportBoardFailure(statusText)
+    func refreshSources(announce: Bool = false) async -> Bool {
+        sourceRefreshGeneration += 1
+        let generation = sourceRefreshGeneration
+        if announce {
+            refreshMessageTask?.cancel()
+            sourceRefreshMessage = nil
+        }
+        do {
+            let result = try await inputSources.refreshedInputSources(using: Self.scannerURL)
+            guard generation == sourceRefreshGeneration else { return false }
+            apply(scanned: result.sources)
+            guard announce else { return true }
+            sourceRefreshMessage = result.fallbackReason == nil
+                ? "Updated - \(selectableSources.count) input sources"
+                : "Listed \(selectableSources.count) input sources; removed ones may linger until relaunch"
+            refreshMessageTask = Task { [weak self] in
+                do { try await Task.sleep(nanoseconds: 3_000_000_000) }
+                catch { return }
+                self?.sourceRefreshMessage = nil
+            }
+            return true
+        } catch is CancellationError {
+            return false
+        } catch {
+            guard generation == sourceRefreshGeneration else { return false }
+            statusText = error.localizedDescription
+            if announce { reportBoardFailure(statusText) }
             return false
         }
-        sourceRefreshMessage = "Updated - \(selectableSources.count) input sources"
-        refreshMessageTask = Task { [weak self] in
-            do { try await Task.sleep(nanoseconds: 3_000_000_000) }
-            catch { return }
-            self?.sourceRefreshMessage = nil
-        }
-        return true
     }
 
     /// Wire to the settings window closing, not activation or key-window changes.
@@ -347,7 +373,8 @@ final class AppModel: ObservableObject {
     }
 
     func resetSlotsFromDetectedSources() {
-        guard scan() else { return }
+        // The window keeps `sources` fresh; an in-process rescan could bring removed ones back.
+        guard !sources.isEmpty || scan() else { return }
         do {
             let rebuilt = try configStore.resettingSlots(in: config, from: sources)
             invalidateUndo()
