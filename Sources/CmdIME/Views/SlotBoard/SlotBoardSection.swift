@@ -127,9 +127,11 @@ struct SlotBoardSection: View {
                 return succeeded
             },
             onCancelRename: isGhost ? {} : {
+                model.clearSlotNotice(for: slot.id)
                 renamingSlotID = nil
                 pendingRenameCommit = nil
             },
+            onRenameDraftChanged: isGhost ? {} : { model.clearSlotNotice(for: slot.id) },
             onRenameCommitChanged: isGhost ? { _ in } : { callback in
                 // An outgoing field must not clear the incoming field's registration.
                 guard renamingSlotID == slot.id else { return }

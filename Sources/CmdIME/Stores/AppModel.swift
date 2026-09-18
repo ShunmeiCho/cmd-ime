@@ -56,7 +56,7 @@ final class AppModel: ObservableObject {
         monitor?.isCapturingShortcut = recordingRole != nil
     }
 
-    private func clearSlotNotice(for role: InputRole) {
+    func clearSlotNotice(for role: InputRole) {
         if slotNotices[role] != nil {
             slotNotices[role] = nil
         }

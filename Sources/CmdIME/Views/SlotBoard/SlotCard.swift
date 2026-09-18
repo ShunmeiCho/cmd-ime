@@ -22,6 +22,7 @@ struct SlotCard: View {
     let onRename: () -> Void
     let onCommitRename: (String) -> Bool
     let onCancelRename: () -> Void
+    let onRenameDraftChanged: () -> Void
     let onRenameCommitChanged: ((() -> Bool)?) -> Void
     let onTest: () -> Void
     let onMove: (Int) -> Void
@@ -114,7 +115,7 @@ struct SlotCard: View {
         Group {
             if isRenaming {
                 SlotNameField(name: slot.name, tint: tint, session: renameSession,
-                              onCommit: onCommitRename, onCancel: onCancelRename,
+                              onCommit: onCommitRename, onCancel: onCancelRename, onEdit: onRenameDraftChanged,
                               onCommitChanged: onRenameCommitChanged)
                     .transition(.opacity)
             } else {
@@ -278,6 +279,7 @@ struct SlotNameField: View {
     let session: SlotRenameSession
     let onCommit: (String) -> Bool
     let onCancel: () -> Void
+    let onEdit: () -> Void
     let onCommitChanged: ((() -> Bool)?) -> Void
 
     var body: some View {
@@ -311,6 +313,7 @@ struct SlotNameField: View {
                 appeared = true
             }
             .onChange(of: draft) { _ in
+                if invalid { invalid = false; onEdit() }
                 session.commit = commit
                 onCommitChanged(commit)
             }
@@ -334,10 +337,9 @@ struct SlotNameField: View {
             return true
         }
         // The outside-click monitor returns the event; its menu/button action
-        // must not immediately retry the reverted draft and erase this reason.
+        // must not immediately retry the rejected draft and repeat this reason.
         rejectedInCurrentEvent = true
         DispatchQueue.main.async { rejectedInCurrentEvent = false }
-        draft = name
         invalid = true
         focused = true
         shakeGeneration += 1
