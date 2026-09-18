@@ -139,14 +139,17 @@ struct IndicatorSettingsSection: View {
     }
 
     private var scaleRow: some View {
-        let percent = Int((model.config.switchIndicatorScale * 100).rounded())
+        // The slider shows what the bubble really uses: only the switcher goes below 40%.
+        let effective = BubbleMetrics.effectiveScale(model.config.switchIndicatorScale, archetype: theme.archetype)
+        let minimum = BubbleMetrics.effectiveScale(SwitcherConfig.minSwitchIndicatorScale, archetype: theme.archetype)
+        let percent = Int((effective * 100).rounded())
         return CompactSettingRow("Scale \(percent)%") {
             Slider(
                 value: Binding(
-                    get: { model.config.switchIndicatorScale },
+                    get: { effective },
                     set: { model.setSwitchIndicatorScale($0) }
                 ),
-                in: SwitcherConfig.minSwitchIndicatorScale...SwitcherConfig.maxSwitchIndicatorScale,
+                in: minimum...SwitcherConfig.maxSwitchIndicatorScale,
                 step: 0.05,
                 onEditingChanged: { isAdjusting = $0 }
             )

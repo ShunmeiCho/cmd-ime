@@ -48,8 +48,8 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertGreaterThan(large.baseHeight, large.tileSide + 2 * large.inset)
 
         let small = BubbleMetrics(size: .small, scale: 0, textScale: 0, theme: glass)
-        XCTAssertEqual(small.sizeFactor, 0.82 * SwitcherConfig.minSwitchIndicatorScale, accuracy: 0.0001)
-        XCTAssertEqual(small.textMinWidth, 44 * 0.82 * SwitcherConfig.minSwitchIndicatorScale * 0.8, accuracy: 0.0001)
+        XCTAssertEqual(small.sizeFactor, 0.82 * BubbleMetrics.minimumScaleOutsideSwitcher, accuracy: 0.0001)
+        XCTAssertEqual(small.textMinWidth, 44 * 0.82 * BubbleMetrics.minimumScaleOutsideSwitcher * 0.8, accuracy: 0.0001)
     }
 
     func testRadiiAreCappedConcentricOrOverridden() {
@@ -72,8 +72,11 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertEqual([stacked.titleSize, stacked.detailSize, stacked.tileSide], [20, 10, 0])
         XCTAssertEqual(BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: theme("builtin.tile")).tileSide, 40)
 
-        let switcher = BubbleMetrics(size: .small, scale: 0.65, textScale: 1, theme: theme("builtin.switcher"))
-        XCTAssertEqual(switcher.sizeFactor, BubbleMetrics.switcherMinimumFactor)
+        // Only the switcher follows Scale below 40%.
+        let switcher = BubbleMetrics(size: .small, scale: 0.25, textScale: 1, theme: theme("builtin.switcher"))
+        XCTAssertEqual(switcher.sizeFactor, 0.82 * 0.25, accuracy: 0.0001)
+        let tile = BubbleMetrics(size: .small, scale: 0.25, textScale: 1, theme: theme("builtin.tile"))
+        XCTAssertEqual(tile.sizeFactor, 0.82 * BubbleMetrics.minimumScaleOutsideSwitcher, accuracy: 0.0001)
         let largeSwitcher = BubbleMetrics(size: .large, scale: 1.3, textScale: 1, theme: theme("builtin.switcher"))
         XCTAssertEqual(largeSwitcher.maxBubbleWidth, 320)
     }
