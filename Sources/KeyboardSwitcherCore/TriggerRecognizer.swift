@@ -41,13 +41,30 @@ public struct TriggerRecognizer: Sendable {
     public private(set) var draft: KeyTrigger?
     public private(set) var pressedModifierKeyCodes: Set<Int>
     private var pressedKeys: Set<Int> = []
+    private var initiallyHeldOrdinaryKeys: Set<Int>
     private var tapCandidate: Int?
     private var pendingTap: (code: Int, timestamp: TimeInterval)?
 
     /// Keys already held at session start are tracked but never eligible for a tap.
-    public init(existingTrigger: KeyTrigger? = nil, heldModifierKeyCodes: Set<Int> = []) {
+    public init(
+        existingTrigger: KeyTrigger? = nil,
+        heldModifierKeyCodes: Set<Int> = [],
+        heldKeyCodes: Set<Int> = []
+    ) {
         draft = existingTrigger
-        pressedModifierKeyCodes = heldModifierKeyCodes.intersection(Self.modifierTriggers.keys)
+        let modifierCodes = Set(Self.modifierTriggers.keys)
+        pressedModifierKeyCodes = heldModifierKeyCodes.union(heldKeyCodes).intersection(modifierCodes)
+        pressedKeys = heldKeyCodes.subtracting(modifierCodes)
+        initiallyHeldOrdinaryKeys = pressedKeys
+    }
+
+    /// Repairs missing releases of ordinary keys held before capture began.
+    /// Once released (or pressed again), a key belongs to normal event tracking
+    /// and can no longer be removed by a startup-state snapshot.
+    public mutating func reconcileInitiallyHeldKeys(stillPressed: Set<Int>) {
+        let released = initiallyHeldOrdinaryKeys.subtracting(stillPressed)
+        pressedKeys.subtract(released)
+        initiallyHeldOrdinaryKeys.subtract(released)
     }
 
     public mutating func keyDown(
@@ -68,6 +85,7 @@ public struct TriggerRecognizer: Sendable {
             return nil
         }
 
+        initiallyHeldOrdinaryKeys.remove(keyCode)
         pressedKeys.insert(keyCode)
         invalidateTaps()
         if modifiers.isEmpty {
@@ -81,6 +99,7 @@ public struct TriggerRecognizer: Sendable {
             default: break
             }
         }
+        guard !modifiers.isEmpty else { return nil }
         let trigger = KeyTrigger(kind: .keyPress, keyCode: keyCode,
                                  keyName: keyName, modifiers: Array(modifiers))
         draft = trigger
@@ -93,6 +112,7 @@ public struct TriggerRecognizer: Sendable {
         let modifiers = modifiers.subtracting(Modifier.latching)
         guard var trigger = Self.modifierTriggers[keyCode] else {
             pressedKeys.remove(keyCode)
+            initiallyHeldOrdinaryKeys.remove(keyCode)
             return nil
         }
         guard pressedModifierKeyCodes.remove(keyCode) != nil else { return nil }

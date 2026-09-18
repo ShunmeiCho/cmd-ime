@@ -76,7 +76,7 @@ final class TriggerRecognizerTests: XCTestCase {
             XCTAssertEqual(state.draft, expected)
         }
         XCTAssertEqual(down(&state, 117), .clear)
-        XCTAssertEqual(down(&state, 49), .chord(KeyTrigger(kind: .keyPress, keyCode: 49, keyName: "raw")))
+        XCTAssertNil(down(&state, 49))
     }
 
     func testLatchingNoiseDoesNotBlockTapOrControlsOrBecomeChordModifiers() throws {
@@ -90,11 +90,27 @@ final class TriggerRecognizerTests: XCTestCase {
         XCTAssertEqual(state.flagsChanged(keyCode: 59, modifiers: noise, timestamp: 1.01), .tap("left-control"))
         XCTAssertNil(state.keyDown(keyCode: 59, keyName: "left-control", modifiers: noise.union([.control]), timestamp: 1.1))
         XCTAssertEqual(state.keyUp(keyCode: 59, keyName: "left-control", modifiers: noise, timestamp: 1.11), .doubleTap("left-control"))
-        let arrow = KeyTrigger(kind: .keyPress, keyCode: 123, keyName: "left")
-        XCTAssertEqual(state.keyDown(keyCode: 123, keyName: "left", modifiers: noise, timestamp: 2), .chord(arrow))
+        let previousDraft = state.draft
+        XCTAssertNil(state.keyDown(keyCode: 123, keyName: "left", modifiers: noise, timestamp: 2))
+        XCTAssertEqual(state.draft, previousDraft)
+        let arrow = KeyTrigger(kind: .keyPress, keyCode: 123, keyName: "left", modifiers: [.command])
+        XCTAssertEqual(state.keyDown(keyCode: 123, keyName: "left", modifiers: noise.union([.command]), timestamp: 2.1), .chord(arrow))
         XCTAssertEqual(state.draft, arrow)
         XCTAssertEqual(state.keyDown(keyCode: 117, keyName: "delete", modifiers: noise, timestamp: 3), .clear)
         XCTAssertNil(state.draft)
+    }
+
+    func testUnmodifiedOrdinaryKeyDoesNotReplaceDraft() throws {
+        let existing = try ShortcutParser.parse("command+a")
+        var state = TriggerRecognizer(existingTrigger: existing)
+        for modifiers: Set<Modifier> in [[], [.capsLock, .fn]] {
+            XCTAssertNil(state.keyDown(keyCode: 0, keyName: "a", modifiers: modifiers, timestamp: 0))
+            XCTAssertEqual(state.draft, existing)
+            _ = state.keyUp(keyCode: 0, keyName: "a", modifiers: modifiers, timestamp: 0.1)
+        }
+        var empty = TriggerRecognizer()
+        XCTAssertNil(down(&empty, 0))
+        XCTAssertNil(empty.draft)
     }
 
     func testDoubleTapUsesSharedWindowBoundary() throws {
@@ -117,6 +133,55 @@ final class TriggerRecognizerTests: XCTestCase {
         _ = state.keyDown(keyCode: 0, keyName: "a", modifiers: [], timestamp: 0.02)
         _ = state.keyUp(keyCode: 0, keyName: "a", modifiers: [], timestamp: 0.03)
         XCTAssertEqual(tap(&state, trigger, at: 0.04), .tap(trigger.keyName))
+    }
+
+    func testInitiallyHeldOrdinaryKeyPreventsModifierTapUntilRelease() throws {
+        let trigger = try ShortcutParser.parse("left-shift")
+        let existing = try ShortcutParser.parse("command+a")
+        var state = TriggerRecognizer(existingTrigger: existing, heldKeyCodes: [0])
+        XCTAssertNil(tap(&state, trigger, at: 0.1))
+        XCTAssertEqual(state.draft, existing)
+        _ = state.keyUp(keyCode: 0, keyName: "a", modifiers: [], timestamp: 0.2)
+        XCTAssertEqual(tap(&state, trigger, at: 0.3), .tap(trigger.keyName))
+
+        let control = try ShortcutParser.parse("left-control")
+        var mixed = TriggerRecognizer(heldModifierKeyCodes: [control.keyCode], heldKeyCodes: [0, trigger.keyCode])
+        XCTAssertEqual(mixed.pressedModifierKeyCodes, [control.keyCode, trigger.keyCode])
+        XCTAssertNil(mixed.keyUp(keyCode: control.keyCode, keyName: control.keyName, modifiers: [.shift], timestamp: 0))
+        XCTAssertNil(mixed.keyUp(keyCode: trigger.keyCode, keyName: trigger.keyName, modifiers: [], timestamp: 0.1))
+        _ = mixed.keyUp(keyCode: 0, keyName: "a", modifiers: [], timestamp: 0.2)
+        XCTAssertEqual(tap(&mixed, trigger, at: 0.3), .tap(trigger.keyName))
+    }
+
+    func testReconcileInitiallyHeldKeysRepairsMissingReleaseOnly() throws {
+        let trigger = try ShortcutParser.parse("left-shift")
+        var state = TriggerRecognizer(heldKeyCodes: [0])
+        state.reconcileInitiallyHeldKeys(stillPressed: [0])
+        XCTAssertNil(tap(&state, trigger, at: 0))
+        // The startup key-up was swallowed before the recorder received it.
+        state.reconcileInitiallyHeldKeys(stillPressed: [])
+        XCTAssertEqual(tap(&state, trigger, at: 1), .tap(trigger.keyName))
+
+        // A later press of that same key is no longer owned by reconciliation.
+        _ = state.keyDown(keyCode: 0, keyName: "a", modifiers: [], timestamp: 2)
+        state.reconcileInitiallyHeldKeys(stillPressed: [])
+        XCTAssertNil(tap(&state, trigger, at: 2.1))
+        _ = state.keyUp(keyCode: 0, keyName: "a", modifiers: [], timestamp: 2.2)
+        XCTAssertEqual(tap(&state, trigger, at: 3), .tap(trigger.keyName))
+
+        // Nor may a snapshot remove an unrelated key pressed after startup.
+        _ = state.keyDown(keyCode: 1, keyName: "s", modifiers: [], timestamp: 4)
+        state.reconcileInitiallyHeldKeys(stillPressed: [])
+        XCTAssertNil(tap(&state, trigger, at: 4.1))
+    }
+
+    func testStartupReleaseThenRepressIsNotRemovedByReconciliation() throws {
+        let trigger = try ShortcutParser.parse("left-shift")
+        var state = TriggerRecognizer(heldKeyCodes: [0])
+        _ = state.keyUp(keyCode: 0, keyName: "a", modifiers: [], timestamp: 0)
+        _ = state.keyDown(keyCode: 0, keyName: "a", modifiers: [], timestamp: 1)
+        state.reconcileInitiallyHeldKeys(stillPressed: [])
+        XCTAssertNil(tap(&state, trigger, at: 1.1))
     }
 
     func testModifierPressedWhileOrdinaryKeyHeldCannotTap() throws {
