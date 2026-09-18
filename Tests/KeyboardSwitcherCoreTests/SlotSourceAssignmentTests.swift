@@ -115,4 +115,90 @@ final class SlotSourceAssignmentTests: XCTestCase {
         XCTAssertEqual(swapped.preference(for: .english).languagePrefixes, ["en"])
         XCTAssertEqual(swapped.preference(for: .english).nameContains, ["English"])
     }
+
+    func testSourceUsageReportsOwnedResolvedAndAvailableStates() {
+        var config = pinned()
+        config.inputSources[InputRole.chinese.rawValue] = RoleInputSourcePreference(languagePrefixes: ["ko"])
+        let fallback = InputSourceInfo(id: "ko.one", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
+        let unused = InputSourceInfo(id: "fr.one", localizedName: "French", languages: ["fr"], isSelectCapable: true)
+        let installed = sources + [fallback, unused]
+
+        XCTAssertEqual(config.sourceUsage(of: sources[0], among: installed), .owned(by: .english))
+        XCTAssertEqual(config.sourceUsage(of: fallback, among: installed), .resolved(by: .chinese, tier: .languagePrefix))
+        XCTAssertEqual(config.sourceUsage(of: unused, among: installed), .available)
+    }
+
+    func testSourceUsageUsesFirstSlotInOrderForDuplicateFirstPreferences() {
+        var config = pinned()
+        config.pinInputSourceID(sources[0].id, for: .chinese)
+
+        XCTAssertEqual(config.sourceUsage(of: sources[0], among: sources), .owned(by: .english))
+    }
+
+    func testSourceUsagePrefersLaterDeclaredOwnerOverEarlierFallbackResolution() {
+        var config = pinned()
+        let shared = InputSourceInfo(id: "ko.one", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
+        config.inputSources[InputRole.english.rawValue] = RoleInputSourcePreference(languagePrefixes: ["ko"])
+        config.pinInputSourceID(shared.id, for: .chinese)
+        let installed = sources + [shared]
+
+        XCTAssertEqual(config.sourceUsage(of: shared, among: installed), .owned(by: .chinese))
+    }
+
+    func testSourceUsageUsesSlotOrderWhenMultipleSlotsResolveSameSource() {
+        var config = pinned()
+        let shared = InputSourceInfo(id: "ko.one", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
+        config.inputSources[InputRole.english.rawValue] = RoleInputSourcePreference(languagePrefixes: ["ko"])
+        config.inputSources[InputRole.chinese.rawValue] = RoleInputSourcePreference(languagePrefixes: ["ko"])
+        let installed = sources + [shared]
+
+        XCTAssertEqual(config.sourceUsage(of: shared, among: installed), .resolved(by: .english, tier: .languagePrefix))
+        config.slots.swapAt(0, 1)
+        XCTAssertEqual(config.sourceUsage(of: shared, among: installed), .resolved(by: .chinese, tier: .languagePrefix))
+    }
+
+    func testSourceUsageTreatsLaterLegacyPreferredIDAsResolved() {
+        var config = pinned()
+        let laterPreferred = InputSourceInfo(id: "legacy.later", localizedName: "Later", languages: ["en"], isSelectCapable: true)
+        config.inputSources[InputRole.english.rawValue] = RoleInputSourcePreference(preferredIDs: ["missing", laterPreferred.id])
+        let installed = sources + [laterPreferred]
+
+        XCTAssertEqual(
+            config.sourceUsage(of: laterPreferred, among: installed),
+            .resolved(by: .english, tier: .preferredID)
+        )
+    }
+
+    func testSourceUsageReportsFallbackLanguageTier() {
+        var config = pinned()
+        let fallback = InputSourceInfo(id: "ko.one", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
+        config.inputSources[InputRole.chinese.rawValue] = RoleInputSourcePreference(fallbackLanguage: "ko")
+        let installed = sources + [fallback]
+
+        XCTAssertEqual(
+            config.sourceUsage(of: fallback, among: installed),
+            .resolved(by: .chinese, tier: .fallbackLanguage)
+        )
+    }
+
+    func testAvailableSourceUsageMatchesUnassignedSourcesForSelectableSources() {
+        var config = pinned()
+        let german = InputRole(rawValue: "german")
+        config.slots.append(SwitchSlot(id: german, name: "German", tintHex: "#123456"))
+        config.inputSources[InputRole.chinese.rawValue] = RoleInputSourcePreference(fallbackLanguage: "ko")
+        config.inputSources[InputRole.japanese.rawValue] = RoleInputSourcePreference(preferredIDs: ["missing", "legacy.later"])
+        config.inputSources[german.rawValue] = RoleInputSourcePreference(fallbackLanguage: "de")
+        let fallback = InputSourceInfo(id: "ko.one", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
+        let laterPreferred = InputSourceInfo(id: "legacy.later", localizedName: "Later", languages: ["ja"], isSelectCapable: true)
+        let dynamicFallback = InputSourceInfo(id: "de.one", localizedName: "German", languages: ["de"], isSelectCapable: true)
+        let unused = InputSourceInfo(id: "fr.one", localizedName: "French", languages: ["fr"], isSelectCapable: true)
+        let auxiliary = InputSourceInfo(id: "emoji.palette", localizedName: "Emoji", languages: ["en"], isSelectCapable: true)
+        let unselectable = InputSourceInfo(id: "disabled", localizedName: "Disabled", languages: ["de"], isSelectCapable: false)
+        let installed = sources + [fallback, laterPreferred, dynamicFallback, unused, auxiliary, unselectable]
+
+        let available = InputSourceMatcher.selectableSources(from: installed)
+            .filter { config.sourceUsage(of: $0, among: installed) == .available }
+            .map(\.id)
+        XCTAssertEqual(available, config.unassignedSources(from: installed).map(\.id))
+    }
 }

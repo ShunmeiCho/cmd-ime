@@ -1,5 +1,14 @@
 import Foundation
 
+/// How a selectable input source currently participates in the slot board.
+/// A declared first preference owns a source even if another slot also happens
+/// to resolve to it through a fallback rule.
+public enum SlotSourceUsage: Equatable, Sendable {
+    case available
+    case owned(by: InputRole)
+    case resolved(by: InputRole, tier: InputSourceMatchTier)
+}
+
 /// Shared menu/execution policy. Ownership means the first declared preferred ID,
 /// not a fallback match or an entry in a legacy slot's history.
 public enum SlotSourceSelection: Equatable, Sendable {
@@ -18,6 +27,24 @@ public enum SlotSourceSelection: Equatable, Sendable {
 }
 
 extension SwitcherConfig {
+    /// Returns the source's first slot-board use. First-preference ownership
+    /// always wins; otherwise the first slot in board order whose matcher
+    /// resolves to this source supplies the fallback usage.
+    public func sourceUsage(of source: InputSourceInfo, among sources: [InputSourceInfo]) -> SlotSourceUsage {
+        if let owner = slots.first(where: { preference(for: $0.id).preferredIDs.first == source.id }) {
+            return .owned(by: owner.id)
+        }
+
+        for slot in slots {
+            let match = InputSourceMatcher.match(for: slot.id, sources: sources, config: self)
+            if match.source?.id == source.id {
+                return .resolved(by: slot.id, tier: match.tier)
+            }
+        }
+
+        return .available
+    }
+
     public func inputSourceSelection(_ source: InputSourceInfo, for role: InputRole,
                                      sources: [InputSourceInfo]) -> SlotSourceSelection {
         guard slot(role) != nil, !source.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
