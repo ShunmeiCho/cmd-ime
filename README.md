@@ -104,7 +104,7 @@ To pin an exact version and checksum yourself (copy both from the release notes)
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.5.0 CMDIME_SHA256=509d2028e399a334ec4e4ff4af7346ae057814dbecf6bbf37377dc14f2ac60a6 bash
+  CMDIME_VERSION=0.5.0 CMDIME_SHA256=1f7a582261e26b57db21d2cffa6cdffd19020bc92d16b619c9acfb3e9b71f61b bash
 ```
 
 After installation, open CmdIME and grant both **Accessibility** and
