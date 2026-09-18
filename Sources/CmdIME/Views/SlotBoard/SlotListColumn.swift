@@ -59,7 +59,7 @@ struct SlotListColumn<Card: View>: View {
             }
             if slots.count == 1 {
                 Text("Add a second slot to switch between input sources.")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.body)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

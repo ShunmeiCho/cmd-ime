@@ -447,7 +447,7 @@ struct SlotDragHandle: View {
 struct SlotDragHandleGlyph: View {
     var body: some View {
         Image(systemName: "line.3.horizontal")
-            .font(.system(size: 10, weight: .semibold))
+            .font(DesignTokens.Typography.auxiliary.weight(.semibold))
             .foregroundStyle(DesignTokens.Colors.textMuted)
             .frame(width: 14, height: 24)
     }

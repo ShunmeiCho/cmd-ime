@@ -21,7 +21,7 @@ struct SlotBoardNoticeBar: View {
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
             }
         }
-        .font(.caption)
+        .font(DesignTokens.Typography.body)
         .fixedSize(horizontal: false, vertical: true)
         .padding(10)
         .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)

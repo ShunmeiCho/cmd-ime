@@ -83,7 +83,7 @@ struct SlotCard: View {
             .padding(.leading, 22)
             if !hasTrigger {
                 Label("No trigger yet - record one", systemImage: "keyboard")
-                    .font(.caption2)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 22)
@@ -95,7 +95,7 @@ struct SlotCard: View {
                 } icon: {
                     Image(systemName: "exclamationmark.triangle.fill")
                 }
-                .font(.caption2.weight(.semibold))
+                .font(DesignTokens.Typography.auxiliary.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.warning)
                 .padding(.leading, 22)
                 .help(warning)
@@ -144,7 +144,7 @@ struct SlotCard: View {
                     .transition(.opacity)
             }
         }
-        .font(.caption.weight(.semibold))
+        .font(DesignTokens.Typography.title)
         .animation(DesignTokens.Motion.stateChange, value: isRenaming)
     }
 
@@ -404,7 +404,7 @@ private struct SlotRenameOutsideMonitor: NSViewRepresentable {
 private extension View {
     func slotChip(color: Color) -> some View {
         self
-            .font(.caption2.weight(.bold))
+            .font(DesignTokens.Typography.auxiliary.weight(.bold))
             .foregroundStyle(color)
             .lineLimit(1)
             .padding(.horizontal, 6)

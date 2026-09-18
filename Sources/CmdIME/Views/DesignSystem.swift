@@ -39,6 +39,8 @@ enum DesignTokens {
         static let title = Font.system(size: 13, weight: .semibold)
         static let body = Font.system(size: 12)
         static let auxiliary = Font.system(size: 11)
+        // AppKit bridge for the body role on short technical key labels.
+        @MainActor static let bodyKeyNSFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .semibold)
     }
 
     enum Radius {

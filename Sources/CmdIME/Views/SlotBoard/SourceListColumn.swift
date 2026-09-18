@@ -25,11 +25,11 @@ struct SourceListColumn: View {
             }
             if let message = model.sourceRefreshMessage {
                 Text(message)
-                    .font(.caption2)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
             if model.selectableSources.isEmpty {
-                Label("No input sources", systemImage: "keyboard").font(.caption)
+                Label("No input sources", systemImage: "keyboard").font(DesignTokens.Typography.body)
                 keyboardSettingsButton
             } else {
                 ForEach(model.selectableSources, id: \.id) { source in
@@ -39,7 +39,7 @@ struct SourceListColumn: View {
                 }
                 if model.unassignedSources.isEmpty {
                     Text("All input sources are in slots.")
-                        .font(.caption2)
+                        .font(DesignTokens.Typography.auxiliary)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                     keyboardSettingsButton
                 }
@@ -103,16 +103,16 @@ struct SourceRow: View {
             Circle().fill(tint).frame(width: 6, height: 6).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(source.localizedName)
-                    .font(.caption.weight(.semibold))
+                    .font(DesignTokens.Typography.body.weight(.semibold))
                     .foregroundStyle(DesignTokens.Colors.textPrimary)
                     .lineLimit(2)
                 if isNew {
                     Label("New", systemImage: "sparkles")
-                        .font(.caption2.weight(.semibold))
+                        .font(DesignTokens.Typography.auxiliary.weight(.semibold))
                         .foregroundStyle(DesignTokens.Colors.textPrimary)
                 }
                 Label(name, systemImage: icon)
-                    .font(.caption2)
+                    .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(rejected ? DesignTokens.Colors.warning : (isAvailable ? DesignTokens.Colors.textMuted : tint))
                     .id(name).transition(.opacity)
             }

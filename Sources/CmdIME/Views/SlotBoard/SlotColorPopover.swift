@@ -27,7 +27,7 @@ struct SlotColorPopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Spacing.md) {
             Text("Color for \(slot.name)")
-                .font(.headline)
+                .font(DesignTokens.Typography.title)
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
 
             HStack(spacing: DesignTokens.Spacing.xs) {
@@ -43,7 +43,7 @@ struct SlotColorPopover: View {
 
             if let warning {
                 Label(warning, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.body)
                     .foregroundStyle(DesignTokens.Colors.warning)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityElement(children: .combine)
@@ -74,7 +74,7 @@ struct SlotColorPopover: View {
                 }
                 .overlay {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(DesignTokens.Typography.auxiliary.weight(.bold))
                         .foregroundStyle(DesignTokens.Colors.textPrimary)
                         .padding(3)
                         .background(Circle().fill(DesignTokens.Colors.surfaceInset))

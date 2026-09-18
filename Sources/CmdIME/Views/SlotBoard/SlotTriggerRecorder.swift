@@ -79,7 +79,7 @@ private struct TriggerRecorderPopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Press a key combination or tap a modifier")
-                .font(.headline)
+                .font(DesignTokens.Typography.title)
             HStack(spacing: 5) {
                 if session.liveKeyNames.isEmpty {
                     Text("Waiting for keys…")
@@ -88,10 +88,10 @@ private struct TriggerRecorderPopover: View {
                     ForEach(Array(session.liveKeyNames.enumerated()), id: \.offset) { _, key in
                         let cap = TriggerKeycapText.keycap(key)
                         KeycapView(cap.label, detail: cap.detail, role: role,
-                                   isPressed: session.heldKeys.contains { $0.keyName == key })
+                                   isPressed: session.heldKeys.contains { $0.keyName == key }, appearance: .display)
                     }
                     if session.draft?.gesture == .doubleTap {
-                        Text("×2").font(.caption.weight(.bold))
+                        Text("×2").font(DesignTokens.Typography.body.weight(.bold))
                     }
                 }
             }
@@ -101,18 +101,18 @@ private struct TriggerRecorderPopover: View {
             .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.keyRelease,
                        value: session.captureRevision)
             Text("Tap a modifier twice for a double tap.\nReturn saves · Esc cancels · Delete clears the draft.")
-                .font(.caption)
+                .font(DesignTokens.Typography.body)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
             if let warning = session.warning {
                 Label(warning, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
+                    .font(DesignTokens.Typography.body)
                     .foregroundStyle(DesignTokens.Colors.warning)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Divider()
             HStack(spacing: 8) {
                 RoleBadge(role: role, symbol: role.defaultSymbol, size: 24, isActive: false)
-                Text(name).font(.caption.weight(.semibold))
+                Text(name).font(DesignTokens.Typography.body.weight(.semibold))
                 Spacer()
                 Button("Cancel · Esc", action: session.cancel)
                     .buttonStyle(ConsoleButtonStyle())
@@ -190,7 +190,7 @@ private struct TriggerRecorderAnchor: NSViewRepresentable {
         button.isBordered = false
         button.focusRingType = .exterior
         button.alignment = .left
-        button.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
+        button.font = DesignTokens.Typography.bodyKeyNSFont
         button.target = button
         button.action = #selector(AnchorButton.openRecorder)
         return button

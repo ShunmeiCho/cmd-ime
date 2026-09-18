@@ -12,7 +12,7 @@ struct SlotMatchNotice: View {
         case let .unavailablePreferred(id, source):
             Label("Using \(source.localizedName) because \(preferredName ?? id) is unavailable",
                   systemImage: "arrow.triangle.branch")
-                .font(.caption2)
+                .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         case let .automatic(source):
@@ -29,7 +29,7 @@ struct SlotMatchNotice: View {
                     Text(pinUnavailableReason).fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .font(.caption2)
+            .font(DesignTokens.Typography.auxiliary)
             .foregroundStyle(DesignTokens.Colors.textSecondary)
         case .pinned, .unmatched:
             EmptyView()
