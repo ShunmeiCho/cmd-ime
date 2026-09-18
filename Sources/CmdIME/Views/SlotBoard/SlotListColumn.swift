@@ -29,7 +29,7 @@ struct SlotListColumn<Card: View>: View {
     }
 
     var body: some View {
-        VStack(spacing: 9) {
+        VStack(spacing: DesignTokens.Layout.slotRowGap) {
             ForEach(rows) { row in
                 switch row {
                 case let .slot(slot):

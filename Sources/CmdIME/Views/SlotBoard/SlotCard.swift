@@ -54,7 +54,7 @@ struct SlotCard: View {
                         onColorSelect(hex)
                     }, onClose: { showingColor = false }, warning: warning)
                 }
-                HStack(spacing: 4) {
+                VStack(alignment: .leading, spacing: 4) {
                     name
                     inputSourceControl
                 }

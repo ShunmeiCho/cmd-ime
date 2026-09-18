@@ -88,6 +88,7 @@ enum DesignTokens {
     }
 
     enum Layout {
+        static let slotRowGap: CGFloat = 9
         static let contentMaxWidth: CGFloat = 720
         static let labelColumn: CGFloat = 132
         static let fieldHeight: CGFloat = 28

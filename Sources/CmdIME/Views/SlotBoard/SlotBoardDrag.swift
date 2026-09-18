@@ -68,7 +68,7 @@ final class SlotBoardDragController: ObservableObject {
 
     var insertionLineY: Double? {
         guard let gap = insertionLineGap else { return nil }
-        return SlotBoardGeometry.placeholderMinY(at: gap, top: top, restingHeights: fullHeights, spacing: 9)
+        return SlotBoardGeometry.placeholderMinY(at: gap, top: top, restingHeights: fullHeights, spacing: Double(DesignTokens.Layout.slotRowGap))
     }
 
     /// Flush an old hand-off before the view reads its current model for begin().
@@ -172,7 +172,7 @@ final class SlotBoardDragController: ObservableObject {
         if case .source = payload { inX = probe.x >= frozenColumn.minX - 7 } else { inX = true }
         let next = inY && inX && reason == nil ? SlotBoardGeometry.insertionIndex(
             probeY: Double(probe.y), top: top, restingHeights: heights,
-            spacing: 9, placeholderHeight: Double(placeholderHeight)) : nil
+            spacing: Double(DesignTokens.Layout.slotRowGap), placeholderHeight: Double(placeholderHeight)) : nil
         setInsertion(next)
     }
 
@@ -194,7 +194,7 @@ final class SlotBoardDragController: ObservableObject {
         }
         previousNeighbor = index > 0 ? remaining[index - 1] : nil
         nextNeighbor = index < remaining.count ? remaining[index] : nil
-        let y = SlotBoardGeometry.placeholderMinY(at: index, top: top, restingHeights: heights, spacing: 9)
+        let y = SlotBoardGeometry.placeholderMinY(at: index, top: top, restingHeights: heights, spacing: Double(DesignTokens.Layout.slotRowGap))
         targetFrame = CGRect(x: frozenColumn.minX, y: y, width: originFrame.width, height: originFrame.height)
         if reduceMotion {
             guard performCommit() else { rejectDrop(); return }
