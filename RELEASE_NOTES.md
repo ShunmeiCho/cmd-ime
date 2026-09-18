@@ -1,3 +1,17 @@
+## Unreleased
+
+A first-run setup guide walks new users through permissions, the detected slots and a first switch, inside the settings window.
+
+### Highlights
+
+- New installs open with a three-step **Setup guide** card at the top of Settings: allow keyboard access, check what was detected, try it. The other sections stay folded behind one-line bars until the guide is finished or skipped; every bar can be opened by hand, so Quit and the slot board are never out of reach.
+- Step 1 explains what Accessibility and Input Monitoring are each used for, opens the exact System Settings pane, and flips to Ready while System Settings is still in front where macOS reports the change to a running app. When macOS only applies a grant to a fresh process, or the listener cannot start although both permissions are ready, the guide offers **Relaunch CmdIME** (the app is reopened only after the old process has exited).
+- Step 2 lists every slot as a sentence built from the real bindings, for example "Tap Left Command alone -> English (ABC)", covering taps, double taps and chords. **Change** opens the slot board. It also covers a Mac with a single input source, more slots than automatic keys, and a lone Shift trigger that may clash with an input method's own Shift toggle.
+- Step 3 is a practice field: each confirmed switch ticks its sentence and names the next trigger to try. A slot whose input source is not installed is named as such and does not count. It ends with where CmdIME went: it keeps running without a menu bar icon, reopening the app from Spotlight or the Applications folder shows Settings, and Runtime > Quit agent stops it. Steps 1 and 2 carry the same note, because they send the user to System Settings first.
+- Privacy wording in the guide states what the event tap does: key events are checked in memory, by key code and modifier state, only to spot triggers; what you type is never stored or sent.
+- The guide appears only for configs created by a first GUI launch (`hasCompletedSetup: false`). Existing config files, an unreadable config that was reset to defaults, and configs written by `keyboardctl` never show it. **Runtime > Setup guide > Show** replays it at any time without folding anything.
+- Steps are labelled groups, status changes are announced to VoiceOver, every action is a button, and motion follows Reduce Motion.
+
 ## CmdIME v0.3.0 Preview
 
 Switch slots become a customizable, ordered collection: CmdIME detects them from the installed input sources on first run, migrates existing config files with a backup, and fixes the shortcut recorder.

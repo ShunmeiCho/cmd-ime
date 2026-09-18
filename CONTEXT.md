@@ -16,6 +16,10 @@ _Avoid_: IME, keyboard, input method (when the layout/method distinction does no
 The keyboard gesture bound to a slot: either a one-shot modifier tap or a key-press chord.
 _Avoid_: Shortcut, hotkey
 
+**Setup Guide**:
+The first-run checklist card in Settings that walks permissions, the detected slots and a first switch. It is finished or skipped once, and can be replayed from Runtime.
+_Avoid_: Wizard, onboarding, tutorial
+
 ## Dynamic slots (PR1)
 
 The ordered `config.slots` collection stores stable `InputRole` string IDs,
