@@ -24,13 +24,15 @@ public enum IndicatorDisplayComposition {
 /// Size and Scale settings. The bubble itself is measured from its content; these
 /// are the inputs of that layout, not a size table.
 public struct BubbleMetrics: Equatable, Sendable {
-    /// Every slot sits in the switcher at once, so it may shrink to the config minimum;
-    /// the single-slot archetypes stop here because their text stops being readable.
-    public static let minimumScaleOutsideSwitcher = 0.40
+    /// The switcher's glyphs and names have minimum sizes, so below this factor the cells
+    /// would shrink under their own text and overlap.
+    public static let switcherMinimumFactor = 0.90
 
-    public static func effectiveScale(_ scale: Double, archetype: BubbleArchetype) -> Double {
+    /// The scale the bubble really uses, so the settings slider can show it.
+    public static func effectiveScale(_ scale: Double, size: SwitchIndicatorSize, archetype: BubbleArchetype) -> Double {
         let clamped = SwitcherConfig.clampedSwitchIndicatorScale(scale)
-        return archetype == .switcher ? clamped : max(clamped, minimumScaleOutsideSwitcher)
+        guard archetype == .switcher else { return clamped }
+        return min(max(clamped, switcherMinimumFactor / factor(for: size)), SwitcherConfig.maxSwitchIndicatorScale)
     }
 
     enum Base {
@@ -76,7 +78,7 @@ public struct BubbleMetrics: Equatable, Sendable {
 
     public init(size: SwitchIndicatorSize, scale: Double, textScale: Double, theme: IndicatorTheme) {
         let archetype = theme.archetype
-        let factor = Self.factor(for: size) * Self.effectiveScale(scale, archetype: archetype)
+        let factor = Self.factor(for: size) * Self.effectiveScale(scale, size: size, archetype: archetype)
         let textFactor = factor * IndicatorTypography.clampedTextScale(textScale)
         let isStacked = archetype == .stackedText
         let baseDetail = isStacked ? Base.stackedDetailSize

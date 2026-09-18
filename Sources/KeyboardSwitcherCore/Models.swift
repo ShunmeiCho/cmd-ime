@@ -247,7 +247,7 @@ public enum SwitchIndicatorContentStyle: String, Codable, CaseIterable, Identifi
 public struct SwitcherConfig: Codable, Equatable, Sendable {
     public static let currentVersion = 2
     public static let defaultSwitchIndicatorScale = 1.0
-    public static let minSwitchIndicatorScale = 0.25
+    public static let minSwitchIndicatorScale = 0.4
     public static let maxSwitchIndicatorScale = 1.3
 
     public var slots: [SwitchSlot]
