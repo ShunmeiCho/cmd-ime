@@ -10,6 +10,10 @@ struct SetupReviewStep: View {
     /// Clears the slot board's trigger drafts after the slots were rescanned or rebuilt.
     let resetDrafts: () -> Void
 
+    /// The model's own result line for Refresh and Detect Again. The settings window
+    /// shows `statusText` nowhere else, and a failed rescan must not pass silently.
+    @State private var lastActionMessage: String?
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Each line below is a slot, a switch target: fire its trigger and that input source becomes active. On first launch CmdIME creates one slot per installed language.")
@@ -36,10 +40,16 @@ struct SetupReviewStep: View {
                     Button("Detect Again") {
                         model.resetSlotsFromDetectedSources()
                         resetDrafts()
+                        report(model.statusText)
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
                     refreshButton
                 }
+            }
+
+            if let lastActionMessage {
+                Text(lastActionMessage)
+                    .setupNoteText()
             }
 
             SetupSlotSentenceList(model: model)
@@ -74,9 +84,15 @@ struct SetupReviewStep: View {
         Button("Refresh") {
             model.scan()
             resetDrafts()
+            report(model.statusText)
         }
         .buttonStyle(ConsoleButtonStyle())
         .accessibilityLabel("Refresh input sources")
+    }
+
+    private func report(_ message: String) {
+        lastActionMessage = message
+        SetupGuideNavigation.announce(message)
     }
 
     /// First run only: a source was added after detection left a single slot. Returning
