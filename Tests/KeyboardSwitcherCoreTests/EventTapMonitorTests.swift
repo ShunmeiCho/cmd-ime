@@ -120,6 +120,61 @@ final class EventTapMonitorTests: XCTestCase {
         drainMainQueue()
     }
 
+    func testShortcutCapturePassesBoundChordAndKeyUpThenResumesConsumption() {
+        let inputSources = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: inputSources)
+        var switchedRoles: [InputRole] = []
+        monitor.onSwitch = { role, _ in switchedRoles.append(role) }
+        let down = makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])
+        let up = makeKeyboardEvent(keyCode: 38, keyDown: false)
+
+        monitor.isCapturingShortcut = true
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 58, flags: [.maskAlternate]))
+        XCTAssertTrue(monitor.handleKeyDownForTesting(down)?.takeUnretainedValue() === down)
+        // Committing a recording can end capture before the physical key is released.
+        monitor.isCapturingShortcut = false
+        XCTAssertTrue(monitor.handleKeyUpForTesting(up)?.takeUnretainedValue() === up)
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 58))
+        drainMainQueue()
+        XCTAssertEqual(switchedRoles, [])
+        XCTAssertEqual(inputSources.selectedIDs, [])
+
+        XCTAssertNil(monitor.handleKeyDownForTesting(down))
+        XCTAssertNil(monitor.handleKeyUpForTesting(up))
+        drainMainQueue()
+        XCTAssertEqual(switchedRoles, [.japanese])
+        XCTAssertEqual(inputSources.selectedIDs, ["com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"])
+    }
+
+    func testShortcutCaptureStillCancelsOneShotAndPassesRemap() throws {
+        var config = SwitcherConfig.default
+        let chord = try ShortcutParser.parse("command+k")
+        config.upsertRemapBinding(trigger: chord, output: try ShortcutParser.parse("a"))
+        let inputSources = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: config, inputSources: inputSources)
+        let down = makeKeyboardEvent(keyCode: 40, flags: [.maskCommand])
+        let up = makeKeyboardEvent(keyCode: 40, keyDown: false)
+        monitor.isCapturingShortcut = true
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        XCTAssertTrue(monitor.handleKeyDownForTesting(down)?.takeUnretainedValue() === down)
+        XCTAssertTrue(monitor.handleKeyUpForTesting(up)?.takeUnretainedValue() === up)
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(inputSources.selectedIDs, [])
+    }
+
+    func testShortcutCapturePassesReleaseOfPreviouslyConsumedRepeatingKey() {
+        let monitor = EventTapMonitor(config: .default, inputSources: StubInputSourceService())
+        let down = makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])
+        let up = makeKeyboardEvent(keyCode: 38, keyDown: false)
+        XCTAssertNil(monitor.handleKeyDownForTesting(down))
+        monitor.isCapturingShortcut = true
+        down.setIntegerValueField(.keyboardEventAutorepeat, value: 1)
+        XCTAssertTrue(monitor.handleKeyDownForTesting(down)?.takeUnretainedValue() === down)
+        monitor.isCapturingShortcut = false
+        XCTAssertTrue(monitor.handleKeyUpForTesting(up)?.takeUnretainedValue() === up)
+    }
+
     func testCustomSlotSwitchAndDuplicateIDsRemainSafe() throws {
         let source = InputSourceInfo(id: "custom.korean", localizedName: "Korean", languages: ["ko"], isSelectCapable: true)
         let added = try SwitcherConfig(bindings: [], inputSources: [:]).addingSlot(for: source)

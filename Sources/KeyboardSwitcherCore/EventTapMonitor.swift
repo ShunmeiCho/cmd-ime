@@ -8,6 +8,19 @@ public final class EventTapMonitor: @unchecked Sendable {
     public var onMessage: ((String) -> Void)?
     public var onSwitch: ((InputRole, InputSourceInfo) -> Void)?
 
+    /// The event tap runs on the main run loop; recording state must change there too.
+    public var isCapturingShortcut: Bool {
+        get {
+            precondition(Thread.isMainThread)
+            return capturingShortcut
+        }
+        set {
+            precondition(Thread.isMainThread)
+            capturingShortcut = newValue
+        }
+    }
+    private var capturingShortcut = false
+
     private let inputSources: InputSourceService
     private let addGlobalMouseDownMonitor: GlobalMouseDownMonitorInstaller
     private let addLocalMouseDownMonitor: LocalMouseDownMonitorInstaller
@@ -297,6 +310,11 @@ public final class EventTapMonitor: @unchecked Sendable {
     private func handleKeyDown(_ event: CGEvent) -> Unmanaged<CGEvent>? {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         oneShotState.keyDown(keyCode)
+        guard !isCapturingShortcut else {
+            // A repeat may belong to a key pressed before recording began.
+            consumedKeyDowns.remove(keyCode)
+            return Unmanaged.passUnretained(event)
+        }
         guard let binding = keyPressBinding(forKeyCode: keyCode, flags: event.flags) else {
             return Unmanaged.passUnretained(event)
         }
