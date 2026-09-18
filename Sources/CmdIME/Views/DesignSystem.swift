@@ -66,6 +66,14 @@ enum DesignTokens {
         static let keyRelease = SwiftUI.Animation.spring(response: 0.18, dampingFraction: 0.82)
         static let stateChange = SwiftUI.Animation.easeOut(duration: normal)
         static let expandCollapse = SwiftUI.Animation.spring(response: 0.24, dampingFraction: 0.90)
+
+        static let quickFade = SwiftUI.Animation.easeOut(duration: fast)
+        static let seatPulse = SwiftUI.Animation.easeOut(duration: slow)
+        static let rejectShake = SwiftUI.Animation.linear(duration: slow)
+
+        static func resolved(_ animation: SwiftUI.Animation, reduceMotion: Bool) -> SwiftUI.Animation? {
+            reduceMotion ? nil : animation
+        }
     }
 
     enum Layout {
