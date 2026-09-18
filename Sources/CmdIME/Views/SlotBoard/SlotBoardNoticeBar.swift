@@ -8,7 +8,30 @@ struct SlotBoardNoticeBar: View {
     let onAdd: (String) -> Void
     @AccessibilityFocusState private var undoFocused: Bool
 
+    private var discardsUndo: Bool {
+        if case .removed = notice { return canUndo }
+        return false
+    }
+
     var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            noticeRow
+            if canUndo {
+                Text("Undo until the next slot change")
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+            }
+        }
+        .font(.caption)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
+            .fill(DesignTokens.Colors.surfaceInset))
+        .accessibilityElement(children: .contain)
+        .onAppear { focusUndo() }
+        .onChange(of: notice) { _ in focusUndo() }
+    }
+
+    private var noticeRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             switch notice {
             case let .rejected(reason):
@@ -28,17 +51,11 @@ struct SlotBoardNoticeBar: View {
                     .accessibilityFocused($undoFocused)
             }
             Spacer(minLength: 0)
-            Button("Dismiss", action: onDismiss)
+            Button(discardsUndo ? "Discard" : "Dismiss", action: onDismiss)
                 .buttonStyle(ConsoleButtonStyle())
+                .help(discardsUndo ? "Discard the opportunity to restore this removed slot." : "Hide this message. Any pending Undo remains available.")
+                .accessibilityLabel(discardsUndo ? "Discard removal Undo" : "Dismiss message")
         }
-        .font(.caption)
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(10)
-        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
-            .fill(DesignTokens.Colors.surfaceInset))
-        .accessibilityElement(children: .contain)
-        .onAppear { focusUndo() }
-        .onChange(of: notice) { _ in focusUndo() }
     }
 
     private func focusUndo() {
