@@ -206,7 +206,6 @@ private struct PermissionsCard: View {
                 )
             }
         }
-        .onChange(of: needsAttention) { if !$0 { showsDetails = false } }
     }
 
     private var details: some View {
