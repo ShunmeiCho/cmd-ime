@@ -50,6 +50,140 @@ final class EventTapMonitorTests: XCTestCase {
     }
 
     #if DEBUG
+    func testShortcutCaptureSuppressesModifierTapAndResumesFirstTap() {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var roles: [InputRole] = []
+        monitor.onSwitch = { role, _ in roles.append(role) }
+        monitor.isCapturingShortcut = true
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, [])
+        XCTAssertEqual(roles, [])
+
+        monitor.isCapturingShortcut = false
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(roles, [.english])
+        XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
+    }
+
+    func testShortcutCaptureSuppressesDoubleTapAndDoesNotCarryPendingTapAcrossExit() throws {
+        var config = SwitcherConfig.default
+        config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("double-left-command"), action: .switchInputSource(.chinese)))
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        var roles: [InputRole] = []
+        monitor.onSwitch = { role, _ in roles.append(role) }
+        monitor.isCapturingShortcut = true
+        tapLeftCommand(monitor)
+        tapLeftCommand(monitor)
+        drainSingleTapTimer()
+        XCTAssertEqual(roles, [])
+        XCTAssertEqual(service.selectedIDs, [])
+
+        // A final recorded tap must not become the first half of a runtime double tap.
+        tapLeftCommand(monitor)
+        monitor.isCapturingShortcut = false
+        tapLeftCommand(monitor)
+        drainSingleTapTimer()
+        XCTAssertEqual(roles, [.english])
+        tapLeftCommand(monitor)
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(roles, [.english, .chinese])
+    }
+
+    func testModifierPressedBeforeCaptureAndReleasedDuringCaptureDoesNotSwitch() {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        monitor.isCapturingShortcut = true
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        monitor.isCapturingShortcut = false
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, [])
+        XCTAssertEqual(monitor.pressedModifierKeyCodesForTesting, [])
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
+    }
+
+    func testModifierPressedDuringCaptureAndReleasedAfterCaptureDoesNotSwitch() {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        monitor.isCapturingShortcut = true
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        XCTAssertEqual(monitor.pressedModifierKeyCodesForTesting, [55])
+        monitor.isCapturingShortcut = false
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, [])
+        XCTAssertEqual(monitor.pressedModifierKeyCodesForTesting, [])
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
+    }
+
+    func testShortcutCaptureCancelsSingleTapTimerPendingBeforeEntry() throws {
+        var config = SwitcherConfig.default
+        config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("double-left-command"), action: .switchInputSource(.chinese)))
+        for endCaptureBeforeTimer in [false, true] {
+            let service = StubInputSourceService(sources: makeSwitchSources())
+            let monitor = EventTapMonitor(config: config, inputSources: service)
+            tapLeftCommand(monitor)
+            monitor.isCapturingShortcut = true
+            if endCaptureBeforeTimer { monitor.isCapturingShortcut = false }
+            drainSingleTapTimer()
+            XCTAssertEqual(service.selectedIDs, [])
+            monitor.isCapturingShortcut = false
+            tapLeftCommand(monitor)
+            drainSingleTapTimer()
+            XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
+        }
+    }
+
+    func testShortcutCaptureRetiresSwitchQueuedBeforeEntry() {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        tapLeftCommand(monitor)
+        monitor.isCapturingShortcut = true
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, [])
+        monitor.isCapturingShortcut = false
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
+    }
+
+    func testShortcutCapturePreservesPhysicalSidesAcrossBoundary() {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        monitor.isCapturingShortcut = true
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54, flags: [.maskCommand]))
+        monitor.isCapturingShortcut = false
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54, flags: [.maskCommand]))
+        XCTAssertEqual(monitor.pressedModifierKeyCodesForTesting, [55])
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, [])
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
+    }
+
+    private func tapLeftCommand(_ monitor: EventTapMonitor) {
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+    }
+
+    private func drainSingleTapTimer() {
+        let elapsed = expectation(description: "single-tap window elapsed")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { elapsed.fulfill() }
+        wait(for: [elapsed], timeout: 2)
+    }
+
     func testCachedFallbackRecoversPreferredSourceWithoutRefreshingOtherSlots() {
         let originalSources = makeSwitchSources()
         let preferred = originalSources[1]
