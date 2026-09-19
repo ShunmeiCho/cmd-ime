@@ -108,7 +108,7 @@ struct IndicatorTypographyRows: View {
         .buttonStyle(.plain)
         .accessibilityLabel("Font")
         .accessibilityValue(currentFontName)
-        .popover(isPresented: $showsFonts, arrowEdge: .bottom) {
+        .appearancePopover(isPresented: $showsFonts, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 8) {
                 TextField("Search fonts", text: $fontQuery)
                     .textFieldStyle(.roundedBorder)

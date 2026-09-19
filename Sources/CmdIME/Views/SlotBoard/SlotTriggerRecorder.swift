@@ -60,7 +60,7 @@ struct SlotTriggerRecorder: View {
                 }
                 .onHover { if !isGhost { hovered = $0 } }
                 .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.quickFade, reduceMotion: reduceMotion), value: hovered)
-                .popover(isPresented: presentation, arrowEdge: .bottom) {
+                .appearancePopover(isPresented: presentation, arrowEdge: .bottom) {
                     let generation = session.sessionID
                     TriggerRecorderPopover(session: session, role: role, name: slotLook.name(for: role))
                         .environment(\.slotLook, slotLook)

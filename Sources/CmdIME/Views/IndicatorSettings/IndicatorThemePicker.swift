@@ -12,10 +12,22 @@ struct IndicatorThemePicker: View {
     private static let stageRadius: CGFloat = 8
     private static let textSlack = 4.0
     private static let dotsAllowance: CGFloat = 8
-    private static let stageColor = Color(red: 0.16, green: 0.17, blue: 0.20)
+    /// The stage behind each theme thumbnail: recessed in both appearances, never a black slab on a light window.
+    private static var stageColor: Color { DesignTokens.Colors.surfaceInset }
 
     @ObservedObject var model: AppModel
     @ObservedObject var library: IndicatorLibrary
+
+    /// Re-renders the thumbnails when the appearance around them changes.
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// The indicator floats over other apps, so it follows macOS, not this window. Said only
+    /// when the two differ, which is when dark thumbnails in a light window look like a bug.
+    private var systemAppearanceNote: String? {
+        let isSystemDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+        guard (colorScheme == .dark) != isSystemDark else { return nil }
+        return "The indicator appears over other apps, so it follows the macOS appearance (\(isSystemDark ? "Dark" : "Light") now), not this window's."
+    }
 
     private var selected: IndicatorTheme { library.theme(id: model.config.switchIndicatorThemeID) }
 
@@ -27,6 +39,12 @@ struct IndicatorThemePicker: View {
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
                 Spacer()
                 actionsMenu.frame(width: 44)
+            }
+            if let note = systemAppearanceNote {
+                Text(note)
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: Self.cellMinWidth), spacing: 10)], spacing: 12) {

@@ -68,7 +68,7 @@ struct IndicatorSlotChips: View {
         .buttonStyle(.plain)
         .accessibilityLabel("\(slot.name), symbol \(symbol.glyph)")
         .accessibilityHint("Edits the symbol shown in the indicator")
-        .popover(isPresented: Binding(
+        .appearancePopover(isPresented: Binding(
             get: { editingSlot == slot.id },
             set: { if !$0 { editingSlot = nil } }
         )) {

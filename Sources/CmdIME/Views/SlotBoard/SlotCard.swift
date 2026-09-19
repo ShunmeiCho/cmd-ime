@@ -51,7 +51,7 @@ struct SlotCard: View {
                 .buttonStyle(SlotBadgeButtonStyle())
                 .help("Change slot color")
                 .accessibilityLabel("Color for \(slot.name)")
-                .popover(isPresented: $showingColor) {
+                .appearancePopover(isPresented: $showingColor) {
                     SlotColorPopover(slot: slot, onSelect: { hex in
                         guard !isGhost else { return }
                         onColorSelect(hex)

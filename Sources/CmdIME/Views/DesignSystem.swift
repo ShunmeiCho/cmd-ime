@@ -48,7 +48,13 @@ enum DesignTokens {
         private static func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ a: CGFloat = 1) -> NSColor {
             NSColor(srgbRed: r, green: g, blue: b, alpha: a)
         }
-        private static var isOpaque: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency }
+        /// Reduce Transparency. `CMDIME_OPAQUE=1` forces it in debug builds, for screenshots.
+        static var isOpaque: Bool {
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["CMDIME_OPAQUE"] == "1" { return true }
+            #endif
+            return NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency
+        }
         private static func translucent(_ glass: Color, opaque: Color) -> Color { isOpaque ? opaque : glass }
 
         /// Hover and fill tints: a darkening veil in light mode, a lightening one in dark mode.
@@ -70,9 +76,13 @@ enum DesignTokens {
         static var textMuted: Color { dyn(gray(0.40), rgb(0.62, 0.62, 0.66)) }
         static let accent = Color(red: 0.21, green: 0.48, blue: 0.90)
         static let actionFill = Color(red: 40 / 255, green: 104 / 255, blue: 199 / 255)
-        static let success = Color(red: 0.27, green: 0.77, blue: 0.42)
-        static let warning = Color(red: 0.77, green: 0.48, blue: 0.14)
-        static let danger = Color(red: 0.89, green: 0.31, blue: 0.28)
+        // Status colours double as text, so each has a darker light-mode value that keeps
+        // at least 4.5:1 against the light surfaces; the dark values are the original ones.
+        static var success: Color { dyn(rgb(0.07, 0.47, 0.20), rgb(0.27, 0.77, 0.42)) }
+        static var warning: Color { dyn(rgb(0.62, 0.33, 0.00), rgb(0.77, 0.48, 0.14)) }
+        static var danger: Color { dyn(rgb(0.76, 0.15, 0.12), rgb(0.89, 0.31, 0.28)) }
+        /// Destructive button labels: at least 5.68:1 on the raised dark surface, and 5.9:1 on the light one.
+        static var destructiveText: Color { dyn(rgb(0.72, 0.11, 0.09), rgb(1, 159 / 255, 150 / 255)) }
 
         static func role(_ role: InputRole) -> Color {
             switch role {
@@ -548,7 +558,7 @@ struct ConsoleMenuButton<Content: View>: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityLabel(title)
                 .accessibilityAddTraits(.isButton)
-                .popover(isPresented: $isOpen, arrowEdge: .bottom) {
+                .appearancePopover(isPresented: $isOpen, arrowEdge: .bottom) {
                     VStack(alignment: .leading, spacing: 1) { content }
                         .buttonStyle(ConsoleMenuRowStyle())
                         .font(DesignTokens.Typography.body)
@@ -680,8 +690,7 @@ private struct ConsoleButtonBody: View {
     private var foreground: Color {
         if !isEnabled { return DesignTokens.Colors.textMuted.opacity(0.55) }
         if configuration.role == .destructive {
-            // At least 5.68:1 on the raised surface plus the pressed button fill.
-            return Color(red: 1, green: 159 / 255, blue: 150 / 255)
+            return DesignTokens.Colors.destructiveText
         }
         return usesProminentFill ? .white : DesignTokens.Colors.textPrimary
     }
@@ -756,10 +765,31 @@ extension View {
     @ViewBuilder
     func floatingBarSurface() -> some View {
         let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
-        if #available(macOS 26.0, *), !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
+        if #available(macOS 26.0, *), !DesignTokens.Colors.isOpaque {
             glassEffect(.regular, in: shape)
         } else {
             background(shape.fill(DesignTokens.Colors.surface))
         }
+    }
+}
+
+
+// MARK: - Appearance in popovers
+
+/// A popover is its own window and ignores the settings window's appearance, so each one
+/// applies the stored preference itself.
+private struct AppearanceFollower: ViewModifier {
+    @AppStorage(AppearancePreference.defaultsKey) private var stored = AppearancePreference.system.rawValue
+
+    func body(content: Content) -> some View {
+        content.preferredColorScheme((AppearancePreference(rawValue: stored) ?? .system).colorScheme)
+    }
+}
+
+extension View {
+    /// `popover` whose content follows General > Appearance.
+    func appearancePopover<Content: View>(isPresented: Binding<Bool>, arrowEdge: Edge = .top,
+                                          @ViewBuilder content: @escaping () -> Content) -> some View {
+        popover(isPresented: isPresented, arrowEdge: arrowEdge) { content().modifier(AppearanceFollower()) }
     }
 }

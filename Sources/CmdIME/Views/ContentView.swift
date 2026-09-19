@@ -38,11 +38,22 @@ struct ContentView: View {
                 IndicatorSettingsSection(model: model)
                     .setupFold(.indicator)
                     .frame(maxWidth: .infinity)
+                    .id("indicator-section")
+                #if DEBUG
+                // Screenshot aid: CMDIME_SCROLL_TO=indicator opens the window on the lower half.
+                Color.clear.frame(height: 0).onAppear {
+                    guard ProcessInfo.processInfo.environment["CMDIME_SCROLL_TO"] == "indicator" else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { scroll.scrollTo("indicator-section", anchor: .top) }
+                }
+                #endif
             }
             .padding(22)
             .frame(maxWidth: DesignTokens.Layout.contentMaxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        // One point of padding keeps the scrolling content below the transparent title bar;
+        // without it, rows slide up underneath the window title and the traffic lights.
+        .padding(.top, 1)
         .background(DesignTokens.Colors.canvas)
         .background { WindowMaterial().ignoresSafeArea() }
         .preferredColorScheme(model.appearance.colorScheme)
@@ -231,7 +242,7 @@ private extension SettingsHeader {
             // The answer can change in System Settings while CmdIME keeps running.
             if isShown { model.refreshNotificationPermission() }
         }
-        .popover(isPresented: $showsGeneral, arrowEdge: .bottom) {
+        .appearancePopover(isPresented: $showsGeneral, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
                 HStack {
                     Text("Launch at login")
