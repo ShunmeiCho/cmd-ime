@@ -103,7 +103,7 @@ swift test
   <img src="Assets/readme/slot-board.png" width="640" alt="深色外观下的 CmdIME 设置窗口：左侧是已安装的输入源，右侧是三个槽位及各自的单击、双击和快捷键触发，下方是 Live keys。">
 </p>
 
-<p align="center"><sub>深色外观下的槽位面板。</sub></p>
+<p align="center"><sub>深色外观下的槽位面板。这里是三个槽位，你用几个输入法就可以加几个。</sub></p>
 
 - **光标附近的切换指示气泡。** 十二种内置主题，包括 Glass、macOS 26 及以上的
   Liquid Glass、纸张风格，以及显示所有槽位的切换器，另外还支持你自己的主题和字体。

@@ -109,7 +109,7 @@ A local build needs the same two permissions before global keyboard listening wo
   <img src="Assets/readme/slot-board.png" width="640" alt="The CmdIME settings window in the dark appearance: installed input sources on the left, three slots with their single-tap, double-tap and shortcut triggers on the right, and Live keys below.">
 </p>
 
-<p align="center"><sub>The slot board in the dark appearance.</sub></p>
+<p align="center"><sub>The slot board in the dark appearance. Three slots here; add one for every input source you use.</sub></p>
 
 - **A switch indicator near the caret.** Twelve built-in themes, including Glass,
   Liquid Glass on macOS 26 and later, paper styles and a switcher that shows every

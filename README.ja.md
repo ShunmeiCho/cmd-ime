@@ -113,7 +113,7 @@ swift test
   <img src="Assets/readme/slot-board.png" width="640" alt="ダーク外観の CmdIME 設定ウィンドウ：左にインストール済みの入力ソース、右に 3 つのスロットとそれぞれのシングルタップ、ダブルタップ、ショートカットのトリガー、下に Live keys。">
 </p>
 
-<p align="center"><sub>ダーク外観のスロットボード。</sub></p>
+<p align="center"><sub>ダーク外観のスロットボード。ここでは 3 つですが、使う入力ソースの数だけ追加できます。</sub></p>
 
 - **キャレットの近くに表示される切り替えインジケーター。** Glass、macOS 26 以降の
   Liquid Glass、paper 系のスタイル、すべてのスロットを表示する switcher など 12 の
