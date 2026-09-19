@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="Assets/readme/icon-switch.webp" width="128" alt="CmdIME 应用图标：蓝色按键在“文”和“A”之间来回滑动">
+</p>
+
+<p align="center">
   <img src="Assets/readme/hero.zh-CN.svg" width="100%" alt="CmdIME，一款 macOS 输入源切换工具：一个键对应一个输入源。左 Command 选中英文，右 Command 选中中文，右 Shift 选中日文。">
 </p>
 
@@ -29,6 +33,11 @@ CmdIME 让你 Mac 上的每个输入源都有自己的按键。单击左 Command
 
 - **它是循环切换的。** 输入源达到三个或更多时，你得看一眼菜单栏才知道切到了哪里。
   用 CmdIME，每个键总是切到同一个输入源。
+- **只有两个输入法，它也是来回切换。** Control+Space 切到的是“另一个”，所以按之前你得先
+  知道自己现在在哪个。CmdIME 的每个键永远对应同一个输入法：按左 Command 就是英文，
+  不管之前在哪个。
+- **一根拇指，而不是组合键。** 左右 Command 就在拇指下面，轻点一下即可；Control+Space
+  要同时按两个键。
 - **按下去有时像是没有反应。** CmdIME 会确认 macOS 已经完成切换，没有完成时会重试。
 - **单击和快捷键互不干扰。** Command+C、Command+Tab 等组合键永远不会被当成一次
   Command 单击，你已经在用的按键照常工作。

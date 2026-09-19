@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="Assets/readme/icon-switch.webp" width="128" alt="CmdIME app icon: the blue key slides from 文 to A and back">
+</p>
+
+<p align="center">
   <img src="Assets/readme/hero.svg" width="100%" alt="CmdIME, a macOS input-source switcher: one key per input source. Left Command selects English, Right Command selects Chinese, Right Shift selects Japanese.">
 </p>
 
@@ -31,6 +35,11 @@ The demo shows the Switcher, Glass and Liquid Glass indicator themes.
 
 - **It cycles.** With three or more input sources you look at the menu bar to see
   where you landed. With CmdIME each key always lands on the same source.
+- **Even with two input sources, it toggles.** Control+Space flips to the other source,
+  so you have to know which one you are in before you press. A CmdIME key always means
+  the same source: press Left Command and you are in English, wherever you were before.
+- **One thumb instead of a chord.** Left and Right Command sit under your thumbs and take
+  one tap; Control+Space is two keys pressed together.
 - **A press sometimes seems to do nothing.** CmdIME checks that macOS applied the
   switch and retries when it did not.
 - **Taps and shortcuts stay apart.** Command+C, Command+Tab and other chords never
