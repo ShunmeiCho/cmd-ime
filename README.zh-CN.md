@@ -214,6 +214,27 @@ Switcher（切换器）），可以通过预设和缩放滑块调整大小，可
 CmdIME 0.1.10 或更高版本。macOS 把 `com.apple.50onPaletteIM` 暴露为一个可选的日文输入源，
 但它是辅助用的假名面板，而不是常规的平假名输入法。
 
+### 切换后仍然打出拉丁字母的输入法
+
+从后台选中输入源，有时输入法并没有接到当前应用上：菜单栏显示的是新输入源，打出来的
+却还是拉丁字母。Google 日本語入力在你用 ABC 打过字之后就会这样。对它，CmdIME 会先按一下
+かな键，通过系统自己的路径进入日文，60 毫秒后再选中槽位指定的输入源。其他输入法仍然是
+直接选中，不增加延迟。
+
+如果别的日文输入法出现同样的症状，可以在 `~/.config/cmd-ime/activation-recipes.json`
+里加一条激活配方，然后在设置里点 Refresh：
+
+```json
+{ "recipes": [
+  { "sourceIDPrefix": "com.example.inputmethod", "strategy": "kanaThenSelect", "delayMs": 60 }
+] }
+```
+
+输入源 ID 可以用 `keyboardctl scan` 查到。你的配方优先于内置配方，所以写
+`"strategy": "select"` 可以关掉内置的那一条。`kanaThenSelect` 只对日文输入源生效，
+`delayMs` 限制在 0 到 500 之间，读不出来的条目会被跳过，并在状态栏里指出。有效的配方
+欢迎提 issue 告诉我们，好把它收进内置列表。
+
 ## CLI
 
 槽位 ID 取决于检测到的输入源。下面的示例假设槽位名为

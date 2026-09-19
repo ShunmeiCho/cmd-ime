@@ -1,3 +1,28 @@
+## CmdIME v0.6.2 Preview
+
+Switching to Google Japanese Input now lands in Hiragana.
+
+### Fixes
+
+- **Google Japanese Input no longer stays in Latin after a switch (#4).** After you had typed under ABC, switching to Google Japanese Input showed Hiragana in the menu bar while Latin letters kept coming out: selecting the source from the background left the input method detached from the app. For this input method CmdIME now presses the Kana key first, which enters Japanese through the system's own path, and selects the slot's source 60 ms later, so the right source wins even with several Japanese input methods installed. On a test Mac this took switches through the trigger from 1 of 16 to 12 of 12, and 12 of 12 with an Option+J shortcut. Other input methods keep the plain select with no added delay; azooKey and WeType Pinyin were measured before and after and did not change.
+
+### New
+
+- **Activation recipes.** If another input method shows the same symptom, add a recipe to `~/.config/cmd-ime/activation-recipes.json` instead of waiting for a release, then press Refresh in the settings window:
+
+  ```json
+  { "recipes": [
+    { "sourceIDPrefix": "com.example.inputmethod", "strategy": "kanaThenSelect", "delayMs": 60 }
+  ] }
+  ```
+
+  `keyboardctl scan` lists the source ids. Your recipes win over the built-in one, so `"strategy": "select"` switches the built-in recipe off. `kanaThenSelect` only applies to Japanese sources. Please report what worked in an issue so it can become built in.
+
+### Known limits
+
+- The Kana key is a real key event. In a remote desktop or virtual machine window it may reach the remote side; this was not tested.
+- The **Switch** button in the settings window and `keyboardctl switch` still select the source directly.
+
 ## CmdIME v0.6.1 Preview
 
 The switch indicator sits at the text caret again.
