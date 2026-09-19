@@ -6,14 +6,16 @@ final class SwitchActivationPolicyTests: XCTestCase {
         InputSourceInfo(id: id, localizedName: id, languages: [language], isSelectCapable: true)
     }
 
-    func testKanaPreludeAppliesOnlyWhenEnteringAJapaneseInputMethodFromAnotherLanguage() {
+    func testKanaPreludeAppliesOnlyWhenEnteringAListedInputMethodFromAnotherLanguage() {
         let abc = source("com.apple.keylayout.ABC", "en")
         let google = source("com.google.inputmethod.Japanese.base", "ja")
         let azooKey = source("dev.ensan.inputmethod.azooKeyMac.Japanese", "ja")
         let pinyin = source("com.tencent.inputmethod.wetype.pinyin", "zh-Hans")
 
         XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: google, current: abc))
-        XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: azooKey, current: pinyin))
+        XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: google, current: pinyin))
+        // Not listed: a plain select already works for it.
+        XCTAssertFalse(SwitchActivationPolicy.needsKanaPrelude(target: azooKey, current: abc))
         XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: google, current: nil))
         // Inside Japanese the system passes Kana to the app instead of switching.
         XCTAssertFalse(SwitchActivationPolicy.needsKanaPrelude(target: google, current: azooKey))

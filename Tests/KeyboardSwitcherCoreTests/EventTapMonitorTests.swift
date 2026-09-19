@@ -301,8 +301,12 @@ final class EventTapMonitorTests: XCTestCase {
     }
 
     func testSwitchToJapaneseFromALayoutPostsKanaBeforeSelecting() {
-        let service = StubInputSourceService(sources: makeSwitchSources())
-        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var sources = makeSwitchSources()
+        sources[1] = InputSourceInfo(id: "com.google.inputmethod.Japanese.base", localizedName: "Hiragana (Google)", languages: ["ja"], isSelectCapable: true)
+        var config = SwitcherConfig.default
+        config.inputSources[InputRole.japanese.rawValue] = RoleInputSourcePreference(preferredIDs: [sources[1].id], fallbackLanguage: "ja")
+        let service = StubInputSourceService(sources: sources)
+        let monitor = EventTapMonitor(config: config, inputSources: service)
         var order: [String] = []
         monitor.kanaKeyPoster = { order.append("kana") }
         monitor.onSwitch = { _, source in order.append(source.id) }
@@ -313,7 +317,7 @@ final class EventTapMonitorTests: XCTestCase {
         drainMainQueue()
         XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana"], "the slot's source waits for the Kana switch")
         drainSingleTapTimer()
-        XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana", "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"])
+        XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana", "com.google.inputmethod.Japanese.base"])
     }
 
     func testOwnSyntheticKanaKeyPassesThroughTheTapUntouched() {
