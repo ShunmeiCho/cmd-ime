@@ -12,6 +12,11 @@
     "ja": "CmdIME by ShunmeiCho - 入力ソースごとにキーをひとつ"
   };
   var COPIED = { "en": "Copied", "zh-CN": "已复制", "ja": "コピーしました" };
+  var COPY_MANUAL = {
+    "en": "Copying is blocked here. The command is selected; copy it with Command+C.",
+    "zh-CN": "此处无法自动复制。命令已选中，请按 Command+C 复制。",
+    "ja": "ここでは自動でコピーできません。コマンドを選択したので、Command+C でコピーしてください。"
+  };
 
   function normalize(tag) {
     if (!tag) return null;
@@ -79,15 +84,19 @@
     var source = document.getElementById(button.getAttribute("data-copy"));
     if (!source) return;
     var original = button.innerHTML;
+    var status = document.getElementById("copy-status");
     copyText(source.textContent.trim()).then(function () {
       button.classList.add("is-done");
       button.textContent = COPIED[currentLang()];
+      if (status) status.textContent = COPIED[currentLang()];
       setTimeout(function () {
         button.classList.remove("is-done");
         button.innerHTML = original;
+        if (status) status.textContent = "";
       }, COPIED_MS);
     }, function () {
       // Clipboard blocked: select the command so the user can copy it by hand.
+      if (status) status.textContent = COPY_MANUAL[currentLang()];
       var range = document.createRange();
       range.selectNodeContents(source);
       var sel = window.getSelection();
@@ -118,88 +127,33 @@
       });
   }
 
-  // Keyboard demo: a tap of a modifier alone selects its slot, like the app does.
-  var SLOTS = [
-    { glyph: "A", name: "English", code: "MetaLeft" },
-    { glyph: "中", name: "中文", code: "MetaRight" },
-    { glyph: "あ", name: "日本語", code: "ShiftRight" }
-  ];
-  var TAP_MAX_MS = 600;
-
-  function setupDemo() {
-    var demo = document.getElementById("demo");
-    if (!demo) return;
-    var keys = demo.querySelectorAll("[data-slot]");
-    var bubble = document.getElementById("bubble");
-    var glyph = document.getElementById("bubble-glyph");
-    var name = document.getElementById("bubble-name");
-    var inView = false;
-    var pending = null;
-
-    function select(index) {
-      var key = keys[index];
-      for (var i = 0; i < keys.length; i++) {
-        keys[i].classList.toggle("is-active", i === index);
-        keys[i].setAttribute("aria-pressed", i === index ? "true" : "false");
-      }
-      bubble.style.setProperty("--slot", key.style.getPropertyValue("--slot"));
-      glyph.textContent = SLOTS[index].glyph;
-      name.textContent = SLOTS[index].name;
-      bubble.hidden = false;
-      bubble.classList.remove("is-pop");
-      void bubble.offsetWidth; // restart the pop animation
-      bubble.classList.add("is-pop");
-    }
-
-    demo.addEventListener("click", function (event) {
-      var key = event.target.closest("[data-slot]");
-      if (key) select(Number(key.getAttribute("data-slot")));
-    });
-
-    document.addEventListener("keydown", function (event) {
-      if (event.repeat) return;
-      pending = null;
-      for (var i = 0; i < SLOTS.length; i++) {
-        if (SLOTS[i].code === event.code) { pending = { index: i, at: Date.now() }; }
-      }
-    });
-    document.addEventListener("keyup", function (event) {
-      var p = pending;
-      pending = null;
-      if (!inView || !p || SLOTS[p.index].code !== event.code) return;
-      if (Date.now() - p.at <= TAP_MAX_MS) select(p.index);
-    });
-    document.addEventListener("mousedown", function () { pending = null; });
-
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(function (entries) {
-        inView = entries[0].isIntersecting;
-      }).observe(demo);
-    } else {
-      inView = true;
-    }
-    select(0);
-    bubble.classList.remove("is-pop");
-  }
-
-  function setupReveal() {
+  // Promo video: autoplay muted while on screen, pause off screen. The native
+  // controls stay, so Pause is always available; a pause by the viewer sticks.
+  // Under reduced motion it keeps the poster and waits for Play.
+  function setupPromo() {
+    var video = document.getElementById("promo-video");
+    if (!video) return;
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce || !("IntersectionObserver" in window)) return;
-    var items = document.querySelectorAll(".section, .install");
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) { entry.target.classList.add("is-in"); io.unobserve(entry.target); }
-      });
-    }, { rootMargin: "0px 0px -8% 0px" });
-    for (var i = 0; i < items.length; i++) {
-      items[i].classList.add("reveal");
-      io.observe(items[i]);
-    }
+    video.muted = true;
+    var viewerPaused = false;
+    var ourPause = false;
+    video.addEventListener("pause", function () { if (!ourPause) viewerPaused = true; ourPause = false; });
+    video.addEventListener("play", function () { viewerPaused = false; });
+    new IntersectionObserver(function (entries) {
+      if (entries[0].isIntersecting) {
+        if (viewerPaused) return;
+        var played = video.play();
+        if (played && played.catch) played.catch(function () { /* autoplay refused: controls are there */ });
+      } else if (!video.paused) {
+        ourPause = true;
+        video.pause();
+      }
+    }, { threshold: 0.35 }).observe(video);
   }
 
   apply(fromQuery() || readStored() || fromBrowser());
-  setupDemo();
-  setupReveal();
+  setupPromo();
 
   document.addEventListener("click", function (event) {
     var langButton = event.target.closest("[data-set-lang]");

@@ -36,8 +36,11 @@
 })();
 </script>
 <script src="main.js" defer></script>
+<script src="demo.js" defer></script>
+<script src="rain.js" defer></script>
 </head>
 <body>
+<canvas class="glyph-field" id="glyph-field" aria-hidden="true"></canvas>
 <header class="bar">
   <div class="wrap bar-row">
     <a class="brand" href="#top" aria-label="CmdIME">
@@ -57,10 +60,11 @@
 
 <main id="top">
   <!-- Hero -->
-  <section class="hero wrap" aria-labelledby="hero-title">
-    <div class="hero-text">
-      <img class="hero-icon" src="assets/icon-switch.webp" width="96" height="96" alt="" fetchpriority="high">
-      <div>
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap hero-inner">
+    <div class="hero-head">
+      <img class="hero-icon" src="assets/icon-switch.webp" width="72" height="72" alt="" fetchpriority="high">
+      <div class="hero-copy">
         <h1 id="hero-title">
           <span class="i-en"><em>One key</em> per input source.</span>
           <span class="i-zh" lang="zh-CN"><em>一个键</em>对应一个输入源。</span>
@@ -69,64 +73,115 @@
         <p class="lede i-en">CmdIME gives every input source on your Mac its own key. Tap Left Command for English, Right Command for Chinese, Right Shift for Japanese.</p>
         <p class="lede i-zh" lang="zh-CN">CmdIME 让你 Mac 上的每个输入源都有自己的按键。单击左 Command 切到英文，右 Command 切到中文，右 Shift 切到日文。</p>
         <p class="lede i-ja" lang="ja">CmdIME は、Mac の入力ソースそれぞれに専用のキーを割り当てます。左 Command をタップすれば英語、右 Command なら中国語、右 Shift なら日本語。</p>
-        <p class="hero-cta">
-          <a class="btn btn-primary" href="#install"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></a>
-        </p>
+      </div>
+      <p class="hero-cta">
+        <a class="btn btn-primary" href="#install"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></a>
+      </p>
+    </div>
+
+    <!-- Interactive preview: six one-shot keys, each plays a sample in its language. -->
+    <div class="stage" id="stage">
+      <div class="field" id="field" aria-hidden="true">
+        <span class="field-text" id="field-text"></span><span class="caret" id="caret"></span>
+        <div class="glass-bubble" id="bubble">
+          <span class="gb-tile" id="bubble-glyph">A</span>
+          <span class="gb-text"><span class="gb-title" id="bubble-title">English</span></span>
+        </div>
+      </div>
+      <div class="kb" role="group" aria-labelledby="stage-hint">
+        <div class="kb-row kb-row-shift">
+          <button type="button" class="keycap" data-slot="5" style="--slot:var(--slot-teal)">
+            <span class="kc-cap"><span class="kc-glyph" aria-hidden="true">&#8679;</span><span class="kc-tile" aria-hidden="true">De</span><span class="kc-key"><span class="i-en">Left Shift</span><span class="i-zh" lang="zh-CN">左 Shift</span><span class="i-ja" lang="ja">左 Shift</span></span></span>
+            <span class="kc-name" lang="de">Deutsch</span>
+          </button>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <span class="kb-blank" aria-hidden="true"><span class="kc-cap"></span></span>
+          <button type="button" class="keycap" data-slot="2" style="--slot:var(--slot-red)">
+            <span class="kc-cap"><span class="kc-glyph" aria-hidden="true">&#8679;</span><span class="kc-tile" aria-hidden="true">あ</span><span class="kc-key"><span class="i-en">Right Shift</span><span class="i-zh" lang="zh-CN">右 Shift</span><span class="i-ja" lang="ja">右 Shift</span></span></span>
+            <span class="kc-name" lang="ja">日本語</span>
+          </button>
+        </div>
+        <div class="kb-row kb-row-bottom">
+          <button type="button" class="keycap" data-slot="3" style="--slot:var(--slot-purple)">
+            <span class="kc-cap"><span class="kc-glyph" aria-hidden="true">&#8997;</span><span class="kc-tile" aria-hidden="true">한</span><span class="kc-key"><span class="i-en">Left Option</span><span class="i-zh" lang="zh-CN">左 Option</span><span class="i-ja" lang="ja">左 Option</span></span></span>
+            <span class="kc-name" lang="ko">한국어</span>
+          </button>
+          <button type="button" class="keycap" data-slot="0" style="--slot:var(--slot-blue)">
+            <span class="kc-cap"><span class="kc-glyph" aria-hidden="true">&#8984;</span><span class="kc-tile" aria-hidden="true">A</span><span class="kc-key"><span class="i-en">Left Command</span><span class="i-zh" lang="zh-CN">左 Command</span><span class="i-ja" lang="ja">左 Command</span></span></span>
+            <span class="kc-name" lang="en">English</span>
+          </button>
+          <span class="kb-blank kb-space" aria-hidden="true"><span class="kc-cap"></span></span>
+          <button type="button" class="keycap" data-slot="1" style="--slot:var(--slot-green)">
+            <span class="kc-cap"><span class="kc-glyph" aria-hidden="true">&#8984;</span><span class="kc-tile" aria-hidden="true">中</span><span class="kc-key"><span class="i-en">Right Command</span><span class="i-zh" lang="zh-CN">右 Command</span><span class="i-ja" lang="ja">右 Command</span></span></span>
+            <span class="kc-name" lang="zh">中文</span>
+          </button>
+          <button type="button" class="keycap" data-slot="4" style="--slot:var(--slot-orange)">
+            <span class="kc-cap"><span class="kc-glyph" aria-hidden="true">&#8997;</span><span class="kc-tile" aria-hidden="true">Fr</span><span class="kc-key"><span class="i-en">Right Option</span><span class="i-zh" lang="zh-CN">右 Option</span><span class="i-ja" lang="ja">右 Option</span></span></span>
+            <span class="kc-name" lang="fr">Français</span>
+          </button>
+        </div>
+      </div>
+      <div class="stage-foot">
+        <p class="stage-hint" id="stage-hint"><span class="i-en">Interactive preview: press a key or tap a cap to play a sample. Your Mac's input source is not changed.</span><span class="i-zh" lang="zh-CN">交互预览：按一下键或点按键帽，播放示例。不会改变你 Mac 的输入源。</span><span class="i-ja" lang="ja">インタラクティブプレビュー：キーを押すかキーキャップをタップすると、サンプルを再生します。Mac の入力ソースは変わりません。</span></p>
+        <button type="button" class="replay" id="replay" hidden><span class="i-en">Replay demo</span><span class="i-zh" lang="zh-CN">重新播放演示</span><span class="i-ja" lang="ja">デモをもう一度再生</span></button>
       </div>
     </div>
-    <figure class="hero-art">
-      <img class="i-en" src="assets/hero-2.svg" width="1200" height="400" alt="CmdIME, a macOS input-source switcher: one key per input source. Left Command selects English, Right Command selects Chinese, Right Shift selects Japanese.">
-      <img class="i-zh" src="assets/hero-2.zh-CN.svg" width="1200" height="400" loading="lazy" alt="CmdIME，一款 macOS 输入源切换工具：一个键对应一个输入源。左 Command 选中英文，右 Command 选中中文，右 Shift 选中日文。">
-      <img class="i-ja" src="assets/hero-2.ja.svg" width="1200" height="400" loading="lazy" alt="CmdIME：入力ソースごとに専用のキーを割り当てる macOS の入力ソース切り替えツール。左 Command で英語、右 Command で中国語、右 Shift で日本語を選択します。">
-    </figure>
+    </div>
   </section>
 
   <!-- Install -->
   <section id="install" class="install" aria-labelledby="install-title">
-    <div class="wrap">
-      <h2 id="install-title"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></h2>
-      <div class="code code-hero">
-        <pre><code id="cmd-install">curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash</code></pre>
-        <button type="button" class="copy" data-copy="cmd-install"><span class="i-en">Copy</span><span class="i-zh" lang="zh-CN">复制</span><span class="i-ja" lang="ja">コピー</span></button>
-      </div>
-    </div>
     <div class="wrap install-grid">
       <div class="install-main">
-        <p class="status">
-          <span class="i-en">Preview build: signed, not notarized.</span>
-          <span class="i-zh" lang="zh-CN">预览版本：已签名，但未经公证。</span>
-          <span class="i-ja" lang="ja">プレビュービルド：署名済みですが、公証（notarize）はされていません。</span>
-        </p>
-        <div class="i-en">
-          <p>The installer downloads the latest release, verifies it against the published SHA-256, installs <code>CmdIME.app</code> in <code>/Applications</code>, links <code>keyboardctl</code> and opens the app. Then allow <strong>Accessibility</strong> and <strong>Input Monitoring</strong> in System Settings &gt; Privacy &amp; Security; the in-app Setup guide walks you through both and a first switch.</p>
-          <p>Requires macOS 13 or later. Later updates install from inside the app with <strong>Update Now</strong>.</p>
+        <h2 id="install-title"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></h2>
+        <p class="install-facts"><span class="i-en">Free and open source (MIT). Requires macOS 13 or later. Preview build: signed, not notarized.</span><span class="i-zh" lang="zh-CN">免费开源（MIT）。需要 macOS 13 或更高版本。预览版本：已签名，但未经公证。</span><span class="i-ja" lang="ja">無料のオープンソース（MIT）です。macOS 13 以降が必要です。プレビュービルド：署名済みですが、公証（notarize）はされていません。</span></p>
+        <p class="code-label"><span class="i-en">Paste into Terminal</span><span class="i-zh" lang="zh-CN">粘贴到“终端”中运行</span><span class="i-ja" lang="ja">ターミナルに貼り付けて実行</span></p>
+        <div class="code code-hero">
+          <pre><code id="cmd-install">curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash</code></pre>
+          <button type="button" class="copy" data-copy="cmd-install"><span class="i-en">Copy</span><span class="i-zh" lang="zh-CN">复制</span><span class="i-ja" lang="ja">コピー</span></button>
         </div>
-        <div class="i-zh" lang="zh-CN">
-          <p>安装脚本会下载最新的发布版本，对照公布的 SHA-256 进行校验，把 <code>CmdIME.app</code> 安装到 <code>/Applications</code>，链接 <code>keyboardctl</code>，然后打开应用。之后在系统设置 &gt; 隐私与安全性中允许 <strong>Accessibility</strong>（辅助功能）和 <strong>Input Monitoring</strong>（输入监控）；应用内的设置向导会带你完成这两项授权和第一次切换。</p>
-          <p>需要 macOS 13 或更高版本。之后的更新可以在应用内通过 <strong>Update Now</strong>（立即更新）安装。</p>
-        </div>
-        <div class="i-ja" lang="ja">
-          <p>インストーラーは最新のリリースをダウンロードし、公開されている SHA-256 と照合して検証したうえで、<code>CmdIME.app</code> を <code>/Applications</code> にインストールし、<code>keyboardctl</code> をリンクしてアプリを開きます。そのあと、システム設定 &gt; プライバシーとセキュリティで <strong>Accessibility</strong>（アクセシビリティ）と <strong>Input Monitoring</strong>（入力監視）を許可してください。アプリ内の Setup guide（セットアップガイド）が、この 2 つの許可と最初の切り替えまでを案内します。</p>
-          <p>macOS 13 以降が必要です。以降のアップデートは、アプリ内の <strong>Update Now</strong>（今すぐアップデート）からインストールできます。</p>
-        </div>
+        <ol class="steps">
+          <li><span class="i-en">Run the command in Terminal.</span><span class="i-zh" lang="zh-CN">在“终端”中运行这行命令。</span><span class="i-ja" lang="ja">ターミナルでこのコマンドを実行します。</span></li>
+          <li><span class="i-en">Allow <strong>Accessibility</strong> and <strong>Input Monitoring</strong> in System Settings &gt; Privacy &amp; Security.</span><span class="i-zh" lang="zh-CN">在系统设置 &gt; 隐私与安全性中允许 <strong>Accessibility</strong>（辅助功能）和 <strong>Input Monitoring</strong>（输入监控）。</span><span class="i-ja" lang="ja">システム設定 &gt; プライバシーとセキュリティで <strong>Accessibility</strong>（アクセシビリティ）と <strong>Input Monitoring</strong>（入力監視）を許可します。</span></li>
+          <li><span class="i-en">Follow the in-app Setup guide to your first switch.</span><span class="i-zh" lang="zh-CN">按应用内的设置向导完成第一次切换。</span><span class="i-ja" lang="ja">アプリ内の Setup guide（セットアップガイド）に沿って、最初の切り替えまで進みます。</span></li>
+        </ol>
+        <details class="more">
+          <summary><span class="i-en">What the installer does</span><span class="i-zh" lang="zh-CN">安装脚本会做什么</span><span class="i-ja" lang="ja">インストーラーが行うこと</span></summary>
+          <p class="i-en">The installer downloads the latest release, verifies it against the published SHA-256, installs <code>CmdIME.app</code> in <code>/Applications</code>, links <code>keyboardctl</code> and opens the app. Later updates install from inside the app with <strong>Update Now</strong>.</p>
+          <p class="i-zh" lang="zh-CN">安装脚本会下载最新的发布版本，对照公布的 SHA-256 进行校验，把 <code>CmdIME.app</code> 安装到 <code>/Applications</code>，链接 <code>keyboardctl</code>，然后打开应用。之后的更新可以在应用内通过 <strong>Update Now</strong>（立即更新）安装。</p>
+          <p class="i-ja" lang="ja">インストーラーは最新のリリースをダウンロードし、公開されている SHA-256 と照合して検証したうえで、<code>CmdIME.app</code> を <code>/Applications</code> にインストールし、<code>keyboardctl</code> をリンクしてアプリを開きます。以降のアップデートは、アプリ内の <strong>Update Now</strong>（今すぐアップデート）からインストールできます。</p>
+        </details>
+        <p class="source-link"><a href="https://github.com/ShunmeiCho/cmd-ime/blob/main/script/install.sh"><span class="i-en">View installer source</span><span class="i-zh" lang="zh-CN">查看安装脚本源码</span><span class="i-ja" lang="ja">インストーラーのソースを見る</span></a></p>
       </div>
 
       <aside class="install-alt" aria-labelledby="zip-title">
-        <h3 id="zip-title"><span class="i-en">Or download the zip</span><span class="i-zh" lang="zh-CN">或者下载 zip</span><span class="i-ja" lang="ja">zip をダウンロードする</span></h3>
+        <h3 id="zip-title"><span class="i-en">Manual installation</span><span class="i-zh" lang="zh-CN">手动安装</span><span class="i-ja" lang="ja">手動インストール</span></h3>
         <p>
           <a id="zip-link" class="btn btn-quiet" href="https://github.com/ShunmeiCho/cmd-ime/releases/latest">
             <span class="i-en">Download zip</span><span class="i-zh" lang="zh-CN">下载 zip</span><span class="i-ja" lang="ja">zip をダウンロード</span><span id="zip-version" class="ver"></span>
           </a>
         </p>
-        <p class="i-en">A zip downloaded in a browser is stopped by Gatekeeper with an "is damaged" message. The app is not damaged: move <code>CmdIME.app</code> to <code>/Applications</code>, then remove the quarantine flag:</p>
-        <p class="i-zh" lang="zh-CN">通过浏览器下载的 zip 在首次打开时会被 Gatekeeper 拦下，提示“已损坏”。应用并没有损坏：先把 <code>CmdIME.app</code> 移到“应用程序”（<code>/Applications</code>），再去掉隔离标记：</p>
-        <p class="i-ja" lang="ja">ブラウザーでダウンロードした zip は、初回に Gatekeeper によって「壊れている」と表示され、止められます。アプリは壊れていません。<code>CmdIME.app</code> を「アプリケーション」（<code>/Applications</code>）に移してから、隔離属性を削除します。</p>
-        <div class="code code-small">
-          <pre><code id="cmd-xattr">xattr -dr com.apple.quarantine /Applications/CmdIME.app</code></pre>
-          <button type="button" class="copy" data-copy="cmd-xattr"><span class="i-en">Copy</span><span class="i-zh" lang="zh-CN">复制</span><span class="i-ja" lang="ja">コピー</span></button>
-        </div>
+        <details class="more">
+          <summary><span class="i-en">If macOS says the app "is damaged"</span><span class="i-zh" lang="zh-CN">如果 macOS 提示应用“已损坏”</span><span class="i-ja" lang="ja">macOS に「壊れている」と表示された場合</span></summary>
+          <p class="i-en">A zip downloaded in a browser is stopped by Gatekeeper with an "is damaged" message. The app is not damaged: move <code>CmdIME.app</code> to <code>/Applications</code>, then remove the quarantine flag:</p>
+          <p class="i-zh" lang="zh-CN">通过浏览器下载的 zip 在首次打开时会被 Gatekeeper 拦下，提示“已损坏”。应用并没有损坏：先把 <code>CmdIME.app</code> 移到“应用程序”（<code>/Applications</code>），再去掉隔离标记：</p>
+          <p class="i-ja" lang="ja">ブラウザーでダウンロードした zip は、初回に Gatekeeper によって「壊れている」と表示され、止められます。アプリは壊れていません。<code>CmdIME.app</code> を「アプリケーション」（<code>/Applications</code>）に移してから、隔離属性を削除します。</p>
+          <div class="code code-small">
+            <pre><code id="cmd-xattr">xattr -dr com.apple.quarantine /Applications/CmdIME.app</code></pre>
+            <button type="button" class="copy" data-copy="cmd-xattr"><span class="i-en">Copy</span><span class="i-zh" lang="zh-CN">复制</span><span class="i-ja" lang="ja">コピー</span></button>
+          </div>
+        </details>
       </aside>
     </div>
+    <p class="sr-only" role="status" id="copy-status"></p>
   </section>
 
   <!-- Why not Control+Space -->
@@ -137,25 +192,33 @@
       <img class="i-zh" src="assets/why-2.zh-CN.svg" width="1200" height="430" loading="lazy" alt="Control+Space 在英文、中文、日文之间轮流切换，切到日文要按两次；CmdIME 按一次右 Shift 就切到日文。">
       <img class="i-ja" src="assets/why-2.ja.svg" width="1200" height="430" loading="lazy" alt="Control+Space は英語・中国語・日本語を巡回し、日本語までに 2 回押す必要があります。CmdIME なら右 Shift を 1 回押すだけで日本語に切り替わります。">
     </figure>
+    <figure class="promo" id="promo">
+      <video id="promo-video" width="1280" height="720" muted loop playsinline controls preload="metadata" poster="assets/promo-poster.jpg"
+             aria-label="CmdIME demo: one key per input source">
+        <source src="assets/promo.mp4" type="video/mp4">
+      </video>
+      <figcaption>
+        <span class="i-en">The demo shows the Switcher, Glass and Liquid Glass indicator themes.</span>
+        <span class="i-zh" lang="zh-CN">演示里出现的是 Switcher、Glass 和 Liquid Glass 三种指示气泡主题。</span>
+        <span class="i-ja" lang="ja">デモには Switcher、Glass、Liquid Glass の 3 つのインジケーターテーマが登場します。</span>
+      </figcaption>
+    </figure>
     <ul class="reasons i-en">
       <li><strong>It cycles.</strong> With three or more input sources you look at the menu bar to see where you landed. With CmdIME each key always lands on the same source.</li>
       <li><strong>Even with two input sources, it toggles.</strong> Control+Space flips to the other source, so you have to know which one you are in before you press. A CmdIME key always means the same source: press Left Command and you are in English, wherever you were before.</li>
       <li><strong>One thumb instead of a chord.</strong> Left and Right Command sit under your thumbs and take one tap; Control+Space is two keys pressed together.</li>
-      <li><strong>A press sometimes seems to do nothing.</strong> CmdIME checks that macOS applied the switch and retries when it did not.</li>
       <li><strong>Taps and shortcuts stay apart.</strong> Command+C, Command+Tab and other chords never count as a Command tap, so the keys you already use keep working.</li>
     </ul>
     <ul class="reasons i-zh" lang="zh-CN">
       <li><strong>它是循环切换的。</strong>输入源达到三个或更多时，你得看一眼菜单栏才知道切到了哪里。用 CmdIME，每个键总是切到同一个输入源。</li>
       <li><strong>只有两个输入法，它也是来回切换。</strong>Control+Space 切到的是“另一个”，所以按之前你得先知道自己现在在哪个。CmdIME 的每个键永远对应同一个输入法：按左 Command 就是英文，不管之前在哪个。</li>
       <li><strong>一根拇指，而不是组合键。</strong>左右 Command 就在拇指下面，轻点一下即可；Control+Space 要同时按两个键。</li>
-      <li><strong>按下去有时像是没有反应。</strong>CmdIME 会确认 macOS 已经完成切换，没有完成时会重试。</li>
       <li><strong>单击和快捷键互不干扰。</strong>Command+C、Command+Tab 等组合键永远不会被当成一次 Command 单击，你已经在用的按键照常工作。</li>
     </ul>
     <ul class="reasons i-ja" lang="ja">
       <li><strong>巡回式だから。</strong>入力ソースが 3 つ以上あると、どこに切り替わったかをメニューバーで確認する必要があります。CmdIME なら、各キーは常に同じ入力ソースに切り替わります。</li>
       <li><strong>入力ソースが 2 つでも、交互に切り替わるだけだから。</strong>Control+Space は「もう一方」に切り替えるので、押す前に今どちらなのかを知っておく必要があります。CmdIME のキーはいつも同じ入力ソースを指します。左 Command を押せば、直前がどちらでも英語になります。</li>
       <li><strong>同時押しではなく、親指 1 本で済むから。</strong>左右の Command は親指の下にあり、軽く叩くだけです。Control+Space は 2 つのキーの同時押しです。</li>
-      <li><strong>押しても何も起きないように見えることがあるから。</strong>CmdIME は macOS が切り替えを適用したことを確認し、適用されなかった場合は再試行します。</li>
       <li><strong>タップとショートカットを区別するから。</strong>Command+C、Command+Tab などのショートカットが Command のタップとして扱われることはないので、普段使っているキーはそのまま使えます。</li>
     </ul>
   </section>
@@ -173,26 +236,6 @@
         <span class="i-ja" lang="ja">CmdIME はその入力ソースを直接選択し、macOS が実際に切り替えたことを確認して、キャレットの近くに小さなインジケーターを表示します。</span>
       </figcaption>
     </figure>
-
-    <div class="demo" id="demo">
-      <div class="demo-copy">
-        <h3><span class="i-en">Try it on this page</span><span class="i-zh" lang="zh-CN">在这个页面上试试</span><span class="i-ja" lang="ja">このページで試す</span></h3>
-        <p class="i-en">Tap Left Command, Right Command or Right Shift on your keyboard, or click a key. This is a simulation in your browser; the app does the same with macOS input sources.</p>
-        <p class="i-zh" lang="zh-CN">在键盘上单击左 Command、右 Command 或右 Shift，或者直接点按键。这是浏览器里的模拟；应用对 macOS 输入源做的是同样的事。</p>
-        <p class="i-ja" lang="ja">キーボードで左 Command、右 Command、右 Shift をタップするか、キーをクリックしてください。これはブラウザー上のシミュレーションで、アプリは同じことを macOS の入力ソースに対して行います。</p>
-      </div>
-      <div class="demo-stage" aria-live="polite">
-        <div class="demo-keys" role="group" aria-label="Keys">
-          <button type="button" class="key" data-slot="0" style="--slot:var(--slot-blue)"><span class="key-glyph">&#8984;</span><span class="key-name"><span class="i-en">left command</span><span class="i-zh" lang="zh-CN">左 command</span><span class="i-ja" lang="ja">左 command</span></span></button>
-          <button type="button" class="key" data-slot="1" style="--slot:var(--slot-green)"><span class="key-glyph">&#8984;</span><span class="key-name"><span class="i-en">right command</span><span class="i-zh" lang="zh-CN">右 command</span><span class="i-ja" lang="ja">右 command</span></span></button>
-          <button type="button" class="key key-wide" data-slot="2" style="--slot:var(--slot-red)"><span class="key-glyph">&#8679;</span><span class="key-name"><span class="i-en">right shift</span><span class="i-zh" lang="zh-CN">右 shift</span><span class="i-ja" lang="ja">右 shift</span></span></button>
-        </div>
-        <div class="bubble" id="bubble" hidden>
-          <span class="bubble-glyph" id="bubble-glyph"></span>
-          <span class="bubble-name" id="bubble-name"></span>
-        </div>
-      </div>
-    </div>
   </section>
 
   <!-- Features -->

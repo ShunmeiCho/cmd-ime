@@ -77,7 +77,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .langs { display: flex; border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 2px; }
 .langs button {
   font: inherit; font-size: 0.82rem; color: var(--muted); background: none; border: 0;
-  padding: 4px 10px; border-radius: 6px; cursor: pointer; line-height: 1.4;
+  padding: 4px 10px; border-radius: 6px; cursor: pointer; line-height: 1.4; min-height: 44px; min-width: 44px;
 }
 .langs button:hover { color: var(--text); }
 .langs button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
@@ -100,21 +100,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .ver { color: var(--muted); font-weight: 500; font-size: 0.9rem; }
 .ver:empty { display: none; }
 
-/* Hero */
-.hero { padding-top: 56px; padding-bottom: 48px; }
-.hero-text { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: start; max-width: 880px; }
-.hero-icon { width: 96px; height: 96px; }
-.hero h1 { font-size: clamp(2.1rem, 1.4rem + 3vw, 3.6rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.08; margin-bottom: 18px; }
-.lede { font-size: clamp(1.05rem, 1rem + 0.35vw, 1.25rem); color: var(--muted); max-width: 60ch; margin-bottom: 26px; }
-.hero-cta { margin: 0; }
-.hero-art { margin-top: 44px; }
-.hero-art img, .art img { width: 100%; }
-@media (max-width: 640px) {
-  .hero { padding-top: 32px; }
-  .hero-text { grid-template-columns: 1fr; gap: 18px; }
-  .hero-icon { width: 72px; height: 72px; }
-  .hero-art { margin-top: 32px; }
-}
+/* Hero: see "Hero demo" below */
 
 /* Install */
 .install { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 64px 0; }
@@ -136,7 +122,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   padding: 18px 18px 18px 20px; margin: 0 0 24px;
 }
 .code-hero {
-  align-items: center; margin-bottom: 40px; padding: 22px 22px 22px 26px;
+  align-items: center; margin-bottom: 24px; padding: 22px 22px 22px 26px;
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 10%, transparent);
 }
@@ -157,10 +143,17 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .copy:hover { border-color: var(--accent); }
 .copy:active { transform: scale(0.97); }
 .copy.is-done { color: var(--ok); border-color: var(--ok); }
-.status {
-  display: inline-block; font-family: var(--mono); font-size: 0.85rem; color: var(--text);
-  border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 4px 10px; margin-bottom: 18px;
-}
+.install-facts { color: var(--text); margin-bottom: 20px; max-width: 64ch; }
+.code-label { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+.steps { margin: 0 0 18px; padding-left: 1.4em; }
+.steps li { margin-bottom: 6px; }
+.more { margin: 0 0 14px; }
+.more summary { cursor: pointer; font-weight: 600; min-height: 32px; }
+.more[open] summary { margin-bottom: 10px; }
+.source-link { font-size: 0.95rem; }
+.copy { min-width: 6.5em; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+[id] { scroll-margin-top: 76px; }
 
 /* Sections */
 .section { padding-top: 88px; }
@@ -209,24 +202,21 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .foot a:hover { color: var(--accent); }
 
 /* ---- Print layer: one ink (the accent), exposed paper, a halftone plate ---- */
-:root { --slot-blue: #4D8CFF; --slot-green: #33A854; --slot-red: #E3574A; --dot: 9px; }
+/* The app's preset slot palette (SwitchSlots.colors). */
+:root {
+  --slot-blue: #4D8CFF; --slot-green: #33A854; --slot-red: #E3574A;
+  --slot-purple: #9664D8; --slot-orange: #E49B35; --slot-teal: #32A6A8;
+  --dot: 9px;
+}
 .hero h1 em { font-style: normal; color: var(--accent); white-space: nowrap; }
 .hero h1, h2, h3 { text-wrap: balance; }
 .nw { white-space: nowrap; }
-.hero { position: relative; }
-.hero-text { position: relative; z-index: 1; }
-.hero-art { position: relative; isolation: isolate; }
-.hero-art::before,
+.field::before,
 .install::before {
   content: ""; position: absolute; z-index: -1; pointer-events: none;
   background-image: radial-gradient(circle, var(--accent) 1.3px, transparent 1.7px);
   background-size: var(--dot) var(--dot);
   opacity: 0.55;
-}
-.hero-art::before {
-  inset: -120px -80px auto 30%; height: 110%;
-  -webkit-mask-image: radial-gradient(closest-side at 70% 35%, #000 20%, transparent 100%);
-  mask-image: radial-gradient(closest-side at 70% 35%, #000 20%, transparent 100%);
 }
 .install { position: relative; isolation: isolate; overflow: hidden; }
 .install::before {
@@ -236,67 +226,240 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   opacity: 0.4;
 }
 @media (max-width: 640px) {
-  .hero-art::before { inset: -24px -16px auto 20%; }
   .install::before { width: 80%; height: 40%; }
 }
 
-/* Keyboard demo */
-.demo {
-  margin-top: 40px; display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 40px; align-items: center;
-  border: 1px solid var(--line); border-radius: var(--r-surf); background: var(--surface);
-  padding: 32px;
-}
-.demo-copy h3 { margin-bottom: 10px; }
-.demo-copy p { color: var(--muted); margin: 0; }
-.demo-stage { display: grid; gap: 22px; justify-items: center; }
-.demo-keys { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-.key {
-  --slot: var(--accent);
-  font: inherit; cursor: pointer; color: var(--text);
-  width: 104px; height: 88px; padding: 10px 12px;
-  display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;
-  background: var(--bg); border: 1px solid var(--line); border-bottom-width: 3px;
-  border-radius: 10px;
-  transition: transform 140ms var(--ease), border-color 160ms var(--ease), box-shadow 160ms var(--ease);
-}
-.key-wide { width: 140px; }
-.key:hover { border-color: color-mix(in srgb, var(--slot) 60%, var(--line)); }
-.key:active { transform: translateY(2px); }
-.key.is-active { border-color: var(--slot); box-shadow: inset 0 -3px 0 var(--slot); }
-.key-glyph { font-size: 1.4rem; line-height: 1; }
-.key-name { font-family: var(--mono); font-size: 0.72rem; color: var(--muted); }
-.key.is-active .key-name { color: var(--slot); }
-.bubble {
-  --slot: var(--accent);
-  display: inline-flex; align-items: center; gap: 14px;
-  padding: 10px 20px 10px 10px; border-radius: 999px;
-  background: var(--bg); border: 1px solid color-mix(in srgb, var(--slot) 55%, var(--line));
-}
-.bubble[hidden] { display: none; }
-.bubble-glyph {
-  display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
-  background: var(--slot); color: #0F1014; font-weight: 700; font-size: 1.3rem;
-}
-.bubble-name { font-weight: 600; font-size: 1.05rem; }
-@media (prefers-reduced-motion: no-preference) {
-  .bubble.is-pop { animation: pop 260ms var(--ease); }
-  @keyframes pop { from { transform: scale(0.9); opacity: 0.2; } to { transform: scale(1); opacity: 1; } }
-  .reveal { opacity: 0; transform: translateY(18px); transition: opacity 600ms var(--ease), transform 600ms var(--ease); }
-  .reveal.is-in { opacity: 1; transform: none; }
-}
 @media (max-width: 640px) {
   .code { flex-direction: column; align-items: stretch; gap: 12px; }
-  .code pre { word-break: break-all; }
+  .code pre { white-space: pre; overflow-x: auto; overflow-wrap: normal; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
   .code .copy { align-self: flex-end; }
   /* Diagrams stay legible: swipe inside the figure instead of shrinking the text. */
   .art { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter) 8px; }
   .art img { width: 720px; max-width: none; }
   .art figcaption { max-width: calc(100vw - 2 * var(--gutter)); position: sticky; left: 0; }
 }
+.art img { width: 100%; }
+
+/* ---- Hero demo ---- */
+:root {
+  --hero-pad-top: 36px;
+  --hero-pad-bottom: 56px;
+  --hero-gap: 28px;
+  --stage-max: 820px;
+  --field-font: clamp(1.6rem, 1.1rem + 2vw, 2.6rem);
+  --field-min-h: 150px;
+  --kb-gap: 10px;          /* between the two rows */
+  --kb-key-gap: 8px;       /* between keys in a row */
+  --kb-letter: 1fr;        /* each inert letter key in the shift row */
+  --kb-space: 8.6fr;       /* the inert spacebar */
+  --keycap-h: 62px;
+  --kc-radius: 12px;
+  /* Keycap drawn like the README art (hero-2.svg): #2F2F37 to #1D1D22, 10% white edge. */
+  --kc-top: #2F2F37; --kc-bottom: #1D1D22; --kc-edge: rgb(255 255 255 / 0.10);
+  --kc-glyph: #F4F4F6;
+  --field-fill: rgb(22 23 28 / 0.84);
+  --kb-fill: rgb(22 23 28 / 0.95);   /* labels sit here: the rain must not show through */
+}
+@media (prefers-color-scheme: light) {
+  :root { --kc-top: #FFFFFF; --kc-bottom: #ECECF0; --kc-edge: rgb(0 0 0 / 0.12); --kc-glyph: #16161A; --field-fill: rgb(255 255 255 / 0.86); --kb-fill: rgb(255 255 255 / 0.96); }
+}
+.hero { position: relative; padding-top: var(--hero-pad-top); padding-bottom: var(--hero-pad-bottom); }
+.hero-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px; align-items: center; }
+.hero-icon { width: 72px; height: 72px; }
+.hero h1 { font-size: clamp(2rem, 1.3rem + 2.4vw, 3.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.08; margin-bottom: 10px; }
+.lede { font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem); color: var(--muted); max-width: 64ch; margin: 0; }
+.hero-cta { margin: 0; }
 @media (max-width: 760px) {
-  .demo { grid-template-columns: minmax(0, 1fr); padding: 24px 20px; gap: 24px; }
-  .demo-keys { gap: 8px; }
-  .key { width: 84px; height: 76px; padding: 8px 10px; }
-  .key-wide { width: 104px; }
+  :root { --hero-pad-top: 24px; }
+  .hero-head { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .hero-icon { width: 56px; height: 56px; }
+}
+
+/* Field, keyboard and hint form one centred column. */
+.stage {
+  margin: var(--hero-gap) auto 0; max-width: var(--stage-max);
+  display: grid; gap: 16px; justify-items: stretch;
+}
+.field {
+  position: relative; isolation: isolate; overflow: hidden;
+  min-height: var(--field-min-h); padding: calc(1.05em + 26px) 28px 30px;
+  background: var(--field-fill); border: 1px solid var(--line); border-radius: var(--r-surf);
+  font-size: var(--field-font); line-height: 1.25; font-weight: 500; letter-spacing: -0.01em;
+  text-align: center; cursor: text; overflow-wrap: anywhere;
+}
+.field:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* Halftone plate centred behind the text: part of what the glass bubble blurs. */
+.field::before {
+  inset: 0; opacity: 0.35;
+  -webkit-mask-image: radial-gradient(closest-side at 50% 70%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(closest-side at 50% 70%, #000 0%, transparent 100%);
+}
+/* Each language segment carries a faint underline in its slot colour. */
+.seg {
+  text-decoration: underline 2px color-mix(in srgb, var(--seg, transparent) 70%, transparent);
+  text-underline-offset: 0.18em; text-decoration-skip-ink: none;
+}
+.caret {
+  display: inline-block; width: 3px; height: 1.1em; margin-left: 2px; vertical-align: -0.16em;
+  background: var(--slot, var(--accent)); border-radius: 1px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .caret { animation: blink 1.06s steps(1) infinite; }
+  .field.is-typing .caret { animation: none; }
+  @keyframes blink { 50% { opacity: 0; } }
+}
+.stage-foot { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
+.replay {
+  font: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer; min-height: 36px;
+  color: var(--text); background: var(--kb-fill); border: 1px solid var(--line);
+  border-radius: var(--r-ctl); padding: 6px 14px;
+}
+.replay:hover { border-color: var(--accent); }
+.replay[hidden] { display: none; }
+.field { cursor: default; }
+/* The hint sits on its own backing so the rain never crosses it. */
+.stage-hint {
+  justify-self: center; margin: 0; padding: 4px 12px; border-radius: var(--r-ctl);
+  background: var(--kb-fill); color: var(--muted); font-size: 0.92rem; text-align: center;
+  text-wrap: balance;
+}
+
+/* Miniature Mac keyboard: the shift row, then option, command, space, command, option,
+   on a solid chassis so the rain stays behind it. */
+.kb {
+  display: grid; gap: var(--kb-gap); padding: 12px 12px 8px;
+  background: var(--kb-fill); border: 1px solid var(--line); border-radius: var(--r-surf);
+}
+.kb-row { display: grid; gap: var(--kb-key-gap); align-items: start; }
+.kb-row-shift { grid-template-columns: 2.4fr repeat(10, var(--kb-letter)) 2.6fr; }
+.kb-row-bottom { grid-template-columns: 1.4fr 1.8fr var(--kb-space) 1.8fr 1.4fr; }
+.keycap {
+  --slot: var(--accent);
+  font: inherit; color: var(--text); background: none; border: 0; padding: 0; cursor: pointer;
+  display: grid; gap: 6px; min-width: 0;
+}
+.kc-cap {
+  height: var(--keycap-h); width: 100%;
+  display: grid; grid-template: "key key" auto ". tile" 1fr / 1fr auto; align-items: end; padding: 7px 8px;
+  background: linear-gradient(var(--kc-top), var(--kc-bottom));
+  border: 1px solid var(--kc-edge); border-radius: var(--kc-radius);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+  transition: transform 120ms var(--ease), box-shadow 120ms var(--ease), border-color 160ms var(--ease);
+}
+.kc-glyph { display: none; }
+.kc-key { grid-area: key; align-self: start; text-align: left; font-size: 0.72rem; font-weight: 600; line-height: 1.2; color: var(--kc-glyph); opacity: 0.85; }
+.kc-tile {
+  grid-area: tile; display: grid; place-items: center;
+  min-width: 24px; height: 24px; padding: 0 5px; border-radius: 6px;
+  background: var(--slot); color: #FFFFFF; font-size: 0.78rem; font-weight: 700; line-height: 1;
+}
+.kc-name {
+  display: block; text-align: center; white-space: nowrap;
+  font-size: 0.82rem; font-weight: 600; color: var(--muted);
+}
+.kb-blank .kc-cap { background: var(--kc-bottom); box-shadow: none; }
+.keycap:hover .kc-cap { border-color: color-mix(in srgb, var(--slot) 55%, transparent); }
+.keycap:active .kc-cap, .keycap.is-pressed .kc-cap { transform: translateY(2px); box-shadow: 0 0 0 rgb(0 0 0 / 0.35); }
+.keycap.is-active .kc-cap { border-color: var(--slot); box-shadow: 0 2px 0 rgb(0 0 0 / 0.35), inset 0 -3px 0 var(--slot); }
+.keycap.is-active .kc-name { color: var(--text); }
+@media (max-width: 760px) {
+  :root {
+    --field-min-h: 116px; --kb-gap: 8px; --kb-key-gap: 5px;
+    --kb-letter: 0.35fr; --kb-space: 2fr; --keycap-h: 50px; --kc-radius: 9px;
+  }
+  .field { padding: calc(1.05em + 20px) 16px calc(1.05em + 18px); }
+  .kb { padding: 8px 6px 6px; }
+  .kc-cap { padding: 5px 6px; }
+  .kc-key { font-size: 0.6rem; }
+  .kc-tile { min-width: 20px; height: 20px; padding: 0 3px; font-size: 0.68rem; border-radius: 5px; }
+  .kc-name { font-size: 0.7rem; }
+}
+/* Phones: the six caps as a 3 x 2 grid, left-hand keys first, no decorative keys. */
+@media (max-width: 480px) {
+  .kb { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; padding: 10px; }
+  .kb-row { display: contents; }
+  .kb-blank { display: none; }
+  .keycap[data-slot="5"] { order: 1; } .keycap[data-slot="3"] { order: 2; } .keycap[data-slot="0"] { order: 3; }
+  .keycap[data-slot="1"] { order: 4; } .keycap[data-slot="4"] { order: 5; } .keycap[data-slot="2"] { order: 6; }
+  :root { --keycap-h: 52px; }
+  .kc-cap { grid-template: "key tile" 1fr / 1fr auto; align-items: center; padding: 6px 8px; }
+  .kc-key { align-self: center; font-size: 0.75rem; }
+  .kc-name { font-size: 0.8125rem; }
+}
+
+/* ---- Page-wide glyph field (rain.js). Content sits above it. ---- */
+.glyph-field { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+main, .foot { position: relative; z-index: 1; }
+
+/* ---- Switch bubble, Liquid Glass theme ----
+   Proportions from the app: BuiltInIndicatorThemes.liquidGlass (radius 16, inset 9, no
+   wash, no drawn highlight) and BubbleMetrics.Base (tile 32, title 13, key shadow 18/8):
+   a one-line bubble is 50 pt tall, the tile is 64% of it, the radius 32%. Here the whole
+   bubble is sized in em of the typed text, so it stays a small hint next to the caret:
+   about 1em tall, tile 0.64em, label 0.57em. BubbleChrome gives the separation hairline
+   and highlight; BubbleInks the text colours. The system material is approximated with
+   backdrop-filter; this is a web approximation, not Apple's NSGlassEffectView. */
+.glass-bubble {
+  --slot: var(--slot-blue);
+  --gb-fill: rgb(30 30 34 / 0.30);          /* #1E1E22 */
+  --gb-solid: #1E1E22;
+  --gb-title: #FFFFFF;
+  --gb-edge: rgb(255 255 255 / 0.16);       /* strokeOpacity 0.16 */
+  --gb-sep: rgb(0 0 0 / 0.32);              /* darkSeparation */
+  --gb-light: rgb(255 255 255 / 0.34);      /* darkHighlight, the material's top edge */
+  --gb-shadow: rgb(0 0 0 / 0.30);           /* darkKeyShadow 0.50 x shadowStrength 0.6 */
+  position: absolute; left: 0; top: 0; z-index: 2;
+  display: inline-flex; align-items: center; gap: 0.15em;
+  padding: 0.16em 0.27em 0.16em 0.16em;
+  border-radius: 0.31em;
+  background: var(--gb-fill);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--gb-edge);
+  box-shadow:
+    inset 0 1px 0 var(--gb-light),
+    0 0 0 0.5px var(--gb-sep),
+    0 0.16em 0.36em var(--gb-shadow);
+  font-size: 1em; font-weight: 400; letter-spacing: 0; line-height: 1;
+  opacity: 0; transform: scale(0.94); transform-origin: 50% 100%;
+  pointer-events: none; white-space: nowrap;
+}
+@media (prefers-color-scheme: light) {
+  .glass-bubble {
+    --gb-fill: rgb(242 242 244 / 0.42);     /* #F2F2F4 */
+    --gb-solid: #F2F2F4;
+    --gb-title: #1D1D1F;
+    --gb-edge: rgb(255 255 255 / 0.70);
+    --gb-sep: rgb(0 0 0 / 0.14);
+    --gb-light: rgb(255 255 255 / 0.90);
+    --gb-shadow: rgb(0 0 0 / 0.18);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-bubble { background: var(--gb-solid); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass-bubble { background: var(--gb-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.glass-bubble.is-shown { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .glass-bubble { transition: opacity 180ms var(--ease), transform 260ms var(--ease); }
+}
+/* The tile's own font is 0.34em of the bubble, so 1.88em here is 0.64em of the bubble
+   and 0.44em is the concentric radius (0.31em minus the 0.16em inset). */
+.gb-tile {
+  display: grid; place-items: center; flex: none;
+  font-size: 0.34em; font-weight: 700; min-width: 1.88em; height: 1.88em; padding: 0 0.24em;
+  border-radius: 0.44em;
+  background: var(--slot); color: #FFFFFF;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.18);
+}
+.gb-text { display: grid; }
+.gb-title { font-size: 0.57em; font-weight: 600; color: var(--gb-title); line-height: 1.2; }
+
+/* ---- Promo video ---- */
+.promo { margin-top: 36px; }
+.promo video {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+  border-radius: var(--r-surf); border: 1px solid var(--line); background: #0F1014;
 }
