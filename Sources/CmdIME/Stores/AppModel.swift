@@ -393,7 +393,7 @@ final class AppModel: ObservableObject {
     }
 
     /// The app has no window most of the time, so it looks for a new release itself,
-    /// at most once a day, and says so once per version through a system notification.
+    /// at most every six hours, and says so once per version through a system notification.
     func startUpdateReminder() {
         runUpdateReminderIfDue()
         updateReminderTimer = Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in

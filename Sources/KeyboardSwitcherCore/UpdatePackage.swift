@@ -38,8 +38,9 @@ public struct UpdateReminderState: Equatable, Sendable {
 }
 
 public enum UpdateReminderPolicy {
-    /// At most one background check a day.
-    public static let checkInterval: TimeInterval = 24 * 60 * 60
+    /// At most one background check every six hours: a fix reaches a windowless app the same
+    /// day, and the unauthenticated GitHub limit (60 requests an hour) stays far away.
+    public static let checkInterval: TimeInterval = 6 * 60 * 60
 
     public static func shouldCheck(now: Date, state: UpdateReminderState) -> Bool {
         guard state.isEnabled else { return false }

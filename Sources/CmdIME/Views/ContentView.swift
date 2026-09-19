@@ -242,7 +242,7 @@ private extension SettingsHeader {
                     .tint(DesignTokens.Colors.success)
                     .controlSize(.small)
                 }
-                .help("Once a day CmdIME asks GitHub for the newest release. Nothing else is sent.")
+                .help("A few times a day CmdIME asks GitHub for the newest release. Nothing else is sent.")
                 Divider()
                 generalRow("Show Setup Guide") {
                     showsGeneral = false

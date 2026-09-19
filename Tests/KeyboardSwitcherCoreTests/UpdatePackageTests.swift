@@ -21,12 +21,13 @@ final class UpdatePackageTests: XCTestCase {
         XCTAssertNil(UpdatePackage.publishedChecksum(from: ""))
     }
 
-    func testBackgroundCheckRunsAtMostOnceADayAndOnlyWhenEnabled() {
+    func testBackgroundCheckRunsAtMostEverySixHoursAndOnlyWhenEnabled() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init()))
         XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(isEnabled: false)))
         XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(-3600))))
-        XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(-86_400))))
+        XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(-6 * 3600))))
+        XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(-6 * 3600 + 1))))
         // A clock moved backwards still checks.
         XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(500))))
     }

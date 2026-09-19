@@ -418,12 +418,12 @@ is a compatibility symlink to the signed helper in `Contents/MacOS`.
 ### Updates
 
 CmdIME has no window most of the time, so it looks for new releases itself: at
-most once a day it asks GitHub for the newest release (nothing else is sent), and
+most every six hours it asks GitHub for the newest release (nothing else is sent), and
 when there is one it posts a single system notification for that version.
 Notification permission is requested only at that moment, never at first launch.
 The settings window shows the same update at the top, and **General** has
 **Check** for a manual check and a **Check automatically** switch to turn the
-daily check off.
+automatic check off.
 
 **Update Now** installs the update in place: it downloads the release zip, checks
 it against the published `.sha256`, verifies that the new app carries a valid

@@ -376,10 +376,10 @@ xcrun notarytool store-credentials "cmd-ime-notary" \
 
 ### 更新
 
-CmdIME 大部分时间没有窗口，所以它会自己检查新版本：每天最多向 GitHub 查询一次最新的
+CmdIME 大部分时间没有窗口，所以它会自己检查新版本：最多每六小时向 GitHub 查询一次最新的
 Release（除此之外不发送任何内容），发现新版本时，为这个版本发一条系统通知。
 通知权限只在这个时刻申请，首次启动时不会申请。设置窗口顶部会显示同一条更新提示，
-**General** 里有用于手动检查的 **Check**，以及用来关闭每日检查的
+**General** 里有用于手动检查的 **Check**，以及用来关闭自动检查的
 **Check automatically** 开关。
 
 **Update Now** 会原地安装更新：下载发布的 zip，对照发布的 `.sha256` 校验，
