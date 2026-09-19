@@ -1,3 +1,22 @@
+## CmdIME v0.7.0 Preview
+
+The settings window gets a Liquid look and follows light and dark.
+
+### New
+
+- **A settings window that follows the macOS appearance.** The window was always dark. It now follows the system, in light and in dark, and **General > Appearance** pins it to **Light** or **Dark** or returns it to **System**. Every panel it opens follows along: General, the slot menus, the colour and font pickers and the shortcut recorder.
+- **Liquid look.** The window sits on a system material, so a little of the desktop shows through, and the status and update bars use Liquid Glass on macOS 26 and later. Slot cards stay close to opaque so slot colours and text keep their contrast. With Reduce Transparency on, everything turns opaque.
+- **Readable status colours in light mode.** Success, warning and danger colours, and the Quit CmdIME label, have darker light-mode values.
+
+### Fixes
+
+- The window's rows no longer slide up underneath the title bar while scrolling.
+- Under **Theme**, a note explains why the thumbnails can differ from the window: the switch indicator appears over other apps, so it follows the macOS appearance rather than this window's. It shows only when the two differ.
+
+### Known limits
+
+- Checked on macOS 27 only. Before macOS 26 the bars use the translucent surface instead of Liquid Glass; that path was not run on a real system.
+
 ## CmdIME v0.6.4 Preview
 
 The slot menus open every time.

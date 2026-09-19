@@ -181,6 +181,12 @@ panel: closing the window does not stop keyboard listening. Release builds are
 packaged with `LSUIElement`, so the app does not appear in the Dock or app
 switcher.
 
+The settings window follows the macOS appearance. **General > Appearance** pins it to
+**Light** or **Dark** instead, or returns it to **System**. It sits on a system material,
+its status and update bars use Liquid Glass on macOS 26 and later, and everything turns
+opaque when Reduce Transparency is on. The switch indicator is separate: it appears over
+other apps, so its themes follow the macOS appearance unless a theme's tone is fixed.
+
 Open `CmdIME.app` again whenever you need Settings. To stop the background
 agent, use **General > Quit CmdIME** in the status bar at the top of Settings, or run:
 

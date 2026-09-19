@@ -163,6 +163,11 @@ xattr -dr com.apple.quarantine /Applications/CmdIME.app
 CmdIME 是一个后台输入源代理程序。设置窗口只是一个控制面板：关闭窗口不会停止键盘监听。
 发布版本打包时带有 `LSUIElement`，因此应用不会出现在 Dock 或应用切换器中。
 
+设置窗口跟随 macOS 的外观。也可以在 **General > Appearance** 里把它固定为 **Light** 或
+**Dark**，或者交还给 **System**。窗口建立在系统材质之上，顶部状态条和更新条在 macOS 26
+及以上使用 Liquid Glass；开启“减少透明度”时，全部退回不透明。切换指示气泡是另一回事：
+它出现在其他应用之上，所以它的主题跟随 macOS 的外观，除非主题自己把色调固定了。
+
 需要打开设置时，再次打开 `CmdIME.app` 即可。要停止后台代理程序，请使用设置窗口顶部
 状态栏中的 **General > Quit CmdIME**，或者运行：
 
