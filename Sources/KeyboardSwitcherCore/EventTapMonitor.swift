@@ -288,6 +288,11 @@ public final class EventTapMonitor: @unchecked Sendable {
         pressedModifierKeyCodes
     }
 
+    /// True until the single-tap flush timer has fired or been cancelled.
+    var hasPendingSingleTapForTesting: Bool {
+        pendingSingleTapTimer?.isValid ?? false
+    }
+
     @discardableResult
     func handleFlagsChangedForTesting(_ event: CGEvent) -> Unmanaged<CGEvent>? {
         handleFlagsChanged(event)

@@ -61,11 +61,11 @@ final class EventTapMonitorTests: XCTestCase {
         tapLeftCommand(monitor)
         monitor.updateConfig(try config.removingSlot(.english))
         monitor.updateConfig(config)
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(legacy, 1)
         XCTAssertEqual(proofs, 0)
         tapLeftCommand(monitor)
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(proofs, 1)
     }
 
@@ -170,10 +170,10 @@ final class EventTapMonitorTests: XCTestCase {
         tapLeftCommand(monitor)
         let chord = makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])
         XCTAssertTrue(monitor.handleKeyDownForTesting(chord)?.takeUnretainedValue() === chord)
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(count, 0)
         monitor.isCapturingShortcut = false
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(count, 0)
     }
 
@@ -205,7 +205,7 @@ final class EventTapMonitorTests: XCTestCase {
         monitor.isCapturingShortcut = true
         tapLeftCommand(monitor)
         tapLeftCommand(monitor)
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(roles, [])
         XCTAssertEqual(service.selectedIDs, [])
 
@@ -213,7 +213,7 @@ final class EventTapMonitorTests: XCTestCase {
         tapLeftCommand(monitor)
         monitor.isCapturingShortcut = false
         tapLeftCommand(monitor)
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(roles, [.english])
         tapLeftCommand(monitor)
         tapLeftCommand(monitor)
@@ -261,11 +261,11 @@ final class EventTapMonitorTests: XCTestCase {
             tapLeftCommand(monitor)
             monitor.isCapturingShortcut = true
             if endCaptureBeforeTimer { monitor.isCapturingShortcut = false }
-            drainSingleTapTimer()
+            drainSingleTapTimer(monitor)
             XCTAssertEqual(service.selectedIDs, [])
             monitor.isCapturingShortcut = false
             tapLeftCommand(monitor)
-            drainSingleTapTimer()
+            drainSingleTapTimer(monitor)
             XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
         }
     }
@@ -316,7 +316,7 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
         drainMainQueue()
         XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana"], "the slot's source waits for the Kana switch")
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana", "com.google.inputmethod.Japanese.base"])
     }
 
@@ -334,7 +334,7 @@ final class EventTapMonitorTests: XCTestCase {
         tapLeftCommand(monitor)
         drainMainQueue()
         XCTAssertEqual(service.selectedIDs, [], "selecting ABC now would race the Kana key already posted")
-        drainSingleTapTimer()
+        drainSingleTapTimer(monitor)
         XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"], "the superseded Japanese select never runs")
     }
 
@@ -354,10 +354,16 @@ final class EventTapMonitorTests: XCTestCase {
         monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
     }
 
-    private func drainSingleTapTimer() {
-        let elapsed = expectation(description: "single-tap window elapsed")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { elapsed.fulfill() }
-        wait(for: [elapsed], timeout: 2)
+    /// Runs the main run loop past the single-tap window and until the monitor's flush timer has
+    /// actually fired; a loaded CI runner can fire it well after the nominal window.
+    private func drainSingleTapTimer(_ monitor: EventTapMonitor) {
+        let minimumWait = Date(timeIntervalSinceNow: 0.3)
+        let deadline = Date(timeIntervalSinceNow: 2)
+        while Date() < deadline, Date() < minimumWait || monitor.hasPendingSingleTapForTesting {
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+        }
+        // Let work the flush dispatched to the main queue run too.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
     }
 
     func testCachedFallbackRecoversPreferredSourceWithoutRefreshingOtherSlots() {
