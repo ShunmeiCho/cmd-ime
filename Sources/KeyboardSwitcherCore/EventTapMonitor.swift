@@ -507,13 +507,14 @@ public final class EventTapMonitor: @unchecked Sendable {
         // Only a live tap posts keys; a monitor that was never started has nothing to activate.
         // The strategy check comes first so unlisted input methods do no extra work, not even a TIS read.
         guard kanaKeyPoster != nil || isRunning,
-              SwitchActivationPolicy.strategy(for: source) == .kanaThenSelect,
-              SwitchActivationPolicy.needsKanaPrelude(target: source, current: try? inputSources.currentInputSource()) else {
+              SwitchActivationPolicy.strategy(for: source, userRecipes: activationRecipes) == .kanaThenSelect,
+              SwitchActivationPolicy.needsKanaPrelude(target: source, current: try? inputSources.currentInputSource(), userRecipes: activationRecipes) else {
             select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
             return
         }
         (kanaKeyPoster ?? Self.postKanaKeyEvent)()
-        Self.scheduleOnMainQueue(after: SwitchActivationPolicy.kanaToSelectDelay) { [weak self] in
+        let delay = SwitchActivationPolicy.kanaToSelectDelay(for: source, userRecipes: activationRecipes)
+        Self.scheduleOnMainQueue(after: delay) { [weak self] in
             guard let self, self.isCurrentSwitch(generation) else {
                 return
             }
@@ -600,6 +601,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     static func isOwnSyntheticEvent(_ event: CGEvent) -> Bool {
         event.getIntegerValueField(.eventSourceUserData) == syntheticEventMarker
     }
+
+    /// The user's recipes from `ActivationRecipeStore`; they take precedence over the built-in ones.
+    public var activationRecipes: [ActivationRecipe] = []
 
     /// Set by tests to observe the prelude without posting real events.
     var kanaKeyPoster: (() -> Void)?

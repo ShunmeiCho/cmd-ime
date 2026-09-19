@@ -15,15 +15,41 @@ public enum SwitchActivationStrategy: String, Codable, Sendable {
     case kanaThenSelect
 }
 
+/// One rule: input sources whose id starts with `sourceIDPrefix` are entered with `strategy`.
+public struct ActivationRecipe: Codable, Equatable, Sendable {
+    public var sourceIDPrefix: String
+    public var strategy: SwitchActivationStrategy
+    /// Milliseconds between the Kana key and the select. nil uses `kanaToSelectDelay`.
+    public var delayMs: Int?
+
+    public init(sourceIDPrefix: String, strategy: SwitchActivationStrategy, delayMs: Int? = nil) {
+        self.sourceIDPrefix = sourceIDPrefix
+        self.strategy = strategy
+        self.delayMs = delayMs
+    }
+}
+
 public enum SwitchActivationPolicy {
-    /// Input methods measured to need more than a plain select, by source-id prefix.
+    /// Input methods measured to need more than a plain select.
     /// azooKey and WeType switch reliably without it (12 of 12 and 9 of 9), so they are not listed.
-    public static let builtInStrategies: [(idPrefix: String, strategy: SwitchActivationStrategy)] = [
-        ("com.google.inputmethod.Japanese", .kanaThenSelect),
+    public static let builtInRecipes = [
+        ActivationRecipe(sourceIDPrefix: "com.google.inputmethod.Japanese", strategy: .kanaThenSelect),
     ]
 
-    public static func strategy(for target: InputSourceInfo) -> SwitchActivationStrategy {
-        builtInStrategies.first { target.id.hasPrefix($0.idPrefix) }?.strategy ?? .select
+    public static let delayRangeMs = 0...500
+
+    /// The user's recipes win over the built-in ones, so a `select` recipe can switch one off.
+    public static func recipe(for target: InputSourceInfo, userRecipes: [ActivationRecipe] = []) -> ActivationRecipe? {
+        (userRecipes + builtInRecipes).first { target.id.hasPrefix($0.sourceIDPrefix) }
+    }
+
+    public static func strategy(for target: InputSourceInfo, userRecipes: [ActivationRecipe] = []) -> SwitchActivationStrategy {
+        recipe(for: target, userRecipes: userRecipes)?.strategy ?? .select
+    }
+
+    public static func kanaToSelectDelay(for target: InputSourceInfo, userRecipes: [ActivationRecipe] = []) -> TimeInterval {
+        guard let delayMs = recipe(for: target, userRecipes: userRecipes)?.delayMs else { return kanaToSelectDelay }
+        return TimeInterval(min(max(delayMs, delayRangeMs.lowerBound), delayRangeMs.upperBound)) / 1000
     }
 
     /// `kVK_JIS_Kana`. Recognised on every keyboard, not only JIS ones.
@@ -33,8 +59,9 @@ public enum SwitchActivationPolicy {
     /// in six on azooKey; 60 ms lost none on Google Japanese Input or azooKey.
     public static let kanaToSelectDelay: TimeInterval = 0.06
 
-    public static func needsKanaPrelude(target: InputSourceInfo, current: InputSourceInfo?) -> Bool {
-        guard strategy(for: target) == .kanaThenSelect, target.primaryLanguage == "ja" else { return false }
+    public static func needsKanaPrelude(target: InputSourceInfo, current: InputSourceInfo?, userRecipes: [ActivationRecipe] = []) -> Bool {
+        // Kana only switches to Japanese sources; a recipe naming anything else is ignored.
+        guard strategy(for: target, userRecipes: userRecipes) == .kanaThenSelect, target.primaryLanguage == "ja" else { return false }
         // Inside Japanese the system no longer switches on Kana; the app would get the key.
         return current?.primaryLanguage != "ja"
     }

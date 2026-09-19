@@ -190,6 +190,8 @@ final class AppModel: ObservableObject {
         }
         refreshCurrentRole()
         statusText = "Found \(sources.count) input sources"
+        // Refresh is also when an edited recipes file is picked up.
+        loadActivationRecipes()
     }
 
     private static let scannerURL = Bundle.main.executableURL?
@@ -868,6 +870,15 @@ final class AppModel: ObservableObject {
         InputSourceMatcher.bestMatch(for: role, sources: sources, config: config)
     }
 
+    /// Hands the user's activation recipes to the live monitor; a skipped entry is reported, not fatal.
+    private func loadActivationRecipes() {
+        let result = ActivationRecipeStore().load()
+        monitor?.activationRecipes = result.recipes
+        if let problem = result.problems.first {
+            statusText = problem
+        }
+    }
+
     func startListening() {
         refreshRuntimeStatus()
         guard permissions.isReady else {
@@ -897,6 +908,7 @@ final class AppModel: ObservableObject {
             }
             try nextMonitor.start()
             monitor = nextMonitor
+            loadActivationRecipes()
             isListening = true
             keyboardControlStatus = "Active"
             statusText = "Listener started"
