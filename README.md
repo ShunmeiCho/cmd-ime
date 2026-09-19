@@ -104,21 +104,36 @@ A local build needs the same two permissions before global keyboard listening wo
 - **Three optional triggers per slot.** A single tap or a double tap of one of the
   eight modifier keys, and a shortcut such as Option+J. Set any of them; any one you
   set switches to that slot.
+
+<p align="center">
+  <img src="Assets/readme/slot-board.png" width="640" alt="The CmdIME settings window in the dark appearance: installed input sources on the left, three slots with their single-tap, double-tap and shortcut triggers on the right, and Live keys below.">
+</p>
+
+<p align="center"><sub>The slot board in the dark appearance.</sub></p>
+
 - **A switch indicator near the caret.** Twelve built-in themes, including Glass,
   Liquid Glass on macOS 26 and later, paper styles and a switcher that shows every
   slot, plus your own themes and fonts.
-- **Updates from inside the app.** A check every six hours by default, a summary of
-  what changed beside **Update Now**, and an in-place install that keeps your
-  permissions.
-- **A settings window that follows light and dark,** or stays on the one you pick.
-- **`keyboardctl`,** a command-line tool for scanning, binding, switching and
-  diagnosing.
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="Ten of the built-in indicator themes in Settings: Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile, Line and Switcher.">
 </p>
 
 <p align="center"><sub>Ten of the twelve built-in themes, as they appear in Settings.</sub></p>
+
+- **Updates from inside the app.** A check every six hours by default, a summary of
+  what changed beside **Update Now**, and an in-place install that keeps your
+  permissions.
+- **A settings window that follows light and dark,** or stays on the one you pick.
+
+<p align="center">
+  <img src="Assets/readme/general.png" width="520" alt="The General panel in the light appearance: Launch at login, Appearance, update check, how often to check, and update notifications.">
+</p>
+
+<p align="center"><sub>General in the light appearance: appearance, update checks and notifications.</sub></p>
+
+- **`keyboardctl`,** a command-line tool for scanning, binding, switching and
+  diagnosing.
 
 ## Reference
 

@@ -98,18 +98,33 @@ swift test
   列表会跟随系统设置同步更新。
 - **每个槽位三种可选触发方式。** 八个修饰键之一的单击或双击，以及一个 Option+J 这样的
   快捷键。任选其中几种设置；设置了的任意一种都会切换到该槽位。
+
+<p align="center">
+  <img src="Assets/readme/slot-board.png" width="640" alt="深色外观下的 CmdIME 设置窗口：左侧是已安装的输入源，右侧是三个槽位及各自的单击、双击和快捷键触发，下方是 Live keys。">
+</p>
+
+<p align="center"><sub>深色外观下的槽位面板。</sub></p>
+
 - **光标附近的切换指示气泡。** 十二种内置主题，包括 Glass、macOS 26 及以上的
   Liquid Glass、纸张风格，以及显示所有槽位的切换器，另外还支持你自己的主题和字体。
-- **应用内更新。** 默认每六小时检查一次，在 **Update Now** 旁边附上改动摘要，
-  原地安装并保留你的权限。
-- **跟随浅色和深色的设置窗口，** 也可以固定为你选的那一种。
-- **`keyboardctl`，** 一个用于扫描、绑定、切换和诊断的命令行工具。
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="设置里的 10 个内置指示气泡主题：Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile、Line 和 Switcher。">
 </p>
 
 <p align="center"><sub>设置里 12 个内置主题中的 10 个。</sub></p>
+
+- **应用内更新。** 默认每六小时检查一次，在 **Update Now** 旁边附上改动摘要，
+  原地安装并保留你的权限。
+- **跟随浅色和深色的设置窗口，** 也可以固定为你选的那一种。
+
+<p align="center">
+  <img src="Assets/readme/general.png" width="520" alt="浅色外观下的 General 面板：开机启动、外观、检查更新、检查频率和更新通知。">
+</p>
+
+<p align="center"><sub>浅色外观下的 General：外观、检查更新和通知。</sub></p>
+
+- **`keyboardctl`，** 一个用于扫描、绑定、切换和诊断的命令行工具。
 
 ## 参考
 
