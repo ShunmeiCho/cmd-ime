@@ -6,6 +6,8 @@ struct UpdateCheckResult: Equatable {
     var latestVersion: String
     var releaseURL: URL
     var isUpdateAvailable: Bool
+    /// What changed, condensed from the release's notes; empty when the release has none.
+    var notes = ReleaseNotesSummary()
 }
 
 enum UpdateServiceError: Error, LocalizedError {
@@ -43,7 +45,8 @@ final class UpdateService: Sendable {
             currentVersion: currentVersion,
             latestVersion: latestVersion,
             releaseURL: release.htmlURL,
-            isUpdateAvailable: AppVersion(latestVersion) > AppVersion(currentVersion)
+            isUpdateAvailable: AppVersion(latestVersion) > AppVersion(currentVersion),
+            notes: ReleaseNotesSummary.parse(release.body ?? "")
         )
     }
 }
@@ -52,11 +55,13 @@ private struct GitHubRelease: Decodable {
     var tagName: String
     var htmlURL: URL
     var isDraft: Bool
+    var body: String?
 
     private enum CodingKeys: String, CodingKey {
         case tagName = "tag_name"
         case htmlURL = "html_url"
         case isDraft = "draft"
+        case body
     }
 }
 

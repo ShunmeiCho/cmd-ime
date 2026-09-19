@@ -300,18 +300,48 @@ private struct UpdateActions: View {
     }
 }
 
+/// What the update changes, so deciding on it does not take a trip to the browser.
+private struct ReleaseNotesSummaryView: View {
+    let notes: ReleaseNotesSummary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let headline = notes.headline {
+                Text(headline)
+                    .font(DesignTokens.Typography.body)
+                    .foregroundStyle(DesignTokens.Colors.textPrimary)
+            }
+            ForEach(notes.items, id: \.self) { item in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("•")
+                    Text(item)
+                }
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textSecondary)
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 private struct UpdateAvailableBar: View {
     @ObservedObject var model: AppModel
     let version: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
-            Label("CmdIME \(version) is available", systemImage: "arrow.down.circle.fill")
-                .font(DesignTokens.Typography.body.weight(.semibold))
-                .foregroundStyle(DesignTokens.Colors.textPrimary)
-                .padding(.top, 5)
-            Spacer(minLength: DesignTokens.Layout.rowGap)
-            UpdateActions(model: model)
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+            HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+                Label("CmdIME \(version) is available", systemImage: "arrow.down.circle.fill")
+                    .font(DesignTokens.Typography.body.weight(.semibold))
+                    .foregroundStyle(DesignTokens.Colors.textPrimary)
+                    .padding(.top, 5)
+                Spacer(minLength: DesignTokens.Layout.rowGap)
+                UpdateActions(model: model)
+            }
+            if case let .available(result) = model.updateStatus, !result.notes.isEmpty {
+                ReleaseNotesSummaryView(notes: result.notes)
+            }
         }
         .padding(DesignTokens.Layout.panelInset)
         .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
