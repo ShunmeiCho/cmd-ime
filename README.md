@@ -417,13 +417,18 @@ is a compatibility symlink to the signed helper in `Contents/MacOS`.
 
 ### Updates
 
-CmdIME has no window most of the time, so it looks for new releases itself: at
-most every six hours it asks GitHub for the newest release (nothing else is sent), and
-when there is one it posts a single system notification for that version.
-Notification permission is requested only at that moment, never at first launch.
-The settings window shows the same update at the top, and **General** has
-**Check** for a manual check and a **Check automatically** switch to turn the
-automatic check off.
+CmdIME has no window most of the time, so it looks for new releases itself: by
+default every six hours it asks GitHub for the newest release (nothing else is sent), and
+when there is one it posts a single system notification for that version. The settings
+window shows the same update at the top, together with the release's opening sentence
+and the title of each change, so you can see what it brings without opening the browser.
+
+**General** has **Check** for a manual check, a **Check automatically** switch, an
+**Every 6 hours / Daily / Weekly** choice, and **Notify me about updates**, which turns
+the notification off while the update still shows in the window. Notification permission
+is requested when there is an update to announce or when you turn that switch on, never
+at first launch. macOS does not let an app change its own notification permission: if
+notifications are blocked, General says so and offers **Open Notification Settings…**.
 
 **Update Now** installs the update in place: it downloads the release zip, checks
 it against the published `.sha256`, verifies that the new app carries a valid

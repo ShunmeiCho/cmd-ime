@@ -1,3 +1,13 @@
+## CmdIME v0.6.3 Preview
+
+Updates tell you what they change, and you decide how often CmdIME looks for them.
+
+### New
+
+- **What an update changes, right beside Update Now.** The update bar at the top of the settings window now shows the release's opening sentence and the title of each change, taken from the release notes that the update check already downloads. **Release Notes** still opens the full text in the browser.
+- **Choose how often CmdIME checks.** **General** has **Every 6 hours / Daily / Weekly** under **Check automatically**. The default moves from once a day to every six hours, so a fix reaches an app that rarely shows a window the same day. Each check is one anonymous request to GitHub for the newest release; nothing else is sent.
+- **Notify me about updates.** A switch in **General** turns the system notification off while the update still shows in the settings window. macOS does not let an app change its own notification permission, so when notifications are blocked in System Settings the panel says so and offers **Open Notification Settings…**. Turning the switch on is also when macOS asks for permission, if it has not asked before.
+
 ## CmdIME v0.6.2 Preview
 
 Switching to Google Japanese Input now lands in Hiragana.

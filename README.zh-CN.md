@@ -376,11 +376,16 @@ xcrun notarytool store-credentials "cmd-ime-notary" \
 
 ### 更新
 
-CmdIME 大部分时间没有窗口，所以它会自己检查新版本：最多每六小时向 GitHub 查询一次最新的
-Release（除此之外不发送任何内容），发现新版本时，为这个版本发一条系统通知。
-通知权限只在这个时刻申请，首次启动时不会申请。设置窗口顶部会显示同一条更新提示，
-**General** 里有用于手动检查的 **Check**，以及用来关闭自动检查的
-**Check automatically** 开关。
+CmdIME 大部分时间没有窗口，所以它会自己检查新版本：默认每六小时向 GitHub 查询一次最新的
+Release（除此之外不发送任何内容），发现新版本时，为这个版本发一条系统通知。设置窗口顶部
+会显示同一条更新提示，并附上这一版的一句话概括和每项改动的标题，不用打开浏览器就能知道
+更新了什么。
+
+**General** 里有用于手动检查的 **Check**、**Check automatically** 开关、
+**Every 6 hours / Daily / Weekly** 频率选择，以及 **Notify me about updates**：关掉它就不再
+发通知，但窗口里的更新提示照常显示。通知权限只在有更新要通知时、或者你打开这个开关时
+申请，首次启动时不会申请。macOS 不允许应用自己修改通知权限：如果通知在系统里被关掉了，
+General 会提示，并提供 **Open Notification Settings…** 直达系统设置。
 
 **Update Now** 会原地安装更新：下载发布的 zip，对照发布的 `.sha256` 校验，
 验证新应用带有有效的代码签名、并且与正在运行的应用来自同一个开发者团队，
