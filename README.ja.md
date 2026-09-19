@@ -8,6 +8,8 @@
 
 <p align="center">
   <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a> · <strong>日本語</strong>
+  <br>
+  <a href="https://shunmeicho.github.io/cmd-ime/?lang=ja">公式サイトとライブデモ</a>
 </p>
 
 <p align="center">
