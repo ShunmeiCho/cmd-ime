@@ -426,6 +426,7 @@ struct ConsoleMenuButton<Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.isEnabled) private var isEnabled
     @State private var isHovered = false
+    @State private var isOpen = false
 
     private let title: String
     private let valueLabel: AnyView?
@@ -486,18 +487,57 @@ struct ConsoleMenuButton<Content: View>: View {
             ConsoleControlChrome(tint: effectiveTint, highlighted: isEnabled && isHovered, warning: warning)
         }
         .overlay {
-            // Keep native menu activation/focus, but lay out all visible content
-            // outside its flattened label. The arrow owns a separate layout seat.
-            Menu { content } label: { Text(" ") }
-                .menuStyle(.borderlessButton)
-                .menuIndicator(.hidden)
+            // A plain button over the whole field, opening the choices in a popover. A SwiftUI
+            // `Menu` here only reacted to clicks on part of the field, and not at all in some
+            // window states, so users saw a control that sometimes would not open.
+            Button { isOpen.toggle() } label: { Color.clear.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
                 .accessibilityLabel(title)
+                .accessibilityAddTraits(.isButton)
+                .popover(isPresented: $isOpen, arrowEdge: .bottom) {
+                    VStack(alignment: .leading, spacing: 1) { content }
+                        .buttonStyle(ConsoleMenuRowStyle())
+                        .font(DesignTokens.Typography.body)
+                        .foregroundStyle(DesignTokens.Colors.textPrimary)
+                        .padding(6)
+                        .frame(minWidth: 220, alignment: .leading)
+                        .background(DesignTokens.Colors.surfaceRaised)
+                        // Any choice closes the list, as a menu would.
+                        .simultaneousGesture(TapGesture().onEnded { isOpen = false })
+                }
         }
         .onHover { isHovered = $0 }
         .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.quickFade, reduceMotion: reduceMotion), value: isHovered)
         .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion), value: warning)
+    }
+}
+
+/// One choice in a `ConsoleMenuButton` list: full-width, left-aligned, highlighted on hover.
+struct ConsoleMenuRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        ConsoleMenuRow(configuration: configuration)
+    }
+}
+
+private struct ConsoleMenuRow: View {
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
+    let configuration: ButtonStyleConfiguration
+
+    var body: some View {
+        configuration.label
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .foregroundStyle(isEnabled
+                ? (configuration.role == .destructive ? DesignTokens.Colors.danger : DesignTokens.Colors.textPrimary)
+                : DesignTokens.Colors.textMuted.opacity(0.6))
+            .background(RoundedRectangle(cornerRadius: 5)
+                .fill(isEnabled && (isHovered || configuration.isPressed) ? DesignTokens.Colors.actionFill.opacity(0.85) : .clear))
+            .contentShape(Rectangle())
+            .onHover { isHovered = $0 }
     }
 }
 
