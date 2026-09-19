@@ -300,6 +300,33 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"])
     }
 
+    func testSwitchToJapaneseFromALayoutPostsKanaBeforeSelecting() {
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var order: [String] = []
+        monitor.kanaKeyPoster = { order.append("kana") }
+        monitor.onSwitch = { _, source in order.append(source.id) }
+        tapLeftCommand(monitor)
+        drainMainQueue()
+
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
+        drainMainQueue()
+        XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana"], "the slot's source waits for the Kana switch")
+        drainSingleTapTimer()
+        XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana", "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"])
+    }
+
+    func testOwnSyntheticKanaKeyPassesThroughTheTapUntouched() {
+        let monitor = EventTapMonitor(config: .default, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        let kana = makeKeyboardEvent(keyCode: SwitchActivationPolicy.kanaKeyCode)
+        kana.setIntegerValueField(.eventSourceUserData, value: EventTapMonitor.syntheticEventMarker)
+        monitor.setOneShotModifierDownForTesting(KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command"))
+        XCTAssertTrue(monitor.handleKeyDownForTesting(kana)?.takeUnretainedValue() === kana)
+        // An ordinary key would have cancelled the pending Command tap.
+        let leftCommand = KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command")
+        XCTAssertEqual(monitor.releaseOneShotModifierForTesting(leftCommand), .trigger(leftCommand))
+    }
+
     private func tapLeftCommand(_ monitor: EventTapMonitor) {
         monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
         monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))

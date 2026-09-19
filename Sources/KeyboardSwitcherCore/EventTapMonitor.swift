@@ -355,6 +355,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     }
 
     private func handleKeyDown(_ event: CGEvent) -> Unmanaged<CGEvent>? {
+        guard !Self.isOwnSyntheticEvent(event) else {
+            return Unmanaged.passUnretained(event)
+        }
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         oneShotState.keyDown(keyCode)
         guard !isCapturingShortcut else {
@@ -372,6 +375,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     }
 
     private func handleKeyUp(_ event: CGEvent) -> Unmanaged<CGEvent>? {
+        guard !Self.isOwnSyntheticEvent(event) else {
+            return Unmanaged.passUnretained(event)
+        }
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
         if consumedKeyDowns.remove(keyCode) != nil {
             return nil
@@ -498,6 +504,22 @@ public final class EventTapMonitor: @unchecked Sendable {
             onMessage?("No input method matched this switch slot.")
             return
         }
+        // Only a live tap posts keys; a monitor that was never started has nothing to activate.
+        guard kanaKeyPoster != nil || isRunning,
+              SwitchActivationPolicy.needsKanaPrelude(target: source, current: try? inputSources.currentInputSource()) else {
+            select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+            return
+        }
+        (kanaKeyPoster ?? Self.postKanaKeyEvent)()
+        Self.scheduleOnMainQueue(after: SwitchActivationPolicy.kanaToSelectDelay) { [weak self] in
+            guard let self, self.isCurrentSwitch(generation) else {
+                return
+            }
+            self.select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+        }
+    }
+
+    private func select(_ source: InputSourceInfo, role: InputRole, generation: Int, trigger: KeyTrigger, evidenceEpoch: UUID?) {
         selectAndReport(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch, prefix: nil) { [weak self] originalError in
             guard let self else {
                 return
@@ -567,6 +589,25 @@ public final class EventTapMonitor: @unchecked Sendable {
             onMessage?("\(prefix). Selected refreshed input method \(source.localizedName).")
         } else {
             onMessage?("Selected \(source.localizedName).")
+        }
+    }
+
+    /// Marks the Kana key this monitor posts, so its own tap lets it through untouched.
+    static let syntheticEventMarker: Int64 = 0x436D_6449_4D45
+
+    static func isOwnSyntheticEvent(_ event: CGEvent) -> Bool {
+        event.getIntegerValueField(.eventSourceUserData) == syntheticEventMarker
+    }
+
+    /// Set by tests to observe the prelude without posting real events.
+    var kanaKeyPoster: (() -> Void)?
+
+    static func postKanaKeyEvent() {
+        for isDown in [true, false] {
+            let event = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(SwitchActivationPolicy.kanaKeyCode), keyDown: isDown)
+            event?.flags = []
+            event?.setIntegerValueField(.eventSourceUserData, value: EventTapMonitor.syntheticEventMarker)
+            event?.post(tap: .cghidEventTap)
         }
     }
 
