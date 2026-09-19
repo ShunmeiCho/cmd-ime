@@ -203,6 +203,31 @@ extension SwitcherConfig {
         }
     }
 
+    /// What a slot's card should say about its source.
+    public enum SourceStatus: Equatable, Sendable {
+        case ok
+        /// Another slot names the same source on purpose.
+        case duplicate
+        /// The source this slot names is not installed, so it fell back to another one.
+        case sourceMissing
+    }
+
+    /// A slot that fell back onto another slot's source is the one with the problem: it is
+    /// reported as missing its source, and the slot it landed on is not blamed as a duplicate.
+    public func sourceStatus(for role: InputRole, sources: [InputSourceInfo]) -> SourceStatus {
+        if isMissingItsSource(role, sources: sources) { return .sourceMissing }
+        let deliberate = duplicateSlotIDs(for: role, sources: sources).filter { !isMissingItsSource($0, sources: sources) }
+        return deliberate.isEmpty ? .ok : .duplicate
+    }
+
+    private func isMissingItsSource(_ role: InputRole, sources: [InputSourceInfo]) -> Bool {
+        let preferred = preference(for: role).preferredIDs
+        // A slot that names no source (language only) is not missing anything.
+        guard !preferred.isEmpty,
+              let match = InputSourceMatcher.bestMatch(for: role, sources: sources, config: self) else { return false }
+        return !preferred.contains(match.id)
+    }
+
     public func nextFreeOneShotTrigger() -> KeyTrigger? {
         for name in ["left-command", "right-command", "left-option", "right-option", "left-control"] {
             guard let trigger = try? ShortcutParser.parse(name) else { continue }

@@ -11,7 +11,7 @@ struct SlotCard: View {
     let slot: SwitchSlot
     let source: InputSourceInfo?
     let isActive: Bool
-    let isDuplicate: Bool
+    let sourceStatus: SwitcherConfig.SourceStatus
     /// Zero-based position in the slot list.
     let position: Int
     let count: Int
@@ -167,7 +167,8 @@ struct SlotCard: View {
     private var accessibilityStatus: String {
         var values = [isActive ? "Current" : "Not current"]
         if source == nil { values.append("Not matched") }
-        if isDuplicate { values.append("Duplicate") }
+        if sourceStatus == .duplicate { values.append("Duplicate") }
+        if sourceStatus == .sourceMissing { values.append("Source missing") }
         if !hasTrigger { values.append("No trigger yet - record one") }
         if let warning { values.append(warning) }
         return values.joined(separator: ", ")
@@ -181,8 +182,11 @@ struct SlotCard: View {
             if warning != nil {
                 Label("Warning", systemImage: "exclamationmark.triangle.fill").slotChip(color: DesignTokens.Colors.warning)
             }
-            if isDuplicate {
+            if sourceStatus == .duplicate {
                 Label("Duplicate", systemImage: "square.on.square").slotChip(color: DesignTokens.Colors.warning)
+            }
+            if sourceStatus == .sourceMissing {
+                Label("Source missing", systemImage: "questionmark.circle").slotChip(color: DesignTokens.Colors.warning)
             }
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -190,7 +194,7 @@ struct SlotCard: View {
 
     private var strokeColor: Color {
         if isActive { return tint.opacity(0.74) }
-        if source == nil || isDuplicate || warning != nil { return DesignTokens.Colors.warning.opacity(0.35) }
+        if source == nil || sourceStatus != .ok || warning != nil { return DesignTokens.Colors.warning.opacity(0.35) }
         return tint.opacity(0.22)
     }
 }

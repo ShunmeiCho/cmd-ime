@@ -649,4 +649,26 @@ final class SwitchSlotsTests: XCTestCase {
         let removed = try config.removingSlot(.chinese)
         XCTAssertNil(removed.slotID(forOneShotKeyName: "right-command"))
     }
+
+    func testSlotThatLostItsSourceIsMissingAndTheSlotItLandedOnIsNotADuplicate() throws {
+        let abc = source("com.apple.keylayout.ABC", "en")
+        let azooKey = source("dev.ensan.inputmethod.azooKeyMac.Japanese", "ja")
+        let google = source("com.google.inputmethod.Japanese.base", "ja")
+        var config = SwitcherConfig.default
+        config.inputSources["japanese"] = RoleInputSourcePreference(preferredIDs: [azooKey.id], fallbackLanguage: "ja")
+        let added = try config.addingSlot(for: google, name: "Hiragana (Google)")
+        config = added.config
+        let googleSlot = added.slot.id
+
+        XCTAssertEqual(config.sourceStatus(for: .japanese, sources: [abc, azooKey, google]), .ok)
+        XCTAssertEqual(config.sourceStatus(for: googleSlot, sources: [abc, azooKey, google]), .ok)
+        // Google Japanese Input was uninstalled: its slot falls back to azooKey by language.
+        XCTAssertEqual(config.sourceStatus(for: googleSlot, sources: [abc, azooKey]), .sourceMissing)
+        XCTAssertEqual(config.sourceStatus(for: .japanese, sources: [abc, azooKey]), .ok)
+
+        // Two slots that both name the same source are still duplicates of each other.
+        config.inputSources[googleSlot.rawValue] = RoleInputSourcePreference(preferredIDs: [azooKey.id], fallbackLanguage: "ja")
+        XCTAssertEqual(config.sourceStatus(for: .japanese, sources: [abc, azooKey]), .duplicate)
+        XCTAssertEqual(config.sourceStatus(for: googleSlot, sources: [abc, azooKey]), .duplicate)
+    }
 }

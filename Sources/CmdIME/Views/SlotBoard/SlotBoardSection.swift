@@ -151,7 +151,7 @@ struct SlotBoardSection: View {
         let source = model.matchedSource(for: slot.id)
         return SlotCard(
             slot: slot, source: source, isActive: model.activeRole == slot.id,
-            isDuplicate: !model.config.duplicateSlotIDs(for: slot.id, sources: model.sources).isEmpty,
+            sourceStatus: model.config.sourceStatus(for: slot.id, sources: model.sources),
             position: model.config.slots.firstIndex(where: { $0.id == slot.id }) ?? 0,
             count: model.config.slots.count, triggerText: model.bindingText(for: slot.id),
             hasTrigger: model.trigger(for: slot.id) != nil,
