@@ -8,7 +8,7 @@
     </linearGradient>
   </defs>
 
-  <rect width="1200" height="400" rx="28" fill="#0F1014"/>
+  <rect x="0.5" y="0.5" width="1199" height="399" rx="28" fill="#0F1014" stroke="#30363D"/>
   <path d="M640 64 V336" stroke="#26272E" stroke-width="1"/>
 
   <g id="title-block" transform="translate(64 0)">

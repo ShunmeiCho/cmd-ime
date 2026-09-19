@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="Assets/readme/hero.svg" width="100%" alt="CmdIME, a macOS input-source switcher: one key per input source. Left Command selects English, Right Command selects Chinese, Right Shift selects Japanese.">
+  <img src="Assets/readme/hero-2.svg" width="100%" alt="CmdIME, a macOS input-source switcher: one key per input source. Left Command selects English, Right Command selects Chinese, Right Shift selects Japanese.">
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@ The demo shows the Switcher, Glass and Liquid Glass indicator themes.
 ## Why not Control+Space
 
 <p align="center">
-  <img src="Assets/readme/why.svg" width="100%" alt="Control+Space cycles English, Chinese, Japanese and takes two presses to reach Japanese; CmdIME reaches Japanese with one press of Right Shift.">
+  <img src="Assets/readme/why-2.svg" width="100%" alt="Control+Space cycles English, Chinese, Japanese and takes two presses to reach Japanese; CmdIME reaches Japanese with one press of Right Shift.">
 </p>
 
 - **It cycles.** With three or more input sources you look at the menu bar to see
@@ -48,7 +48,7 @@ The demo shows the Switcher, Glass and Liquid Glass indicator themes.
 ## How a switch works
 
 <p align="center">
-  <img src="Assets/readme/flow.svg" width="100%" alt="One switch: tap the slot's key, CmdIME selects its source, checks that macOS switched and retries if not, then shows an indicator near the caret.">
+  <img src="Assets/readme/flow-2.svg" width="100%" alt="One switch: tap the slot's key, CmdIME selects its source, checks that macOS switched and retries if not, then shows an indicator near the caret.">
 </p>
 
 ## Install

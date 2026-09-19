@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="Assets/readme/hero.zh-CN.svg" width="100%" alt="CmdIME，一款 macOS 输入源切换工具：一个键对应一个输入源。左 Command 选中英文，右 Command 选中中文，右 Shift 选中日文。">
+  <img src="Assets/readme/hero-2.zh-CN.svg" width="100%" alt="CmdIME，一款 macOS 输入源切换工具：一个键对应一个输入源。左 Command 选中英文，右 Command 选中中文，右 Shift 选中日文。">
 </p>
 
 <p align="center">
@@ -28,7 +28,7 @@ CmdIME 让你 Mac 上的每个输入源都有自己的按键。单击左 Command
 ## 为什么不用 Control+Space
 
 <p align="center">
-  <img src="Assets/readme/why.zh-CN.svg" width="100%" alt="Control+Space 在英文、中文、日文之间轮流切换，切到日文要按两次；CmdIME 按一次右 Shift 就切到日文。">
+  <img src="Assets/readme/why-2.zh-CN.svg" width="100%" alt="Control+Space 在英文、中文、日文之间轮流切换，切到日文要按两次；CmdIME 按一次右 Shift 就切到日文。">
 </p>
 
 - **它是循环切换的。** 输入源达到三个或更多时，你得看一眼菜单栏才知道切到了哪里。
@@ -45,7 +45,7 @@ CmdIME 让你 Mac 上的每个输入源都有自己的按键。单击左 Command
 ## 一次切换的过程
 
 <p align="center">
-  <img src="Assets/readme/flow.zh-CN.svg" width="100%" alt="一次切换：按下槽位的键，CmdIME 选中对应的输入法，确认 macOS 已经切换、没切过去就重试，然后在光标旁显示指示气泡。">
+  <img src="Assets/readme/flow-2.zh-CN.svg" width="100%" alt="一次切换：按下槽位的键，CmdIME 选中对应的输入法，确认 macOS 已经切换、没切过去就重试，然后在光标旁显示指示气泡。">
 </p>
 
 ## 安装

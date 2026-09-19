@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc" lang="zh-CN">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc" lang="en">
   <title id="title">What happens on one switch</title>
-  <desc id="desc">一次切换：按下槽位的键，CmdIME 选中对应的输入法，确认 macOS 已经切换、没切过去就重试，然后在光标旁显示指示气泡。</desc>
+  <desc id="desc">One switch: tap the slot's key, CmdIME selects its source, checks that macOS switched and retries if not, then shows an indicator near the caret.</desc>
   <defs>
     <linearGradient id="keycap" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#2F2F37"/>
       <stop offset="1" stop-color="#1D1D22"/>
     </linearGradient>
   </defs>
-  <rect width="1200" height="300" rx="28" fill="#0F1014"/>
+  <rect x="0.5" y="0.5" width="1199" height="299" rx="28" fill="#0F1014" stroke="#30363D"/>
     <g id="step-1" transform="translate(64 40)">
       <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
       <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">01</text>
@@ -16,7 +16,7 @@
         <text x="36" y="40" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="28" fill="#F4F4F6">⌘</text>
         <text x="74" y="39" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" font-weight="600" fill="#B9B9C3">R</text>
       </g>
-      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">按下槽位的键</text>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">Tap the slot's key</text>
       
     </g>
     <path d="M304 150 H336" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
@@ -30,8 +30,8 @@
       <text x="30" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="23" font-weight="700" fill="#FFFFFF">中</text>
       <text x="62" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">中文</text>
     </g>
-      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">CmdIME 选中</text>
-      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">对应的输入法</text>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">CmdIME selects</text>
+      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">the slot's source</text>
     </g>
     <path d="M584 150 H616" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
     <path d="M608 142 L616 150 L608 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -44,8 +44,8 @@
         <circle r="22" fill="#33A854"/>
         <path d="M-9 1 L-2 8 L10 -6" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">确认 macOS 已切换</text>
-      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">没切过去就重试</text>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">Checks macOS switched</text>
+      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">and retries if not</text>
     </g>
     <path d="M864 150 H896" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
     <path d="M888 142 L896 150 L888 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -63,7 +63,7 @@
         <text x="68" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="26" fill="#F4F4F6">你好</text>
         <rect x="121" y="94" width="2.5" height="30" rx="1" fill="#4D8CFF"/>
       </g>
-      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">光标旁显示</text>
-      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">指示气泡</text>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">An indicator shows</text>
+      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">near the caret</text>
     </g>
 </svg>

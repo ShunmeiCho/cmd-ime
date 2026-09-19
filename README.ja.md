@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <img src="Assets/readme/hero.ja.svg" width="100%" alt="CmdIME：入力ソースごとに専用のキーを割り当てる macOS の入力ソース切り替えツール。左 Command で英語、右 Command で中国語、右 Shift で日本語を選択します。">
+  <img src="Assets/readme/hero-2.ja.svg" width="100%" alt="CmdIME：入力ソースごとに専用のキーを割り当てる macOS の入力ソース切り替えツール。左 Command で英語、右 Command で中国語、右 Shift で日本語を選択します。">
 </p>
 
 <p align="center">
@@ -30,7 +30,7 @@ CmdIME は、Mac の入力ソースそれぞれに専用のキーを割り当て
 ## Control+Space との違い
 
 <p align="center">
-  <img src="Assets/readme/why.ja.svg" width="100%" alt="Control+Space は英語・中国語・日本語を巡回し、日本語までに 2 回押す必要があります。CmdIME なら右 Shift を 1 回押すだけで日本語に切り替わります。">
+  <img src="Assets/readme/why-2.ja.svg" width="100%" alt="Control+Space は英語・中国語・日本語を巡回し、日本語までに 2 回押す必要があります。CmdIME なら右 Shift を 1 回押すだけで日本語に切り替わります。">
 </p>
 
 - **巡回式だから。** 入力ソースが 3 つ以上あると、どこに切り替わったかをメニューバーで
@@ -48,7 +48,7 @@ CmdIME は、Mac の入力ソースそれぞれに専用のキーを割り当て
 ## 切り替えのしくみ
 
 <p align="center">
-  <img src="Assets/readme/flow.ja.svg" width="100%" alt="1 回の切り替え：スロットのキーを押すと、CmdIME が入力ソースを選択し、macOS が切り替えたことを確認して失敗時は再試行し、キャレットの近くにインジケーターを表示します。">
+  <img src="Assets/readme/flow-2.ja.svg" width="100%" alt="1 回の切り替え：スロットのキーを押すと、CmdIME が入力ソースを選択し、macOS が切り替えたことを確認して失敗時は再試行し、キャレットの近くにインジケーターを表示します。">
 </p>
 
 ## インストール

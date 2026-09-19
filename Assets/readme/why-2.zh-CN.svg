@@ -1,18 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc" lang="ja">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc" lang="zh-CN">
   <title id="title">Control+Space versus CmdIME</title>
-  <desc id="desc">英語から日本語へ移るのに、Control+Space では 2 回押してメニューバーを確認します。CmdIME なら右 Shift を 1 回押すだけです。</desc>
+  <desc id="desc">从英文切到日文，用 Control+Space 要按两次，还要看一眼菜单栏；用 CmdIME 只需按一次右 Shift。</desc>
   <defs>
     <linearGradient id="keycap" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#2F2F37"/>
       <stop offset="1" stop-color="#1D1D22"/>
     </linearGradient>
   </defs>
-  <rect width="1200" height="430" rx="28" fill="#0F1014"/>
+  <rect x="0.5" y="0.5" width="1199" height="429" rx="28" fill="#0F1014" stroke="#30363D"/>
   <path d="M64 200 H1136" stroke="#26272E" stroke-width="1"/>
 
   <g id="cycling">
     <text x="64" y="92" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22" font-weight="600" fill="#F4F4F6">Control+Space</text>
-    <text x="64" y="124" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#7F7F8A">すべての入力ソースを巡回</text>
+    <text x="64" y="124" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#7F7F8A">在所有输入法之间轮流切换</text>
     <g transform="translate(360 62)">
       <rect width="144" height="60" rx="14" fill="#4D8CFF" fill-opacity="0.14" stroke="#4D8CFF" stroke-opacity="0.55"/>
       <rect x="10" y="10" width="40" height="40" rx="10" fill="#4D8CFF"/>
@@ -45,12 +45,12 @@
       <text x="30" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="23" font-weight="700" fill="#FFFFFF">あ</text>
       <text x="62" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">日本語</text>
     </g>
-    <text x="360" y="162" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#7F7F8A">2 回押して、メニューバーで確認</text>
+    <text x="360" y="162" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#7F7F8A">按两次，还要看一眼菜单栏</text>
   </g>
 
   <g id="direct">
     <text x="64" y="262" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22" font-weight="600" fill="#F4F4F6">CmdIME</text>
-    <text x="64" y="294" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#7F7F8A">入力ソースごとに専用キー</text>
+    <text x="64" y="294" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#7F7F8A">每个输入法一个键</text>
     <g transform="translate(360 232)">
       <rect width="144" height="60" rx="14" fill="#4D8CFF" fill-opacity="0.14" stroke="#4D8CFF" stroke-opacity="0.55"/>
       <rect x="10" y="10" width="40" height="40" rx="10" fill="#4D8CFF"/>
@@ -70,9 +70,9 @@
       <text x="30" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="23" font-weight="700" fill="#FFFFFF">あ</text>
       <text x="62" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">日本語</text>
     </g>
-    <text x="360" y="332" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#B9B9C3">1 回押すだけ。いつも同じ入力ソース</text>
+    <text x="360" y="332" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#B9B9C3">按一次，永远是同一个输入法</text>
   </g>
 
   <path d="M64 364 H1136" stroke="#26272E" stroke-width="1"/>
-  <text x="64" y="398" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="18" fill="#7F7F8A">3 つの入力ソースは一例です。インストール済みのどの入力ソースにも専用キーを割り当てられます。</text>
+  <text x="64" y="398" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="18" fill="#7F7F8A">以三种输入法为例。系统里安装的任何输入法都可以有自己的键。</text>
 </svg>
