@@ -1,3 +1,12 @@
+## CmdIME v0.6.1 Preview
+
+The switch indicator sits at the text caret again.
+
+### Fixes
+
+- **The indicator appears next to the insertion point.** An insertion point is a zero-width rectangle, and CmdIME treated that as "no caret" and fell back to the mouse pointer, so in apps such as TextEdit the bubble showed up near the pointer instead of above the caret. It now accepts a zero-width caret and only falls back to the pointer when an app reports no caret at all, or one outside every display.
+- This is also the first release that 0.6.0 users can install with **Update Now**.
+
 ## CmdIME v0.6.0 Preview
 
 Updates reach you without opening GitHub.
