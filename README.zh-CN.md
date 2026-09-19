@@ -105,20 +105,6 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 [打开完整的安装与权限演示](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
-### Homebrew 自定义 Tap
-
-较新版本的 Homebrew 要求 cask 必须来自某个 tap。要用 Homebrew 安装 CmdIME，
-请先 tap 本仓库：
-
-```sh
-brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
-brew install --cask ShunmeiCho/cmd-ime/cmd-ime
-```
-
-Homebrew 会给下载的文件加上隔离标记，而预览版尚未公证，所以 macOS 会拦住第一次启动。
-请在“系统设置 > 隐私与安全性”中选择 **Open Anyway**（见
-[Gatekeeper 故障排除](#gatekeeper-故障排除)），或者改用上面的一行安装命令，它不经过隔离流程。
-
 ### 从源码构建
 
 ```sh
@@ -381,23 +367,6 @@ Release（除此之外不发送任何内容），发现新版本时，为这个�
 Input Monitoring 的授权会保留。**Release Notes** 打开 GitHub 的发布页面，
 **Skip** 不再提醒这个版本。如果 CmdIME 是用 Homebrew 安装的，`brew upgrade`
 照常可用；原地更新之后，Homebrew 记录的版本号会落后，直到下一次 `brew upgrade`。
-
-## Homebrew
-
-较新版本的 Homebrew 要求 cask 必须从 tap 安装，并且会拒绝直接使用 GitHub raw 地址或
-本地 cask 文件路径。请把本仓库用作自定义 tap：
-
-```sh
-brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
-brew install --cask ShunmeiCho/cmd-ime/cmd-ime
-```
-
-该 cask 包含 Homebrew 的 `unsigned_accessibility` 注意事项，因为预览版本没有使用
-Developer ID 签名。Homebrew 的文档说明，这条注意事项是告诉用户更新后可能需要重新启用
-Accessibility。
-
-如果以后添加了专门的 `homebrew-cmd-ime` tap 仓库，可以把这个 cask 复制过去，
-以使用更短的 `brew tap ShunmeiCho/cmd-ime` 流程。
 
 ## 项目结构
 

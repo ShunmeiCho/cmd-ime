@@ -117,21 +117,6 @@ After installation, open CmdIME and grant both **Accessibility** and
 
 [Open the full install and permissions demo](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
-### Homebrew Custom Tap
-
-Recent Homebrew versions require casks to come from a tap. To install CmdIME
-with Homebrew, tap this repository first:
-
-```sh
-brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
-brew install --cask ShunmeiCho/cmd-ime/cmd-ime
-```
-
-Homebrew quarantines what it downloads, and preview builds are not notarized, so
-macOS blocks the first launch. Choose **Open Anyway** in System Settings > Privacy &
-Security (see [Gatekeeper Troubleshooting](#gatekeeper-troubleshooting)), or use the
-one-line installer above, which does not go through quarantine.
-
 ### Build From Source
 
 ```sh
@@ -425,23 +410,6 @@ Accessibility and Input Monitoring approvals carry over. **Release Notes** opens
 the GitHub release page and **Skip** silences that version. If CmdIME was
 installed with Homebrew, `brew upgrade` works as before; an in-place update leaves
 Homebrew's recorded version behind until the next `brew upgrade`.
-
-## Homebrew
-
-Recent Homebrew versions require casks to be installed from a tap and reject
-direct raw GitHub or local cask file paths. Use this repository as a custom tap:
-
-```sh
-brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
-brew install --cask ShunmeiCho/cmd-ime/cmd-ime
-```
-
-The cask includes Homebrew's `unsigned_accessibility` caveat because preview
-builds are not Developer ID signed. Homebrew documents that this caveat tells
-users they may need to re-enable Accessibility after updates.
-
-If a dedicated `homebrew-cmd-ime` tap repository is added later, this cask can
-be copied there for the shorter `brew tap ShunmeiCho/cmd-ime` flow.
 
 ## Project Shape
 

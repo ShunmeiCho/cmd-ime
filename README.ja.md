@@ -125,23 +125,6 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 [インストールと権限のデモの全編を開く](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
-### Homebrew カスタム tap
-
-最近のバージョンの Homebrew では、cask は tap から取得する必要があります。
-Homebrew で CmdIME をインストールするには、まずこのリポジトリを tap して
-ください。
-
-```sh
-brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
-brew install --cask ShunmeiCho/cmd-ime/cmd-ime
-```
-
-Homebrew はダウンロードしたファイルに隔離属性を付けます。プレビュー版は公証されて
-いないため、macOS は初回起動をブロックします。「システム設定 > プライバシーと
-セキュリティ」で **Open Anyway** を選ぶか（
-[Gatekeeper のトラブルシューティング](#gatekeeper-のトラブルシューティング)を参照）、
-隔離を経由しない上記のワンライナーインストールを使ってください。
-
 ### ソースからビルド
 
 ```sh
@@ -458,26 +441,6 @@ GitHub のリリースページを開き、**Skip** はそのバージョンの�
 Homebrew でインストールした場合は、これまでどおり `brew upgrade` を使えます。
 その場でアップデートすると、次の `brew upgrade` まで Homebrew 側のバージョン記録は
 古いままになります。
-
-## Homebrew
-
-最近のバージョンの Homebrew では、cask は tap からインストールする必要があり、
-GitHub の raw URL やローカルの cask ファイルパスを直接指定することはできません。
-このリポジトリをカスタム tap として使ってください。
-
-```sh
-brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
-brew install --cask ShunmeiCho/cmd-ime/cmd-ime
-```
-
-プレビュービルドは Developer ID で署名されていないため、cask には Homebrew の
-`unsigned_accessibility` の注意書き(caveat)が含まれています。Homebrew の
-ドキュメントによると、この注意書きは、アップデート後に Accessibility を
-有効にし直す必要があるかもしれないことをユーザーに伝えるものです。
-
-将来、専用の `homebrew-cmd-ime` tap リポジトリが追加された場合は、この cask を
-そこにコピーして、より短い `brew tap ShunmeiCho/cmd-ime` の手順で使えるように
-できます。
 
 ## プロジェクト構成
 
