@@ -1,3 +1,12 @@
+## CmdIME v0.6.4 Preview
+
+The slot menus open every time.
+
+### Fixes
+
+- **Single tap, Double tap and the other slot menus always open.** These controls were a system menu laid over a drawn field, and the menu only reacted to clicks on part of that field, so a click often did nothing. The whole field is now a button, and the choices open in a small panel below it. This covers Single tap, Double tap, the input-source picker, Add Slot, Manage, the slot's "…" actions and the theme actions.
+- **A slot whose input source was removed says "Source missing".** After uninstalling an input method, its slot falls back to another source of the same language. Both slots were then marked "Duplicate", including the one that had done nothing wrong. Now only the slot that lost its source is marked, as "Source missing", and the slot it fell back onto stays clean. Two slots that name the same source on purpose are still marked "Duplicate".
+
 ## CmdIME v0.6.3 Preview
 
 Updates tell you what they change, and you decide how often CmdIME looks for them.
