@@ -1,51 +1,110 @@
-<div align="center">
-  <img src="Assets/AppIcon.png" alt="CmdIME app icon" width="112">
-  <h1>CmdIME</h1>
-  <p><strong>Deterministic macOS input-source switching for multilingual typing.</strong></p>
-  <p><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a></p>
+<p align="center">
+  <img src="Assets/readme/hero.svg" width="100%" alt="CmdIME, a macOS input-source switcher: one key per input source. Left Command selects English, Right Command selects Chinese, Right Shift selects Japanese.">
+</p>
 
-  <p>
-    <a href="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml"><img alt="Swift" src="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml/badge.svg"></a>
-    <a href="https://github.com/ShunmeiCho/cmd-ime/releases"><img alt="Release" src="https://img.shields.io/github/v/release/ShunmeiCho/cmd-ime"></a>
-    <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
-  </p>
-</div>
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.ja.md">日本語</a>
+</p>
 
-CmdIME is a macOS input-source switcher built around configurable switch slots
-and direct target switching. Instead of cycling through input sources, press the
-slot you want and CmdIME selects the matching macOS input source.
+<p align="center">
+  <a href="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml"><img alt="Swift" src="https://github.com/ShunmeiCho/cmd-ime/actions/workflows/swift.yml/badge.svg"></a>
+  <a href="https://github.com/ShunmeiCho/cmd-ime/releases"><img alt="Release" src="https://img.shields.io/github/v/release/ShunmeiCho/cmd-ime"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue.svg"></a>
+</p>
 
-Why not just use the built-in `Control+Space`? It cycles, so with three or more
-input sources you have to look at where you landed, and many users find that a
-press is occasionally delayed or seems to do nothing. CmdIME gives every input
-source its own key, confirms that macOS really made the switch (retrying when it
-did not), and shows a small indicator near the caret so you know where you are
-without looking at the menu bar.
+CmdIME gives every input source on your Mac its own key. Tap Left Command for
+English, Right Command for Chinese, Right Shift for Japanese: CmdIME selects that
+source directly, checks that macOS really switched, and shows a small indicator near
+the caret. The keys are yours to choose; the slots follow the input sources installed
+on your Mac.
 
-## What It Does
+[![CmdIME demo: one key per input source](demo-videos/renders/preview-promo.gif)](demo-videos/renders/cmdime-promo.mp4)
 
-CmdIME scans the input sources already installed in macOS instead of hardcoding
-one keyboard layout. On a fresh setup, it creates one slot per primary language,
-using the first selectable source for that language in system order. Sources
-without a primary language are skipped. Each slot can be pointed at any installed
-input source from its card, including a slot that shows "Not matched".
+The demo shows the Switcher, Glass and Liquid Glass indicator themes.
+[Open the full video](demo-videos/renders/cmdime-promo.mp4).
 
-Settings is a slot board. Installed input sources are listed on the left, your
-slots on the right:
+## Why not Control+Space
 
-- Drag a source into the slot list, or use **Add Slot**, to create a slot. Drag a
-  slot's handle to reorder it; Esc cancels a drag. The "..." menu has Move Up,
-  Move Down, Rename, Color and Remove Slot, and the same actions work from the
-  keyboard and VoiceOver. A removed slot can be restored with **Undo** until the
-  next slot change.
-- Click a slot's badge to give it one color. The source list, Live keys and the
-  switch indicator follow that color.
-- The source list follows System Settings: adding or removing an input source
-  updates it without a relaunch, and a Refresh button is always there.
-- "Current" marks the input source macOS has selected, however it was selected.
-  **Switch** selects a slot's source directly; it does not test the trigger.
-- Live keys, below the board, is a small keyboard that lights up the keys bound
-  to the current slot.
+- **It cycles.** With three or more input sources you look at the menu bar to see
+  where you landed. With CmdIME each key always lands on the same source.
+- **A press sometimes seems to do nothing.** CmdIME checks that macOS applied the
+  switch and retries when it did not.
+- **Taps and shortcuts stay apart.** Command+C, Command+Tab and other chords never
+  count as a Command tap, so the keys you already use keep working.
+
+## Install
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash
+```
+
+The installer downloads the latest release, verifies it against the published
+SHA-256, installs `CmdIME.app` in `/Applications`, links `keyboardctl` and opens the
+app. Then allow **Accessibility** and **Input Monitoring** in System Settings >
+Privacy & Security; the in-app Setup guide walks you through both and a first switch.
+
+Requires macOS 13 or later. Later updates install from inside the app with
+**Update Now**.
+
+> [!NOTE]
+> CmdIME is a preview build: signed, not notarized. The one-line installer is the
+> smooth path. A zip downloaded in a browser is stopped by Gatekeeper the first time;
+> see [Troubleshooting](#troubleshooting).
+
+[![CmdIME install and permissions demo](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
+
+<details>
+<summary><strong>Pin a version, or build from source</strong></summary>
+
+To pin an exact version and checksum (copy both from the release notes):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
+  CMDIME_VERSION=0.7.0 CMDIME_SHA256=76ffc1e46d594179452719eac58923df1020d129307d05296ab594fd44237420 bash
+```
+
+To build from source:
+
+```sh
+git clone https://github.com/ShunmeiCho/cmd-ime.git
+cd cmd-ime
+swift test
+./script/build_and_run.sh
+```
+
+A local build needs the same two permissions before global keyboard listening works.
+
+</details>
+
+## What you get
+
+- **A slot board.** Installed input sources on the left, your slots on the right.
+  Drag a source in to add a slot, drag a handle to reorder, rename, color or remove a
+  slot, and undo a removal. The list follows System Settings as you add or remove
+  input sources.
+- **Three optional triggers per slot.** A single tap or a double tap of one of the
+  eight modifier keys, and a shortcut such as Option+J. Set any of them; any one you
+  set switches to that slot.
+- **A switch indicator near the caret.** Twelve built-in themes, including Glass,
+  Liquid Glass on macOS 26 and later, paper styles and a switcher that shows every
+  slot, plus your own themes and fonts.
+- **Updates from inside the app.** A check every six hours by default, a summary of
+  what changed beside **Update Now**, and an in-place install that keeps your
+  permissions.
+- **A settings window that follows light and dark,** or stays on the one you pick.
+- **`keyboardctl`,** a command-line tool for scanning, binding, switching and
+  diagnosing.
+
+## Reference
+
+<details>
+<summary><strong>Slots and default triggers</strong></summary>
+
+CmdIME scans the input sources already installed in macOS instead of hardcoding one
+keyboard layout. On a fresh setup it creates one slot per primary language, using the
+first selectable source for that language in system order; sources without a primary
+language are skipped. Each slot can point at any installed input source from its card,
+including a slot that shows "Not matched".
 
 | Detected slot | Default trigger |
 | --- | --- |
@@ -56,204 +115,84 @@ slots on the right:
 | Fifth | Left Control |
 | Sixth and later | No trigger (assign manually) |
 
-Existing configurations and their triggers are unchanged. If no selectable
-source has a usable primary language, initialization uses the legacy defaults:
-English on Left Command, Chinese on Right Command, Japanese on **Option+J**.
+Existing configurations and their triggers are unchanged. If no selectable source has
+a usable primary language, initialization uses the legacy defaults: English on Left
+Command, Chinese on Right Command, Japanese on **Option+J**.
 
-The demo below uses one possible setup (left Command for English, right Command
-for Chinese, right Shift for Japanese); your slots follow the input sources
-installed on your Mac. It shows the Switcher, Glass and Liquid Glass indicator
-themes.
+On the board:
 
-[![CmdIME demo: one key per input source](demo-videos/renders/preview-promo.gif)](demo-videos/renders/cmdime-promo.mp4)
+- The "..." menu has Move Up, Move Down, Rename, Color and Remove Slot, and the same
+  actions work from the keyboard and VoiceOver. Esc cancels a drag. A removed slot can
+  be restored with **Undo** until the next slot change.
+- Click a slot's badge to give it one color. The source list, Live keys and the switch
+  indicator follow that color.
+- "Current" marks the input source macOS has selected, however it was selected.
+  **Switch** selects a slot's source directly; it does not test the trigger.
+- "Duplicate" marks two slots that name the same input source. "Source missing" marks
+  a slot whose input source is no longer installed and has fallen back to another one.
+- Live keys, below the board, is a small keyboard that lights up the keys bound to the
+  current slot.
 
-[Open the full demo video](demo-videos/renders/cmdime-promo.mp4)
+</details>
 
-## Distribution Status
+<details>
+<summary><strong>Triggers in detail</strong></summary>
 
-CmdIME is currently distributed as an **unnotarized preview build**.
-
-It is not distributed through the Mac App Store, and current preview builds are
-not signed with a Developer ID certificate unless a release explicitly says so.
-macOS may block the app on first launch or ask you to approve it manually in
-System Settings.
-
-After you approve CmdIME and grant the required permissions, it runs normally.
-This preview distribution path is intended for technical users and early
-adopters.
-
-Apple's Gatekeeper documentation explains that apps downloaded from outside the
-App Store are checked for identified developer signing, notarization, and
-modification status. Developer ID signing and notarization are the smoother path
-for broader public distribution:
-
-- [Gatekeeper and runtime protection in macOS](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web)
-- [Signing Mac Software with Developer ID](https://developer.apple.com/developer-id/)
-
-## Install
-
-### Recommended Preview Install
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash
-```
-
-The installer resolves the latest release, downloads the zip, verifies it against
-the `.sha256` file published with the release, installs `CmdIME.app` to
-`/Applications`, links `keyboardctl`, and opens the app so macOS can request
-permissions.
-
-To pin an exact version and checksum yourself (copy both from the release notes):
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.7.0 CMDIME_SHA256=76ffc1e46d594179452719eac58923df1020d129307d05296ab594fd44237420 bash
-```
-
-After installation, open CmdIME and grant both **Accessibility** and
-**Input Monitoring** permissions in System Settings > Privacy & Security.
-
-[![CmdIME install and permissions demo](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
-
-[Open the full install and permissions demo](demo-videos/renders/cmdime-install-permissions-demo.mp4)
-
-### Build From Source
-
-```sh
-git clone https://github.com/ShunmeiCho/cmd-ime.git
-cd cmd-ime
-swift test
-./script/build_and_run.sh
-```
-
-The local app still needs Accessibility and Input Monitoring permissions before
-global keyboard listening can work.
-
-## First Launch And Permissions
-
-A new install opens with a three-step **Setup guide** at the top of Settings:
-allow keyboard access, check the detected slots, then try a switch. It can be
-skipped, and **General > Show Setup Guide** brings it back. Users updating from
-an earlier version see a one-line "New in 0.4" notice instead.
-
-CmdIME needs both macOS permissions:
-
-- Accessibility
-- Input Monitoring
-
-Use one stable app location when granting permissions. macOS stores approval
-against the app's code identity, so approving one rebuilt `CmdIME.app` and then
-running another copy from `dist/`, `dist/release/`, or `/Applications` can make
-macOS ask again.
-
-Recommended permission reset flow:
-
-1. Quit CmdIME.
-2. Remove old `CmdIME.app` entries from System Settings > Privacy & Security >
-   Accessibility and Input Monitoring.
-3. Install or copy the app to the location you actually use, such as
-   `/Applications/CmdIME.app`.
-4. Open that exact app and grant both permissions.
-5. Quit and reopen CmdIME.
-
-## Gatekeeper Troubleshooting
-
-Because current preview builds are not notarized, macOS may show a warning such
-as "CmdIME is damaged" or "Apple cannot check it for malicious software" when
-you open a browser-downloaded zip.
-
-If you trust the release you downloaded, try opening CmdIME once, then go to
-System Settings > Privacy & Security and choose **Open Anyway**.
-
-If needed, you can also remove the browser quarantine attribute:
-
-```sh
-xattr -dr com.apple.quarantine /Applications/CmdIME.app
-```
-
-Prefer the pinned installer path when possible. That path avoids the browser
-quarantine flow.
-
-## App Behavior
-
-CmdIME is a background input-source agent. The settings window is only a control
-panel: closing the window does not stop keyboard listening. Release builds are
-packaged with `LSUIElement`, so the app does not appear in the Dock or app
-switcher.
-
-The settings window follows the macOS appearance. **General > Appearance** pins it to
-**Light** or **Dark** instead, or returns it to **System**. It sits on a system material,
-its status and update bars use Liquid Glass on macOS 26 and later, and everything turns
-opaque when Reduce Transparency is on. The switch indicator is separate: it appears over
-other apps, so its themes follow the macOS appearance unless a theme's tone is fixed.
-
-Open `CmdIME.app` again whenever you need Settings. To stop the background
-agent, use **General > Quit CmdIME** in the status bar at the top of Settings, or run:
-
-```sh
-keyboardctl quit
-```
-
-If the CLI is not linked yet, use:
-
-```sh
-pkill -x CmdIME
-```
-
-## Bindings
-
-Each slot has three optional triggers. Any one you set switches to that slot,
-and they can be combined (for example a single tap for daily use plus a shortcut
-as a fallback). Leave the rest empty.
-
-- `Single tap`: choose one of the eight physical modifier keys (left or right
-  Command, Option, Control, Shift) from the menu.
-- `Double tap`: the same menu, for a double tap.
+- `Single tap`: one of the eight physical modifier keys (left or right Command, Option,
+  Control, Shift).
+- `Double tap`: the same keys, tapped twice.
 - `Shortcut`: click **Record…**, press a modifier together with a key such as
   `option+j`, then Save. Esc cancels; tap triggers are paused while recording.
 
-A key already used for the same gesture by another slot, or by a key remap, is
-shown as used and cannot be picked. The same key can be a single tap for one
-slot and a double tap for another. Many Chinese input methods use Shift to
-toggle Chinese and English, so CmdIME never assigns Shift automatically.
+A key already used for the same gesture by another slot, or by a key remap, is shown as
+used and cannot be picked. The same key can be a single tap for one slot and a double
+tap for another. Many Chinese input methods use Shift to toggle Chinese and English, so
+CmdIME never assigns Shift automatically.
 
-Single-key modifier bindings and keyboard shortcuts are intentionally separate
-so common shortcuts such as `Command+C`, `Command+V`, `Command+Tab`, and
-multi-modifier chords are not treated as one-shot Command taps. Single-tap
-modifier bindings switch immediately; CmdIME waits briefly only when the same
-modifier also has a CmdIME double-tap binding.
+Single-key modifier bindings and keyboard shortcuts are intentionally separate, so
+`Command+C`, `Command+V`, `Command+Tab` and multi-modifier chords are not treated as
+one-shot Command taps. A single tap switches immediately; CmdIME waits briefly only
+when the same modifier also has a double-tap binding.
 
-The settings UI rejects macOS input-source shortcuts such as `control+space`
-and `control+option+space` so CmdIME does not steal the system input-source
-chooser by accident.
+The settings window rejects macOS input-source shortcuts such as `control+space` and
+`control+option+space`, so CmdIME does not take over the system input-source chooser
+by accident.
 
-CmdIME switches input sources programmatically, so it does not invoke the
-private macOS input-source chooser. Enable `Show switch indicator` to show
-CmdIME's own lightweight confirmation bubble after a switch. In Settings the
-indicator can be disabled, given one of the built-in themes (glass, Liquid Glass
-on macOS 26 and later, paper with
-one or two inks, text only, tile only, a single line, or a switcher that shows
-every slot), resized with presets and a scale slider, switched between icon/text
-display modes, and colored from each slot's own color, the system accent color
-or monochrome. Font family, weight and text size belong to the theme; editing a
-built-in theme makes a copy. Custom themes live as JSON files in
-`~/.config/cmd-ime/themes` and imported fonts in `~/.config/cmd-ime/fonts`
-(both beside the config file); fonts are registered for CmdIME only and nothing
-is installed system-wide. A theme file may have any name; removing a theme in
-Settings moves its file to the Trash.
+</details>
 
-If Japanese opens a kana palette instead of switching to Hiragana, refresh input
-sources or update to CmdIME 0.1.10 or later. macOS exposes
-`com.apple.50onPaletteIM` as a selectable Japanese source, but it is an
-auxiliary kana palette, not the normal Hiragana input method.
+<details>
+<summary><strong>Switch indicator and themes</strong></summary>
 
-### Input methods that stay in Latin after a switch
+CmdIME switches input sources programmatically, so it does not invoke the private macOS
+input-source chooser. With `Show switch indicator` on, it shows its own lightweight
+confirmation bubble after a switch.
+
+In Settings the indicator can be turned off, given one of the built-in themes (glass,
+Liquid Glass on macOS 26 and later, paper with one or two inks, text only, tile only, a
+single line, or a switcher that shows every slot), resized with presets and a scale
+slider, switched between icon and text display, and colored from each slot's own color,
+the system accent color or monochrome. Font family, weight and text size belong to the
+theme; editing a built-in theme makes a copy.
+
+Custom themes are JSON files in `~/.config/cmd-ime/themes` and imported fonts live in
+`~/.config/cmd-ime/fonts`, both beside the config file. Fonts are registered for CmdIME
+only; nothing is installed system-wide. A theme file may have any name; removing a
+theme in Settings moves its file to the Trash.
+
+The indicator appears over other apps, so its themes follow the macOS appearance, not
+the settings window's, unless a theme's tone is fixed.
+
+</details>
+
+<details>
+<summary><strong>Input methods that stay in Latin after a switch</strong></summary>
 
 Selecting a source from the background can leave an input method detached from the
 focused app: the menu bar shows the new source, but Latin letters keep coming out.
 Google Japanese Input does this after you have typed under ABC. For it, CmdIME presses
-the Kana key first, which enters Japanese through the system's own path, and selects the
-slot's source 60 ms later. Other input methods keep the plain select with no added delay.
+the Kana key first, which enters Japanese through the system's own path, and selects
+the slot's source 60 ms later. Other input methods keep the plain select with no added
+delay.
 
 If another Japanese input method shows the same symptom, add an activation recipe to
 `~/.config/cmd-ime/activation-recipes.json` and press Refresh in Settings:
@@ -270,10 +209,73 @@ Japanese sources, `delayMs` is limited to 0-500, and an entry that cannot be rea
 skipped and named in the status bar. Please report what worked in an issue so it can
 become built in.
 
-## CLI
+If Japanese opens a kana palette instead of Hiragana, refresh input sources or update to
+CmdIME 0.1.10 or later. macOS exposes `com.apple.50onPaletteIM` as a selectable Japanese
+source, but it is an auxiliary kana palette, not the normal Hiragana input method.
 
-Slot IDs depend on your detected sources. These examples assume slots named
-`english`, `chinese`, and `japanese`; run `keyboardctl slots` for your actual IDs.
+</details>
+
+<details>
+<summary><strong>Settings window, appearance and quitting</strong></summary>
+
+CmdIME is a background agent. The settings window is only a control panel: closing it
+does not stop keyboard listening. Release builds are packaged with `LSUIElement`, so the
+app does not appear in the Dock or the app switcher. Open `CmdIME.app` again whenever
+you need Settings.
+
+A new install opens with a three-step **Setup guide** at the top of Settings: allow
+keyboard access, check the detected slots, then try a switch. It can be skipped, and
+**General > Show Setup Guide** brings it back. Users updating from an earlier version
+see a one-line notice about what is new instead.
+
+The settings window follows the macOS appearance. **General > Appearance** pins it to
+**Light** or **Dark**, or returns it to **System**. It sits on a system material, its
+status and update bars use Liquid Glass on macOS 26 and later, and everything turns
+opaque when Reduce Transparency is on.
+
+To stop the background agent, use **General > Quit CmdIME**, or run:
+
+```sh
+keyboardctl quit
+```
+
+If the CLI is not linked yet, use `pkill -x CmdIME`.
+
+</details>
+
+<details>
+<summary><strong>Updates</strong></summary>
+
+CmdIME has no window most of the time, so it looks for new releases itself: by default
+every six hours it asks GitHub for the newest release (nothing else is sent), and when
+there is one it posts a single system notification for that version. The settings
+window shows the same update at the top, together with the release's opening sentence
+and the title of each change.
+
+**General** has **Check** for a manual check, a **Check automatically** switch, an
+**Every 6 hours / Daily / Weekly** choice, and **Notify me about updates**, which turns
+the notification off while the update still shows in the window. Notification
+permission is requested when there is an update to announce or when you turn that
+switch on, never at first launch. macOS does not let an app change its own notification
+permission: if notifications are blocked, General says so and offers
+**Open Notification Settings…**.
+
+**Update Now** installs the update in place: it downloads the release zip, checks it
+against the published `.sha256`, verifies that the new app carries a valid code
+signature from the same developer team as the running one, replaces the app bundle and
+reopens CmdIME. Because the signing identity is unchanged, the Accessibility and Input
+Monitoring approvals carry over. **Release Notes** opens the GitHub release page and
+**Skip** silences that version. If CmdIME was installed with Homebrew, `brew upgrade`
+works as before; an in-place update leaves Homebrew's recorded version behind until the
+next `brew upgrade`.
+
+</details>
+
+<details>
+<summary><strong>Command line: keyboardctl</strong></summary>
+
+Slot IDs depend on your detected sources. These examples assume slots named `english`,
+`chinese` and `japanese`; run `keyboardctl slots` for your actual IDs.
 
 ```sh
 swift run keyboardctl scan
@@ -294,115 +296,143 @@ swift run keyboardctl quit
 swift run keyboardctl listen
 ```
 
-- `keyboardctl init`: creates source-detected defaults using the same detection
-  as the GUI's first launch. An existing config is left untouched unless you
-  pass `--force`, which replaces the entire configuration with detected defaults.
-  Back up custom settings before forcing a reset; it does not create the GUI's
-  before-reset backup (the legacy migration backup below still applies).
-- `keyboardctl switch <slot>`: selects the matched input source for a slot and
-  confirms that macOS applied the switch. If macOS does not apply the selection,
-  it prints an error message to `stderr` and exits non-zero.
+- `keyboardctl init`: creates source-detected defaults using the same detection as the
+  GUI's first launch. An existing config is left untouched unless you pass `--force`,
+  which replaces the entire configuration with detected defaults. Back up custom
+  settings before forcing a reset; it does not create the GUI's before-reset backup (the
+  legacy migration backup below still applies).
+- `keyboardctl switch <slot>`: selects the matched input source for a slot and confirms
+  that macOS applied the switch. If macOS does not apply the selection, it prints an
+  error message to `stderr` and exits non-zero.
 - `keyboardctl diagnose [--json]`: prints each slot's configured preferences
-  (`preferredIDs`, `languagePrefixes`, `nameContains`), the matched input source,
-  and the match reason (`preferredID`, `fallbackLanguage`, `languagePrefix`, `nameContains`, or `none`).
-  Pass `--json` for structured JSON output: `slots` entries retain `slot` IDs,
+  (`preferredIDs`, `languagePrefixes`, `nameContains`), the matched input source, and the
+  match reason (`preferredID`, `fallbackLanguage`, `languagePrefix`, `nameContains`, or
+  `none`). Pass `--json` for structured JSON output: `slots` entries retain `slot` IDs,
   and include `name` and `duplicateSlots` (an empty array when there are none).
-- `keyboardctl slots`: lists ordered slot IDs, names, triggers, and matches,
-  marking fallback matches.
-- `keyboardctl slot add [<number|source-id>] [--name N]`: without a source,
-  lists numbered unassigned input sources; with one, adds a slot and assigns
-  the first free trigger from Left Command, Right Command, Left Option,
-  Right Option, Left Control. When all are occupied, the slot has no trigger;
-  use `bind` to assign one. Shift is never assigned automatically because many
-  Chinese input sources use a Shift tap to toggle English/Chinese. Right Control
-  is also manual-only because laptop keyboards lack it.
-- `keyboardctl slot remove <slot>`: removes its bindings, preferences and custom
-  color. The last slot cannot be removed.
-- Slot queries accept an exact ID first, then a unique case-insensitive ID or
-  name. Deleted or unknown slots fail with exit code 1; they are never redirected.
+- `keyboardctl slots`: lists ordered slot IDs, names, triggers and matches, marking
+  fallback matches.
+- `keyboardctl slot add [<number|source-id>] [--name N]`: without a source, lists
+  numbered unassigned input sources; with one, adds a slot and assigns the first free
+  trigger from Left Command, Right Command, Left Option, Right Option, Left Control. When
+  all are occupied, the slot has no trigger; use `bind` to assign one. Shift is never
+  assigned automatically because many Chinese input sources use a Shift tap to toggle
+  English/Chinese. Right Control is also manual-only because laptop keyboards lack it.
+- `keyboardctl slot remove <slot>`: removes its bindings, preferences and custom color.
+  The last slot cannot be removed.
+- Slot queries accept an exact ID first, then a unique case-insensitive ID or name.
+  Deleted or unknown slots fail with exit code 1; they are never redirected.
   `bind <trigger> <slot>` retains trigger-stealing behavior and reports when the
   previous slot is left without a trigger.
 
-New slots prefer the chosen source and fall back by its **primary** language.
-An input source cannot be assigned as two slots' first preferred source, but
-fallbacks and legacy rules may resolve multiple slots to it: both still work,
-and `diagnose` reports `duplicate with: <ids>`. Existing matching rules remain
-unchanged. First launch detects slots only when the config is missing; refreshing
-sources does not replace existing slots or triggers.
+New slots prefer the chosen source and fall back by its **primary** language. An input
+source cannot be assigned as two slots' first preferred source, but fallbacks and legacy
+rules may resolve multiple slots to it: both still work, and `diagnose` reports
+`duplicate with: <ids>`. Existing matching rules remain unchanged. First launch detects
+slots only when the config is missing; refreshing sources does not replace existing
+slots or triggers.
 
-In Settings, **Reset to Detected** asks for confirmation before
-replacing all slots and triggers with detected defaults. Unrelated settings,
-including general indicator preferences, are preserved. Before saving, the GUI
-backs up the original file to `config.json.before-reset.bak` beside the config;
-subsequent resets use unique backup names rather than overwriting earlier ones.
-If backup or save fails, the reset is not applied.
+</details>
 
-Quit the GUI before editing configuration with the CLI, then reopen it: the
-running GUI does not watch the file and could overwrite CLI changes.
+<details>
+<summary><strong>Configuration file, reset, upgrade and downgrade</strong></summary>
 
-Config lives at:
+Config lives at `~/.config/cmd-ime/config.json`. Quit the GUI before editing it with the
+CLI, then reopen it: the running GUI does not watch the file and could overwrite CLI
+changes.
 
-```text
-~/.config/cmd-ime/config.json
+In Settings, **Reset to Detected** asks for confirmation before replacing all slots and
+triggers with detected defaults. Unrelated settings, including general indicator
+preferences, are preserved. Before saving, the GUI backs up the original file to
+`config.json.before-reset.bak` beside the config; subsequent resets use unique backup
+names rather than overwriting earlier ones. If backup or save fails, the reset is not
+applied.
+
+Version 2 stores an ordered `slots` collection with stable IDs, names and tints. Old
+configurations migrate in memory on load. `show`, `slots`, `diagnose`, `switch` and
+`listen` do not save the migration or print an upgrade notice. Each successful write
+(`bind`, `remap`, `slot add`, `slot remove`, or `init --force`) backs up a file lacking
+`slots` to `config.json.v1.bak` alongside it, then prints a note to stderr. This also
+covers version-2 files whose `slots` key was dropped by an older binary. If the backup
+already exists, a fresh `config.json.v1.bak.<uuid>` is created; earlier backups are
+never reused or overwritten. The note reports the new backup path. Backup failure
+prevents saving. Legacy IDs and bindings are preserved on migration.
+
+Before downgrading, quit CmdIME and restore the backup named in the latest migration
+note to `config.json` (keep a separate copy of your version-2 settings). After repeated
+upgrades, that backup may have a UUID suffix; the original `config.json.v1.bak` still
+holds the first migration's settings. Old binaries cannot decode custom slot IDs and may
+move that config to `.corrupt.<uuid>` and reset it. Even with only legacy IDs, an old
+binary drops `slots` on save, losing names and tints and potentially restoring removed
+legacy slots on the next upgrade.
+
+</details>
+
+## Troubleshooting
+
+<details>
+<summary><strong>"CmdIME is damaged" or "Apple cannot check it for malicious software"</strong></summary>
+
+Current preview builds are not notarized, so macOS shows a warning like this when you
+open a zip downloaded in a browser. If you trust the release you downloaded, try opening
+CmdIME once, then go to System Settings > Privacy & Security and choose **Open Anyway**.
+If needed, remove the browser quarantine attribute:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/CmdIME.app
 ```
 
-### Configuration upgrade and downgrade
+The one-line installer avoids the browser quarantine flow. Apple's documentation on
+[Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web)
+and [Developer ID](https://developer.apple.com/developer-id/) explains the checks.
 
-Version 2 stores an ordered `slots` collection with stable IDs, names and tints.
-Old configurations migrate in memory on load. `show`, `slots`, `diagnose`,
-`switch` and `listen` do not save the migration or print an upgrade notice.
-Each successful write (`bind`, `remap`, `slot add`, `slot remove`, or
-`init --force`) backs up a file lacking `slots` to `config.json.v1.bak` alongside
-it, then prints a note to stderr. This also covers version-2 files whose `slots`
-key was dropped by an older binary. If the backup already exists, a fresh
-`config.json.v1.bak.<uuid>` is created; earlier backups are never reused or
-overwritten. The note reports the new backup path. Backup failure prevents saving.
-Legacy IDs and bindings are preserved on migration.
+</details>
 
-Before downgrading, quit CmdIME and restore the backup named in the latest
-migration note to `config.json` (keep a separate copy of your version-2 settings).
-After repeated upgrades, that backup may have a UUID suffix; the original
-`config.json.v1.bak` still holds the first migration's settings. Old binaries cannot decode custom
-slot IDs and may move that config to `.corrupt.<uuid>` and reset it. Even with
-only legacy IDs, an old binary drops `slots` on save, losing names/tints and
-potentially restoring removed legacy slots on the next upgrade.
+<details>
+<summary><strong>macOS keeps asking for permissions</strong></summary>
 
-## Build
+macOS stores the Accessibility and Input Monitoring approvals against the app's code
+identity, so approving one rebuilt `CmdIME.app` and then running another copy from
+`dist/`, `dist/release/` or `/Applications` can make macOS ask again. Use one stable app
+location. To reset:
+
+1. Quit CmdIME.
+2. Remove old `CmdIME.app` entries from System Settings > Privacy & Security >
+   Accessibility and Input Monitoring.
+3. Install or copy the app to the location you actually use, such as
+   `/Applications/CmdIME.app`.
+4. Open that exact app and grant both permissions.
+5. Quit and reopen CmdIME.
+
+</details>
+
+## Development
+
+<details>
+<summary><strong>Build, package and release</strong></summary>
 
 ```sh
 swift test
 ./script/build_and_run.sh
 ```
 
-For local development, `script/build_and_run.sh` signs the generated app bundle
-after staging it. It uses the first local Apple Development or Developer ID
-signing identity it can find, then falls back to ad-hoc signing. You can set
-`CODESIGN_IDENTITY` to choose a specific identity:
+`script/build_and_run.sh` signs the generated app bundle after staging it. It uses the
+first local Apple Development or Developer ID signing identity it can find, then falls
+back to ad-hoc signing. Set `CODESIGN_IDENTITY` to choose one:
 
 ```sh
 CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run.sh
 ```
 
-The shipped app stays native SwiftUI/AppKit. React is useful for web prototypes
-or a future optional settings surface, but it does not replace the macOS APIs
-CmdIME depends on for global keyboard listening, Accessibility/Input Monitoring
-permissions, login items, or input-source switching.
-
-Mac App Store distribution needs a separate sandboxed App Store build. See
-[docs/app-store.md](docs/app-store.md).
-
-## Package And Release
+Package a release:
 
 ```sh
 CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.7.0
 shasum -a 256 dist/CmdIME-0.7.0.zip
 ```
 
-Notarized release packaging requires a `Developer ID Application` signing
-identity. For an explicitly labelled unnotarized preview, set
-`CMDIME_ALLOW_UNNOTARIZED=1`.
-
-One-time notarization setup:
+Notarized packaging requires a `Developer ID Application` signing identity; for an
+explicitly labelled unnotarized preview, set `CMDIME_ALLOW_UNNOTARIZED=1`. One-time
+notarization setup:
 
 ```sh
 security find-identity -p codesigning -v
@@ -412,52 +442,36 @@ xcrun notarytool store-credentials "cmd-ime-notary" \
   --password "APP_SPECIFIC_PASSWORD"
 ```
 
-The package script signs with Developer ID, submits the zip to Apple notary
-service, staples the ticket to `CmdIME.app`, rebuilds the distributable zip, and
-prints the SHA-256. Use `CMDIME_NOTARY_PROFILE` if your keychain profile is not
-named `cmd-ime-notary`.
+The package script signs with Developer ID, submits the zip to Apple's notary service,
+staples the ticket to `CmdIME.app`, rebuilds the distributable zip and prints the
+SHA-256. Use `CMDIME_NOTARY_PROFILE` if your keychain profile is not named
+`cmd-ime-notary`.
 
-Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
-Homebrew cask. The cask links `keyboardctl` through `Contents/Resources`, which
-is a compatibility symlink to the signed helper in `Contents/MacOS`.
+Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a Homebrew
+cask. The cask links `keyboardctl` through `Contents/Resources`, which is a
+compatibility symlink to the signed helper in `Contents/MacOS`.
 
-### Updates
+The shipped app stays native SwiftUI and AppKit: global keyboard listening,
+Accessibility and Input Monitoring, login items and input-source switching all depend
+on macOS APIs. Mac App Store distribution needs a separate sandboxed build; see
+[docs/app-store.md](docs/app-store.md).
 
-CmdIME has no window most of the time, so it looks for new releases itself: by
-default every six hours it asks GitHub for the newest release (nothing else is sent), and
-when there is one it posts a single system notification for that version. The settings
-window shows the same update at the top, together with the release's opening sentence
-and the title of each change, so you can see what it brings without opening the browser.
+</details>
 
-**General** has **Check** for a manual check, a **Check automatically** switch, an
-**Every 6 hours / Daily / Weekly** choice, and **Notify me about updates**, which turns
-the notification off while the update still shows in the window. Notification permission
-is requested when there is an update to announce or when you turn that switch on, never
-at first launch. macOS does not let an app change its own notification permission: if
-notifications are blocked, General says so and offers **Open Notification Settings…**.
+<details>
+<summary><strong>Project layout</strong></summary>
 
-**Update Now** installs the update in place: it downloads the release zip, checks
-it against the published `.sha256`, verifies that the new app carries a valid
-code signature from the same developer team as the running one, replaces the app
-bundle and reopens CmdIME. Because the signing identity is unchanged, the
-Accessibility and Input Monitoring approvals carry over. **Release Notes** opens
-the GitHub release page and **Skip** silences that version. If CmdIME was
-installed with Homebrew, `brew upgrade` works as before; an in-place update leaves
-Homebrew's recorded version behind until the next `brew upgrade`.
-
-## Project Shape
-
-- `Sources/KeyboardSwitcherCore`: config, shortcut parsing, input-source scan,
-  matching, switching, and global event tap logic
-- `Sources/CmdIME`: AppKit background app with a SwiftUI settings window
-- `Sources/keyboardctl`: CLI for scan, config, switching, and listener mode
-- `script`: local run and release package scripts
+- `Sources/KeyboardSwitcherCore`: config, shortcut parsing, input-source scan, matching,
+  switching and the global event tap
+- `Sources/CmdIME`: the AppKit background app with a SwiftUI settings window
+- `Sources/keyboardctl`: CLI for scan, config, switching and listener mode
+- `script`: local run, install and release scripts
 - `Casks`: Homebrew cask template
+
+</details>
 
 ## Support
 
-If CmdIME saves you a little keyboard friction, you can support the project at
-[buymeacoffee.com/shunmeicor7](https://buymeacoffee.com/shunmeicor7).
-
-You can also star the repository:
-[github.com/ShunmeiCho/cmd-ime](https://github.com/ShunmeiCho/cmd-ime).
+If CmdIME saves you a little keyboard friction, you can
+[buy me a coffee](https://buymeacoffee.com/shunmeicor7) or
+[star the repository](https://github.com/ShunmeiCho/cmd-ime).
