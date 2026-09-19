@@ -77,7 +77,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.7.0 CMDIME_SHA256=76ffc1e46d594179452719eac58923df1020d129307d05296ab594fd44237420 bash
+  CMDIME_VERSION=0.7.1 CMDIME_SHA256=37a8e92de27e7a563a5ca65d521ae4aef7363929580e48f02c93d0ab0f19412a bash
 ```
 
 从源码构建：
@@ -431,8 +431,8 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 打包发布版本：
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.7.0
-shasum -a 256 dist/CmdIME-0.7.0.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.7.1
+shasum -a 256 dist/CmdIME-0.7.1.zip
 ```
 
 经过公证的打包需要 `Developer ID Application` 签名身份；如果要打包明确标注为未经公证的
