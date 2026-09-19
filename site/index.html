@@ -63,17 +63,14 @@
   <section class="hero" aria-labelledby="hero-title">
     <div class="wrap hero-inner">
     <div class="hero-head">
-      <img class="hero-icon" src="assets/icon-switch.webp" width="72" height="72" alt="" fetchpriority="high">
-      <div class="hero-copy">
-        <h1 id="hero-title">
-          <span class="i-en"><em>One key</em> per input source.</span>
-          <span class="i-zh" lang="zh-CN"><em>一个键</em>对应一个输入源。</span>
-          <span class="i-ja" lang="ja"><span class="nw">入力ソースごとに</span><em>キーをひとつ</em>。</span>
-        </h1>
-        <p class="lede i-en">CmdIME gives every input source on your Mac its own key. Tap Left Command for English, Right Command for Chinese, Right Shift for Japanese.</p>
-        <p class="lede i-zh" lang="zh-CN">CmdIME 让你 Mac 上的每个输入源都有自己的按键。单击左 Command 切到英文，右 Command 切到中文，右 Shift 切到日文。</p>
-        <p class="lede i-ja" lang="ja">CmdIME は、Mac の入力ソースそれぞれに専用のキーを割り当てます。左 Command をタップすれば英語、右 Command なら中国語、右 Shift なら日本語。</p>
-      </div>
+      <h1 id="hero-title">
+        <span class="i-en"><span class="nw">One key per input source.</span> <span class="muted"><span class="nw">No cycling.</span> <span class="nw">No guessing.</span></span></span>
+        <span class="i-zh" lang="zh-CN"><span class="nw">每个输入法，</span><span class="nw">一个专属键。</span><span class="muted"><span class="nw">不用轮流切换，</span><span class="nw">也不用猜。</span></span></span>
+        <span class="i-ja" lang="ja"><span class="nw">入力ソースごとに、</span><span class="nw">専用キー。</span><span class="muted"><span class="nw">巡回しない。</span><span class="nw">迷わない。</span></span></span>
+      </h1>
+      <p class="lede i-en">CmdIME gives every input source on your Mac its own key.</p>
+      <p class="lede i-zh" lang="zh-CN">CmdIME 让你 Mac 上的每个输入源都有自己的按键。</p>
+      <p class="lede i-ja" lang="ja">CmdIME は、Mac の入力ソースそれぞれに専用のキーを割り当てます。</p>
       <p class="hero-cta">
         <a class="btn btn-primary" href="#install"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></a>
       </p>
@@ -138,8 +135,8 @@
   </section>
 
   <!-- Install -->
-  <section id="install" class="install" aria-labelledby="install-title">
-    <div class="wrap install-grid">
+  <section id="install" class="install panel" aria-labelledby="install-title">
+    <div class="install-grid">
       <div class="install-main">
         <h2 id="install-title"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></h2>
         <p class="install-facts"><span class="i-en">Free and open source (MIT). Requires macOS 13 or later. Preview build: signed, not notarized.</span><span class="i-zh" lang="zh-CN">免费开源（MIT）。需要 macOS 13 或更高版本。预览版本：已签名，但未经公证。</span><span class="i-ja" lang="ja">無料のオープンソース（MIT）です。macOS 13 以降が必要です。プレビュービルド：署名済みですが、公証（notarize）はされていません。</span></p>
@@ -185,12 +182,12 @@
   </section>
 
   <!-- Why not Control+Space -->
-  <section id="why" class="wrap section" aria-labelledby="why-title">
+  <section id="why" class="panel section" aria-labelledby="why-title">
     <h2 id="why-title"><span class="i-en">Why not Control+Space</span><span class="i-zh" lang="zh-CN">为什么不用 Control+Space</span><span class="i-ja" lang="ja">Control+Space との違い</span></h2>
     <figure class="art">
-      <img class="i-en" src="assets/why-2.svg" width="1200" height="430" loading="lazy" alt="Control+Space cycles English, Chinese, Japanese and takes two presses to reach Japanese; CmdIME reaches Japanese with one press of Right Shift.">
-      <img class="i-zh" src="assets/why-2.zh-CN.svg" width="1200" height="430" loading="lazy" alt="Control+Space 在英文、中文、日文之间轮流切换，切到日文要按两次；CmdIME 按一次右 Shift 就切到日文。">
-      <img class="i-ja" src="assets/why-2.ja.svg" width="1200" height="430" loading="lazy" alt="Control+Space は英語・中国語・日本語を巡回し、日本語までに 2 回押す必要があります。CmdIME なら右 Shift を 1 回押すだけで日本語に切り替わります。">
+      <img class="i-en" src="assets/why-2.svg" width="1200" height="430" alt="Control+Space cycles English, Chinese, Japanese and takes two presses to reach Japanese; CmdIME reaches Japanese with one press of Right Shift.">
+      <img class="i-zh" src="assets/why-2.zh-CN.svg" width="1200" height="430" alt="Control+Space 在英文、中文、日文之间轮流切换，切到日文要按两次；CmdIME 按一次右 Shift 就切到日文。">
+      <img class="i-ja" src="assets/why-2.ja.svg" width="1200" height="430" alt="Control+Space は英語・中国語・日本語を巡回し、日本語までに 2 回押す必要があります。CmdIME なら右 Shift を 1 回押すだけで日本語に切り替わります。">
     </figure>
     <figure class="promo" id="promo">
       <video id="promo-video" width="1280" height="720" muted loop playsinline controls preload="metadata" poster="assets/promo-poster.jpg"
@@ -224,12 +221,12 @@
   </section>
 
   <!-- How a switch works -->
-  <section id="how" class="wrap section" aria-labelledby="how-title">
+  <section id="how" class="panel section" aria-labelledby="how-title">
     <h2 id="how-title"><span class="i-en">How a switch works</span><span class="i-zh" lang="zh-CN">一次切换的过程</span><span class="i-ja" lang="ja">切り替えのしくみ</span></h2>
     <figure class="art">
-      <img class="i-en" src="assets/flow-2.svg" width="1200" height="300" loading="lazy" alt="One switch: tap the slot's key, CmdIME selects its source, checks that macOS switched and retries if not, then shows an indicator near the caret.">
-      <img class="i-zh" src="assets/flow-2.zh-CN.svg" width="1200" height="300" loading="lazy" alt="一次切换：按下槽位的键，CmdIME 选中对应的输入法，确认 macOS 已经切换、没切过去就重试，然后在光标旁显示指示气泡。">
-      <img class="i-ja" src="assets/flow-2.ja.svg" width="1200" height="300" loading="lazy" alt="1 回の切り替え：スロットのキーを押すと、CmdIME が入力ソースを選択し、macOS が切り替えたことを確認して失敗時は再試行し、キャレットの近くにインジケーターを表示します。">
+      <img class="i-en" src="assets/flow-2.svg" width="1200" height="300" alt="One switch: tap the slot's key, CmdIME selects its source, checks that macOS switched and retries if not, then shows an indicator near the caret.">
+      <img class="i-zh" src="assets/flow-2.zh-CN.svg" width="1200" height="300" alt="一次切换：按下槽位的键，CmdIME 选中对应的输入法，确认 macOS 已经切换、没切过去就重试，然后在光标旁显示指示气泡。">
+      <img class="i-ja" src="assets/flow-2.ja.svg" width="1200" height="300" alt="1 回の切り替え：スロットのキーを押すと、CmdIME が入力ソースを選択し、macOS が切り替えたことを確認して失敗時は再試行し、キャレットの近くにインジケーターを表示します。">
       <figcaption>
         <span class="i-en">CmdIME selects that source directly, checks that macOS really switched, and shows a small indicator near the caret.</span>
         <span class="i-zh" lang="zh-CN">CmdIME 直接选中那个输入源，确认 macOS 确实完成了切换，并在光标附近显示一个小的指示气泡。</span>
@@ -239,7 +236,7 @@
   </section>
 
   <!-- Features -->
-  <section id="features" class="wrap section" aria-labelledby="features-title">
+  <section id="features" class="panel section" aria-labelledby="features-title">
     <h2 id="features-title"><span class="i-en">What you get</span><span class="i-zh" lang="zh-CN">功能一览</span><span class="i-ja" lang="ja">できること</span></h2>
 
     <div class="feature split">
@@ -329,14 +326,14 @@
   </section>
 
   <!-- Troubleshooting -->
-  <section id="troubleshooting" class="wrap section trouble" aria-labelledby="trouble-title">
+  <section id="troubleshooting" class="panel section trouble" aria-labelledby="trouble-title">
     <h2 id="trouble-title"><span class="i-en">Troubleshooting</span><span class="i-zh" lang="zh-CN">故障排除</span><span class="i-ja" lang="ja">トラブルシューティング</span></h2>
     <h3>"CmdIME is damaged" <span class="i-en">or</span><span class="i-zh" lang="zh-CN">或</span><span class="i-ja" lang="ja">または</span> "Apple cannot check it for malicious software"</h3>
     <div class="i-en">
       <p>The app is not damaged. Preview builds are signed but not notarized, and a zip downloaded in a browser carries a quarantine flag, so Gatekeeper blocks the first launch. The "is damaged" message usually offers no <strong>Open Anyway</strong>. Either of these works:</p>
       <ol>
         <li>Delete the downloaded zip and app, then install with the one-line installer from <a href="#install">Install</a>, which does not go through the browser quarantine.</li>
-        <li>Or keep the downloaded app: move <code>CmdIME.app</code> to <code>/Applications</code>, then remove the quarantine flag with <code>xattr -dr com.apple.quarantine /Applications/CmdIME.app</code>.</li>
+        <li><p>Or keep the downloaded app: move <code>CmdIME.app</code> to <code>/Applications</code>, then remove the quarantine flag:</p><div class="code code-small"><pre><code id="cmd-xattr-en">xattr -dr com.apple.quarantine /Applications/CmdIME.app</code></pre><button type="button" class="copy" data-copy="cmd-xattr-en">Copy</button></div></li>
       </ol>
       <p>If macOS shows "Apple cannot check it for malicious software" instead, System Settings &gt; Privacy &amp; Security may offer <strong>Open Anyway</strong>; removing the flag as above also works. Apple's documentation on <a href="https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web">Gatekeeper</a> and <a href="https://developer.apple.com/developer-id/">Developer ID</a> explains the checks.</p>
     </div>
@@ -344,7 +341,7 @@
       <p>应用并没有损坏。预览版已签名但未公证，而浏览器下载的 zip 会带上隔离标记，所以 Gatekeeper 会拦住第一次启动。“已损坏”这个提示下通常没有 <strong>Open Anyway</strong>（仍要打开）可点。下面两种方法任选其一：</p>
       <ol>
         <li>删掉下载的 zip 和应用，用<a href="#install">安装</a>里的一行命令重新安装。它不经过浏览器的隔离流程。</li>
-        <li>或者保留已下载的应用：先把 <code>CmdIME.app</code> 移到“应用程序”（<code>/Applications</code>），再用 <code>xattr -dr com.apple.quarantine /Applications/CmdIME.app</code> 去掉隔离标记。</li>
+        <li><p>或者保留已下载的应用：先把 <code>CmdIME.app</code> 移到“应用程序”（<code>/Applications</code>），再去掉隔离标记：</p><div class="code code-small"><pre><code id="cmd-xattr-zh">xattr -dr com.apple.quarantine /Applications/CmdIME.app</code></pre><button type="button" class="copy" data-copy="cmd-xattr-zh">复制</button></div></li>
       </ol>
       <p>如果 macOS 显示的是 "Apple cannot check it for malicious software"（Apple 无法检查其是否包含恶意软件），系统设置 &gt; 隐私与安全性里可能会有 <strong>Open Anyway</strong>；按上面的方法去掉标记也可以。Apple 关于 <a href="https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web">Gatekeeper</a> 和 <a href="https://developer.apple.com/developer-id/">Developer ID</a> 的文档说明了这些检查。</p>
     </div>
@@ -352,7 +349,7 @@
       <p>アプリは壊れていません。プレビュービルドは署名済みですが公証されておらず、ブラウザーでダウンロードした zip には隔離（quarantine）属性が付くため、Gatekeeper が初回起動を止めます。「壊れている」というメッセージでは、通常 <strong>Open Anyway</strong>（このまま開く）は表示されません。次のどちらかで開けます。</p>
       <ol>
         <li>ダウンロードした zip とアプリを削除し、<a href="#install">インストール</a>にある 1 行のインストーラーで入れ直します。ブラウザーの隔離の仕組みを通りません。</li>
-        <li>ダウンロードしたアプリを使う場合は、<code>CmdIME.app</code> を「アプリケーション」（<code>/Applications</code>）に移してから、<code>xattr -dr com.apple.quarantine /Applications/CmdIME.app</code> で隔離属性を削除します。</li>
+        <li><p>ダウンロードしたアプリを使う場合は、<code>CmdIME.app</code> を「アプリケーション」（<code>/Applications</code>）に移してから、隔離属性を削除します。</p><div class="code code-small"><pre><code id="cmd-xattr-ja">xattr -dr com.apple.quarantine /Applications/CmdIME.app</code></pre><button type="button" class="copy" data-copy="cmd-xattr-ja">コピー</button></div></li>
       </ol>
       <p>"Apple cannot check it for malicious software" と表示された場合は、システム設定 &gt; プライバシーとセキュリティに <strong>Open Anyway</strong> が出ることがあります。上の方法で属性を削除しても開けます。確認の仕組みについては、Apple の <a href="https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web">Gatekeeper</a> と <a href="https://developer.apple.com/developer-id/">Developer ID</a> のドキュメントで説明されています。</p>
     </div>

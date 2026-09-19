@@ -39,8 +39,9 @@
 
   // One switch for the ambient layer below the hero. false: rain in the hero only.
   var AMBIENT_BELOW_HERO = true;
-  // Ambient glyphs over the text column are drawn at this fraction of their alpha.
-  var AMBIENT_TEXT_COLUMN_FACTOR = 0.35;
+  // Ambient glyphs over the content column are drawn at this fraction of their alpha.
+  // 1: the glass panels carry legibility, and the drift should read through them.
+  var AMBIENT_TEXT_COLUMN_FACTOR = 1;
 
   var FONT ='-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans", "Apple SD Gothic Neo", "Noto Sans", "Segoe UI", sans-serif';
   var FRAME_MS = 33;             // about 30 frames a second is enough for rain
@@ -174,7 +175,7 @@
     var ambientCount = Math.round((vw * vh) / (phone ? 22000 : 26000));
     ambient = [];
     for (var j = 0; j < ambientCount; j++) {
-      ambient.push({ x: rand(12, vw - 12), y: rand(0, vh), speed: rand(5, 14), ch: pick(allGlyphs), a: rand(0.04, 0.08), size: rand(13, 17) | 0 });
+      ambient.push({ x: rand(12, vw - 12), y: rand(0, vh), speed: rand(5, 14), ch: pick(allGlyphs), a: rand(0.07, 0.14), size: rand(16, 28) | 0 });
     }
     state.columns = columns.length;
     state.ambient = ambient.length;

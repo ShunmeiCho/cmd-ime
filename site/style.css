@@ -103,15 +103,14 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 /* Hero: see "Hero demo" below */
 
 /* Install */
-.install { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 64px 0; }
-.install-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 56px; }
+/* One column: the command gets the full panel width, so it stays on one line on desktop. */
+.install-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; }
 .install-main p { max-width: 64ch; }
-.install-alt { border-left: 1px solid var(--line); padding-left: 40px; font-size: 0.95rem; }
+.install-alt { border-top: 1px solid var(--line); padding-top: 28px; font-size: 0.95rem; }
 .install-alt h3 { margin-bottom: 16px; }
 .install-alt p { color: var(--muted); }
 .install-alt p code { color: var(--text); }
 @media (max-width: 860px) {
-  .install { padding: 48px 0; }
   .install-grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
   .install-alt { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 32px; }
 }
@@ -126,7 +125,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
   box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 10%, transparent);
 }
-.code-hero pre { font-size: clamp(0.85rem, 0.7rem + 0.45vw, 1.05rem); }
+.code.code-hero pre { font-size: clamp(0.8rem, 0.62rem + 0.4vw, 0.92rem); white-space: pre; overflow-x: auto; overflow-wrap: normal; }
 .code-hero pre::before { content: "$ "; color: var(--accent); }
 .code-hero .copy { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); padding: 7px 16px; }
 .code-hero .copy.is-done { background: var(--surface); }
@@ -156,14 +155,12 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 [id] { scroll-margin-top: 76px; }
 
 /* Sections */
-.section { padding-top: 88px; }
 .art img { border-radius: 0; }
 .reasons { list-style: none; padding: 0; margin: 36px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 48px; }
 .reasons li { color: var(--muted); }
 .reasons strong { display: block; color: var(--text); margin-bottom: 4px; font-size: 1.05rem; }
 .reasons li:first-child { grid-column: 1 / -1; max-width: 70ch; }
 @media (max-width: 760px) {
-  .section { padding-top: 64px; }
   .reasons { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 }
 
@@ -208,7 +205,6 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   --slot-purple: #9664D8; --slot-orange: #E49B35; --slot-teal: #32A6A8;
   --dot: 9px;
 }
-.hero h1 em { font-style: normal; color: var(--accent); white-space: nowrap; }
 .hero h1, h2, h3 { text-wrap: balance; }
 .nw { white-space: nowrap; }
 .field::before,
@@ -234,9 +230,9 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   .code pre { white-space: pre; overflow-x: auto; overflow-wrap: normal; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
   .code .copy { align-self: flex-end; }
   /* Diagrams stay legible: swipe inside the figure instead of shrinking the text. */
-  .art { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter) 8px; }
+  .art { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 calc(-1 * var(--panel-pad)); padding: 0 var(--panel-pad) 8px; }
   .art img { width: 720px; max-width: none; }
-  .art figcaption { max-width: calc(100vw - 2 * var(--gutter)); position: sticky; left: 0; }
+  .art figcaption { max-width: calc(100vw - 2 * var(--gutter) - 2 * var(--panel-pad)); position: sticky; left: 0; }
 }
 .art img { width: 100%; }
 
@@ -264,15 +260,14 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   :root { --kc-top: #FFFFFF; --kc-bottom: #ECECF0; --kc-edge: rgb(0 0 0 / 0.12); --kc-glyph: #16161A; --field-fill: rgb(255 255 255 / 0.86); --kb-fill: rgb(255 255 255 / 0.96); }
 }
 .hero { position: relative; padding-top: var(--hero-pad-top); padding-bottom: var(--hero-pad-bottom); }
-.hero-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px; align-items: center; }
-.hero-icon { width: 72px; height: 72px; }
-.hero h1 { font-size: clamp(2rem, 1.3rem + 2.4vw, 3.2rem); font-weight: 700; letter-spacing: -0.03em; line-height: 1.08; margin-bottom: 10px; }
-.lede { font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem); color: var(--muted); max-width: 64ch; margin: 0; }
-.hero-cta { margin: 0; }
+/* Pitch, Install and the demo share one column, so the hero reads as one unit. */
+.hero-head { max-width: var(--stage-max); margin: 0 auto; }
+.hero h1 { font-size: var(--h1-size); font-weight: 700; letter-spacing: -0.03em; line-height: 1.12; margin-bottom: 14px; }
+.hero h1 .muted { color: var(--muted); }
+.lede { font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem); color: var(--muted); margin: 0; }
+.hero-cta { margin: 20px 0 0; }
 @media (max-width: 760px) {
   :root { --hero-pad-top: 24px; }
-  .hero-head { grid-template-columns: minmax(0, 1fr); gap: 16px; }
-  .hero-icon { width: 56px; height: 56px; }
 }
 
 /* Field, keyboard and hint form one centred column. */
@@ -462,4 +457,71 @@ main, .foot { position: relative; z-index: 1; }
 .promo video {
   display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
   border-radius: var(--r-surf); border: 1px solid var(--line); background: #0F1014;
+}
+
+/* ---- Round 3: type scale, measure and line breaks ---- */
+:root {
+  --h1-size: clamp(2rem, 1.25rem + 2.6vw, 3.1rem);
+  --measure: 62ch;          /* Latin reading paragraphs */
+  --measure-cjk: 30em;      /* about 28-30 ideographs per line */
+  --panel-pad: clamp(22px, 4.2vw, 52px);
+  --panel-gap: clamp(28px, 4vw, 44px);
+  --panel-radius: 24px;
+}
+h1, h2, h3, figcaption, .stage-hint { text-wrap: balance; }
+p, li { text-wrap: pretty; }                      /* no one-word last lines */
+.nw { white-space: nowrap; }
+/* CJK: strict punctuation rules (no line starts with 。、」), phrase-aware breaks in Japanese. */
+:lang(ja) { line-break: strict; word-break: auto-phrase; }
+:lang(zh-CN) { line-break: strict; }
+main :is(p, li, figcaption) { max-width: var(--measure); }
+html[data-ui="zh-CN"] main :is(p, li, figcaption),
+html[data-ui="ja"] main :is(p, li, figcaption) { max-width: var(--measure-cjk); }
+.stage-hint { max-width: 36em; }
+.reasons li:first-child { max-width: var(--measure); }
+.shot figcaption, .art figcaption { margin-left: auto; margin-right: auto; }
+@media (max-width: 480px) {
+  :root { --h1-size: clamp(1.75rem, 7vw, 2rem); }
+  .hero h1 { line-height: 1.15; }
+}
+
+/* ---- Round 3: content panels as glass over the ambient glyph layer ----
+   Same material family as the demo bubble: translucent fill, blur and saturation,
+   a soft top highlight. Code, diagrams, screenshots and video keep their own opaque
+   surfaces. Moderate blur, only on these panels; the page background is not blurred. */
+.panel {
+  --panel-fill: rgb(22 23 28 / 0.58);
+  --panel-solid: #16171C;
+  --panel-edge: rgb(255 255 255 / 0.08);
+  --panel-light: rgb(255 255 255 / 0.10);
+  position: relative;
+  width: min(var(--max), calc(100% - 2 * var(--gutter)));
+  margin: var(--panel-gap) auto 0;
+  padding: var(--panel-pad);
+  border-radius: var(--panel-radius);
+  background: var(--panel-fill);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+  border: 1px solid var(--panel-edge);
+  box-shadow: inset 0 1px 0 var(--panel-light), 0 24px 60px rgb(0 0 0 / 0.22);
+}
+@media (prefers-color-scheme: light) {
+  .panel {
+    --panel-fill: rgb(255 255 255 / 0.66);
+    --panel-solid: #FFFFFF;
+    --panel-edge: rgb(0 0 0 / 0.06);
+    --panel-light: rgb(255 255 255 / 0.9);
+  }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .panel { background: var(--panel-solid); }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .panel { background: var(--panel-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.install.panel { margin-top: 0; overflow: hidden; }
+.panel > h2:first-child { margin-top: 0; }
+.promo video, .code, .shot img, .art img { position: relative; }
+@media (max-width: 760px) {
+  :root { --panel-radius: 18px; }
 }
