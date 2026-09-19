@@ -2,6 +2,7 @@ import AppKit
 import Carbon
 import KeyboardSwitcherCore
 import SwiftUI
+import UserNotifications
 
 @main
 @MainActor
@@ -21,6 +22,9 @@ enum CmdIMEMain {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = AppModel()
+    private let updateNotifications = UpdateNotificationDelegate {
+        AppWindowCoordinator.shared.showSettings()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -31,6 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if !Self.wasLaunchedAsLoginItem() {
             AppWindowCoordinator.shared.showSettings()
         }
+        UNUserNotificationCenter.current().delegate = updateNotifications
+        model.startUpdateReminder()
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {

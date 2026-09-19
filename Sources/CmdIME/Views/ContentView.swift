@@ -21,6 +21,9 @@ struct ContentView: View {
                 SettingsHeader(model: model, status: runtimeStatus, onPrimaryAction: performHeaderAction) {
                     SetupGuideNavigation.showGuide($setupSession, model: model, scroll: scroll)
                 }
+                if case let .available(result) = model.updateStatus {
+                    UpdateAvailableBar(model: model, version: result.latestVersion)
+                }
                 WhatsNewNoticeBar(model: model, isSetupGuideReopened: setupSession.isReopened)
                 SetupGuideCard(model: model, session: $setupSession, scroll: scroll, resetDrafts: resetDrafts)
                 SlotBoardSection(
@@ -227,10 +230,19 @@ private extension SettingsHeader {
                         .disabled(model.updateStatus.isChecking)
                         .fixedSize()
                 }
-                // Only an available update gets a button; "up to date" is just the line above.
-                if case .available = model.updateStatus {
-                    generalRow("Open Release Page", prominent: true) { model.openLatestRelease() }
+                if case .available = model.updateStatus { UpdateActions(model: model) }
+                HStack {
+                    Text("Check automatically")
+                    Spacer(minLength: DesignTokens.Layout.rowGap)
+                    Toggle("Check for updates automatically", isOn: Binding(
+                        get: { model.checksForUpdatesAutomatically }, set: { model.checksForUpdatesAutomatically = $0 }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(DesignTokens.Colors.success)
+                    .controlSize(.small)
                 }
+                .help("Once a day CmdIME asks GitHub for the newest release. Nothing else is sent.")
                 Divider()
                 generalRow("Show Setup Guide") {
                     showsGeneral = false
@@ -246,10 +258,66 @@ private extension SettingsHeader {
             .font(DesignTokens.Typography.body)
             .foregroundStyle(DesignTokens.Colors.textPrimary)
             .padding(16)
-            .frame(width: 260)
+            .frame(width: 300)
             .background(DesignTokens.Colors.surfaceRaised)
             .preferredColorScheme(.dark)
         }
+    }
+}
+
+/// Update, read the notes, or skip: shared by the top bar and the General panel.
+private struct UpdateActions: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+            if let stage = model.updateInstallStage {
+                HStack(spacing: DesignTokens.Layout.rowGap) {
+                    ProgressView().controlSize(.small)
+                    Text(stage).font(DesignTokens.Typography.body)
+                }
+            } else {
+                HStack(spacing: DesignTokens.Layout.rowGap) {
+                    if SelfUpdater.canUpdateInPlace {
+                        Button("Update Now") { model.installAvailableUpdate() }
+                            .buttonStyle(ConsoleButtonStyle(prominent: true))
+                    }
+                    Button("Release Notes") { model.openLatestRelease() }
+                        .buttonStyle(ConsoleButtonStyle())
+                    Button("Skip") { model.skipAvailableUpdate() }
+                        .buttonStyle(ConsoleButtonStyle())
+                        .help("Do not remind me about this version again")
+                }
+                .fixedSize()
+            }
+            if let error = model.updateInstallError {
+                Text(error)
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+private struct UpdateAvailableBar: View {
+    @ObservedObject var model: AppModel
+    let version: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
+            Label("CmdIME \(version) is available", systemImage: "arrow.down.circle.fill")
+                .font(DesignTokens.Typography.body.weight(.semibold))
+                .foregroundStyle(DesignTokens.Colors.textPrimary)
+                .padding(.top, 5)
+            Spacer(minLength: DesignTokens.Layout.rowGap)
+            UpdateActions(model: model)
+        }
+        .padding(DesignTokens.Layout.panelInset)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
+            .fill(DesignTokens.Colors.surface))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Update available")
     }
 }
 

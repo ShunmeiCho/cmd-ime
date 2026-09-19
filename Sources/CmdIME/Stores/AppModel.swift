@@ -26,6 +26,10 @@ final class AppModel: ObservableObject {
     @Published private(set) var boardNotice: BoardNotice?
     @Published private(set) var canUndoRemoval = false
     @Published private(set) var newSourceIDs: Set<String> = []
+    /// Non-nil while an update is being installed; the text is shown as is.
+    @Published private(set) var updateInstallStage: String?
+    @Published private(set) var updateInstallError: String?
+    private var updateReminderTimer: Timer?
     @Published private(set) var sourceRefreshMessage: String?
     private var selectedSourceObserver: InputSourceChangeObserver?
     private var sourceChangeObserver: InputSourceChangeObserver?
@@ -354,6 +358,88 @@ final class AppModel: ObservableObject {
             } catch {
                 updateStatus = .failed(currentVersion: currentVersion, message: error.localizedDescription)
                 statusText = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Update reminder
+
+    private enum ReminderKey {
+        static let enabled = "updateReminder.enabled"
+        static let lastCheck = "updateReminder.lastCheck"
+        static let lastNotified = "updateReminder.lastNotifiedVersion"
+        static let skipped = "updateReminder.skippedVersion"
+    }
+
+    private var reminderState: UpdateReminderState {
+        let defaults = UserDefaults.standard
+        return UpdateReminderState(
+            isEnabled: defaults.object(forKey: ReminderKey.enabled) as? Bool ?? true,
+            lastCheck: defaults.object(forKey: ReminderKey.lastCheck) as? Date,
+            lastNotifiedVersion: defaults.string(forKey: ReminderKey.lastNotified),
+            skippedVersion: defaults.string(forKey: ReminderKey.skipped)
+        )
+    }
+
+    var checksForUpdatesAutomatically: Bool {
+        get { reminderState.isEnabled }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue, forKey: ReminderKey.enabled)
+            if newValue { runUpdateReminderIfDue() }
+        }
+    }
+
+    /// The app has no window most of the time, so it looks for a new release itself,
+    /// at most once a day, and says so once per version through a system notification.
+    func startUpdateReminder() {
+        runUpdateReminderIfDue()
+        updateReminderTimer = Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.runUpdateReminderIfDue() }
+        }
+    }
+
+    private func runUpdateReminderIfDue() {
+        guard UpdateReminderPolicy.shouldCheck(now: Date(), state: reminderState), !updateStatus.isChecking else { return }
+        UserDefaults.standard.set(Date(), forKey: ReminderKey.lastCheck)
+        let currentVersion = Self.currentVersion
+        Task {
+            // A failed background check stays quiet; the next one is a day away.
+            guard let result = try? await updates.check(currentVersion: currentVersion), result.isUpdateAvailable else { return }
+            updateStatus = .available(result)
+            guard UpdateReminderPolicy.shouldNotify(latest: result.latestVersion, current: currentVersion,
+                                                    state: reminderState) else { return }
+            UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
+            UpdateNotification.post(version: result.latestVersion)
+        }
+    }
+
+    func skipAvailableUpdate() {
+        guard case let .available(result) = updateStatus else { return }
+        UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.skipped)
+        updateStatus = .upToDate(result)
+    }
+
+    /// One-click update: download, verify, replace this bundle, reopen.
+    func installAvailableUpdate() {
+        guard case let .available(result) = updateStatus, updateInstallStage == nil else { return }
+        updateInstallError = nil
+        updateInstallStage = SelfUpdater.Stage.downloading.rawValue
+        Task {
+            do {
+                try await SelfUpdater.install(version: result.latestVersion) { [weak self] stage in
+                    self?.updateInstallStage = stage.rawValue
+                }
+                updateInstallStage = "Restarting…"
+                if AppRelauncher.scheduleReopenAfterExit() {
+                    quit()
+                } else {
+                    updateInstallStage = nil
+                    updateInstallError = "Updated. Quit CmdIME and open it again to use the new version."
+                }
+            } catch {
+                updateInstallStage = nil
+                updateInstallError = error.localizedDescription
             }
         }
     }
