@@ -320,6 +320,24 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(order, ["com.apple.keylayout.ABC", "kana", "com.google.inputmethod.Japanese.base"])
     }
 
+    func testSwitchThatSupersedesAKanaPreludeWaitsForTheKanaKeyToSettle() {
+        var sources = makeSwitchSources()
+        sources[1] = InputSourceInfo(id: "com.google.inputmethod.Japanese.base", localizedName: "Hiragana (Google)", languages: ["ja"], isSelectCapable: true)
+        var config = SwitcherConfig.default
+        config.inputSources[InputRole.japanese.rawValue] = RoleInputSourcePreference(preferredIDs: [sources[1].id], fallbackLanguage: "ja")
+        let service = StubInputSourceService(sources: sources)
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        monitor.kanaKeyPoster = {}
+
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: [.maskAlternate])))
+        drainMainQueue()
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        XCTAssertEqual(service.selectedIDs, [], "selecting ABC now would race the Kana key already posted")
+        drainSingleTapTimer()
+        XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"], "the superseded Japanese select never runs")
+    }
+
     func testOwnSyntheticKanaKeyPassesThroughTheTapUntouched() {
         let monitor = EventTapMonitor(config: .default, inputSources: StubInputSourceService(sources: makeSwitchSources()))
         let kana = makeKeyboardEvent(keyCode: SwitchActivationPolicy.kanaKeyCode)

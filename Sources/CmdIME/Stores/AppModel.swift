@@ -908,10 +908,11 @@ final class AppModel: ObservableObject {
             }
             try nextMonitor.start()
             monitor = nextMonitor
-            loadActivationRecipes()
             isListening = true
             keyboardControlStatus = "Active"
             statusText = "Listener started"
+            // After the line above, so a skipped recipe is what the status bar ends up showing.
+            loadActivationRecipes()
         } catch {
             isListening = false
             keyboardControlStatus = permissions.isReady ? "Failed" : "Needs permission"

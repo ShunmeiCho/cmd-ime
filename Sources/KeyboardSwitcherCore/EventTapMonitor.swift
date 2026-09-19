@@ -56,6 +56,8 @@ public final class EventTapMonitor: @unchecked Sendable {
     private var triggerEvidenceEpoch = UUID()
     private var modifierEvidenceEpochs: [Int: UUID] = [:]
     private var pendingTapEvidenceEpoch: UUID?
+    /// When the last posted Kana key has had time to take effect.
+    private var kanaSettlesAt = Date.distantPast
 
     static func scheduleOnMainQueue(after delay: TimeInterval, _ work: @escaping () -> Void) {
         // The event tap and all TIS calls live on the main thread, and `work` only
@@ -509,11 +511,24 @@ public final class EventTapMonitor: @unchecked Sendable {
         guard kanaKeyPoster != nil || isRunning,
               SwitchActivationPolicy.strategy(for: source, userRecipes: activationRecipes) == .kanaThenSelect,
               SwitchActivationPolicy.needsKanaPrelude(target: source, current: try? inputSources.currentInputSource(), userRecipes: activationRecipes) else {
-            select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+            // A Kana key from a switch this one superseded may still be taking effect; selecting
+            // before it lands would let the system's Kana switch override this one.
+            let wait = kanaSettlesAt.timeIntervalSinceNow
+            guard wait > 0 else {
+                select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+                return
+            }
+            Self.scheduleOnMainQueue(after: wait) { [weak self] in
+                guard let self, self.isCurrentSwitch(generation) else {
+                    return
+                }
+                self.select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+            }
             return
         }
         (kanaKeyPoster ?? Self.postKanaKeyEvent)()
         let delay = SwitchActivationPolicy.kanaToSelectDelay(for: source, userRecipes: activationRecipes)
+        kanaSettlesAt = Date(timeIntervalSinceNow: delay)
         Self.scheduleOnMainQueue(after: delay) { [weak self] in
             guard let self, self.isCurrentSwitch(generation) else {
                 return
