@@ -1,3 +1,12 @@
+## Unreleased
+
+Updates reach you without opening GitHub.
+
+### Highlights
+
+- **Update Now.** When a new version exists, the settings window shows it at the top and in General, with **Update Now**, **Release Notes** and **Skip**. Update Now downloads the release, checks it against the published SHA-256, verifies that the new app is validly signed by the same developer team, replaces the app in place and reopens it. Permissions carry over because the signing identity is the same.
+- **Daily check with one notification.** CmdIME asks GitHub for the newest release at most once a day and posts one system notification per new version; clicking it opens the settings window. Notification permission is requested only when there is an update to announce. Turn the daily check off with **General > Check automatically**. Nothing but the release lookup is sent.
+
 ## CmdIME v0.5.1 Preview
 
 Fixes the switch indicator appearing on the wrong display.

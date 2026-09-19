@@ -400,12 +400,24 @@ Update `Casks/cmd-ime.rb` with the release zip SHA-256 before publishing a
 Homebrew cask. The cask links `keyboardctl` through `Contents/Resources`, which
 is a compatibility symlink to the signed helper in `Contents/MacOS`.
 
-CmdIME can check recent GitHub Releases from **General > Check for Updates** in
-Settings, including explicitly labelled preview releases. When a new
-version is available, open the release page and reinstall with the one-line
-installer or update through Homebrew. Fully automatic in-app replacement is left
-to a future Sparkle-based updater so signing and macOS permission behavior stay
-predictable.
+### Updates
+
+CmdIME has no window most of the time, so it looks for new releases itself: at
+most once a day it asks GitHub for the newest release (nothing else is sent), and
+when there is one it posts a single system notification for that version.
+Notification permission is requested only at that moment, never at first launch.
+The settings window shows the same update at the top, and **General** has
+**Check** for a manual check and a **Check automatically** switch to turn the
+daily check off.
+
+**Update Now** installs the update in place: it downloads the release zip, checks
+it against the published `.sha256`, verifies that the new app carries a valid
+code signature from the same developer team as the running one, replaces the app
+bundle and reopens CmdIME. Because the signing identity is unchanged, the
+Accessibility and Input Monitoring approvals carry over. **Release Notes** opens
+the GitHub release page and **Skip** silences that version. If CmdIME was
+installed with Homebrew, `brew upgrade` works as before; an in-place update leaves
+Homebrew's recorded version behind until the next `brew upgrade`.
 
 ## Homebrew
 
