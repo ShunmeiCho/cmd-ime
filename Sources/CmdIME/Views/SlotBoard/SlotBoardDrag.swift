@@ -417,7 +417,7 @@ struct SlotDragHandle: View {
     var body: some View {
         SlotDragHandleGlyph()
             .background(RoundedRectangle(cornerRadius: 3)
-                .fill(Color.white.opacity(hover ? 0.07 : 0.035)))
+                .fill(DesignTokens.Colors.overlay(hover ? 0.07 : 0.035)))
             .contentShape(Rectangle())
             .onHover { hover = $0 }
             .animation(DesignTokens.Motion.stateChange, value: hover)

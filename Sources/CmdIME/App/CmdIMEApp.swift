@@ -128,6 +128,17 @@ final class AppWindowCoordinator {
             defer: false
         )
         window.title = "CmdIME"
+        // PROTOTYPE: CMDIME_APPEARANCE=light|dark pins the appearance for screenshots.
+        switch ProcessInfo.processInfo.environment["CMDIME_APPEARANCE"] {
+        case "light": window.appearance = NSAppearance(named: .aqua)
+        case "dark": window.appearance = NSAppearance(named: .darkAqua)
+        default: break
+        }
+        if Skin.current == .glass {
+            // PROTOTYPE: let the material run under the title bar.
+            window.titlebarAppearsTransparent = true
+            window.styleMask.insert(.fullSizeContentView)
+        }
         window.isReleasedWhenClosed = false
         window.center()
         window.setFrameAutosaveName("CmdIMESettings")

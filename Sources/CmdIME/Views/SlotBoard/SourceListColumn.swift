@@ -197,7 +197,7 @@ struct SourceRow: View {
         rowContent
         .padding(.vertical, DesignTokens.Layout.rowGap)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Rectangle().fill(Color.white.opacity(hover && isAvailable ? 0.07 : 0)))
+        .background(Rectangle().fill(DesignTokens.Colors.overlay(hover && isAvailable ? 0.07 : 0)))
         .contentShape(Rectangle())
         .onHover { if !isGhost { hover = $0 } }
         .animation(DesignTokens.Motion.stateChange, value: hover)

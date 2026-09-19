@@ -44,7 +44,8 @@ struct ContentView: View {
             .frame(maxWidth: .infinity)
         }
         .background(DesignTokens.Colors.canvas)
-        .preferredColorScheme(.dark)
+        .background { if Skin.current == .glass { WindowMaterial().ignoresSafeArea() } }
+        .preferredColorScheme(Skin.current == .classic ? .dark : nil)
         .environment(\.slotLook, SlotLook(slots: model.config.slots))
         .onAppear {
             resetDrafts()
@@ -175,8 +176,7 @@ private struct SettingsHeader: View {
             }
         }
         .padding(DesignTokens.Layout.panelInset)
-        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
-            .fill(DesignTokens.Colors.surface))
+        .floatingBarSurface()
     }
 }
 
@@ -398,8 +398,7 @@ private struct UpdateAvailableBar: View {
             }
         }
         .padding(DesignTokens.Layout.panelInset)
-        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
-            .fill(DesignTokens.Colors.surface))
+        .floatingBarSurface()
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Update available")
     }
@@ -731,7 +730,7 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                 .accessibilityAddTraits(selection == option.value ? .isSelected : [])
                 .background(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(selection == option.value ? Color.white.opacity(0.12) : .clear)
+                        .fill(selection == option.value ? DesignTokens.Colors.overlay(0.12) : .clear)
                 )
 
                 if index < options.count - 1 {
