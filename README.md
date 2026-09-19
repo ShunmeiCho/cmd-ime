@@ -60,12 +60,14 @@ Existing configurations and their triggers are unchanged. If no selectable
 source has a usable primary language, initialization uses the legacy defaults:
 English on Left Command, Chinese on Right Command, Japanese on **Option+J**.
 
-The demo below shows an example legacy English/Chinese/Japanese mapping, not
-the source-detected defaults for every Mac.
+The demo below uses one possible setup (left Command for English, right Command
+for Chinese, right Shift for Japanese); your slots follow the input sources
+installed on your Mac. It shows the Switcher, Glass and Liquid Glass indicator
+themes.
 
-[![CmdIME example switching demo](demo-videos/renders/preview-default-switching.gif)](demo-videos/renders/cmdime-default-switching-demo.mp4)
+[![CmdIME demo: one key per input source](demo-videos/renders/preview-promo.gif)](demo-videos/renders/cmdime-promo.mp4)
 
-[Open the full example switching demo](demo-videos/renders/cmdime-default-switching-demo.mp4)
+[Open the full demo video](demo-videos/renders/cmdime-promo.mp4)
 
 ## Distribution Status
 

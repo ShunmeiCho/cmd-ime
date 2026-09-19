@@ -65,12 +65,14 @@ CmdIME は、特定のキーボードレイアウトを固定で組み込むの�
 入力ソースが 1 つもない場合、初期化には従来のデフォルトが使われます。
 英語は Left Command、中国語は Right Command、日本語は **Option+J** です。
 
-以下のデモは、従来の英語/中国語/日本語の割り当て例を示したもので、すべての Mac で
-入力ソースから検出されるデフォルトを示すものではありません。
+以下のデモは設定の一例です（左 Command で英語、右 Command で中国語、右 Shift で
+日本語）。スロットは、お使いの Mac にインストールされている入力ソースに合わせて
+作成されます。デモには Switcher、Glass、Liquid Glass の 3 つのインジケーター
+テーマが登場します。
 
-[![CmdIME example switching demo](demo-videos/renders/preview-default-switching.gif)](demo-videos/renders/cmdime-default-switching-demo.mp4)
+[![CmdIME デモ：キーひとつで目的の入力ソースへ](demo-videos/renders/preview-promo.gif)](demo-videos/renders/cmdime-promo.mp4)
 
-[切り替えデモの全編を開く](demo-videos/renders/cmdime-default-switching-demo.mp4)
+[デモ動画の全編を開く](demo-videos/renders/cmdime-promo.mp4)
 
 ## 配布状況
 

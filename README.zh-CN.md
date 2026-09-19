@@ -53,12 +53,13 @@ CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键
 已有的配置及其触发键保持不变。如果没有任何可选输入源具有可用的主要语言，
 初始化时会使用旧版默认值：英文对应左 Command，中文对应右 Command，日文对应 **Option+J**。
 
-下面的演示展示的是旧版英文/中文/日文映射的一个示例，并不是每台 Mac 上根据输入源
-检测得到的默认值。
+下面的演示用的是一种可能的设置（左 Command 对应英文，右 Command 对应中文，右 Shift
+对应日文）；你的槽位会按你 Mac 上安装的输入源来生成。演示里出现的是 Switcher、Glass 和
+Liquid Glass 三种指示气泡主题。
 
-[![CmdIME 切换示例演示](demo-videos/renders/preview-default-switching.gif)](demo-videos/renders/cmdime-default-switching-demo.mp4)
+[![CmdIME 演示：一个键对应一个输入源](demo-videos/renders/preview-promo.gif)](demo-videos/renders/cmdime-promo.mp4)
 
-[打开完整的切换示例演示](demo-videos/renders/cmdime-default-switching-demo.mp4)
+[打开完整的演示视频](demo-videos/renders/cmdime-promo.mp4)
 
 ## 分发状态
 

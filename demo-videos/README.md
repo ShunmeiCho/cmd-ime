@@ -20,6 +20,7 @@ the full dashboard density.
 | Video | Length | Output |
 | --- | ---: | --- |
 | Default switching demo | 15s | [cmdime-default-switching-demo.mp4](renders/cmdime-default-switching-demo.mp4) |
+| Promo: one key per input source (0.6, Switcher / Glass / Liquid Glass themes) | 31s | [cmdime-promo.mp4](renders/cmdime-promo.mp4) |
 | Install and permissions demo | 30s | [cmdime-install-permissions-demo.mp4](renders/cmdime-install-permissions-demo.mp4) |
 
 GitHub-friendly README assets:
