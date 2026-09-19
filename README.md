@@ -107,7 +107,7 @@ To pin an exact version and checksum yourself (copy both from the release notes)
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.6.2 CMDIME_SHA256=e5cc56df3a32e2d06ef81ebadd92c10f532e88f7c156810c094a3ceb465cce23 bash
+  CMDIME_VERSION=0.6.3 CMDIME_SHA256=fec595c32779caf9eeca3023dd0a01c0da8a259646cf677354b49587c8703ceb bash
 ```
 
 After installation, open CmdIME and grant both **Accessibility** and
@@ -388,8 +388,8 @@ Mac App Store distribution needs a separate sandboxed App Store build. See
 ## Package And Release
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.6.2
-shasum -a 256 dist/CmdIME-0.6.2.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.6.3
+shasum -a 256 dist/CmdIME-0.6.3.zip
 ```
 
 Notarized release packaging requires a `Developer ID Application` signing

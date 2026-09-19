@@ -95,7 +95,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.6.2 CMDIME_SHA256=e5cc56df3a32e2d06ef81ebadd92c10f532e88f7c156810c094a3ceb465cce23 bash
+  CMDIME_VERSION=0.6.3 CMDIME_SHA256=fec595c32779caf9eeca3023dd0a01c0da8a259646cf677354b49587c8703ceb bash
 ```
 
 安装完成后，打开 CmdIME，并在系统设置 > 隐私与安全性中同时授予 **Accessibility**（辅助功能）
@@ -348,8 +348,8 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 ## 打包与发布
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.6.2
-shasum -a 256 dist/CmdIME-0.6.2.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.6.3
+shasum -a 256 dist/CmdIME-0.6.3.zip
 ```
 
 经过公证的发布打包需要 `Developer ID Application` 签名身份。
