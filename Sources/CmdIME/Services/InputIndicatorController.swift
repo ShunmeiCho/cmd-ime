@@ -79,7 +79,7 @@ final class InputIndicatorController {
         let size = measure(model)
         // An app that reports a caret outside every display (some launchers do) gets the pointer instead.
         let caret = focusedCaretRect().flatMap { rect in
-            NSScreen.screens.contains { $0.frame.intersects(rect) } ? rect : nil
+            NSScreen.screens.contains { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) } ? rect : nil
         }
         let pointer = NSEvent.mouseLocation
         let newTarget = caret.map { CGPoint(x: $0.midX, y: $0.maxY) } ?? pointer
@@ -280,7 +280,9 @@ final class InputIndicatorController {
 
         let bounds = boundsValue as! AXValue
         var rect = CGRect.zero
-        guard AXValueGetType(bounds) == .cgRect, AXValueGetValue(bounds, .cgRect, &rect), !rect.isEmpty else {
+        // An insertion point is a zero-width rect, which `isEmpty` would throw away: only the
+        // height says whether the app reported a real caret.
+        guard AXValueGetType(bounds) == .cgRect, AXValueGetValue(bounds, .cgRect, &rect), rect.height > 0 else {
             return nil
         }
         return convertAccessibilityRect(rect)
