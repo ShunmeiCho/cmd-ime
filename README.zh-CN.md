@@ -115,6 +115,10 @@ brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
 brew install --cask ShunmeiCho/cmd-ime/cmd-ime
 ```
 
+Homebrew 会给下载的文件加上隔离标记，而预览版尚未公证，所以 macOS 会拦住第一次启动。
+请在“系统设置 > 隐私与安全性”中选择 **Open Anyway**（见
+[Gatekeeper 故障排除](#gatekeeper-故障排除)），或者改用上面的一行安装命令，它不经过隔离流程。
+
 ### 从源码构建
 
 ```sh

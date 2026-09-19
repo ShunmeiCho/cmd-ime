@@ -127,6 +127,11 @@ brew tap ShunmeiCho/cmd-ime https://github.com/ShunmeiCho/cmd-ime
 brew install --cask ShunmeiCho/cmd-ime/cmd-ime
 ```
 
+Homebrew quarantines what it downloads, and preview builds are not notarized, so
+macOS blocks the first launch. Choose **Open Anyway** in System Settings > Privacy &
+Security (see [Gatekeeper Troubleshooting](#gatekeeper-troubleshooting)), or use the
+one-line installer above, which does not go through quarantine.
+
 ### Build From Source
 
 ```sh
