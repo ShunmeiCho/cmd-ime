@@ -336,8 +336,8 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 ## 打包与发布
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.5.0
-shasum -a 256 dist/CmdIME-0.5.0.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.5.1
+shasum -a 256 dist/CmdIME-0.5.1.zip
 ```
 
 经过公证的发布打包需要 `Developer ID Application` 签名身份。

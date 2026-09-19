@@ -1,3 +1,12 @@
+## CmdIME v0.5.1 Preview
+
+Fixes the switch indicator appearing on the wrong display.
+
+### Fixes
+
+- **The indicator stays on the screen you are working on.** With an external display placed above the built-in one (or taller than it), the bubble appeared on that display instead of next to the caret. The caret position from the accessibility API was flipped around the wrong display's height; it is now converted around the primary display only. Setups with a single display, or with displays side by side at the same height, were not affected.
+- An app that reports a caret outside every display now gets the bubble next to the pointer instead.
+
 ## CmdIME v0.5.0 Preview
 
 The switch indicator becomes themeable: twelve built-in looks including Glass, Liquid Glass, paper-and-ink styles and a switcher that slides between slots, plus your own themes and fonts.

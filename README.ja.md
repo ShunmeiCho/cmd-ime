@@ -404,8 +404,8 @@ Mac App Store での配布には、サンドボックス化された別の App S
 ## パッケージとリリース
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.5.0
-shasum -a 256 dist/CmdIME-0.5.0.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.5.1
+shasum -a 256 dist/CmdIME-0.5.1.zip
 ```
 
 公証付きのリリースパッケージを作成するには、`Developer ID Application` の
