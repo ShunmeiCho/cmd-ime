@@ -564,3 +564,6 @@ p code, li code, h3 code { border: 0; }
 }
 /* English only: avoid one-word last lines. CJK keeps plain strict wrapping. */
 html[data-ui="en"] main :is(p, li, figcaption) { text-wrap: pretty; }
+/* The web screenshots carry only the window (README frame cropped off); their corners
+   match the window radius so the figure surface stays the only container. */
+.sheet .shot img { border-radius: 16px; }
