@@ -441,7 +441,7 @@
           <div class="surface status-card">
             <div class="status-badge blue">Trust path</div>
             <div class="status-title">Verify what you install</div>
-            <div class="status-text">Use Homebrew or a pinned installer command with the release SHA-256.</div>
+            <div class="status-text">The installer checks every download against the release SHA-256.</div>
           </div>
         </div>
       </section>
@@ -453,19 +453,19 @@
         </div>
         <div class="heading">
           <div class="eyebrow">Install</div>
-          <h2>Choose a preview install path.</h2>
-          <p class="lede">Homebrew is the simplest path. The one-line installer can be pinned to a checksum.</p>
+          <h2>One line in Terminal.</h2>
+          <p class="lede">The installer downloads the latest release, verifies it, and installs to /Applications.</p>
         </div>
         <div class="grid">
           <div class="surface dark-surface install-card">
-            <div class="install-title">Homebrew cask</div>
-            <code class="command">brew install --cask https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/Casks/cmd-ime.rb</code>
-            <div class="meta-line">Good default for repeatable local installs.</div>
+            <div class="install-title">Installer</div>
+            <code class="command">curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash</code>
+            <div class="meta-line">Verified against the published .sha256. Later versions install with Update Now inside the app.</div>
           </div>
           <div class="surface dark-surface install-card">
-            <div class="install-title">Pinned installer</div>
-            <code class="command">CMDIME_VERSION=0.1.13 CMDIME_SHA256=86fb954c... /bin/bash -c "$(curl -fsSL ...)"</code>
-            <div class="meta-line">Use the published checksum when you install directly.</div>
+            <div class="install-title">Pinned version</div>
+            <code class="command">curl -fsSL .../install.sh | CMDIME_VERSION=0.6.1 CMDIME_SHA256=cd5455a3... bash</code>
+            <div class="meta-line">Pin the version and checksum from the release notes yourself.</div>
           </div>
         </div>
       </section>
@@ -478,13 +478,13 @@
         <div class="heading">
           <div class="eyebrow">Permissions</div>
           <h2>Grant only what CmdIME needs.</h2>
-          <p class="lede">CmdIME watches for configured switch keys. Nothing is recorded or sent anywhere.</p>
+          <p class="lede">CmdIME watches for your switch keys. What you type is never stored or sent.</p>
         </div>
         <div class="surface onboarding">
           <div class="onboarding-head">
             <img src="app-icon.png" alt="" />
             <div class="onboarding-title">Welcome to CmdIME</div>
-            <div class="onboarding-copy">macOS controls these permissions. CmdIME can request them or open the right Settings pane.</div>
+            <div class="onboarding-copy">A three-step setup guide opens the right Settings panes and checks the detected slots with you.</div>
           </div>
           <div class="permission-list">
             <div class="permission-row">
