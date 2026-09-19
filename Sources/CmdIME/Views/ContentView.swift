@@ -270,15 +270,20 @@ private extension SettingsHeader {
                 }
                 .help("CmdIME asks GitHub for the newest release. Nothing else is sent.")
                 if model.checksForUpdatesAutomatically {
-                    Picker("Check every", selection: Binding(
-                        get: { model.updateCheckFrequency }, set: { model.updateCheckFrequency = $0 }
-                    )) {
-                        ForEach(UpdateCheckFrequency.allCases, id: \.self) { Text($0.title).tag($0) }
+                    HStack {
+                        Text("Every")
+                        Spacer(minLength: DesignTokens.Layout.rowGap)
+                        Picker("Check every", selection: Binding(
+                            get: { model.updateCheckFrequency }, set: { model.updateCheckFrequency = $0 }
+                        )) {
+                            ForEach(UpdateCheckFrequency.allCases, id: \.self) { Text($0.title).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .controlSize(.small)
+                        .fixedSize()
+                        .accessibilityLabel("How often to check for updates")
                     }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .controlSize(.small)
-                    .accessibilityLabel("How often to check for updates")
                     HStack {
                         Text("Notify me about updates")
                         Spacer(minLength: DesignTokens.Layout.rowGap)
