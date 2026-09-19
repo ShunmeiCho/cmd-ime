@@ -205,7 +205,9 @@ struct CLI {
             userRecipes: ActivationRecipeStore().load().recipes,
             postKana: EventTapMonitor.postKanaKeyEvent,
             wait: { delay, then in
-                Thread.sleep(forTimeInterval: delay)
+                // Run the loop rather than sleep: a blocked loop keeps TIS's cached current source stale,
+                // so the confirmation below would still read the source from before the Kana switch.
+                RunLoop.current.run(until: Date(timeIntervalSinceNow: delay))
                 then()
             },
             select: {}
