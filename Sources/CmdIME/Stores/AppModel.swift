@@ -30,6 +30,15 @@ final class AppModel: ObservableObject {
     @Published private(set) var updateInstallStage: String?
     @Published private(set) var updateInstallError: String?
     @Published private(set) var notificationPermission = NotificationPermission.unknown
+    /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
+    @Published var appearance = AppearancePreference.stored {
+        didSet {
+            UserDefaults.standard.set(appearance.rawValue, forKey: AppearancePreference.defaultsKey)
+            for window in NSApp.windows where window.frameAutosaveName == "CmdIMESettings" {
+                window.appearance = appearance.nsAppearance
+            }
+        }
+    }
     private var updateReminderTimer: Timer?
     @Published private(set) var sourceRefreshMessage: String?
     private var selectedSourceObserver: InputSourceChangeObserver?

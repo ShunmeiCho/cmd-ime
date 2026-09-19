@@ -2,15 +2,45 @@ import AppKit
 import KeyboardSwitcherCore
 import SwiftUI
 
-/// PROTOTYPE switch for the settings window's look.
-enum Skin: String {
-    case classic, semantic, glass
-    static let current = Skin(rawValue: ProcessInfo.processInfo.environment["CMDIME_SKIN"] ?? "") ?? .classic
+/// Light, dark, or whatever the system uses, for the settings window and its popovers.
+enum AppearancePreference: String, CaseIterable {
+    case system, light, dark
+
+    static let defaultsKey = "appearance"
+
+    static var stored: AppearancePreference {
+        AppearancePreference(rawValue: UserDefaults.standard.string(forKey: defaultsKey) ?? "") ?? .system
+    }
+
+    var title: String {
+        switch self {
+        case .system: "System"
+        case .light: "Light"
+        case .dark: "Dark"
+        }
+    }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+
+    var nsAppearance: NSAppearance? {
+        switch self {
+        case .system: nil
+        case .light: NSAppearance(named: .aqua)
+        case .dark: NSAppearance(named: .darkAqua)
+        }
+    }
 }
 
 enum DesignTokens {
     enum Colors {
-        // PROTOTYPE: CMDIME_SKIN=classic | semantic | glass. Not for merge.
+        // Every colour follows the window's appearance. Surfaces are translucent because the
+        // window sits on a system material; with Reduce Transparency they turn opaque.
         private static func dyn(_ light: NSColor, _ dark: NSColor) -> Color {
             Color(nsColor: NSColor(name: nil) { $0.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light })
         }
@@ -18,41 +48,26 @@ enum DesignTokens {
         private static func rgb(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ a: CGFloat = 1) -> NSColor {
             NSColor(srgbRed: r, green: g, blue: b, alpha: a)
         }
-        private static func pick(classic: Color, semantic: Color, glass: Color? = nil) -> Color {
-            switch Skin.current {
-            case .classic: classic
-            case .semantic: semantic
-            case .glass: glass ?? semantic
-            }
-        }
+        private static var isOpaque: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency }
+        private static func translucent(_ glass: Color, opaque: Color) -> Color { isOpaque ? opaque : glass }
 
-        /// The old `Color.white.opacity(x)` hover and fill tints, which vanish on a light surface.
-        static func overlay(_ opacity: Double) -> Color {
-            pick(classic: Color.white.opacity(opacity), semantic: dyn(gray(0, opacity * 0.9), gray(1, opacity)))
-        }
+        /// Hover and fill tints: a darkening veil in light mode, a lightening one in dark mode.
+        static func overlay(_ opacity: Double) -> Color { dyn(gray(0, opacity * 0.9), gray(1, opacity)) }
 
-        static var canvas: Color { pick(classic: Color(red: 0.08, green: 0.08, blue: 0.095),
-                                        semantic: dyn(rgb(0.945, 0.945, 0.955), rgb(0.11, 0.11, 0.125)), glass: .clear) }
-        static var surface: Color { pick(classic: Color(red: 0.095, green: 0.095, blue: 0.11),
-                                         semantic: dyn(gray(1), rgb(0.155, 0.155, 0.175)),
-                                         glass: dyn(gray(1, 0.62), rgb(0.10, 0.10, 0.12, 0.50))) }
-        static var surfaceRaised: Color { pick(classic: Color(red: 0.135, green: 0.135, blue: 0.15),
-                                               semantic: dyn(rgb(0.975, 0.975, 0.98), rgb(0.20, 0.20, 0.225)),
-                                               glass: dyn(gray(1, 0.78), rgb(0.17, 0.17, 0.20, 0.72))) }
-        static var surfaceInset: Color { pick(classic: Color(red: 0.070, green: 0.070, blue: 0.085),
-                                              semantic: dyn(rgb(0.915, 0.915, 0.93), rgb(0.085, 0.085, 0.10)),
-                                              glass: dyn(gray(0, 0.06), gray(0, 0.30))) }
-        static var keycapTop: Color { pick(classic: Color(red: 0.185, green: 0.185, blue: 0.215),
-                                           semantic: dyn(gray(1), rgb(0.235, 0.235, 0.265))) }
-        static var keycapBottom: Color { pick(classic: Color(red: 0.115, green: 0.115, blue: 0.135),
-                                              semantic: dyn(rgb(0.90, 0.90, 0.92), rgb(0.155, 0.155, 0.18))) }
-        static var separator: Color { pick(classic: Color.white.opacity(0.07), semantic: dyn(gray(0, 0.09), gray(1, 0.08))) }
-        static var separatorStrong: Color { pick(classic: Color.white.opacity(0.12), semantic: dyn(gray(0, 0.16), gray(1, 0.14))) }
-        static var textPrimary: Color { pick(classic: Color(red: 0.96, green: 0.96, blue: 0.97), semantic: Color(nsColor: .labelColor)) }
-        static var textSecondary: Color { pick(classic: Color(red: 0.72, green: 0.72, blue: 0.76),
-                                               semantic: dyn(gray(0.27), rgb(0.74, 0.74, 0.78))) }
-        static var textMuted: Color { pick(classic: Color(red: 154 / 255, green: 154 / 255, blue: 163 / 255),
-                                           semantic: dyn(gray(0.40), rgb(0.62, 0.62, 0.66))) }
+        static var canvas: Color { translucent(.clear, opaque: dyn(rgb(0.945, 0.945, 0.955), rgb(0.11, 0.11, 0.125))) }
+        static var surface: Color { translucent(dyn(gray(1, 0.62), rgb(0.10, 0.10, 0.12, 0.50)),
+                                                opaque: dyn(gray(1), rgb(0.155, 0.155, 0.175))) }
+        static var surfaceRaised: Color { translucent(dyn(gray(1, 0.78), rgb(0.17, 0.17, 0.20, 0.72)),
+                                                      opaque: dyn(rgb(0.975, 0.975, 0.98), rgb(0.20, 0.20, 0.225))) }
+        static var surfaceInset: Color { translucent(dyn(gray(0, 0.06), gray(0, 0.30)),
+                                                     opaque: dyn(rgb(0.915, 0.915, 0.93), rgb(0.085, 0.085, 0.10))) }
+        static var keycapTop: Color { dyn(gray(1), rgb(0.235, 0.235, 0.265)) }
+        static var keycapBottom: Color { dyn(rgb(0.90, 0.90, 0.92), rgb(0.155, 0.155, 0.18)) }
+        static var separator: Color { dyn(gray(0, 0.09), gray(1, 0.08)) }
+        static var separatorStrong: Color { dyn(gray(0, 0.16), gray(1, 0.14)) }
+        static var textPrimary: Color { Color(nsColor: .labelColor) }
+        static var textSecondary: Color { dyn(gray(0.27), rgb(0.74, 0.74, 0.78)) }
+        static var textMuted: Color { dyn(gray(0.40), rgb(0.62, 0.62, 0.66)) }
         static let accent = Color(red: 0.21, green: 0.48, blue: 0.90)
         static let actionFill = Color(red: 40 / 255, green: 104 / 255, blue: 199 / 255)
         static let success = Color(red: 0.27, green: 0.77, blue: 0.42)
@@ -720,7 +735,7 @@ extension InputRole {
 }
 
 
-// MARK: - PROTOTYPE surfaces
+// MARK: - Window material and floating surfaces
 
 /// The system material behind the whole settings window, so the desktop shows through a little.
 struct WindowMaterial: NSViewRepresentable {
@@ -736,11 +751,12 @@ struct WindowMaterial: NSViewRepresentable {
 }
 
 extension View {
-    /// The bars that float above the content (status, update). Liquid Glass in the glass skin on macOS 26+.
+    /// The bars that float above the content (status, update): Liquid Glass on macOS 26 and later,
+    /// the translucent surface before that, and an opaque one with Reduce Transparency.
     @ViewBuilder
     func floatingBarSurface() -> some View {
         let shape = RoundedRectangle(cornerRadius: DesignTokens.Radius.surface)
-        if Skin.current == .glass, #available(macOS 26.0, *) {
+        if #available(macOS 26.0, *), !NSWorkspace.shared.accessibilityDisplayShouldReduceTransparency {
             glassEffect(.regular, in: shape)
         } else {
             background(shape.fill(DesignTokens.Colors.surface))

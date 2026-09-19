@@ -44,8 +44,8 @@ struct ContentView: View {
             .frame(maxWidth: .infinity)
         }
         .background(DesignTokens.Colors.canvas)
-        .background { if Skin.current == .glass { WindowMaterial().ignoresSafeArea() } }
-        .preferredColorScheme(Skin.current == .classic ? .dark : nil)
+        .background { WindowMaterial().ignoresSafeArea() }
+        .preferredColorScheme(model.appearance.colorScheme)
         .environment(\.slotLook, SlotLook(slots: model.config.slots))
         .onAppear {
             resetDrafts()
@@ -244,6 +244,17 @@ private extension SettingsHeader {
                     .tint(DesignTokens.Colors.success)
                     .controlSize(.small)
                     .disabled(!model.loginItem.isAvailable)
+                }
+                HStack {
+                    Text("Appearance")
+                    Spacer(minLength: DesignTokens.Layout.rowGap)
+                    Picker("Appearance", selection: $model.appearance) {
+                        ForEach(AppearancePreference.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .fixedSize()
                 }
                 Divider()
                 HStack {
