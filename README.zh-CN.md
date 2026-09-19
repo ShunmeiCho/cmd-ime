@@ -23,11 +23,21 @@ CmdIME 让你 Mac 上的每个输入源都有自己的按键。单击左 Command
 
 ## 为什么不用 Control+Space
 
+<p align="center">
+  <img src="Assets/readme/why.zh-CN.svg" width="100%" alt="Control+Space 在英文、中文、日文之间轮流切换，切到日文要按两次；CmdIME 按一次右 Shift 就切到日文。">
+</p>
+
 - **它是循环切换的。** 输入源达到三个或更多时，你得看一眼菜单栏才知道切到了哪里。
   用 CmdIME，每个键总是切到同一个输入源。
 - **按下去有时像是没有反应。** CmdIME 会确认 macOS 已经完成切换，没有完成时会重试。
 - **单击和快捷键互不干扰。** Command+C、Command+Tab 等组合键永远不会被当成一次
   Command 单击，你已经在用的按键照常工作。
+
+## 一次切换的过程
+
+<p align="center">
+  <img src="Assets/readme/flow.zh-CN.svg" width="100%" alt="一次切换：按下槽位的键，CmdIME 选中对应的输入法，确认 macOS 已经切换、没切过去就重试，然后在光标旁显示指示气泡。">
+</p>
 
 ## 安装
 
@@ -85,6 +95,12 @@ swift test
   原地安装并保留你的权限。
 - **跟随浅色和深色的设置窗口，** 也可以固定为你选的那一种。
 - **`keyboardctl`，** 一个用于扫描、绑定、切换和诊断的命令行工具。
+
+<p align="center">
+  <img src="Assets/readme/themes.png" width="100%" alt="设置里的 10 个内置指示气泡主题：Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile、Line 和 Switcher。">
+</p>
+
+<p align="center"><sub>设置里 12 个内置主题中的 10 个。</sub></p>
 
 ## 参考
 

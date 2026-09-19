@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-labelledby="title desc" lang="zh-CN">
+  <title id="title">What happens on one switch</title>
+  <desc id="desc">一次切换：按下槽位的键，CmdIME 选中对应的输入法，确认 macOS 已经切换、没切过去就重试，然后在光标旁显示指示气泡。</desc>
+  <defs>
+    <linearGradient id="keycap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2F2F37"/>
+      <stop offset="1" stop-color="#1D1D22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="300" rx="28" fill="#0F1014"/>
+    <g id="step-1" transform="translate(64 40)">
+      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">01</text>
+      <g transform="translate(66 44)">
+        <rect width="100" height="60" rx="12" fill="url(#keycap)" stroke="#FFFFFF" stroke-opacity="0.10"/>
+        <text x="36" y="40" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="28" fill="#F4F4F6">⌘</text>
+        <text x="74" y="39" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" font-weight="600" fill="#B9B9C3">R</text>
+      </g>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">按下槽位的键</text>
+      
+    </g>
+    <path d="M304 150 H336" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
+    <path d="M328 142 L336 150 L328 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <g id="step-2" transform="translate(344 40)">
+      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">02</text>
+    <g transform="translate(41 44)">
+      <rect width="144" height="60" rx="14" fill="#33A854" fill-opacity="0.14" stroke="#33A854" stroke-opacity="0.55"/>
+      <rect x="10" y="10" width="40" height="40" rx="10" fill="#33A854"/>
+      <text x="30" y="38" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="23" font-weight="700" fill="#FFFFFF">中</text>
+      <text x="62" y="38" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">中文</text>
+    </g>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">CmdIME 选中</text>
+      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">对应的输入法</text>
+    </g>
+    <path d="M584 150 H616" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
+    <path d="M608 142 L616 150 L608 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <g id="step-3" transform="translate(624 40)">
+      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">03</text>
+      <g transform="translate(116 74)">
+        <path d="M-34 -8 A36 36 0 1 1 -22 26" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
+        <path d="M-30 18 L-22 26 L-32 32" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle r="22" fill="#33A854"/>
+        <path d="M-9 1 L-2 8 L10 -6" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">确认 macOS 已切换</text>
+      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">没切过去就重试</text>
+    </g>
+    <path d="M864 150 H896" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
+    <path d="M888 142 L896 150 L888 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <g id="step-4" transform="translate(904 40)">
+      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">04</text>
+      <g transform="translate(58 30)">
+        <rect x="18" width="62" height="42" rx="12" fill="#1E1F25" stroke="#FFFFFF" stroke-opacity="0.12"/>
+        <rect x="27" y="7" width="28" height="28" rx="7" fill="#33A854"/>
+        <text x="41" y="28" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="17" font-weight="700" fill="#FFFFFF">中</text>
+        <text x="0" y="84" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="26" fill="#F4F4F6">你好</text>
+        <rect x="56" y="60" width="2.5" height="30" rx="1" fill="#4D8CFF"/>
+      </g>
+      <text x="116" y="166" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" font-weight="600" fill="#F4F4F6">光标旁显示</text>
+      <text x="116" y="194" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="20" fill="#7F7F8A">指示气泡</text>
+    </g>
+</svg>

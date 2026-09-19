@@ -25,12 +25,22 @@ The demo shows the Switcher, Glass and Liquid Glass indicator themes.
 
 ## Why not Control+Space
 
+<p align="center">
+  <img src="Assets/readme/why.svg" width="100%" alt="Control+Space cycles English, Chinese, Japanese and takes two presses to reach Japanese; CmdIME reaches Japanese with one press of Right Shift.">
+</p>
+
 - **It cycles.** With three or more input sources you look at the menu bar to see
   where you landed. With CmdIME each key always lands on the same source.
 - **A press sometimes seems to do nothing.** CmdIME checks that macOS applied the
   switch and retries when it did not.
 - **Taps and shortcuts stay apart.** Command+C, Command+Tab and other chords never
   count as a Command tap, so the keys you already use keep working.
+
+## How a switch works
+
+<p align="center">
+  <img src="Assets/readme/flow.svg" width="100%" alt="One switch: tap the slot's key, CmdIME selects its source, checks that macOS switched and retries if not, then shows an indicator near the caret.">
+</p>
 
 ## Install
 
@@ -94,6 +104,12 @@ A local build needs the same two permissions before global keyboard listening wo
 - **A settings window that follows light and dark,** or stays on the one you pick.
 - **`keyboardctl`,** a command-line tool for scanning, binding, switching and
   diagnosing.
+
+<p align="center">
+  <img src="Assets/readme/themes.png" width="100%" alt="Ten of the built-in indicator themes in Settings: Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile, Line and Switcher.">
+</p>
+
+<p align="center"><sub>Ten of the twelve built-in themes, as they appear in Settings.</sub></p>
 
 ## Reference
 

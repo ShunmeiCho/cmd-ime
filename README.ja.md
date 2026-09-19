@@ -25,12 +25,22 @@ CmdIME は、Mac の入力ソースそれぞれに専用のキーを割り当て
 
 ## Control+Space との違い
 
+<p align="center">
+  <img src="Assets/readme/why.ja.svg" width="100%" alt="Control+Space は英語・中国語・日本語を巡回し、日本語までに 2 回押す必要があります。CmdIME なら右 Shift を 1 回押すだけで日本語に切り替わります。">
+</p>
+
 - **巡回式だから。** 入力ソースが 3 つ以上あると、どこに切り替わったかをメニューバーで
   確認する必要があります。CmdIME なら、各キーは常に同じ入力ソースに切り替わります。
 - **押しても何も起きないように見えることがあるから。** CmdIME は macOS が切り替えを
   適用したことを確認し、適用されなかった場合は再試行します。
 - **タップとショートカットを区別するから。** Command+C、Command+Tab などのショートカットが
   Command のタップとして扱われることはないので、普段使っているキーはそのまま使えます。
+
+## 切り替えのしくみ
+
+<p align="center">
+  <img src="Assets/readme/flow.ja.svg" width="100%" alt="1 回の切り替え：スロットのキーを押すと、CmdIME が入力ソースを選択し、macOS が切り替えたことを確認して失敗時は再試行し、キャレットの近くにインジケーターを表示します。">
+</p>
 
 ## インストール
 
@@ -96,6 +106,12 @@ swift test
   変更点の概要を表示し、権限を保ったままその場でインストールします。
 - **ライトとダークに追従する設定ウィンドウ。** どちらかに固定することもできます。
 - **`keyboardctl`。** スキャン、バインド、切り替え、診断のためのコマンドラインツールです。
+
+<p align="center">
+  <img src="Assets/readme/themes.png" width="100%" alt="設定画面にある組み込みインジケーターテーマ 10 種類：Glass、Liquid Glass、Classic、3 種類の paper 系、Typographic、Tile、Line、Switcher。">
+</p>
+
+<p align="center"><sub>設定画面に並ぶ 12 の組み込みテーマのうち 10 種類。</sub></p>
 
 ## リファレンス
 
