@@ -20,14 +20,6 @@ enum AppearancePreference: String, CaseIterable {
         }
     }
 
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .system: nil
-        case .light: .light
-        case .dark: .dark
-        }
-    }
-
     var nsAppearance: NSAppearance? {
         switch self {
         case .system: nil
@@ -776,18 +768,37 @@ extension View {
 
 // MARK: - Appearance in popovers
 
-/// A popover is its own window and ignores the settings window's appearance, so each one
-/// applies the stored preference itself.
+/// Applies General > Appearance to whatever window hosts it. A popover is its own window and
+/// ignores the settings window's appearance, so each one carries this too.
+///
+/// This sets `NSWindow.appearance` rather than SwiftUI's `preferredColorScheme`: passing nil to
+/// that modifier does not undo an earlier light or dark, so "System" never came back.
+private struct WindowAppearanceSetter: NSViewRepresentable {
+    let preference: AppearancePreference
+
+    func makeNSView(context: Context) -> NSView { NSView() }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        let appearance = preference.nsAppearance
+        // The view joins its window after this call, so apply on the next turn as well.
+        nsView.window?.appearance = appearance
+        DispatchQueue.main.async { nsView.window?.appearance = appearance }
+    }
+}
+
 private struct AppearanceFollower: ViewModifier {
     @AppStorage(AppearancePreference.defaultsKey) private var stored = AppearancePreference.system.rawValue
 
     func body(content: Content) -> some View {
-        content.preferredColorScheme((AppearancePreference(rawValue: stored) ?? .system).colorScheme)
+        content.background(WindowAppearanceSetter(preference: AppearancePreference(rawValue: stored) ?? .system))
     }
 }
 
 extension View {
     /// `popover` whose content follows General > Appearance.
+    /// Makes the hosting window follow General > Appearance, including a return to "System".
+    func followsAppearancePreference() -> some View { modifier(AppearanceFollower()) }
+
     func appearancePopover<Content: View>(isPresented: Binding<Bool>, arrowEdge: Edge = .top,
                                           @ViewBuilder content: @escaping () -> Content) -> some View {
         popover(isPresented: isPresented, arrowEdge: arrowEdge) { content().modifier(AppearanceFollower()) }

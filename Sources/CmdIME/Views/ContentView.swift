@@ -56,7 +56,7 @@ struct ContentView: View {
         .padding(.top, 1)
         .background(DesignTokens.Colors.canvas)
         .background { WindowMaterial().ignoresSafeArea() }
-        .preferredColorScheme(model.appearance.colorScheme)
+        .followsAppearancePreference()
         .environment(\.slotLook, SlotLook(slots: model.config.slots))
         .onAppear {
             resetDrafts()
@@ -336,7 +336,6 @@ private extension SettingsHeader {
             .padding(16)
             .frame(width: 300)
             .background(DesignTokens.Colors.surfaceRaised)
-            .preferredColorScheme(.dark)
         }
     }
 }

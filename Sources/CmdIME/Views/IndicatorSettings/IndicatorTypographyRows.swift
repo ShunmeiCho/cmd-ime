@@ -137,7 +137,6 @@ struct IndicatorTypographyRows: View {
             }
             .padding(12)
             .frame(width: 280)
-            .preferredColorScheme(.dark)
         }
     }
 

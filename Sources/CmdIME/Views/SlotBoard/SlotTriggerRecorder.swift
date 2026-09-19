@@ -187,7 +187,6 @@ private struct TriggerRecorderPopover: View {
         .padding(16)
         .frame(width: 350)
         .background(DesignTokens.Colors.surfaceRaised)
-        .preferredColorScheme(.dark)
         .scaleEffect(appeared || reduceMotion ? 1 : 0.98)
         .opacity(appeared ? 1 : 0)
         .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.expandCollapse, value: appeared)
