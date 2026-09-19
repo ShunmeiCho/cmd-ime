@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://shunmeicho.github.io/cmd-ime/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shunmeicho.github.io/cmd-ime/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://shunmeicho.github.io/cmd-ime/?lang=zh-CN"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://shunmeicho.github.io/cmd-ime/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shunmeicho.github.io/cmd-ime/"/>
+  </url>
+  <url>
+    <loc>https://shunmeicho.github.io/cmd-ime/?lang=en</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shunmeicho.github.io/cmd-ime/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://shunmeicho.github.io/cmd-ime/?lang=zh-CN"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://shunmeicho.github.io/cmd-ime/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shunmeicho.github.io/cmd-ime/"/>
+  </url>
+  <url>
+    <loc>https://shunmeicho.github.io/cmd-ime/?lang=zh-CN</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shunmeicho.github.io/cmd-ime/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://shunmeicho.github.io/cmd-ime/?lang=zh-CN"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://shunmeicho.github.io/cmd-ime/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shunmeicho.github.io/cmd-ime/"/>
+  </url>
+  <url>
+    <loc>https://shunmeicho.github.io/cmd-ime/?lang=ja</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://shunmeicho.github.io/cmd-ime/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://shunmeicho.github.io/cmd-ime/?lang=zh-CN"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://shunmeicho.github.io/cmd-ime/?lang=ja"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://shunmeicho.github.io/cmd-ime/"/>
+  </url>
+</urlset>

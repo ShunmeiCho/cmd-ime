@@ -3,11 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CmdIME by ShunmeiCho - one key per input source on macOS</title>
+<title>CmdIME by ShunmeiCho - macOS input source switcher, one key per input source</title>
 <meta name="description" content="CmdIME gives every input source on your Mac its own key. Tap Left Command for English, Right Command for Chinese, Right Shift for Japanese. Preview build: signed, not notarized.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0F1014">
 <link rel="canonical" href="https://shunmeicho.github.io/cmd-ime/">
+<link rel="alternate" hreflang="en" href="https://shunmeicho.github.io/cmd-ime/?lang=en">
+<link rel="alternate" hreflang="zh-CN" href="https://shunmeicho.github.io/cmd-ime/?lang=zh-CN">
+<link rel="alternate" hreflang="ja" href="https://shunmeicho.github.io/cmd-ime/?lang=ja">
+<link rel="alternate" hreflang="x-default" href="https://shunmeicho.github.io/cmd-ime/">
+<link rel="sitemap" type="application/xml" href="sitemap.xml">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "CmdIME", "alternateName": "CmdIME by ShunmeiCho", "description": "A macOS input source switcher that gives every input source its own key: tap Left Command for English, Right Command for Chinese, Right Shift for Japanese.", "applicationCategory": "UtilitiesApplication", "operatingSystem": "macOS 13 or later", "url": "https://shunmeicho.github.io/cmd-ime/", "downloadUrl": "https://github.com/ShunmeiCho/cmd-ime/releases/latest", "softwareVersion": "0.7.1", "license": "https://opensource.org/licenses/MIT", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "author": {"@type": "Person", "name": "ShunmeiCho", "url": "https://github.com/ShunmeiCho"}, "codeRepository": "https://github.com/ShunmeiCho/cmd-ime", "inLanguage": ["en", "zh-CN", "ja"]}</script>
 <link rel="icon" href="assets/icon-switch.webp" type="image/webp">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CmdIME by ShunmeiCho">
@@ -32,6 +38,7 @@
   var lang = (q && norm(decodeURIComponent(q[1]))) || saved || norm((navigator.languages || [])[0] || navigator.language) || "en";
   document.documentElement.setAttribute("data-ui", lang);
   document.documentElement.setAttribute("lang", lang);
+  if (q) { var c = document.querySelector('link[rel="canonical"]'); if (c) c.href = "https://shunmeicho.github.io/cmd-ime/?lang=" + lang; }
 })();
 </script>
 <script src="main.js" defer></script>

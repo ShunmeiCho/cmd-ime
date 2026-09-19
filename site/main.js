@@ -6,9 +6,9 @@
   var API_URL = "https://api.github.com/repos/ShunmeiCho/cmd-ime/releases/latest";
   var COPIED_MS = 1600;
   var TITLES = {
-    "en": "CmdIME by ShunmeiCho - one key per input source on macOS",
-    "zh-CN": "CmdIME by ShunmeiCho - 一个键对应一个输入源",
-    "ja": "CmdIME by ShunmeiCho - 入力ソースごとにキーをひとつ"
+    "en": "CmdIME by ShunmeiCho - macOS input source switcher, one key per input source",
+    "zh-CN": "CmdIME by ShunmeiCho - macOS 输入法切换工具，每个输入法一个专属键",
+    "ja": "CmdIME by ShunmeiCho - macOS 入力ソース切り替えツール、入力ソースごとに専用キー"
   };
   var COPIED = { "en": "Copied", "zh-CN": "已复制", "ja": "コピーしました" };
   var COPY_MANUAL = {
