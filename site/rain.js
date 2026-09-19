@@ -7,8 +7,7 @@
      to another script. Content sits above it on its own surfaces.
    Guardrails: DPR capped at 2, columns capped by width, sparser on phones, the
    hero rain only advances while the hero is on screen, the loop stops when the
-   tab is hidden, reduced motion draws one static frame, light mode keeps only a
-   faint hero rain.
+   tab is hidden, reduced motion draws one static frame. The page is dark only.
    State for tests: window.__glyphField. */
 (function () {
   "use strict";
@@ -54,7 +53,6 @@
   var PHONE_MAX = 760;
 
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var lightQuery = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)");
 
   var state = window.__glyphField = { frames: 0, heroFrames: 0, running: false, columns: 0, ambient: 0, mode: reduce ? "static" : "animated" };
 
@@ -93,10 +91,8 @@
   // ---- Colour ----
   function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
   var slotColours = [];
-  var isLight = false;
   function readColours() {
     slotColours = SLOT_VARS.map(cssVar);
-    isLight = !!(lightQuery && lightQuery.matches);
   }
 
   // ---- Pulse from the demo ----
@@ -192,9 +188,9 @@
 
   // ---- Drawing ----
   function drawHero(now, dt, top, animate) {
-    var base = isLight ? "92, 92, 102" : "127, 127, 138";
-    var trailAlpha = isLight ? 0.14 : 0.3;
-    var headAlpha = isLight ? 0.3 : 0.8;
+    var base = "127, 127, 138";
+    var trailAlpha = 0.3;
+    var headAlpha = 0.8;
     ctx.font = fontPx + "px " + FONT;
     for (var c = 0; c < columns.length; c++) {
       var col = columns[c];
@@ -226,7 +222,7 @@
         var m = heroMask(y);
         if (m <= 0) continue;
         if (i === 0) {
-          ctx.fillStyle = col.head || (isLight ? "rgba(40, 40, 48, 1)" : "rgba(214, 214, 222, 1)");
+          ctx.fillStyle = col.head || "rgba(214, 214, 222, 1)";
           ctx.globalAlpha = headAlpha * m;
         } else {
           ctx.fillStyle = "rgb(" + base + ")";
@@ -239,7 +235,7 @@
   }
 
   function drawAmbient(dt, heroTop, heroBottom, animate) {
-    if (!AMBIENT_BELOW_HERO || isLight) return; // light page: too close to the text colour
+    if (!AMBIENT_BELOW_HERO) return;
     for (var i = 0; i < ambient.length; i++) {
       var g = ambient[i];
       if (animate) {
@@ -310,7 +306,6 @@
 
   resize();
   window.addEventListener("resize", function () { resize(); if (reduce) staticFrame(); });
-  if (lightQuery && lightQuery.addEventListener) lightQuery.addEventListener("change", readColours);
   if ("ResizeObserver" in window) new ResizeObserver(measureHero).observe(hero);
 
   if (reduce) {

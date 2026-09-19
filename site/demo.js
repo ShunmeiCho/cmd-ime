@@ -52,10 +52,12 @@
   var glyphEl = document.getElementById("bubble-glyph");
   var titleEl = document.getElementById("bubble-title");
   var replay = document.getElementById("replay");
+  var playBtn = document.getElementById("play-demo");
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var current = 0;
   var manual = false;
+  var playOnce = false;   // reduced motion: one run of the story, on request
   var visible = true;
   var pending = null;
 
@@ -178,7 +180,11 @@
     stepTimer = null;
     if (!canAutoplay()) { if (!manual) setMode("paused"); return; }
     setMode("auto");
-    if (cursor >= script.length) { script = sentenceSteps(pageLang()).concat(showcaseSteps(pageLang())); cursor = 0; }
+    if (cursor >= script.length) {
+      if (playOnce) { finishPlayOnce(); return; }
+      script = sentenceSteps(pageLang()).concat(showcaseSteps(pageLang()));
+      cursor = 0;
+    }
     var step = script[cursor];
     cursor += 1;
     field.classList.toggle("is-typing", step.kind === "char");
@@ -192,9 +198,9 @@
   function finishWord() {
     while (cursor < script.length && script[cursor].kind === "char") { typeChar(script[cursor].ch); cursor += 1; }
   }
-  function canAutoplay() { return !reduceMotion && !manual && visible && !document.hidden; }
+  function canAutoplay() { return (!reduceMotion || playOnce) && !manual && visible && !document.hidden; }
   function resumeAuto() {
-    if (reduceMotion || manual || stepTimer) return;
+    if ((reduceMotion && !playOnce) || manual || stepTimer) return;
     if (canAutoplay()) tick(); else setMode("paused");
   }
   function restartStory() { stopScript(); script = []; cursor = 0; resumeAuto(); }
@@ -217,7 +223,26 @@
     }, TYPE_MS);
   }
 
+  // Reduced motion: no autoplay, but the story plays once when asked. State changes
+  // are instant (no pop, no rain pulse); the typing stays because it is the content.
+  function playDemoOnce() {
+    stopScript();
+    manual = false;
+    playOnce = true;
+    playBtn.hidden = true;
+    script = sentenceSteps(pageLang());
+    cursor = 0;
+    resumeAuto();
+  }
+  function finishPlayOnce() {
+    playOnce = false;
+    stopScript();
+    setMode("static");
+    playBtn.hidden = false;
+  }
+
   function goManual() {
+    if (playOnce) { playOnce = false; stopScript(); finishWord(); playBtn.hidden = false; }
     if (manual) return;
     manual = true;
     stopScript();
@@ -233,11 +258,12 @@
   }
 
   // ---- Input ----
+  playBtn.addEventListener("click", playDemoOnce);
   stage.addEventListener("pointerdown", function (event) {
-    if (!event.target.closest("#replay")) goManual();
+    if (!event.target.closest("#replay, #play-demo")) goManual();
   });
   stage.addEventListener("focusin", function (event) {
-    if (!event.target.closest("#replay")) goManual();
+    if (!event.target.closest("#replay, #play-demo")) goManual();
   });
   stage.addEventListener("click", function (event) {
     if (event.target.closest("#replay")) { replayDemo(); return; }
@@ -305,6 +331,7 @@
   if (reduceMotion) {
     staticSentence();
     setMode("static");
+    playBtn.hidden = false;
   } else {
     setMode("paused");
     resumeAuto();

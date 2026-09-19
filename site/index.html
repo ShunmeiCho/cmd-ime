@@ -5,9 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CmdIME by ShunmeiCho - one key per input source on macOS</title>
 <meta name="description" content="CmdIME gives every input source on your Mac its own key. Tap Left Command for English, Right Command for Chinese, Right Shift for Japanese. Preview build: signed, not notarized.">
-<meta name="color-scheme" content="dark light">
-<meta name="theme-color" content="#0F1014" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#F6F6F8" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0F1014">
 <link rel="canonical" href="https://shunmeicho.github.io/cmd-ime/">
 <link rel="icon" href="assets/icon-switch.webp" type="image/webp">
 <meta property="og:type" content="website">
@@ -73,6 +72,7 @@
       <p class="lede i-ja" lang="ja">CmdIME は、Mac の入力ソースそれぞれに専用のキーを割り当てます。</p>
       <p class="hero-cta">
         <a class="btn btn-primary" href="#install"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></a>
+        <button type="button" class="btn btn-quiet play-demo" id="play-demo" hidden><span class="i-en">Play demo</span><span class="i-zh" lang="zh-CN">播放演示</span><span class="i-ja" lang="ja">デモを再生</span></button>
       </p>
     </div>
 
@@ -134,6 +134,8 @@
     </div>
   </section>
 
+  <!-- Everything below the hero sits on one glass sheet; headings separate the sections. -->
+  <div class="sheet">
   <!-- Install -->
   <section id="install" class="install panel" aria-labelledby="install-title">
     <div class="install-grid">
@@ -354,6 +356,7 @@
       <p>"Apple cannot check it for malicious software" と表示された場合は、システム設定 &gt; プライバシーとセキュリティに <strong>Open Anyway</strong> が出ることがあります。上の方法で属性を削除しても開けます。確認の仕組みについては、Apple の <a href="https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web">Gatekeeper</a> と <a href="https://developer.apple.com/developer-id/">Developer ID</a> のドキュメントで説明されています。</p>
     </div>
   </section>
+  </div>
 </main>
 
 <footer class="foot">

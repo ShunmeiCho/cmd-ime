@@ -7,9 +7,8 @@
       <stop offset="1" stop-color="#1D1D22"/>
     </linearGradient>
   </defs>
-  <rect x="0.5" y="0.5" width="1199" height="299" rx="28" fill="#0F1014" stroke="#30363D"/>
     <g id="step-1" transform="translate(64 40)">
-      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <rect width="232" height="220" rx="18" fill="none"/>
       <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">01</text>
       <g transform="translate(66 44)">
         <rect width="100" height="60" rx="12" fill="url(#keycap)" stroke="#FFFFFF" stroke-opacity="0.10"/>
@@ -22,7 +21,7 @@
     <path d="M304 150 H336" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
     <path d="M328 142 L336 150 L328 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     <g id="step-2" transform="translate(344 40)">
-      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <rect width="232" height="220" rx="18" fill="none"/>
       <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">02</text>
     <g transform="translate(41 44)">
       <rect width="144" height="60" rx="14" fill="#33A854" fill-opacity="0.14" stroke="#33A854" stroke-opacity="0.55"/>
@@ -36,7 +35,7 @@
     <path d="M584 150 H616" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
     <path d="M608 142 L616 150 L608 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     <g id="step-3" transform="translate(624 40)">
-      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <rect width="232" height="220" rx="18" fill="none"/>
       <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">03</text>
       <g transform="translate(116 74)">
         <path d="M-34 -8 A36 36 0 1 1 -22 26" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
@@ -50,7 +49,7 @@
     <path d="M864 150 H896" stroke="#5A5B66" stroke-width="2" stroke-linecap="round"/>
     <path d="M888 142 L896 150 L888 158" fill="none" stroke="#5A5B66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
     <g id="step-4" transform="translate(904 40)">
-      <rect width="232" height="220" rx="18" fill="#16171C" stroke="#26272E"/>
+      <rect width="232" height="220" rx="18" fill="none"/>
       <text x="20" y="32" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#7F7F8A">04</text>
       <g id="indicator-at-caret">
         <g transform="translate(70 34)">

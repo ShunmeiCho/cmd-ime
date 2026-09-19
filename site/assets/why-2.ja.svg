@@ -7,8 +7,6 @@
       <stop offset="1" stop-color="#1D1D22"/>
     </linearGradient>
   </defs>
-  <rect x="0.5" y="0.5" width="1199" height="429" rx="28" fill="#0F1014" stroke="#30363D"/>
-  <path d="M64 200 H1136" stroke="#26272E" stroke-width="1"/>
 
   <g id="cycling">
     <text x="64" y="92" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="22" font-weight="600" fill="#F4F4F6">Control+Space</text>
@@ -72,7 +70,5 @@
     </g>
     <text x="360" y="332" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="19" fill="#B9B9C3">1 回押すだけ。いつも同じ入力ソース</text>
   </g>
-
-  <path d="M64 364 H1136" stroke="#26272E" stroke-width="1"/>
   <text x="64" y="398" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans', 'Noto Sans CJK SC', sans-serif" font-size="18" fill="#7F7F8A">3 つの入力ソースは一例です。インストール済みのどの入力ソースにも専用キーを割り当てられます。</text>
 </svg>

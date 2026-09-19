@@ -1,4 +1,4 @@
-/* CmdIME landing page. Dark first, light via prefers-color-scheme.
+/* CmdIME landing page. Dark only.
    Radius rule: controls 8px, surfaces 14px. */
 :root {
   --bg: #0F1014;
@@ -20,20 +20,7 @@
   color-scheme: dark;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg: #F6F6F8;
-    --surface: #FFFFFF;
-    --line: #E1E1E7;
-    --text: #16161A;
-    --muted: #5C5C66;
-    --accent: #2F6FE0;
-    --accent-ink: #FFFFFF;
-    --code-bg: #FFFFFF;
-    --ok: #1F7F3C;
-    color-scheme: light;
-  }
-}
+
 
 /* Language visibility: only the active language's copies render. */
 html[data-ui="en"] .i-zh, html[data-ui="en"] .i-ja,
@@ -214,7 +201,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   background-size: var(--dot) var(--dot);
   opacity: 0.55;
 }
-.install { position: relative; isolation: isolate; overflow: hidden; }
+.install { position: relative; }
 .install::before {
   inset: -10% -10% auto auto; width: 60%; height: 90%;
   -webkit-mask-image: radial-gradient(closest-side at 75% 30%, #000 10%, transparent 100%);
@@ -256,9 +243,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   --field-fill: rgb(22 23 28 / 0.84);
   --kb-fill: rgb(22 23 28 / 0.95);   /* labels sit here: the rain must not show through */
 }
-@media (prefers-color-scheme: light) {
-  :root { --kc-top: #FFFFFF; --kc-bottom: #ECECF0; --kc-edge: rgb(0 0 0 / 0.12); --kc-glyph: #16161A; --field-fill: rgb(255 255 255 / 0.86); --kb-fill: rgb(255 255 255 / 0.96); }
-}
+
 .hero { position: relative; padding-top: var(--hero-pad-top); padding-bottom: var(--hero-pad-bottom); }
 /* Pitch, Install and the demo share one column, so the hero reads as one unit. */
 .hero-head { max-width: var(--stage-max); margin: 0 auto; }
@@ -419,17 +404,7 @@ main, .foot { position: relative; z-index: 1; }
   opacity: 0; transform: scale(0.94); transform-origin: 50% 100%;
   pointer-events: none; white-space: nowrap;
 }
-@media (prefers-color-scheme: light) {
-  .glass-bubble {
-    --gb-fill: rgb(242 242 244 / 0.42);     /* #F2F2F4 */
-    --gb-solid: #F2F2F4;
-    --gb-title: #1D1D1F;
-    --gb-edge: rgb(255 255 255 / 0.70);
-    --gb-sep: rgb(0 0 0 / 0.14);
-    --gb-light: rgb(255 255 255 / 0.90);
-    --gb-shadow: rgb(0 0 0 / 0.18);
-  }
-}
+
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .glass-bubble { background: var(--gb-solid); }
 }
@@ -485,43 +460,56 @@ html[data-ui="ja"] main :is(p, li, figcaption) { max-width: var(--measure-cjk); 
   .hero h1 { line-height: 1.15; }
 }
 
-/* ---- Round 3: content panels as glass over the ambient glyph layer ----
-   Same material family as the demo bubble: translucent fill, blur and saturation,
-   a soft top highlight. Code, diagrams, screenshots and video keep their own opaque
-   surfaces. Moderate blur, only on these panels; the page background is not blurred. */
-.panel {
-  --panel-fill: rgb(22 23 28 / 0.58);
-  --panel-solid: #16171C;
-  --panel-edge: rgb(255 255 255 / 0.08);
-  --panel-light: rgb(255 255 255 / 0.10);
+/* ---- One glass sheet below the hero ----
+   The page reads as one continuous surface: a single translucent sheet over the faint
+   ambient glyph layer holds every section. Sections have no box of their own; headings
+   and spacing separate them. One container level per block: diagrams are frameless,
+   code and media keep a plain surface without borders. The sheet edge is only a faint
+   top highlight. Moderate blur, only on the sheet; the page background is not blurred. */
+.sheet {
+  --sheet-fill: rgb(22 23 28 / 0.58);
+  --sheet-solid: #16171C;
+  --sheet-light: rgb(255 255 255 / 0.07);
   position: relative;
   width: min(var(--max), calc(100% - 2 * var(--gutter)));
-  margin: var(--panel-gap) auto 0;
-  padding: var(--panel-pad);
+  margin: 0 auto;
   border-radius: var(--panel-radius);
-  background: var(--panel-fill);
+  background: var(--sheet-fill);
   -webkit-backdrop-filter: blur(10px) saturate(150%);
   backdrop-filter: blur(10px) saturate(150%);
-  border: 1px solid var(--panel-edge);
-  box-shadow: inset 0 1px 0 var(--panel-light), 0 24px 60px rgb(0 0 0 / 0.22);
+  box-shadow: inset 0 1px 0 var(--sheet-light), 0 30px 80px rgb(0 0 0 / 0.25);
 }
-@media (prefers-color-scheme: light) {
-  .panel {
-    --panel-fill: rgb(255 255 255 / 0.66);
-    --panel-solid: #FFFFFF;
-    --panel-edge: rgb(0 0 0 / 0.06);
-    --panel-light: rgb(255 255 255 / 0.9);
-  }
-}
+
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .panel { background: var(--panel-solid); }
+  .sheet { background: var(--sheet-solid); }
 }
 @media (prefers-reduced-transparency: reduce) {
-  .panel { background: var(--panel-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .sheet { background: var(--sheet-solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
-.install.panel { margin-top: 0; overflow: hidden; }
+/* Every section: same left edge, same width, same rhythm. */
+.sheet > .panel { padding: var(--section-space) var(--panel-pad) 0; }
+.sheet > .panel:last-child { padding-bottom: var(--section-space); }
+.sheet > .panel:first-child { padding-top: var(--panel-pad); }
 .panel > h2:first-child { margin-top: 0; }
-.promo video, .code, .shot img, .art img { position: relative; }
+
+/* No sub-block borders: surfaces only where the content needs one. */
+.code { border: 0; }
+.code-hero { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent); }
+p code, li code, h3 code { border: 0; }
+.install-alt { border-top: 0; padding-top: 8px; }
+.install::before { display: none; }
+.promo video { border: 0; }
+.foot { border-top: 0; }
+
+:root { --section-space: clamp(56px, 7vw, 96px); }
 @media (max-width: 760px) {
   :root { --panel-radius: 18px; }
+}
+
+/* Reduced motion: the Play demo button is the visible way to see the story. */
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.play-demo { font: inherit; font-weight: 600; cursor: pointer; }
+.play-demo[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .kc-cap, .btn, .copy { transition: none; }
 }
