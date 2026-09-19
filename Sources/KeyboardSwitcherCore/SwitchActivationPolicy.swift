@@ -65,4 +65,25 @@ public enum SwitchActivationPolicy {
         // Inside Japanese the system no longer switches on Kana; the app would get the key.
         return current?.primaryLanguage != "ja"
     }
+
+    /// Selects `target` for a switch that does not come from the event tap (the settings window,
+    /// `keyboardctl switch`): when the input method needs it, the Kana key is posted first and
+    /// `select` runs after the recipe's delay; otherwise `select` runs at once with no wait.
+    /// `current` is only read for input methods that have a Kana recipe.
+    public static func selectWithKanaPrelude(
+        target: InputSourceInfo,
+        current: () -> InputSourceInfo?,
+        userRecipes: [ActivationRecipe] = [],
+        postKana: () -> Void,
+        wait: (TimeInterval, @escaping () -> Void) -> Void,
+        select: @escaping () -> Void
+    ) {
+        guard strategy(for: target, userRecipes: userRecipes) == .kanaThenSelect,
+              needsKanaPrelude(target: target, current: current(), userRecipes: userRecipes) else {
+            select()
+            return
+        }
+        postKana()
+        wait(kanaToSelectDelay(for: target, userRecipes: userRecipes), select)
+    }
 }

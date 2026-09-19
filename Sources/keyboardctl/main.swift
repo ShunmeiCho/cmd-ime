@@ -197,6 +197,19 @@ struct CLI {
         guard let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) else {
             throw InputSourceServiceError.notFound(role.rawValue)
         }
+        // Same Kana prelude as the event tap. Without Accessibility trust the post does nothing
+        // and the select below proceeds as a plain select.
+        SwitchActivationPolicy.selectWithKanaPrelude(
+            target: source,
+            current: { try? service.currentInputSource() },
+            userRecipes: ActivationRecipeStore().load().recipes,
+            postKana: EventTapMonitor.postKanaKeyEvent,
+            wait: { delay, then in
+                Thread.sleep(forTimeInterval: delay)
+                then()
+            },
+            select: {}
+        )
         let current = try service.selectInputSourceAndConfirm(id: source.id)
         guard let current, current.id == source.id else {
             fputs(InputSourceInfo.verificationMessage(requested: source, current: current) + "\n", stderr)

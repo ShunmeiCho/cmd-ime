@@ -59,7 +59,7 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// When the last posted Kana key has had time to take effect.
     private var kanaSettlesAt = Date.distantPast
 
-    static func scheduleOnMainQueue(after delay: TimeInterval, _ work: @escaping () -> Void) {
+    public static func scheduleOnMainQueue(after delay: TimeInterval, _ work: @escaping () -> Void) {
         // The event tap and all TIS calls live on the main thread, and `work` only
         // ever runs there, so handing it to the main queue is safe.
         nonisolated(unsafe) let work = work
@@ -623,7 +623,7 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// Set by tests to observe the prelude without posting real events.
     var kanaKeyPoster: (() -> Void)?
 
-    static func postKanaKeyEvent() {
+    public static func postKanaKeyEvent() {
         for isDown in [true, false] {
             let event = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(SwitchActivationPolicy.kanaKeyCode), keyDown: isDown)
             event?.flags = []

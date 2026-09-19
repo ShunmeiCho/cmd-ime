@@ -60,6 +60,8 @@ final class AppModel: ObservableObject {
     private(set) lazy var switchIndicator = InputIndicatorController(configStore: configStore)
     private let updates = UpdateService()
     private var monitor: EventTapMonitor?
+    /// The user's recipes from `ActivationRecipeStore`, also used by the Switch button.
+    private var activationRecipes: [ActivationRecipe] = []
     private var recordingRole: InputRole?
     private var recordingOwner: UUID?
 
@@ -726,14 +728,26 @@ final class AppModel: ObservableObject {
     }
 
     func switchRole(_ role: InputRole) {
+        if !hasSourceBaseline {
+            scan()
+        }
+        guard let source = matchedSource(for: role) else {
+            reportSlotFailure("No input source matched this slot", for: role)
+            return
+        }
+        // Same Kana prelude as the event tap; the select is scheduled, never waited for here.
+        SwitchActivationPolicy.selectWithKanaPrelude(
+            target: source,
+            current: { try? inputSources.currentInputSource() },
+            userRecipes: activationRecipes,
+            postKana: EventTapMonitor.postKanaKeyEvent,
+            wait: EventTapMonitor.scheduleOnMainQueue,
+            select: { [weak self] in self?.selectSwitchedSource(source, for: role) }
+        )
+    }
+
+    private func selectSwitchedSource(_ source: InputSourceInfo, for role: InputRole) {
         do {
-            if !hasSourceBaseline {
-                scan()
-            }
-            guard let source = matchedSource(for: role) else {
-                reportSlotFailure("No input source matched this slot", for: role)
-                return
-            }
             let current = try inputSources.selectInputSourceAndConfirm(id: source.id)
             guard current?.id == source.id else {
                 reportSlotFailure(InputSourceInfo.verificationMessage(requested: source, current: current), for: role)
@@ -911,6 +925,7 @@ final class AppModel: ObservableObject {
     /// Hands the user's activation recipes to the live monitor; a skipped entry is reported, not fatal.
     private func loadActivationRecipes() {
         let result = ActivationRecipeStore().load()
+        activationRecipes = result.recipes
         monitor?.activationRecipes = result.recipes
         if let problem = result.problems.first {
             statusText = problem
