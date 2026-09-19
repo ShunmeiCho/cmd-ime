@@ -112,7 +112,7 @@ macOS が権限を要求できるようにアプリを開きます。
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.5.1 CMDIME_SHA256=f8d0fb8e545d8bb7be4278a12a88507b22d250a33cb318039491b1fc1adf154b bash
+  CMDIME_VERSION=0.6.0 CMDIME_SHA256=d63b25819d3a6efec87acd9fdc2f0f6fb9eed641c50cfbe9e3694e54c51854c4 bash
 ```
 
 インストール後、CmdIME を開き、システム設定 > プライバシーとセキュリティで
