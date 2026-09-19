@@ -336,8 +336,8 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 ## 打包与发布
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.5.1
-shasum -a 256 dist/CmdIME-0.5.1.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.6.0
+shasum -a 256 dist/CmdIME-0.6.0.zip
 ```
 
 经过公证的发布打包需要 `Developer ID Application` 签名身份。
@@ -362,10 +362,20 @@ xcrun notarytool store-credentials "cmd-ime-notary" \
 该 cask 通过 `Contents/Resources` 链接 `keyboardctl`，
 这是一个指向 `Contents/MacOS` 中已签名辅助程序的兼容性符号链接。
 
-CmdIME 可以通过设置中的 **General > Check for Updates** 检查最近的 GitHub Releases，
-其中包括明确标注的预览版本。有新版本可用时，请打开发布页面，
-用一行安装命令重新安装，或者通过 Homebrew 更新。完全自动的应用内替换留给将来基于
-Sparkle 的更新器，这样签名和 macOS 权限方面的行为才能保持可预期。
+### 更新
+
+CmdIME 大部分时间没有窗口，所以它会自己检查新版本：每天最多向 GitHub 查询一次最新的
+Release（除此之外不发送任何内容），发现新版本时，为这个版本发一条系统通知。
+通知权限只在这个时刻申请，首次启动时不会申请。设置窗口顶部会显示同一条更新提示，
+**General** 里有用于手动检查的 **Check**，以及用来关闭每日检查的
+**Check automatically** 开关。
+
+**Update Now** 会原地安装更新：下载发布的 zip，对照发布的 `.sha256` 校验，
+验证新应用带有有效的代码签名、并且与正在运行的应用来自同一个开发者团队，
+然后替换应用包并重新打开 CmdIME。由于签名身份没有变化，Accessibility 和
+Input Monitoring 的授权会保留。**Release Notes** 打开 GitHub 的发布页面，
+**Skip** 不再提醒这个版本。如果 CmdIME 是用 Homebrew 安装的，`brew upgrade`
+照常可用；原地更新之后，Homebrew 记录的版本号会落后，直到下一次 `brew upgrade`。
 
 ## Homebrew
 

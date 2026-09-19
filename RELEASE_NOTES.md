@@ -1,4 +1,4 @@
-## Unreleased
+## CmdIME v0.6.0 Preview
 
 Updates reach you without opening GitHub.
 

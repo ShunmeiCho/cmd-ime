@@ -5,7 +5,7 @@ struct WhatsNewNoticeBar: View {
     @ObservedObject var model: AppModel
     let isSetupGuideReopened: Bool
 
-    private let message = "New in 0.5: switch indicator themes, including Glass, Liquid Glass and a slot switcher. Scroll to Switch indicator to pick one."
+    private let message = "New in 0.6: updates install from here with Update Now, and CmdIME checks for them once a day (General > Check automatically)."
 
     var body: some View {
         if !isSetupGuideReopened && WhatsNewNotice.shouldShow(

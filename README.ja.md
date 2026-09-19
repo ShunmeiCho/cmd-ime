@@ -404,8 +404,8 @@ Mac App Store での配布には、サンドボックス化された別の App S
 ## パッケージとリリース
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.5.1
-shasum -a 256 dist/CmdIME-0.5.1.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.6.0
+shasum -a 256 dist/CmdIME-0.6.0.zip
 ```
 
 公証付きのリリースパッケージを作成するには、`Developer ID Application` の
@@ -432,12 +432,24 @@ Homebrew cask を公開する前に、`Casks/cmd-ime.rb` をリリース zip の
 します。これは、`Contents/MacOS` にある署名済みヘルパーへの互換用シンボリック
 リンクです。
 
-CmdIME は、設定画面の **General > Check for Updates** から、最近の GitHub
-Releases を確認できます。明示的にプレビューと記されたリリースも対象です。
-新しいバージョンがある場合は、リリースページを開き、1 行インストーラーで
-再インストールするか、Homebrew で更新してください。アプリ内での完全自動の
-置き換えは、署名と macOS の権限の挙動を予測可能に保つため、将来の Sparkle
-ベースのアップデーターに委ねています。
+### アップデート
+
+CmdIME はほとんどの時間ウインドウを表示しないため、新しいリリースを自分で確認します。
+1 日に最大 1 回、GitHub に最新のリリースを問い合わせ（それ以外の情報は送信しません）、
+新しいバージョンがあれば、そのバージョンについてシステム通知を 1 回だけ表示します。
+通知の許可を求めるのはそのときだけで、初回起動時には求めません。設定ウインドウの
+上部にも同じアップデートが表示され、**General** には手動確認用の **Check** と、
+毎日の確認をオフにする **Check automatically** スイッチがあります。
+
+**Update Now** はその場でアップデートをインストールします。リリースの zip を
+ダウンロードし、公開されている `.sha256` と照合し、新しいアプリが有効なコード署名を
+持ち、実行中のアプリと同じ開発者チームのものであることを検証したうえで、アプリ
+バンドルを置き換えて CmdIME を開き直します。署名の ID が変わらないため、
+Accessibility と Input Monitoring の許可は引き継がれます。**Release Notes** は
+GitHub のリリースページを開き、**Skip** はそのバージョンの通知を止めます。
+Homebrew でインストールした場合は、これまでどおり `brew upgrade` を使えます。
+その場でアップデートすると、次の `brew upgrade` まで Homebrew 側のバージョン記録は
+古いままになります。
 
 ## Homebrew
 
