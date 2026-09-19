@@ -114,7 +114,7 @@ macOS が権限を要求できるようにアプリを開きます。
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.6.4 CMDIME_SHA256=825e446dd3abfbdb4fd80b3b5cb99633f2ba0274e22b5f8d9d6eae35e42cd789 bash
+  CMDIME_VERSION=0.7.0 CMDIME_SHA256=76ffc1e46d594179452719eac58923df1020d129307d05296ab594fd44237420 bash
 ```
 
 インストール後、CmdIME を開き、システム設定 > プライバシーとセキュリティで
@@ -427,8 +427,8 @@ Mac App Store での配布には、サンドボックス化された別の App S
 ## パッケージとリリース
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.6.4
-shasum -a 256 dist/CmdIME-0.6.4.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.7.0
+shasum -a 256 dist/CmdIME-0.7.0.zip
 ```
 
 公証付きのリリースパッケージを作成するには、`Developer ID Application` の
