@@ -92,6 +92,17 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertEqual(placement, BubblePlacement(originX: 411, originY: 338, anchor: .bottomLeading))
     }
 
+    func testAccessibilityRectsFlipAroundThePrimaryDisplayOnly() {
+        // Primary 1512 x 982; an external display sits above it (AppKit y 982...2422).
+        let onPrimary = BubblePlacement.appKitRect(
+            fromAccessibility: .init(x: 400, y: 300, width: 2, height: 18), primaryDisplayHeight: 982)
+        XCTAssertEqual(onPrimary, .init(x: 400, y: 664, width: 2, height: 18))
+        // A caret on the display above has a negative accessibility y and stays above the primary.
+        let onExternal = BubblePlacement.appKitRect(
+            fromAccessibility: .init(x: 400, y: -500, width: 2, height: 18), primaryDisplayHeight: 982)
+        XCTAssertEqual(onExternal.y, 1464)
+    }
+
     func testFlipsBelowTheCaretNearTheTopEdge() {
         let caret = BubblePlacement.Rect(x: 400, y: 860, width: 2, height: 20)
         let placement = BubblePlacement.resolve(caret: caret, pointerX: 0, pointerY: 0,

@@ -11,6 +11,14 @@ public struct BubblePlacement: Equatable, Sendable {
         case topLeading
     }
 
+    /// Accessibility rects use a top-left origin at the top-left corner of the PRIMARY display;
+    /// AppKit uses a bottom-left origin at that display's bottom-left corner. Only the primary
+    /// display's height converts between them: using the tallest or topmost display instead
+    /// shifts every caret by that display's extent and lands the bubble on the wrong screen.
+    public static func appKitRect(fromAccessibility rect: Rect, primaryDisplayHeight: Double) -> Rect {
+        Rect(x: rect.x, y: primaryDisplayHeight - (rect.y + rect.height), width: rect.width, height: rect.height)
+    }
+
     public struct Rect: Equatable, Sendable {
         public var x: Double
         public var y: Double

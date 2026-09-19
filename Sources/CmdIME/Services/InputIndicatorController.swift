@@ -77,7 +77,10 @@ final class InputIndicatorController {
         ) else { return }
 
         let size = measure(model)
-        let caret = focusedCaretRect()
+        // An app that reports a caret outside every display (some launchers do) gets the pointer instead.
+        let caret = focusedCaretRect().flatMap { rect in
+            NSScreen.screens.contains { $0.frame.intersects(rect) } ? rect : nil
+        }
         let pointer = NSEvent.mouseLocation
         let newTarget = caret.map { CGPoint(x: $0.midX, y: $0.maxY) } ?? pointer
         let visible = screen(containing: newTarget).visibleFrame
@@ -285,9 +288,12 @@ final class InputIndicatorController {
 
     /// Accessibility rects have a top-left origin; AppKit's is bottom-left.
     private func convertAccessibilityRect(_ rect: CGRect) -> CGRect {
-        let maxY = NSScreen.screens.map(\.frame.maxY).max() ?? 0
-        let converted = CGRect(x: rect.minX, y: maxY - rect.maxY, width: rect.width, height: rect.height)
-        let top = CGPoint(x: converted.midX, y: converted.maxY)
-        return NSScreen.screens.contains { $0.frame.contains(top) } ? converted : rect
+        // screens[0] is always the primary display, the one both coordinate systems hang off.
+        let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
+        let flipped = BubblePlacement.appKitRect(
+            fromAccessibility: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
+            primaryDisplayHeight: primaryHeight
+        )
+        return CGRect(x: flipped.x, y: flipped.y, width: flipped.width, height: flipped.height)
     }
 }
