@@ -146,7 +146,6 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .reasons { list-style: none; padding: 0; margin: 36px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 48px; }
 .reasons li { color: var(--muted); }
 .reasons strong { display: block; color: var(--text); margin-bottom: 4px; font-size: 1.05rem; }
-.reasons li:first-child { grid-column: 1 / -1; max-width: 70ch; }
 @media (max-width: 760px) {
   .reasons { grid-template-columns: minmax(0, 1fr); gap: 20px; }
 }
@@ -159,14 +158,11 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .feature-text p + h3 { margin-top: 24px; }
 .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
 .split.reverse { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-.split.reverse .shot { order: -1; }
 .narrow { max-width: 62ch; margin-bottom: 24px; }
 .shot img { border-radius: var(--r-surf); margin: 0 auto; }
 .shot-narrow img { max-width: 520px; width: 100%; }
-.shot figcaption { text-align: center; }
 @media (max-width: 860px) {
   .split, .split.reverse { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-  .split.reverse .shot { order: 0; }
   .feature + .feature { margin-top: 56px; }
 }
 
@@ -192,7 +188,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   --slot-purple: #9664D8; --slot-orange: #E49B35; --slot-teal: #32A6A8;
   --dot: 9px;
 }
-.hero h1, h2, h3 { text-wrap: balance; }
+.hero h1 { text-wrap: balance; }
 .nw { white-space: nowrap; }
 .field::before,
 .install::before {
@@ -217,9 +213,8 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
   .code pre { white-space: pre; overflow-x: auto; overflow-wrap: normal; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
   .code .copy { align-self: flex-end; }
   /* Diagrams stay legible: swipe inside the figure instead of shrinking the text. */
-  .art { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 calc(-1 * var(--panel-pad)); padding: 0 var(--panel-pad) 8px; }
-  .art img { width: 720px; max-width: none; }
-  .art figcaption { max-width: calc(100vw - 2 * var(--gutter) - 2 * var(--panel-pad)); position: sticky; left: 0; }
+  .art .art-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .art .art-scroll img { width: 720px; max-width: none; }
 }
 .art img { width: 100%; }
 
@@ -437,14 +432,12 @@ main, .foot { position: relative; z-index: 1; }
 /* ---- Round 3: type scale, measure and line breaks ---- */
 :root {
   --h1-size: clamp(2rem, 1.25rem + 2.6vw, 3.1rem);
-  --measure: 62ch;          /* Latin reading paragraphs */
-  --measure-cjk: 30em;      /* about 28-30 ideographs per line */
+  --measure: 65ch;          /* Latin reading paragraphs */
+  --measure-cjk: 38em;      /* about 36-40 ideographs per line */
   --panel-pad: clamp(22px, 4.2vw, 52px);
   --panel-gap: clamp(28px, 4vw, 44px);
   --panel-radius: 24px;
 }
-h1, h2, h3, figcaption, .stage-hint { text-wrap: balance; }
-p, li { text-wrap: pretty; }                      /* no one-word last lines */
 .nw { white-space: nowrap; }
 /* CJK: strict punctuation rules (no line starts with 。、」), phrase-aware breaks in Japanese. */
 :lang(ja) { line-break: strict; word-break: auto-phrase; }
@@ -453,8 +446,6 @@ main :is(p, li, figcaption) { max-width: var(--measure); }
 html[data-ui="zh-CN"] main :is(p, li, figcaption),
 html[data-ui="ja"] main :is(p, li, figcaption) { max-width: var(--measure-cjk); }
 .stage-hint { max-width: 36em; }
-.reasons li:first-child { max-width: var(--measure); }
-.shot figcaption, .art figcaption { margin-left: auto; margin-right: auto; }
 @media (max-width: 480px) {
   :root { --h1-size: clamp(1.75rem, 7vw, 2rem); }
   .hero h1 { line-height: 1.15; }
@@ -513,3 +504,63 @@ p code, li code, h3 code { border: 0; }
 @media (prefers-reduced-motion: reduce) {
   .kc-cap, .btn, .copy { transition: none; }
 }
+
+/* ---- Structure below the hero ----
+   One content column (1040px, centred, 32px side padding; 16px on phones). Everything
+   starts at its left edge; nothing below the hero is centred except inside a diagram.
+   Figures (diagrams, video, screenshots) sit on a quiet surface so they read as part
+   of their section; text stays on the sheet. */
+:root {
+  --col-max: 1040px;
+  --col-pad: 32px;
+  --section-space: 120px;
+  --head-gap: 32px;
+  --block-gap: 32px;
+  --figure-fill: rgb(255 255 255 / 0.035);
+  --figure-pad: 20px;
+}
+@media (max-width: 760px) {
+  :root { --col-pad: 16px; --section-space: 72px; --figure-pad: 12px; }
+}
+.sheet { width: min(calc(var(--col-max) + 2 * var(--col-pad)), calc(100% - 2 * var(--gutter))); }
+@media (max-width: 760px) { .sheet { width: 100%; border-radius: 0; } }
+.sheet > .panel { padding: var(--section-space) var(--col-pad) 0; }
+.sheet > .panel:first-child { padding-top: 56px; }
+.sheet > .panel:last-child { padding-bottom: var(--section-space); }
+.sheet h2 { margin: 0 0 var(--head-gap); }
+.sheet figure { margin: 0; }
+.sheet figcaption { text-align: left; margin: 10px 0 0; max-width: none; }
+
+/* Figures: full column width on a quiet surface, caption directly under, left-aligned. */
+.sheet .art, .sheet .promo, .sheet .shot {
+  background: var(--figure-fill); border-radius: 16px; padding: var(--figure-pad);
+}
+.sheet .art img, .sheet .promo video { width: 100%; }
+.sheet .promo { margin-top: var(--block-gap); }
+.sheet .promo video { border-radius: 10px; }
+.sheet .shot img { margin: 0; border-radius: 10px; }
+.shot-narrow img { max-width: 100%; }
+
+/* Why: the reasons as an even grid of text blocks, no borders. */
+.reasons { margin: var(--block-gap) 0 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 48px; }
+@media (max-width: 760px) { .reasons { grid-template-columns: minmax(0, 1fr); gap: 24px; } }
+
+/* Features: text | image rows, top aligned, both columns filled. */
+.feature { margin-top: 0; }
+.feature + .feature { margin-top: 48px; }
+.split, .split.reverse { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: start; }
+.wide .narrow { max-width: var(--measure); margin-bottom: 24px; }
+@media (max-width: 860px) {
+  .split, .split.reverse { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+}
+.feature-text p { max-width: none; }
+
+/* Install and help: text blocks at the same left edge. */
+.install-grid { gap: var(--block-gap); }
+.trouble > div, .trouble > h3 { max-width: none; }
+/* Phones: diagrams keep a legible size and scroll sideways inside their surface. */
+@media (max-width: 640px) {
+  .sheet .art .art-scroll img { width: 720px; max-width: none; }
+}
+/* English only: avoid one-word last lines. CJK keeps plain strict wrapping. */
+html[data-ui="en"] main :is(p, li, figcaption) { text-wrap: pretty; }
