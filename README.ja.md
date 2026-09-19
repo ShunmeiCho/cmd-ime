@@ -70,7 +70,7 @@ macOS 13 以降が必要です。以降のアップデートは、アプリ内�
 > [!NOTE]
 > CmdIME はプレビュービルドです。署名済みですが、公証(notarize)はされていません。
 > 1 行のインストーラーを使うのがスムーズです。ブラウザーでダウンロードした zip は、
-> 初回に Gatekeeper によって止められます。[トラブルシューティング](#トラブルシューティング)を参照してください。
+> 初回に Gatekeeper によって「壊れている」と表示され、止められます。[トラブルシューティング](#トラブルシューティング)を参照してください。
 
 [![CmdIME のインストールと権限のデモ](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
@@ -432,20 +432,28 @@ stderr に通知が出力されます。これは、古いバイナリによっ�
 <details>
 <summary><strong>"CmdIME is damaged" または "Apple cannot check it for malicious software" と表示される</strong></summary>
 
-現在のプレビュービルドは公証されていないため、ブラウザーでダウンロードした zip を開くと、
-macOS がこのような警告を表示します。ダウンロードしたリリースを信頼できる場合は、CmdIME を
-一度開こうとしてから、システム設定 > プライバシーとセキュリティに移動し、**Open Anyway**
-(このまま開く)を選択してください。必要に応じて、ブラウザーが付与した quarantine 属性を
-削除します。
+アプリは壊れていません。プレビュービルドは署名済みですが公証されておらず、ブラウザーで
+ダウンロードした zip には隔離（quarantine）属性が付くため、Gatekeeper が初回起動を止めます。
+「壊れている」というメッセージでは、通常 **Open Anyway**（このまま開く）は表示されません。
+次のどちらかで開けます。
 
-```sh
-xattr -dr com.apple.quarantine /Applications/CmdIME.app
-```
+1. ダウンロードした zip とアプリを削除し、1 行のインストーラーで入れ直します。ブラウザーの
+   隔離の仕組みを通りません。
 
-1 行のインストーラーを使えば、ブラウザーによる quarantine の流れを避けられます。確認の
-仕組みについては、Apple の
-[Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web)
-と [Developer ID](https://developer.apple.com/developer-id/) のドキュメントで説明されています。
+   ```sh
+   curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash
+   ```
+
+2. ダウンロードしたアプリを使う場合は、`CmdIME.app` を「アプリケーション」
+   （`/Applications`）に移してから、隔離属性を削除します。
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/CmdIME.app
+   ```
+
+"Apple cannot check it for malicious software" と表示された場合は、システム設定 >
+プライバシーとセキュリティに **Open Anyway** が出ることがあります。上の方法で属性を
+削除しても開けます。確認の仕組みについては、Apple の [Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web) と [Developer ID](https://developer.apple.com/developer-id/) のドキュメントで説明されています。
 
 </details>
 

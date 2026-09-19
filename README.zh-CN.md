@@ -63,7 +63,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 > [!NOTE]
 > CmdIME 目前是预览版本：已签名，但未经公证。一行命令的安装脚本是最顺畅的方式。
-> 通过浏览器下载的 zip 在首次打开时会被 Gatekeeper 拦下；
+> 通过浏览器下载的 zip 在首次打开时会被 Gatekeeper 拦下，提示“已损坏”；
 > 参见[故障排除](#故障排除)。
 
 [![CmdIME 安装与权限演示](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
@@ -369,19 +369,25 @@ GUI 会把原文件备份为配置文件旁边的 `config.json.before-reset.bak`
 <details>
 <summary><strong>"CmdIME is damaged" 或 "Apple cannot check it for malicious software"</strong></summary>
 
-由于当前的预览版本没有经过公证，当你打开通过浏览器下载的 zip 时，macOS 会显示类似
-"CmdIME is damaged"（CmdIME 已损坏）或 "Apple cannot check it for malicious software"
-（Apple 无法检查其是否包含恶意软件）的警告。如果你信任自己下载的发布版本，请先尝试打开
-一次 CmdIME，然后前往系统设置 > 隐私与安全性，选择 **Open Anyway**（仍要打开）。
-如有需要，也可以移除浏览器添加的隔离属性：
+应用并没有损坏。预览版已签名但未公证，而浏览器下载的 zip 会带上隔离标记，所以 Gatekeeper
+会拦住第一次启动。“已损坏”这个提示下通常没有 **Open Anyway**（仍要打开）可点。下面两种方法
+任选其一：
 
-```sh
-xattr -dr com.apple.quarantine /Applications/CmdIME.app
-```
+1. 删掉下载的 zip 和应用，用一行命令重新安装。它不经过浏览器的隔离流程：
 
-一行命令的安装脚本不会经过浏览器的隔离流程。Apple 关于
-[Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web)
-和 [Developer ID](https://developer.apple.com/developer-id/) 的文档说明了这些检查。
+   ```sh
+   curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash
+   ```
+
+2. 或者保留已下载的应用：先把 `CmdIME.app` 移到“应用程序”（`/Applications`），再去掉隔离标记：
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/CmdIME.app
+   ```
+
+如果 macOS 显示的是 "Apple cannot check it for malicious software"（Apple 无法检查其是否包含
+恶意软件），系统设置 > 隐私与安全性里可能会有 **Open Anyway**；按上面的方法去掉标记也可以。
+Apple 关于 [Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web) 和 [Developer ID](https://developer.apple.com/developer-id/) 的文档说明了这些检查。
 
 </details>
 

@@ -67,8 +67,8 @@ Requires macOS 13 or later. Later updates install from inside the app with
 
 > [!NOTE]
 > CmdIME is a preview build: signed, not notarized. The one-line installer is the
-> smooth path. A zip downloaded in a browser is stopped by Gatekeeper the first time;
-> see [Troubleshooting](#troubleshooting).
+> smooth path. A zip downloaded in a browser is stopped by Gatekeeper with an "is damaged"
+> message; see [Troubleshooting](#troubleshooting).
 
 [![CmdIME install and permissions demo](demo-videos/renders/preview-install-permissions.gif)](demo-videos/renders/cmdime-install-permissions-demo.mp4)
 
@@ -412,18 +412,27 @@ legacy slots on the next upgrade.
 <details>
 <summary><strong>"CmdIME is damaged" or "Apple cannot check it for malicious software"</strong></summary>
 
-Current preview builds are not notarized, so macOS shows a warning like this when you
-open a zip downloaded in a browser. If you trust the release you downloaded, try opening
-CmdIME once, then go to System Settings > Privacy & Security and choose **Open Anyway**.
-If needed, remove the browser quarantine attribute:
+The app is not damaged. Preview builds are signed but not notarized, and a zip downloaded
+in a browser carries a quarantine flag, so Gatekeeper blocks the first launch. The "is
+damaged" message usually offers no **Open Anyway**. Either of these works:
 
-```sh
-xattr -dr com.apple.quarantine /Applications/CmdIME.app
-```
+1. Delete the downloaded zip and app, then install with the one-line installer, which
+   does not go through the browser quarantine:
 
-The one-line installer avoids the browser quarantine flow. Apple's documentation on
-[Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web)
-and [Developer ID](https://developer.apple.com/developer-id/) explains the checks.
+   ```sh
+   curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash
+   ```
+
+2. Or keep the downloaded app: move `CmdIME.app` to `/Applications`, then remove the
+   quarantine flag:
+
+   ```sh
+   xattr -dr com.apple.quarantine /Applications/CmdIME.app
+   ```
+
+If macOS shows "Apple cannot check it for malicious software" instead, System Settings >
+Privacy & Security may offer **Open Anyway**; removing the flag as above also works.
+Apple's documentation on [Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web) and [Developer ID](https://developer.apple.com/developer-id/) explains the checks.
 
 </details>
 
