@@ -94,7 +94,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.6.0 CMDIME_SHA256=d63b25819d3a6efec87acd9fdc2f0f6fb9eed641c50cfbe9e3694e54c51854c4 bash
+  CMDIME_VERSION=0.6.1 CMDIME_SHA256=cd5455a30cd43739e1ff8f4fb7144238e6b1c1809a778f5fdae0e3c410ea2842 bash
 ```
 
 安装完成后，打开 CmdIME，并在系统设置 > 隐私与安全性中同时授予 **Accessibility**（辅助功能）
