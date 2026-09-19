@@ -505,7 +505,9 @@ public final class EventTapMonitor: @unchecked Sendable {
             return
         }
         // Only a live tap posts keys; a monitor that was never started has nothing to activate.
+        // The strategy check comes first so unlisted input methods do no extra work, not even a TIS read.
         guard kanaKeyPoster != nil || isRunning,
+              SwitchActivationPolicy.strategy(for: source) == .kanaThenSelect,
               SwitchActivationPolicy.needsKanaPrelude(target: source, current: try? inputSources.currentInputSource()) else {
             select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
             return
