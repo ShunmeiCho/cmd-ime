@@ -3,7 +3,6 @@
 
   var LANGS = ["en", "zh-CN", "ja"];
   var STORAGE_KEY = "cmdime-lang";
-  var RELEASES_URL = "https://github.com/ShunmeiCho/cmd-ime/releases/latest";
   var API_URL = "https://api.github.com/repos/ShunmeiCho/cmd-ime/releases/latest";
   var COPIED_MS = 1600;
   var TITLES = {
@@ -113,7 +112,7 @@
         var assets = release && release.assets ? release.assets : [];
         var zip = null;
         for (var i = 0; i < assets.length; i++) {
-          if (/\.zip$/i.test(assets[i].name)) { zip = assets[i]; break; }
+          if (/^CmdIME-[0-9.]+\.zip$/.test(assets[i].name)) { zip = assets[i]; break; }
         }
         if (!zip || !/^https:\/\/github\.com\//.test(zip.browser_download_url)) return;
         document.getElementById("zip-link").href = zip.browser_download_url;
@@ -123,7 +122,7 @@
         }
       })
       .catch(function () {
-        document.getElementById("zip-link").href = RELEASES_URL;
+        // Keep the page's default link: the fixed-name CmdIME.zip of the latest release.
       });
   }
 
