@@ -21,13 +21,16 @@ final class UpdatePackageTests: XCTestCase {
         XCTAssertNil(UpdatePackage.publishedChecksum(from: ""))
     }
 
-    func testBackgroundCheckRunsAtMostEverySixHoursAndOnlyWhenEnabled() {
+    func testBackgroundCheckFollowsTheChosenFrequencyAndOnlyRunsWhenEnabled() {
         let now = Date(timeIntervalSince1970: 1_000_000)
         XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init()))
         XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(isEnabled: false)))
         XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(-3600))))
         XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(-6 * 3600))))
         XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(-6 * 3600 + 1))))
+        XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(frequency: .daily, lastCheck: now.addingTimeInterval(-6 * 3600))))
+        XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init(frequency: .daily, lastCheck: now.addingTimeInterval(-86_400))))
+        XCTAssertFalse(UpdateReminderPolicy.shouldCheck(now: now, state: .init(frequency: .weekly, lastCheck: now.addingTimeInterval(-6 * 86_400))))
         // A clock moved backwards still checks.
         XCTAssertTrue(UpdateReminderPolicy.shouldCheck(now: now, state: .init(lastCheck: now.addingTimeInterval(500))))
     }
@@ -42,5 +45,6 @@ final class UpdatePackageTests: XCTestCase {
         XCTAssertTrue(UpdateReminderPolicy.shouldNotify(latest: "0.6.1", current: "0.5.1",
                                                         state: .init(lastNotifiedVersion: "0.6.0", skippedVersion: "0.6.0")))
         XCTAssertFalse(UpdateReminderPolicy.shouldNotify(latest: "0.6.0", current: "0.5.1", state: .init(isEnabled: false)))
+        XCTAssertFalse(UpdateReminderPolicy.shouldNotify(latest: "0.6.0", current: "0.5.1", state: .init(notifies: false)))
     }
 }

@@ -182,6 +182,28 @@ private struct SettingsHeader: View {
 
 private extension SettingsHeader {
     /// Every action row spans the panel, so the left and right edges line up.
+    /// Says what macOS currently allows, because the switch above cannot override it.
+    @ViewBuilder
+    var notificationPermissionNote: some View {
+        switch model.notificationPermission {
+        case .blocked:
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Notifications for CmdIME are turned off in System Settings.")
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Open Notification Settings…") { UpdateNotification.openSystemSettings() }
+            }
+        case .notAsked:
+            Text("macOS will ask for permission the first time there is an update.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        case .allowed, .unknown:
+            EmptyView()
+        }
+    }
+
     func generalRow(_ title: String, prominent: Bool = false, destructive: Bool = false,
                     action: @escaping () -> Void) -> some View {
         Button(role: destructive ? .destructive : nil, action: action) {
@@ -205,6 +227,10 @@ private extension SettingsHeader {
         .buttonStyle(ConsoleButtonStyle())
         .fixedSize()
         .accessibilityLabel("General")
+        .onChange(of: showsGeneral) { isShown in
+            // The answer can change in System Settings while CmdIME keeps running.
+            if isShown { model.refreshNotificationPermission() }
+        }
         .popover(isPresented: $showsGeneral, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
                 HStack {
@@ -242,7 +268,30 @@ private extension SettingsHeader {
                     .tint(DesignTokens.Colors.success)
                     .controlSize(.small)
                 }
-                .help("A few times a day CmdIME asks GitHub for the newest release. Nothing else is sent.")
+                .help("CmdIME asks GitHub for the newest release. Nothing else is sent.")
+                if model.checksForUpdatesAutomatically {
+                    Picker("Check every", selection: Binding(
+                        get: { model.updateCheckFrequency }, set: { model.updateCheckFrequency = $0 }
+                    )) {
+                        ForEach(UpdateCheckFrequency.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .controlSize(.small)
+                    .accessibilityLabel("How often to check for updates")
+                    HStack {
+                        Text("Notify me about updates")
+                        Spacer(minLength: DesignTokens.Layout.rowGap)
+                        Toggle("Notify me about updates", isOn: Binding(
+                            get: { model.notifiesAboutUpdates }, set: { model.notifiesAboutUpdates = $0 }
+                        ))
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .tint(DesignTokens.Colors.success)
+                        .controlSize(.small)
+                    }
+                    if model.notifiesAboutUpdates { notificationPermissionNote }
+                }
                 Divider()
                 generalRow("Show Setup Guide") {
                     showsGeneral = false

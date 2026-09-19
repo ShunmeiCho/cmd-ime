@@ -29,6 +29,7 @@ final class AppModel: ObservableObject {
     /// Non-nil while an update is being installed; the text is shown as is.
     @Published private(set) var updateInstallStage: String?
     @Published private(set) var updateInstallError: String?
+    @Published private(set) var notificationPermission = NotificationPermission.unknown
     private var updateReminderTimer: Timer?
     @Published private(set) var sourceRefreshMessage: String?
     private var selectedSourceObserver: InputSourceChangeObserver?
@@ -368,6 +369,8 @@ final class AppModel: ObservableObject {
 
     private enum ReminderKey {
         static let enabled = "updateReminder.enabled"
+        static let frequency = "updateReminder.frequency"
+        static let notifies = "updateReminder.notifies"
         static let lastCheck = "updateReminder.lastCheck"
         static let lastNotified = "updateReminder.lastNotifiedVersion"
         static let skipped = "updateReminder.skippedVersion"
@@ -377,6 +380,8 @@ final class AppModel: ObservableObject {
         let defaults = UserDefaults.standard
         return UpdateReminderState(
             isEnabled: defaults.object(forKey: ReminderKey.enabled) as? Bool ?? true,
+            frequency: defaults.string(forKey: ReminderKey.frequency).flatMap(UpdateCheckFrequency.init) ?? .sixHours,
+            notifies: defaults.object(forKey: ReminderKey.notifies) as? Bool ?? true,
             lastCheck: defaults.object(forKey: ReminderKey.lastCheck) as? Date,
             lastNotifiedVersion: defaults.string(forKey: ReminderKey.lastNotified),
             skippedVersion: defaults.string(forKey: ReminderKey.skipped)
@@ -392,8 +397,32 @@ final class AppModel: ObservableObject {
         }
     }
 
+    var updateCheckFrequency: UpdateCheckFrequency {
+        get { reminderState.frequency }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue.rawValue, forKey: ReminderKey.frequency)
+            runUpdateReminderIfDue()
+        }
+    }
+
+    var notifiesAboutUpdates: Bool {
+        get { reminderState.notifies }
+        set {
+            objectWillChange.send()
+            UserDefaults.standard.set(newValue, forKey: ReminderKey.notifies)
+            // Turning it on is the user asking for notifications, so this is the moment to let macOS ask.
+            guard newValue else { return }
+            Task { notificationPermission = await UpdateNotification.requestPermission() }
+        }
+    }
+
+    func refreshNotificationPermission() {
+        Task { notificationPermission = await UpdateNotification.permission() }
+    }
+
     /// The app has no window most of the time, so it looks for a new release itself,
-    /// at most every six hours, and says so once per version through a system notification.
+    /// as often as the user chose, and says so once per version through a system notification.
     func startUpdateReminder() {
         runUpdateReminderIfDue()
         updateReminderTimer = Timer.scheduledTimer(withTimeInterval: 60 * 60, repeats: true) { [weak self] _ in
@@ -406,7 +435,7 @@ final class AppModel: ObservableObject {
         UserDefaults.standard.set(Date(), forKey: ReminderKey.lastCheck)
         let currentVersion = Self.currentVersion
         Task {
-            // A failed background check stays quiet; the next one is a day away.
+            // A failed background check stays quiet; the next one comes with the next interval.
             guard let result = try? await updates.check(currentVersion: currentVersion), result.isUpdateAvailable else { return }
             updateStatus = .available(result)
             guard UpdateReminderPolicy.shouldNotify(latest: result.latestVersion, current: currentVersion,
