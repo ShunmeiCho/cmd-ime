@@ -3,6 +3,7 @@ import KeyboardSwitcherCore
 
 #if os(macOS)
 import AppKit
+import Carbon
 #endif
 
 enum CLIError: Error, LocalizedError {
@@ -123,6 +124,8 @@ struct CLI {
             try switchRole()
         case "source":
             try sourceCommand(Array(args.dropFirst()))
+        case "activate":
+            try activate(Array(args.dropFirst()))
         case "diagnose":
             try diagnose(json: args.contains("--json"))
         case "lab":
@@ -225,6 +228,28 @@ struct CLI {
             exit(1)
         }
         print("Selected \(source.localizedName) for \(role.rawValue)")
+        #else
+        throw CLIError.unsupportedPlatform
+        #endif
+    }
+
+    /// Selects one input source and exits, doing nothing else.
+    ///
+    /// `source` is the command for people: it explains refusals, confirms the switch and reports.
+    /// Recovery cannot use it. Measured 2026-09-20: with the caret run selected through
+    /// accessibility, selecting via `source` left WeType committing latin 8 times out of 8, while
+    /// this bare selection composed 8 times out of 8. Which of `source`'s extra steps does it is
+    /// not established; until it is, recovery takes the path that was measured to work.
+    private func activate(_ arguments: [String]) throws {
+        #if os(macOS)
+        guard let id = arguments.first, !id.isEmpty else {
+            throw CLIError.missingArgument("input-source-id")
+        }
+        let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
+        guard let list = TISCreateInputSourceList(filter, false)?.takeRetainedValue() as? [TISInputSource],
+              let source = list.first, TISSelectInputSource(source) == noErr else {
+            exit(1)
+        }
         #else
         throw CLIError.unsupportedPlatform
         #endif

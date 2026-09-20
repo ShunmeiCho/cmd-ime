@@ -4,6 +4,7 @@ import ApplicationServices
 import Carbon
 import Foundation
 import KeyboardSwitcherCore
+import os
 
 /// Puts pinyin that came out as latin back into the Chinese input source, once, on request.
 ///
@@ -17,8 +18,14 @@ final class RecoveryRunner {
     /// 80 ms after the last key made WeType take the replayed letters as latin in 8 of 10 runs,
     /// while 200 ms passed 10 of 10.
     private static let quietBeforeSwitch: TimeInterval = 0.2
-    /// Spacing between replayed letters, the pace the real-Mac run used.
+    /// Spacing between replayed letters, and between a letter's down and up. Both are the pace
+    /// the real-Mac run used; a press with no time in it does not reach the input method.
     private static let replayInterval: TimeInterval = 0.09
+    private static let keyHold: TimeInterval = 0.03
+    /// Extra time after the first replayed key. That key does the most work — it replaces the
+    /// selected run and starts the composition — and the measured runs that composed all left
+    /// this much room after it.
+    private static let firstKeySettle: TimeInterval = 0.4
     private static let switchSettle: TimeInterval = 0.5
 
     private let service: MacInputSourceService
@@ -29,6 +36,14 @@ final class RecoveryRunner {
     private var isRunning = false
 
     var onMessage: ((String) -> Void)?
+    /// A refusal the user cannot see is indistinguishable from a broken feature, and the settings
+    /// window is usually closed when recovery is used. Every outcome goes to the system log too.
+    private let log = Logger(subsystem: "com.shunmei.cmd-ime", category: "recovery")
+
+    private func report(_ message: String) {
+        log.notice("\(message, privacy: .public)")
+        onMessage?(message)
+    }
 
     init(service: MacInputSourceService, keyboardctlURL: URL?) {
         self.service = service
@@ -41,7 +56,7 @@ final class RecoveryRunner {
             InputSourceMatcher.bestMatch(for: role, sources: $0, config: config)
         }
         guard let element = focusedElement(), let caret = selectedRange(element) else {
-            onMessage?("Recovery needs to see the text field, and it cannot.")
+            report("Recovery needs to see the text field, and it cannot.")
             return
         }
 
@@ -64,7 +79,10 @@ final class RecoveryRunner {
 
         switch RecoveryPolicy.decide(context) {
         case let .refuse(refusal):
-            onMessage?(refusal.message)
+            report("refused: \(refusal.message) [app \(context.bundleID), role \(context.axRole), "
+                + "subrole \(context.axSubrole ?? "none"), editable \(context.isEditable), "
+                + "selection \(context.hasSelection), marked \(String(describing: context.hasMarkedText)), "
+                + "target \(context.targetSourceID ?? "none")]")
         case let .recover(run):
             isRunning = true
             // The whole thing takes about a second of waiting, and none of it may block the
@@ -78,12 +96,12 @@ final class RecoveryRunner {
 
     private func recover(run: String, element: AXUIElement, caret: CFRange, target: InputSourceInfo?) async {
         guard let target, let keyboardctlURL else {
-            onMessage?("Recovery is not set up.")
+            report("Recovery is not set up.")
             return
         }
         let keys = run.compactMap { try? ShortcutParser.parse(String($0)) }
         guard keys.count == run.count else {
-            onMessage?("Recovery cannot type \"\(run)\" on this keyboard.")
+            report("Recovery cannot type \"\(run)\" on this keyboard.")
             return
         }
 
@@ -93,22 +111,32 @@ final class RecoveryRunner {
               let readBack = selectedRange(element),
               readBack.location == range.location, readBack.length == range.length,
               stringAttribute(element, kAXSelectedTextAttribute as String) == run else {
-            onMessage?("Recovery stopped before changing anything: the editor did not take the selection.")
+            report("Recovery stopped before changing anything: the editor did not take the selection.")
             return
         }
 
         await sleep(Self.quietBeforeSwitch)
+        log.notice("selecting \(target.id, privacy: .public) through \(keyboardctlURL.path, privacy: .public)")
         guard selectThroughChildProcess(id: target.id, executable: keyboardctlURL) else {
             _ = setSelectedRange(element, CFRange(location: caret.location, length: 0))
-            onMessage?("Recovery stopped before changing anything: \(target.localizedName) would not activate.")
+            report("Recovery stopped before changing anything: \(target.localizedName) would not activate.")
             return
         }
         await sleep(Self.switchSettle)
+        log.notice("""
+            before replay: current \((try? self.service.currentInputSource())?.id ?? "unknown", privacy: .public),             selection \(String(describing: self.selectedRange(element)), privacy: .public),             selected text \(self.stringAttribute(element, kAXSelectedTextAttribute as String) ?? "nil", privacy: .public)
+            """)
 
-        for key in keys {
-            postLetter(key)
-            await sleep(Self.replayInterval)
+        for (index, key) in keys.enumerated() {
+            EventTapMonitor.postMarkedKey(keyCode: key.keyCode, isDown: true)
+            await sleep(Self.keyHold)
+            EventTapMonitor.postMarkedKey(keyCode: key.keyCode, isDown: false)
+            await sleep(index == 0 ? Self.firstKeySettle : Self.replayInterval)
         }
+        await sleep(0.4)
+        log.notice("""
+            after replay: text \(self.stringAttribute(element, kAXValueAttribute as String) ?? "nil", privacy: .public),             selection \(String(describing: self.selectedRange(element)), privacy: .public),             trusted \(AXIsProcessTrusted(), privacy: .public),             keyCodes \(keys.map(\.keyCode).map(String.init).joined(separator: ","), privacy: .public)
+            """)
     }
 
     private func sleep(_ seconds: TimeInterval) async {
@@ -118,16 +146,17 @@ final class RecoveryRunner {
     // MARK: - Selection, in a process of its own
 
     private func selectThroughChildProcess(id: String, executable: URL) -> Bool {
+        runChild(executable: executable, arguments: ["activate", id])
+    }
+
+    @discardableResult
+    private func runChild(executable: URL, arguments: [String]) -> Bool {
         let child = Process()
         child.executableURL = executable
-        child.arguments = ["source", id, "--quiet"]
+        child.arguments = arguments
         do { try child.run() } catch { return false }
         child.waitUntilExit()
         return child.terminationStatus == 0
-    }
-
-    private func postLetter(_ trigger: KeyTrigger) {
-        EventTapMonitor.postMarkedKey(keyCode: trigger.keyCode)
     }
 
     // MARK: - Accessibility

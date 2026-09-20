@@ -642,13 +642,18 @@ public final class EventTapMonitor: @unchecked Sendable {
 
     /// Posts one plain key press marked as ours, so this monitor's own tap passes it through.
     /// Recovery replays the pinyin through this.
-    public static func postMarkedKey(keyCode: Int) {
-        for isDown in [true, false] {
-            let event = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(keyCode), keyDown: isDown)
-            event?.flags = []
-            event?.setIntegerValueField(.eventSourceUserData, value: EventTapMonitor.syntheticEventMarker)
-            event?.post(tap: .cghidEventTap)
-        }
+    /// One half of a key press, marked as ours so this monitor's own tap passes it through.
+    ///
+    /// The caller sends the down and the up separately because it must leave time between them:
+    /// an input method that is handed a zero-length press does not compose from it.
+    public static func postMarkedKey(keyCode: Int, isDown: Bool) {
+        // A real HID-backed source, not nil: the letters have to reach the input method the way a
+        // keyboard's do.
+        let source = CGEventSource(stateID: .hidSystemState)
+        let event = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(keyCode), keyDown: isDown)
+        event?.flags = []
+        event?.setIntegerValueField(.eventSourceUserData, value: EventTapMonitor.syntheticEventMarker)
+        event?.post(tap: .cghidEventTap)
     }
 
     public static func postKanaKeyEvent() {
