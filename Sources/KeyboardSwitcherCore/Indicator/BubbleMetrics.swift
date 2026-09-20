@@ -28,11 +28,11 @@ public struct BubbleMetrics: Equatable, Sendable {
     /// would shrink under their own text and overlap.
     public static let switcherMinimumFactor = 0.90
 
-    /// The scale the bubble really uses, so the settings slider can show it.
-    public static func effectiveScale(_ scale: Double, size: SwitchIndicatorSize, archetype: BubbleArchetype) -> Double {
-        let clamped = SwitcherConfig.clampedSwitchIndicatorScale(scale)
-        guard archetype == .switcher else { return clamped }
-        return min(max(clamped, switcherMinimumFactor / factor(for: size)), SwitcherConfig.maxSwitchIndicatorScale)
+    /// The size the bubble really draws at, so the settings slider can show the truth
+    /// instead of a number the archetype's floor then overrides.
+    public static func effectiveFactor(_ factor: Double, archetype: BubbleArchetype) -> Double {
+        let minimum = archetype == .switcher ? switcherMinimumFactor : 0
+        return max(SwitcherConfig.clampedSwitchIndicatorSizeFactor(factor), minimum)
     }
 
     enum Base {
@@ -76,9 +76,9 @@ public struct BubbleMetrics: Equatable, Sendable {
     /// Height of the bubble before any content grows it; caps the corner radius.
     public let baseHeight: Double
 
-    public init(size: SwitchIndicatorSize, scale: Double, textScale: Double, theme: IndicatorTheme) {
+    public init(sizeFactor requested: Double, textScale: Double, theme: IndicatorTheme) {
         let archetype = theme.archetype
-        let factor = Self.factor(for: size) * Self.effectiveScale(scale, size: size, archetype: archetype)
+        let factor = Self.effectiveFactor(requested, archetype: archetype)
         let textFactor = factor * IndicatorTypography.clampedTextScale(textScale)
         let isStacked = archetype == .stackedText
         let baseDetail = isStacked ? Base.stackedDetailSize
@@ -126,6 +126,8 @@ public struct BubbleMetrics: Equatable, Sendable {
         tileRadius = min((theme.tileCornerRadius ?? concentric) * factor, tileRadiusCap)
     }
 
+    /// What each of the three retired Size buttons meant, kept so a file written
+    /// before the two size controls were merged folds to the size it was drawing.
     static func factor(for size: SwitchIndicatorSize) -> Double {
         switch size {
         case .small: 0.82

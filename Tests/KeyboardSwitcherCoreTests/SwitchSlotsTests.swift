@@ -332,7 +332,7 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertEqual(decoded.slots.map(\.id), [.english, orphan])
         XCTAssertEqual(decoded.slots.first, first)
         XCTAssertEqual(decoded.version, 1)
-        XCTAssertEqual(decoded.migrated().version, 2)
+        XCTAssertEqual(decoded.migrated().version, SwitcherConfig.currentVersion)
         XCTAssertEqual(SwitcherConfig.normalizedSlots([], bindings: []), SwitchSlot.legacyDefaults)
     }
 
@@ -594,8 +594,7 @@ final class SwitchSlotsTests: XCTestCase {
     func testRebuildingReplacesAllSlotDataPreservesGlobalSettingsAndIsPure() throws {
         var original = try SwitcherConfig.default.addingSlot(for: source("old.ko")).config
         original.showSwitchIndicator = false
-        original.switchIndicatorSize = .large
-        original.switchIndicatorScale = 1.23
+        original.switchIndicatorSizeFactor = 1.23
         original.switchIndicatorColorStyle = .custom
         original.switchIndicatorContentStyle = .textOnly
         original.switchIndicatorCustomColorHex = "#123456"

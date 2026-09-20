@@ -251,10 +251,15 @@ public enum SwitchIndicatorContentStyle: String, Codable, CaseIterable, Identifi
 }
 
 public struct SwitcherConfig: Codable, Equatable, Sendable {
-    public static let currentVersion = 2
-    public static let defaultSwitchIndicatorScale = 1.0
-    public static let minSwitchIndicatorScale = 0.4
-    public static let maxSwitchIndicatorScale = 1.3
+    public static let currentVersion = 3
+    /// One number decides the indicator's size. It used to be two that multiplied -
+    /// a Size of small, medium or large and a Scale on top of it - which meant the
+    /// same percentage stood for a different size at each Size, and at the switcher's
+    /// floor the slider bottomed out reading 110 %. The range spans what those two
+    /// together could reach.
+    public static let defaultSwitchIndicatorSizeFactor = 1.0
+    public static let minSwitchIndicatorSizeFactor = 0.33
+    public static let maxSwitchIndicatorSizeFactor = 1.60
 
     public var slots: [SwitchSlot]
     public var version: Int
@@ -263,8 +268,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var hasCompletedSetup: Bool
     public var lastSeenWhatsNewVersion: String?
     public var showSwitchIndicator: Bool
-    public var switchIndicatorSize: SwitchIndicatorSize
-    public var switchIndicatorScale: Double
+    /// The whole size of the indicator, 1.0 being its designed size.
+    public var switchIndicatorSizeFactor: Double
     public var switchIndicatorColorStyle: SwitchIndicatorColorStyle
     public var switchIndicatorContentStyle: SwitchIndicatorContentStyle
     public var switchIndicatorCustomColorHex: String
@@ -280,8 +285,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         lastSeenWhatsNewVersion: String? = nil,
         slots: [SwitchSlot] = SwitchSlot.legacyDefaults,
         showSwitchIndicator: Bool = true,
-        switchIndicatorSize: SwitchIndicatorSize = .medium,
-        switchIndicatorScale: Double = SwitcherConfig.defaultSwitchIndicatorScale,
+        switchIndicatorSizeFactor: Double = SwitcherConfig.defaultSwitchIndicatorSizeFactor,
         switchIndicatorColorStyle: SwitchIndicatorColorStyle = .role,
         switchIndicatorContentStyle: SwitchIndicatorContentStyle = .iconAndText,
         switchIndicatorCustomColorHex: String = "#2F7CF6",
@@ -295,8 +299,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.hasCompletedSetup = hasCompletedSetup
         self.lastSeenWhatsNewVersion = lastSeenWhatsNewVersion
         self.showSwitchIndicator = showSwitchIndicator
-        self.switchIndicatorSize = switchIndicatorSize
-        self.switchIndicatorScale = Self.clampedSwitchIndicatorScale(switchIndicatorScale)
+        self.switchIndicatorSizeFactor = Self.clampedSwitchIndicatorSizeFactor(switchIndicatorSizeFactor)
         self.switchIndicatorColorStyle = switchIndicatorColorStyle
         self.switchIndicatorContentStyle = switchIndicatorContentStyle
         self.switchIndicatorCustomColorHex = switchIndicatorCustomColorHex
@@ -306,8 +309,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.inputSources = inputSources
     }
 
-    public static func clampedSwitchIndicatorScale(_ value: Double) -> Double {
-        min(max(value, minSwitchIndicatorScale), maxSwitchIndicatorScale)
+    public static func clampedSwitchIndicatorSizeFactor(_ value: Double) -> Double {
+        guard value.isFinite else { return defaultSwitchIndicatorSizeFactor }
+        return min(max(value, minSwitchIndicatorSizeFactor), maxSwitchIndicatorSizeFactor)
     }
 
     public static var `default`: SwitcherConfig {
@@ -446,6 +450,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case lastSeenWhatsNewVersion
         case slots
         case showSwitchIndicator
+        case switchIndicatorSizeFactor
+        /// Written, never read back on a current file: a build from before the two
+        /// size controls were merged multiplies these together, and this pair makes
+        /// that product the size this file actually asks for.
         case switchIndicatorSize
         case switchIndicatorScale
         case switchIndicatorColorStyle
@@ -463,11 +471,23 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         hasCompletedSetup = try container.decodeIfPresent(Bool.self, forKey: .hasCompletedSetup) ?? true
         lastSeenWhatsNewVersion = try container.decodeIfPresent(String.self, forKey: .lastSeenWhatsNewVersion)
         showSwitchIndicator = try container.decodeIfPresent(Bool.self, forKey: .showSwitchIndicator) ?? true
-        switchIndicatorSize = try container.decodeIfPresent(SwitchIndicatorSize.self, forKey: .switchIndicatorSize) ?? .medium
-        switchIndicatorScale = Self.clampedSwitchIndicatorScale(
-            try container.decodeIfPresent(Double.self, forKey: .switchIndicatorScale)
-                ?? Self.defaultSwitchIndicatorScale
-        )
+        // A file written before the merge carries the two controls that multiplied;
+        // their product is the size it was rendering, so folding it keeps that size
+        // to the point. A current file states the size once and the legacy pair it
+        // also carries is ignored.
+        let storedSizeFactor = try container.decodeIfPresent(Double.self, forKey: .switchIndicatorSizeFactor)
+        if let storedSizeFactor, version >= 3 {
+            switchIndicatorSizeFactor = Self.clampedSwitchIndicatorSizeFactor(storedSizeFactor)
+        } else {
+            let legacySize = try container.decodeIfPresent(SwitchIndicatorSize.self, forKey: .switchIndicatorSize) ?? .medium
+            // The old Scale was clamped to 0.4...1.3 before it multiplied, so the fold
+            // reproduces the size that build drew rather than the number on disk.
+            let storedScale = try container.decodeIfPresent(Double.self, forKey: .switchIndicatorScale) ?? 1.0
+            let legacyScale = min(max(storedScale.isFinite ? storedScale : 1.0, 0.4), 1.3)
+            switchIndicatorSizeFactor = Self.clampedSwitchIndicatorSizeFactor(
+                BubbleMetrics.factor(for: legacySize) * legacyScale
+            )
+        }
         switchIndicatorColorStyle = try container.decodeIfPresent(
             SwitchIndicatorColorStyle.self,
             forKey: .switchIndicatorColorStyle
@@ -500,8 +520,11 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encodeIfPresent(lastSeenWhatsNewVersion, forKey: .lastSeenWhatsNewVersion)
         try container.encode(slots, forKey: .slots)
         try container.encode(showSwitchIndicator, forKey: .showSwitchIndicator)
-        try container.encode(switchIndicatorSize, forKey: .switchIndicatorSize)
-        try container.encode(switchIndicatorScale, forKey: .switchIndicatorScale)
+        try container.encode(switchIndicatorSizeFactor, forKey: .switchIndicatorSizeFactor)
+        // The legacy pair, so a build from before the merge draws this same size: it
+        // multiplies them, and medium's factor is 1. Nothing here reads them back.
+        try container.encode(SwitchIndicatorSize.medium, forKey: .switchIndicatorSize)
+        try container.encode(switchIndicatorSizeFactor, forKey: .switchIndicatorScale)
         try container.encode(switchIndicatorColorStyle, forKey: .switchIndicatorColorStyle)
         try container.encode(switchIndicatorContentStyle, forKey: .switchIndicatorContentStyle)
         try container.encode(switchIndicatorCustomColorHex, forKey: .switchIndicatorCustomColorHex)

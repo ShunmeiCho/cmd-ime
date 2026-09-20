@@ -21,8 +21,7 @@ enum IndicatorPreviewModel {
         var config = model.config
         if let theme {
             config.switchIndicatorThemeID = theme.id
-            config.switchIndicatorSize = .medium
-            config.switchIndicatorScale = miniatureScale
+            config.switchIndicatorSizeFactor = miniatureScale
         }
         return IndicatorBubbleResolver.model(
             config: config,
@@ -66,7 +65,6 @@ struct IndicatorSettingsSection: View {
                 IndicatorThemePicker(model: model, library: library)
                 displayRow
                 sizeRow
-                scaleRow
                 colorRow
                 IndicatorSlotChips(model: model)
                 IndicatorTypographyRows(model: model, library: library, theme: theme, isAdjusting: $isAdjusting)
@@ -127,41 +125,42 @@ struct IndicatorSettingsSection: View {
         }
     }
 
+    /// One control, and the percentage is the size the bubble really draws at. It used
+    /// to be two that multiplied, so the same percentage meant a different size under
+    /// each Size button, and on the switcher the slider bottomed out reading 110 %.
     private var sizeRow: some View {
-        CompactSettingRow("Size") {
-            ConsoleSegmentedControl(
-                options: SwitchIndicatorSize.allCases.map { ConsoleSegmentOption(value: $0, label: $0.displayName) },
-                selection: Binding(
-                    get: { model.config.switchIndicatorSize },
-                    set: { model.setSwitchIndicatorSize($0) }
-                )
-            )
-            .frame(width: IndicatorPreviewModel.segmentedWidth)
-        }
-    }
-
-    private var scaleRow: some View {
-        // The slider shows what the bubble really uses: the switcher stops shrinking earlier.
-        let size = model.config.switchIndicatorSize
-        let effective = BubbleMetrics.effectiveScale(model.config.switchIndicatorScale, size: size, archetype: theme.archetype)
-        let minimum = BubbleMetrics.effectiveScale(SwitcherConfig.minSwitchIndicatorScale, size: size, archetype: theme.archetype)
+        let stored = model.config.switchIndicatorSizeFactor
+        let effective = BubbleMetrics.effectiveFactor(stored, archetype: theme.archetype)
+        let minimum = BubbleMetrics.effectiveFactor(
+            SwitcherConfig.minSwitchIndicatorSizeFactor,
+            archetype: theme.archetype
+        )
         let percent = Int((effective * 100).rounded())
-        return CompactSettingRow("Scale \(percent)%") {
-            Slider(
-                value: Binding(
-                    get: { effective },
-                    set: { model.setSwitchIndicatorScale($0) }
-                ),
-                in: minimum...SwitcherConfig.maxSwitchIndicatorScale,
-                step: 0.05,
-                onEditingChanged: { isAdjusting = $0 }
-            )
-            .accessibilityLabel("Indicator scale")
-            .accessibilityValue("\(percent) percent")
-            Button("Reset") {
-                model.setSwitchIndicatorScale(SwitcherConfig.defaultSwitchIndicatorScale)
+        return VStack(alignment: .leading, spacing: 4) {
+            CompactSettingRow("Size \(percent)%") {
+                Slider(
+                    value: Binding(
+                        get: { effective },
+                        set: { model.setSwitchIndicatorSizeFactor($0) }
+                    ),
+                    in: minimum...SwitcherConfig.maxSwitchIndicatorSizeFactor,
+                    step: 0.05,
+                    onEditingChanged: { isAdjusting = $0 }
+                )
+                .accessibilityLabel("Indicator size")
+                .accessibilityValue("\(percent) percent")
+                Button("Reset") {
+                    model.setSwitchIndicatorSizeFactor(SwitcherConfig.defaultSwitchIndicatorSizeFactor)
+                }
+                .buttonStyle(ConsoleButtonStyle())
             }
-            .buttonStyle(ConsoleButtonStyle())
+            // A theme that stops early says so, rather than leaving a slider that
+            // looks free and is not.
+            if minimum > SwitcherConfig.minSwitchIndicatorSizeFactor {
+                Text("\(theme.name) does not shrink below \(Int((minimum * 100).rounded()))%.")
+                    .font(.caption2)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+            }
         }
     }
 

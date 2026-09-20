@@ -36,8 +36,7 @@ final class ConfigStoreTests: XCTestCase {
         let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
 
         XCTAssertTrue(config.showSwitchIndicator)
-        XCTAssertEqual(config.switchIndicatorSize, .medium)
-        XCTAssertEqual(config.switchIndicatorScale, SwitcherConfig.defaultSwitchIndicatorScale)
+        XCTAssertEqual(config.switchIndicatorSizeFactor, SwitcherConfig.defaultSwitchIndicatorSizeFactor)
         XCTAssertEqual(config.switchIndicatorColorStyle, .role)
         XCTAssertEqual(config.switchIndicatorContentStyle, .iconAndText)
         XCTAssertEqual(config.switchIndicatorCustomColorHex, "#2F7CF6")
@@ -86,7 +85,8 @@ final class ConfigStoreTests: XCTestCase {
 
         let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
 
-        XCTAssertEqual(config.switchIndicatorScale, SwitcherConfig.maxSwitchIndicatorScale)
+        // The legacy Scale was clamped to 1.3 before it multiplied a medium Size of 1.
+        XCTAssertEqual(config.switchIndicatorSizeFactor, 1.3)
     }
 
     func testLoadOrRecoverReturnsDefaultWhenFileAbsent() throws {
@@ -98,7 +98,7 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertNil(result.recoveredBackupURL)
         XCTAssertTrue(result.isFirstRun)
         XCTAssertNil(result.migratedFromVersion)
-        XCTAssertEqual(result.config.version, 2)
+        XCTAssertEqual(result.config.version, SwitcherConfig.currentVersion)
         XCTAssertEqual(result.config.slots, SwitchSlot.legacyDefaults)
         XCTAssertFalse(store.needsSlotsMigration)
         XCTAssertFalse(FileManager.default.fileExists(atPath: store.url.path))
@@ -212,7 +212,7 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(config.bindings[0].trigger.gesture, .doubleTap)
         XCTAssertEqual(config.bindings[2].action.type, .sendKey)
         XCTAssertFalse(config.showSwitchIndicator)
-        XCTAssertEqual(config.switchIndicatorScale, 1.2)
+        XCTAssertEqual(config.switchIndicatorSizeFactor, 1.22 * 1.2, accuracy: 0.0001)
         XCTAssertEqual(config.switchIndicatorCustomRoleColorHexes, ["chinese": "#ABCDEF"])
 
         let encoded = try JSONEncoder().encode(config)
@@ -222,12 +222,44 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(config.preference(for: .chinese).fallbackLanguage, nil)
     }
 
+    func testTheTwoOldSizeControlsFoldIntoTheSizeTheyWereDrawing() throws {
+        // small times the switcher's floor scale: what the slider bottomed out at,
+        // where it read 110 % because the number was a scale, not a size.
+        let json = """
+        {
+          "version": 2,
+          "switchIndicatorSize": "small",
+          "switchIndicatorScale": 1.0975609756097562,
+          "bindings": [],
+          "inputSources": {}
+        }
+        """
+
+        let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
+
+        XCTAssertEqual(config.switchIndicatorSizeFactor, 0.90, accuracy: 0.0001)
+    }
+
+    func testTheSizeIsAlsoWrittenAsTheOldPairSoOlderBuildsDrawItTheSame() throws {
+        var config = SwitcherConfig.default
+        config.switchIndicatorSizeFactor = 0.75
+
+        let written = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: try JSONEncoder().encode(config)) as? [String: Any]
+        )
+
+        XCTAssertEqual(written["switchIndicatorSizeFactor"] as? Double, 0.75)
+        // An older build multiplies these two; medium is 1, so it reaches the same size.
+        XCTAssertEqual(written["switchIndicatorSize"] as? String, "medium")
+        XCTAssertEqual(written["switchIndicatorScale"] as? Double, 0.75)
+    }
+
     func testLoadMigrationPreservesOriginalBytesAndAllLegacySettings() throws {
         let store = ConfigStore(url: uniqueConfigURL())
         defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
         try writeFixture(legacyJSON, to: store.url)
         var expected = try JSONDecoder().decode(SwitcherConfig.self, from: legacyJSON)
-        expected.version = 2
+        expected.version = SwitcherConfig.currentVersion
         // The fixture uses the retired custom colour style: its per-slot colour moves into the slot tint.
         expected = try expected.settingSlotTint("#ABCDEF", for: .chinese)
         expected.switchIndicatorColorStyle = .role
@@ -245,10 +277,10 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(try store.load().version, 1)
     }
 
-    func testVersionTwoWithoutSlotsStillNeedsBackupButDoesNotReportOldVersion() throws {
+    func testCurrentVersionWithoutSlotsStillNeedsBackupButDoesNotReportOldVersion() throws {
         let store = ConfigStore(url: uniqueConfigURL())
         defer { try? FileManager.default.removeItem(at: store.url.deletingLastPathComponent()) }
-        let data = Data(String(decoding: legacyJSON, as: UTF8.self).replacingOccurrences(of: "\"version\": 1", with: "\"version\": 2").utf8)
+        let data = Data(String(decoding: legacyJSON, as: UTF8.self).replacingOccurrences(of: "\"version\": 1", with: "\"version\": \(SwitcherConfig.currentVersion)").utf8)
         try writeFixture(data, to: store.url)
         let result = try store.loadOrRecover()
         XCTAssertNil(result.migratedFromVersion)
@@ -403,8 +435,7 @@ final class ConfigStoreTests: XCTestCase {
         XCTAssertEqual(result.inputSources, detected.inputSources)
         XCTAssertEqual(result.switchIndicatorCustomRoleColorHexes, [:])
         XCTAssertEqual(result.showSwitchIndicator, config.showSwitchIndicator)
-        XCTAssertEqual(result.switchIndicatorSize, config.switchIndicatorSize)
-        XCTAssertEqual(result.switchIndicatorScale, config.switchIndicatorScale)
+        XCTAssertEqual(result.switchIndicatorSizeFactor, config.switchIndicatorSizeFactor)
         XCTAssertEqual(result.switchIndicatorColorStyle, config.switchIndicatorColorStyle)
         XCTAssertEqual(result.switchIndicatorContentStyle, config.switchIndicatorContentStyle)
         XCTAssertEqual(result.switchIndicatorCustomColorHex, config.switchIndicatorCustomColorHex)

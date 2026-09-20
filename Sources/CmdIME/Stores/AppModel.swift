@@ -348,17 +348,11 @@ final class AppModel: ObservableObject {
         statusText = visible ? "Switch indicator enabled" : "Switch indicator disabled"
     }
 
-    func setSwitchIndicatorSize(_ size: SwitchIndicatorSize) {
-        config.switchIndicatorSize = size
+    func setSwitchIndicatorSizeFactor(_ factor: Double) {
+        let clamped = SwitcherConfig.clampedSwitchIndicatorSizeFactor(factor)
+        config.switchIndicatorSizeFactor = clamped
         save()
-        statusText = "Switch indicator size set to \(size.displayName)"
-    }
-
-    func setSwitchIndicatorScale(_ scale: Double) {
-        let clampedScale = SwitcherConfig.clampedSwitchIndicatorScale(scale)
-        config.switchIndicatorScale = clampedScale
-        save()
-        statusText = "Switch indicator scale set to \(Int((clampedScale * 100).rounded()))%"
+        statusText = "Switch indicator size set to \(Int((clamped * 100).rounded()))%"
     }
 
     func setSwitchIndicatorColorStyle(_ style: SwitchIndicatorColorStyle) {

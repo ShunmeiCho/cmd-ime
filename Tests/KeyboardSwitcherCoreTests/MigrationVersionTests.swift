@@ -3,7 +3,7 @@ import XCTest
 
 final class MigrationVersionTests: XCTestCase {
     func testMigrationOnlyRaisesOlderVersions() {
-        for version in [1, 2, 3, 42] {
+        for version in [1, 2, 3, 4, 42] {
             var config = SwitcherConfig.default
             config.version = version
             let migrated = config.migrated()
@@ -19,13 +19,13 @@ final class MigrationVersionTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = ConfigStore(url: directory.appendingPathComponent("config.json"))
         var future = SwitcherConfig.default
-        future.version = 3
+        future.version = SwitcherConfig.currentVersion + 1
         try store.save(future)
         let bytes = try Data(contentsOf: store.url)
 
         let result = try store.loadOrRecover()
 
-        XCTAssertEqual(result.config.version, 3)
+        XCTAssertEqual(result.config.version, SwitcherConfig.currentVersion + 1)
         XCTAssertEqual(result.config, future)
         XCTAssertNil(result.migratedFromVersion)
         XCTAssertNil(result.recoveredBackupURL)

@@ -100,8 +100,7 @@ public enum IndicatorBubbleResolver {
         let symbol = symbols[slotID] ?? SlotSymbol(glyph: SlotSymbolResolver.unknownGlyph)
 
         let metrics = BubbleMetrics(
-            size: config.switchIndicatorSize,
-            scale: config.switchIndicatorScale,
+            sizeFactor: config.switchIndicatorSizeFactor,
             textScale: theme.typography.textScale,
             theme: theme
         )

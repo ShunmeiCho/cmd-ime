@@ -33,8 +33,7 @@ final class BubbleRenderModelTests: XCTestCase {
 
     func testConfigWithoutAThemeRendersGlassWithTheStoredSettings() throws {
         let legacy = config(theme: nil) {
-            $0.switchIndicatorSize = .large
-            $0.switchIndicatorScale = 1.2
+            $0.switchIndicatorSizeFactor = 1.22 * 1.2
             $0.switchIndicatorContentStyle = .iconOnly
         }
         let model = try model(legacy)

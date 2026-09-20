@@ -25,7 +25,7 @@ final class BubbleLayoutTests: XCTestCase {
     // MARK: - Metrics
 
     func testDefaultGlassMetrics() {
-        let metrics = BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: theme("builtin.glass"))
+        let metrics = BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.glass"))
         XCTAssertEqual(metrics.sizeFactor, 1)
         XCTAssertEqual([metrics.inset, metrics.tileSide, metrics.gap, metrics.trailingPadding], [9, 32, 10, 15])
         XCTAssertEqual(metrics.baseHeight, 50)
@@ -37,47 +37,49 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertEqual(metrics.shadowMargin, 44)
     }
 
-    func testSizeScaleAndTextScaleAreClampedAndMultiplied() {
+    func testSizeAndTextScaleAreClampedAndMultiplied() {
         let glass = theme("builtin.glass")
-        let large = BubbleMetrics(size: .large, scale: 9, textScale: 9, theme: glass)
-        XCTAssertEqual(large.sizeFactor, 1.22 * 1.3, accuracy: 0.0001)
-        XCTAssertEqual(large.titleSize, 13 * 1.22 * 1.3 * 1.6, accuracy: 0.0001)
-        XCTAssertEqual(large.tileSide, 32 * 1.22 * 1.3, accuracy: 0.0001)
-        XCTAssertEqual(large.shadowMargin, (44 * 1.22 * 1.3).rounded(.up))
+        let big = SwitcherConfig.maxSwitchIndicatorSizeFactor
+        let large = BubbleMetrics(sizeFactor: 9, textScale: 9, theme: glass)
+        XCTAssertEqual(large.sizeFactor, big, accuracy: 0.0001)
+        XCTAssertEqual(large.titleSize, 13 * big * 1.6, accuracy: 0.0001)
+        XCTAssertEqual(large.tileSide, 32 * big, accuracy: 0.0001)
+        XCTAssertEqual(large.shadowMargin, (44 * big).rounded(.up))
         // Larger text grows the bubble instead of clipping inside a fixed height.
         XCTAssertGreaterThan(large.baseHeight, large.tileSide + 2 * large.inset)
 
-        let small = BubbleMetrics(size: .small, scale: 0, textScale: 0, theme: glass)
-        XCTAssertEqual(small.sizeFactor, 0.82 * SwitcherConfig.minSwitchIndicatorScale, accuracy: 0.0001)
-        XCTAssertEqual(small.textMinWidth, 44 * 0.82 * SwitcherConfig.minSwitchIndicatorScale * 0.8, accuracy: 0.0001)
+        let tiny = SwitcherConfig.minSwitchIndicatorSizeFactor
+        let small = BubbleMetrics(sizeFactor: 0, textScale: 0, theme: glass)
+        XCTAssertEqual(small.sizeFactor, tiny, accuracy: 0.0001)
+        XCTAssertEqual(small.textMinWidth, 44 * tiny * 0.8, accuracy: 0.0001)
     }
 
     func testRadiiAreCappedConcentricOrOverridden() {
         var round = theme("builtin.line")
         round.cornerRadius = 28
-        let line = BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: round)
+        let line = BubbleMetrics(sizeFactor: 1, textScale: 1, theme: round)
         XCTAssertEqual(line.bubbleRadius, line.baseHeight / 2, accuracy: 0.0001)
 
-        XCTAssertEqual(BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: theme("builtin.classic")).tileRadius, 9)
-        XCTAssertEqual(BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: theme("builtin.paper-one-ink")).tileRadius, 3)
+        XCTAssertEqual(BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.classic")).tileRadius, 9)
+        XCTAssertEqual(BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.paper-one-ink")).tileRadius, 3)
         var tight = theme("builtin.glass")
         tight.cornerRadius = 4
-        XCTAssertEqual(BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: tight).tileRadius, 3)
+        XCTAssertEqual(BubbleMetrics(sizeFactor: 1, textScale: 1, theme: tight).tileRadius, 3)
     }
 
     func testArchetypeSpecificMetrics() {
-        let paper = BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: theme("builtin.paper-two-inks"))
+        let paper = BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.paper-two-inks"))
         XCTAssertEqual(paper.detailSize, 10.5)
-        let stacked = BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: theme("builtin.typographic"))
+        let stacked = BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.typographic"))
         XCTAssertEqual([stacked.titleSize, stacked.detailSize, stacked.tileSide], [20, 10, 0])
-        XCTAssertEqual(BubbleMetrics(size: .medium, scale: 1, textScale: 1, theme: theme("builtin.tile")).tileSide, 40)
+        XCTAssertEqual(BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.tile")).tileSide, 40)
 
         // The switcher stops shrinking where its cells would fall under their own text.
-        let switcher = BubbleMetrics(size: .small, scale: 0.4, textScale: 1, theme: theme("builtin.switcher"))
+        let switcher = BubbleMetrics(sizeFactor: 0.4, textScale: 1, theme: theme("builtin.switcher"))
         XCTAssertEqual(switcher.sizeFactor, BubbleMetrics.switcherMinimumFactor, accuracy: 0.0001)
-        let roomySwitcher = BubbleMetrics(size: .large, scale: 1, textScale: 1, theme: theme("builtin.switcher"))
+        let roomySwitcher = BubbleMetrics(sizeFactor: 1.22, textScale: 1, theme: theme("builtin.switcher"))
         XCTAssertEqual(roomySwitcher.sizeFactor, 1.22, accuracy: 0.0001)
-        let largeSwitcher = BubbleMetrics(size: .large, scale: 1.3, textScale: 1, theme: theme("builtin.switcher"))
+        let largeSwitcher = BubbleMetrics(sizeFactor: 1.586, textScale: 1, theme: theme("builtin.switcher"))
         XCTAssertEqual(largeSwitcher.maxBubbleWidth, 320)
     }
 
