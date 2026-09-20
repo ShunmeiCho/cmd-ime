@@ -27,6 +27,20 @@ For local app testing:
 The app needs Accessibility and Input Monitoring permissions for global
 keyboard listening. Use one stable app location when granting permissions.
 
+## Signing the CLA
+
+Your first pull request needs one line confirming you agree to
+[CLA.md](CLA.md):
+
+```
+I have read CLA.md and I agree to its terms. Signed: <your name>, <date>
+```
+
+You keep your copyright. The agreement lets the project relicense later — to copyleft, or to a
+dual arrangement — without having to find every past contributor for permission. It also commits
+the maintainer to keeping attribution and to leaving already-published commits under MIT. One
+signature covers everything you contribute afterwards.
+
 ## Pull Requests
 
 - Keep changes small and focused.
