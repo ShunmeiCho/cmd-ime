@@ -35,13 +35,29 @@ it is refused. Details in the project's reliability notes.
 
 When recovery refuses it says why, and it does this before reading or changing anything.
 
+## What it measures at
+
+Sixty runs through the trigger in TextEdit with WeType, alongside thirty plain switches as a
+yardstick, on macOS 27.0:
+
+| | attempts | failed |
+|---|---:|---:|
+| a plain switch, for comparison | 30 | 1 |
+| recovery: the replay composed | 60 | 5 |
+| recovery: one Command+Z restored the original | 60 | 1 |
+
 ## Known limits
 
 - **Failures come in blocks.** Switching an input source is not reliable in the way a keypress is,
-  and when it goes wrong it tends to go wrong several times in a row before working again. Recovery
-  inherits this: when the replay does not compose you get your latin letters back, unchanged, and
-  nothing is lost — but it can happen a few times running. A short successful run does not mean the
-  next one will work.
+  and when it goes wrong it tends to go wrong several times in a row before working again. All five
+  failures above were consecutive. Recovery inherits this: when the replay does not compose you get
+  your latin letters back, unchanged, and nothing is lost — but it can happen a few times running.
+  A short successful run does not mean the next one will work.
+- **One Command+Z does not always finish the job.** Once in those sixty runs, undo took the Chinese
+  back out but left the composition open with the pinyin still in it, instead of restoring the plain
+  letters. Whether a second Command+Z recovers from that was not measured, because it did not happen
+  again. This is the one part of the release gate recovery does not meet, and the reason it is a
+  beta rather than a feature.
 - **Full pinyin only.** Double pinyin, bopomofo, Cangjie, Wubi and Rime schemas are not covered.
 - **Japanese romaji is not covered.**
 - **One run, one word boundary.** Recovery stops at punctuation, digits, existing CJK text, a line
