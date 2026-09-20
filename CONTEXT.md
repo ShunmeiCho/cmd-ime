@@ -24,6 +24,26 @@ _Avoid_: Wizard, onboarding, tutorial
 A named description of how the switch indicator looks: layout, surface, inks, shape and type. Built-in and user themes are the same kind of thing; the config stores only which one is selected.
 _Avoid_: Skin, style preset
 
+**Silent switch failure**:
+A switch that reports success — menu bar and indicator show the new input source — while keystrokes still produce the old language. Distinct from a switch that visibly fails.
+_Avoid_: Switch bug, not switching
+
+**Activation Recipe**:
+The per-input-source rule for making a switch effective: select directly, or send the Kana key first and select after a delay. Built-ins live with the switching policy; users override them in `~/.config/cmd-ime/activation-recipes.json`.
+_Avoid_: Workaround, hack, strategy (bare)
+
+**Reliability Lab**:
+The on-device check that proves switching works: for each slot, switch and then type, reading back what the focused app produced. The result is a count, "N of N slots produce the right language". Selecting successfully is not a pass; typing correctly is. It needs real input methods and a real window, so it cannot run in CI.
+_Avoid_: Test suite, regression test (those mean `swift test`)
+
+**Recovery**:
+Repairing text typed into the wrong input source — pinyin left as Latin letters because Chinese was never selected. Acts only on a contiguous run of plain ASCII letters before the caret, aborts on anything else, and is undone by a single Command+Z.
+_Avoid_: Correction, autocorrect, translation
+
+**Habit Rule**:
+A per-app default input source that the user confirmed. Usage statistics may propose one; nothing becomes a rule without confirmation, so switching stays predictable.
+_Avoid_: Auto-switch, smart switching, AI switching
+
 ## Dynamic slots (PR1)
 
 The ordered `config.slots` collection stores stable `InputRole` string IDs,
