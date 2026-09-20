@@ -14,11 +14,15 @@ public struct LabKnownIssue: Equatable, Sendable {
         LabKnownIssue(
             sourceIDPrefix: "im.rime.inputmethod.Squirrel",
             failure: .producedLatin,
-            note: "Known, and not caused by CmdIME: measured 2026-09-20 on macOS 27.0, this "
-                + "happens to roughly one switch in five when latin was typed just before the "
-                + "switch, and it happens with CmdIME not running at all, through a plain system "
-                + "selection. Selecting twice, re-activating the app and sending a warm-up key "
-                + "were each tried and none of them fixed it."
+            note: "Known, and not caused by CmdIME: measured 2026-09-20 on macOS 27.0. It "
+                + "happens when latin was typed just before the switch, and it happens with "
+                + "CmdIME not running at all, through a plain system selection. Selecting "
+                + "twice, re-activating the app and sending a warm-up key were each tried and "
+                + "none of them fixed it. In a cross-process run that failed 21 times out of "
+                + "40, the text client's own input context named this source as its selected "
+                + "source every time, yet no composition ever reached the client and every "
+                + "letter arrived as committed text. Every identity the system exposes was "
+                + "right; the letters were latin anyway."
         ),
     ]
 
