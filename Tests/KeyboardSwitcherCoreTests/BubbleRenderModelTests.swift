@@ -31,8 +31,8 @@ final class BubbleRenderModelTests: XCTestCase {
         return config
     }
 
-    func testConfigWithoutAThemeRendersGlassWithTheStoredSettings() throws {
-        let legacy = config(theme: nil) {
+    func testGlassRendersWithTheStoredSettings() throws {
+        let legacy = config(theme: BuiltInIndicatorThemes.legacyDefaultID) {
             $0.switchIndicatorSizeFactor = 1.22 * 1.2
             $0.switchIndicatorContentStyle = .iconOnly
         }
@@ -54,7 +54,7 @@ final class BubbleRenderModelTests: XCTestCase {
 
     func testUnknownThemeFallsBackAndUnknownSlotHasNoModel() throws {
         let model = try model(config(theme: "deleted-theme"))
-        XCTAssertEqual(model.themeID, "builtin.glass")
+        XCTAssertEqual(model.themeID, BuiltInIndicatorThemes.defaultID)
         XCTAssertEqual(model.fellBackFromThemeID, "deleted-theme")
         XCTAssertNil(IndicatorBubbleResolver.model(
             config: .default, themes: [], sources: sources, slotID: InputRole(rawValue: "missing"),
@@ -63,8 +63,8 @@ final class BubbleRenderModelTests: XCTestCase {
     }
 
     func testColorSettingFeedsSlotThemes() throws {
-        XCTAssertEqual(try model(config(theme: nil) { $0.switchIndicatorColorStyle = .accent }).tileFillHex, "#FF2D55")
-        XCTAssertEqual(try model(config(theme: nil) { $0.switchIndicatorColorStyle = .monochrome }).tileFillHex, "#8E8E93")
+        XCTAssertEqual(try model(config(theme: BuiltInIndicatorThemes.legacyDefaultID) { $0.switchIndicatorColorStyle = .accent }).tileFillHex, "#FF2D55")
+        XCTAssertEqual(try model(config(theme: BuiltInIndicatorThemes.legacyDefaultID) { $0.switchIndicatorColorStyle = .monochrome }).tileFillHex, "#8E8E93")
 
         let paper = try model(config(theme: "builtin.paper-slots") { $0.switchIndicatorColorStyle = .monochrome })
         XCTAssertEqual(paper.substrate, .paper(hex: "#E9E9E5"))

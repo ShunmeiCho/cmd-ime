@@ -260,6 +260,8 @@ final class ConfigStoreTests: XCTestCase {
         try writeFixture(legacyJSON, to: store.url)
         var expected = try JSONDecoder().decode(SwitcherConfig.self, from: legacyJSON)
         expected.version = SwitcherConfig.currentVersion
+        // The fixture predates the default theme changing, so it is pinned to the one it was showing.
+        expected.switchIndicatorThemeID = BuiltInIndicatorThemes.legacyDefaultID
         // The fixture uses the retired custom colour style: its per-slot colour moves into the slot tint.
         expected = try expected.settingSlotTint("#ABCDEF", for: .chinese)
         expected.switchIndicatorColorStyle = .role

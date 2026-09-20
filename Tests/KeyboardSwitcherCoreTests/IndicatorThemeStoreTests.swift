@@ -52,7 +52,7 @@ final class IndicatorThemeStoreTests: XCTestCase {
     }
 
     func testBuiltInsCannotBeSavedOrRemovedAndUnsafeIDsAreRejected() {
-        let glass = BuiltInIndicatorThemes.all[0]
+        let glass = BuiltInIndicatorThemes.all.first { $0.id == BuiltInIndicatorThemes.legacyDefaultID }!
         XCTAssertThrowsError(try store.saving(glass)) {
             XCTAssertEqual($0 as? IndicatorThemeStoreError, .builtInIsReadOnly("builtin.glass"))
         }
@@ -72,7 +72,7 @@ final class IndicatorThemeStoreTests: XCTestCase {
     }
 
     func testDuplicateNamesCopiesWithoutWriting() {
-        let glass = BuiltInIndicatorThemes.all[0]
+        let glass = BuiltInIndicatorThemes.all.first { $0.id == BuiltInIndicatorThemes.legacyDefaultID }!
         let first = store.duplicate(of: glass, existing: BuiltInIndicatorThemes.all)
         XCTAssertEqual([first.id, first.name], ["glass-copy", "Glass Copy"])
         XCTAssertFalse(first.isBuiltIn)

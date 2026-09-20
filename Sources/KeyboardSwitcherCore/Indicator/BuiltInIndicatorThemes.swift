@@ -3,11 +3,17 @@ import Foundation
 /// The themes that ship with the app. They are plain data, the same type a user
 /// theme file decodes to, and are never written to disk.
 public enum BuiltInIndicatorThemes {
-    public static let defaultID = "builtin.glass"
+    /// The switcher shows every slot with its name, so a first appearance teaches
+    /// which glyph belongs to which slot. The badge is what that becomes once the
+    /// mapping is known, and it is one click away in the picker.
+    public static let defaultID = "builtin.switcher"
+    /// What the default used to be. A config written before the default changed is
+    /// pinned to it on load, so nobody's indicator changes under them.
+    public static let legacyDefaultID = "builtin.glass"
 
     public static let all: [IndicatorTheme] = [
-        glass, liquidGlass, classic, paperOneInk, paperTwoInks, paperSlotInks, typographic, tile, line, switcher, switcherTint, switcherLiquid,
-        badge, badgeTint,
+        switcher, switcherTint, switcherLiquid, badge, badgeTint,
+        glass, liquidGlass, classic, paperOneInk, paperTwoInks, paperSlotInks, typographic, tile, line,
     ]
 
     /// The caret badge: the switcher's row shrunk to glyph-sized cells, in the system
@@ -41,7 +47,7 @@ public enum BuiltInIndicatorThemes {
     )
 
     /// Translucent glass, an opaque slot-coloured tile, a bright title over a dimmer source name.
-    static let glass = IndicatorTheme(id: defaultID, name: "Glass")
+    static let glass = IndicatorTheme(id: legacyDefaultID, name: "Glass")
 
     /// The macOS 26 system material. No wash or drawn highlight: the material supplies both.
     static let liquidGlass = IndicatorTheme(

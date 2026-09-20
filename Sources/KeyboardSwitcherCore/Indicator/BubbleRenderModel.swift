@@ -147,7 +147,7 @@ public enum IndicatorBubbleResolver {
 
     static func resolvedTheme(id: String?, in themes: [IndicatorTheme]) -> (theme: IndicatorTheme, fellBackFrom: String?) {
         if let id, let match = themes.first(where: { $0.id == id }) { return (match, nil) }
-        let fallback = themes.first { $0.id == BuiltInIndicatorThemes.defaultID } ?? BuiltInIndicatorThemes.glass
+        let fallback = themes.first { $0.id == BuiltInIndicatorThemes.defaultID } ?? BuiltInIndicatorThemes.switcher
         return (fallback, id)
     }
 }

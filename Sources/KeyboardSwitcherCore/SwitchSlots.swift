@@ -165,9 +165,20 @@ extension SwitcherConfig {
     }
 
     public func migrated() -> SwitcherConfig {
-        var result = self
+        var result = pinningTheThemeTheDefaultUsedToBe()
         result.version = max(version, Self.currentVersion)
         result = result.retiringCustomIndicatorColors()
+        return result
+    }
+
+    /// No theme id means "whichever is the default", and the default changed. A file
+    /// written before it changed gets the theme it was actually showing written in, so
+    /// the indicator does not change under a user who never chose one. Runs in memory
+    /// and reaches disk with the next save, like the other migrations.
+    func pinningTheThemeTheDefaultUsedToBe() -> SwitcherConfig {
+        guard version < Self.currentVersion, switchIndicatorThemeID == nil else { return self }
+        var result = self
+        result.switchIndicatorThemeID = BuiltInIndicatorThemes.legacyDefaultID
         return result
     }
 

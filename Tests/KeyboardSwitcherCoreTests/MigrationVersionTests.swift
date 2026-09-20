@@ -2,14 +2,20 @@ import XCTest
 @testable import KeyboardSwitcherCore
 
 final class MigrationVersionTests: XCTestCase {
-    func testMigrationOnlyRaisesOlderVersions() {
+    func testMigrationRaisesOlderVersionsAndPinsTheThemeTheyWereShowing() {
         for version in [1, 2, 3, 4, 42] {
             var config = SwitcherConfig.default
             config.version = version
+            config.switchIndicatorThemeID = nil
             let migrated = config.migrated()
             XCTAssertEqual(migrated.version, max(version, SwitcherConfig.currentVersion))
             var expected = config
             expected.version = max(version, SwitcherConfig.currentVersion)
+            // No theme id means the default, and the default changed: a file older than
+            // that keeps the theme it was showing, a current one is left alone.
+            expected.switchIndicatorThemeID = version < SwitcherConfig.currentVersion
+                ? BuiltInIndicatorThemes.legacyDefaultID
+                : nil
             XCTAssertEqual(migrated, expected)
         }
     }
