@@ -117,7 +117,11 @@ final class InputIndicatorController {
         switch phase {
         case .hidden:
             panel.alphaValue = 0
-            panel.setFrame(panelFrame(for: frame, travel: reduceMotion ? 0 : BubbleMotion.riseDistance), display: true)
+            // No travel on the way in. A window origin lands on whole points, so four
+            // points of rise had five reachable positions: three moves and then five
+            // frames standing still, read as a catch. The direction is carried by the
+            // content settling out of the corner nearest the caret instead.
+            panel.setFrame(panelFrame(for: frame, travel: 0), display: true)
             panel.orderFrontRegardless()
             appear(to: frame)
         case .dismissing:
@@ -126,12 +130,30 @@ final class InputIndicatorController {
             // Alpha keeps rising from where it is; only the destination changes.
             appear(to: frame)
         case .holding:
-            panel.setFrame(panelFrame(for: frame, travel: 0), display: true)
+            reposition(to: frame)
             scheduleHide(for: model, after: 0)
         }
     }
 
     // MARK: - Phases
+
+    /// A re-trigger while the bubble is up. It travels to the new caret instead of
+    /// being teleported there in one frame. The size is taken at once, as on the way
+    /// in, so the glass underneath and the edges drawn over it stay together; only the
+    /// origin is animated.
+    private func reposition(to frame: CGRect) {
+        let destination = panelFrame(for: frame, travel: 0)
+        resizePanelAtOnce(to: destination.size)
+        guard !reduceMotion, panel.frame.origin != destination.origin else {
+            panel.setFrame(destination, display: true)
+            return
+        }
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = BubbleMotion.repositionDuration
+            context.timingFunction = BubbleMotion.appearTimingFunction
+            panel.animator().setFrame(destination, display: true)
+        }
+    }
 
     private func appear(to frame: CGRect) {
         phase = .appearing
@@ -142,7 +164,7 @@ final class InputIndicatorController {
         resizePanelAtOnce(to: panelFrame(for: frame, travel: 0).size)
         NSAnimationContext.runAnimationGroup { context in
             context.duration = duration
-            context.timingFunction = BubbleMotion.easeOutTimingFunction
+            context.timingFunction = BubbleMotion.appearTimingFunction
             panel.animator().alphaValue = 1
             panel.animator().setFrame(panelFrame(for: frame, travel: 0), display: true)
         } completionHandler: { [weak self] in

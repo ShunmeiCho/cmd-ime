@@ -106,8 +106,8 @@ struct IndicatorPreviewRow: View {
                     })
                     .onPreferenceChange(PreviewWidthKey.self) { bubbleWidth = $0 }
                     .scaleEffect(fit.scale, anchor: .bottomLeading)
+                    // Matches the live bubble, which no longer travels on the way in.
                     .opacity(isShown ? 1 : 0)
-                    .offset(y: isShown || reduceMotion ? 0 : BubbleMotion.riseDistance)
                     .padding(.leading, fit.leading)
                     .padding(.bottom, caretTop + Self.bubbleLift)
             }
