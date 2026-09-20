@@ -81,7 +81,7 @@ To pin an exact version and checksum (copy both from the release notes):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.7.1 CMDIME_SHA256=37a8e92de27e7a563a5ca65d521ae4aef7363929580e48f02c93d0ab0f19412a bash
+  CMDIME_VERSION=0.8.0 CMDIME_SHA256=85923f4f534be8411b67de352f7dae308afbf621ae870d936a7e11aaccf817f8 bash
 ```
 
 To build from source:
@@ -113,15 +113,15 @@ A local build needs the same two permissions before global keyboard listening wo
 
 <p align="center"><sub>The slot board in the dark appearance. Three slots here; add one for every input source you use.</sub></p>
 
-- **A switch indicator near the caret.** Twelve built-in themes, including Glass,
-  Liquid Glass on macOS 26 and later, paper styles and a switcher that shows every
-  slot, plus your own themes and fonts.
+- **A switch indicator near the caret.** Fourteen built-in themes, including Glass,
+  Liquid Glass on macOS 26 and later, paper styles, a switcher that shows every slot and
+  a badge that shrinks it to the glyphs, plus your own themes and fonts.
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="Ten of the built-in indicator themes in Settings: Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile, Line and Switcher.">
 </p>
 
-<p align="center"><sub>Ten of the twelve built-in themes, as they appear in Settings.</sub></p>
+<p align="center"><sub>Ten of the built-in themes, as they appear in Settings.</sub></p>
 
 - **Updates from inside the app.** A check every six hours by default, a summary of
   what changed beside **Update Now**, and an in-place install that keeps your
@@ -211,9 +211,10 @@ confirmation bubble after a switch.
 
 In Settings the indicator can be turned off, given one of the built-in themes (glass,
 Liquid Glass on macOS 26 and later, paper with one or two inks, text only, tile only, a
-single line, or a switcher that shows every slot), resized with presets and a scale
-slider, switched between icon and text display, and colored from each slot's own color,
-the system accent color or monochrome. Font family, weight and text size belong to the
+single line, a switcher that shows every slot, or a badge that shrinks the switcher to
+its glyphs), resized with one slider whose percentage is the size it draws at, switched
+between icon and text display, and colored from each slot's own color, the system accent
+color or monochrome. Font family, weight and text size belong to the
 theme; editing a built-in theme makes a copy.
 
 Custom themes are JSON files in `~/.config/cmd-ime/themes` and imported fonts live in
@@ -533,8 +534,8 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 Package a release:
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.7.1
-shasum -a 256 dist/CmdIME-0.7.1.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.8.0
+shasum -a 256 dist/CmdIME-0.8.0.zip
 ```
 
 Notarized packaging requires a `Developer ID Application` signing identity; for an
