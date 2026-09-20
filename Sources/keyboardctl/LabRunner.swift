@@ -48,6 +48,18 @@ struct LabRunner {
     /// Skips the baseline letter. Only for diagnosing the lab itself: without it an attempt
     /// cannot tell a previous input method still attached to the client from a real failure.
     var skipsBaseline = false
+    /// Selects the source once more this many milliseconds after the switch, to test whether a
+    /// second selection makes an input method that did not attach the first time attach.
+    var reselectMs: Int = 0
+    /// Re-activates the client after the switch. macism reports that a selection can stay on the
+    /// menu bar without reaching the focused client until something re-activates it.
+    var refocuses = false
+    /// Sends one key the input method is expected to ignore before the real keys, the way the
+    /// Kana prelude does for Google Japanese Input, to see whether that makes it attach.
+    var warmupKeyCode: Int = 0
+    /// Taps a modifier instead of a plain key as the warm-up: a modifier carries no text and no
+    /// meaning in a document, so it is the candidate a real recipe could ship.
+    var warmupModifierKeyCode: Int = 0
     let service = MacInputSourceService()
     private let textEditID = "com.apple.TextEdit"
     private let baselineID = "com.apple.keylayout.ABC"
@@ -144,6 +156,22 @@ struct LabRunner {
             selectDirectly(source)
         }
         settle(settleMs)
+        if warmupModifierKeyCode > 0 {
+            tapModifier(CGKeyCode(warmupModifierKeyCode), flag: Self.modifierFlag(forKeyCode: warmupModifierKeyCode))
+            settle(200)
+        }
+        if warmupKeyCode > 0 {
+            key(CGKeyCode(warmupKeyCode))
+            settle(200)
+        }
+        if refocuses, let app = NSRunningApplication.runningApplications(withBundleIdentifier: textEditID).first {
+            app.activate(options: [])
+            settle(200)
+        }
+        if reselectMs > 0 {
+            _ = try? service.selectInputSource(id: source.id)
+            settle(reselectMs)
+        }
         let reported = try? service.currentInputSource()
 
         guard let expectation else {
@@ -347,6 +375,10 @@ struct LabRunner {
             print("    \(detail)")
             for (index, note) in result.notes.enumerated() where result.verdicts[index] != .pass {
                 print("      attempt \(index + 1): \(note)")
+            }
+            if case let .fail(failure) = result.verdicts.first(where: { if case .fail = $0 { return true } else { return false } }),
+               let known = LabKnownIssue.note(sourceID: result.sourceID, failure: failure) {
+                print("      \(known)")
             }
         }
     }

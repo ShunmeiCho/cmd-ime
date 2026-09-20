@@ -475,6 +475,10 @@ struct CLI {
         runner.restMs = value(after: "--rest").flatMap(Int.init) ?? 0
         runner.forcesDirect = args.contains("--direct")
         runner.skipsBaseline = args.contains("--no-baseline")
+        runner.reselectMs = value(after: "--reselect").flatMap(Int.init) ?? 0
+        runner.refocuses = args.contains("--refocus")
+        runner.warmupKeyCode = value(after: "--warmup").flatMap(Int.init) ?? 0
+        runner.warmupModifierKeyCode = value(after: "--warmup-mod").flatMap(Int.init) ?? 0
         if let slots = value(after: "--slots") {
             runner.onlySlots = Set(slots.split(separator: ",").map(String.init))
         }
