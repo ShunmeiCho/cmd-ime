@@ -7,7 +7,7 @@ public enum IndicatorDisplayComposition {
         switch archetype {
         case .tileTwoLine, .lineWithBar, .switcher: [.iconAndText, .iconOnly, .textOnly]
         case .stackedText: [.textOnly]
-        case .tileOnly: [.iconOnly]
+        case .tileOnly, .badge: [.iconOnly]
         }
     }
 
@@ -28,11 +28,26 @@ public struct BubbleMetrics: Equatable, Sendable {
     /// would shrink under their own text and overlap.
     public static let switcherMinimumFactor = 0.90
 
+    /// The badge's only text is its glyph, so legibility alone sets its floor: below
+    /// this factor 13 pt falls under 9 pt, the smallest size anything in this family
+    /// draws text at. It is not a layout budget, which is why it sits far under the
+    /// switcher's 0.90.
+    public static let badgeMinimumFactor = 0.70
+
+    /// Exhaustive on purpose: a new archetype has to state whether it has a floor
+    /// rather than inherit none by falling into a default.
+    public static func minimumFactor(for archetype: BubbleArchetype) -> Double {
+        switch archetype {
+        case .switcher: switcherMinimumFactor
+        case .badge: badgeMinimumFactor
+        case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly: 0
+        }
+    }
+
     /// The size the bubble really draws at, so the settings slider can show the truth
     /// instead of a number the archetype's floor then overrides.
     public static func effectiveFactor(_ factor: Double, archetype: BubbleArchetype) -> Double {
-        let minimum = archetype == .switcher ? switcherMinimumFactor : 0
-        return max(SwitcherConfig.clampedSwitchIndicatorSizeFactor(factor), minimum)
+        max(SwitcherConfig.clampedSwitchIndicatorSizeFactor(factor), minimumFactor(for: archetype))
     }
 
     enum Base {
@@ -89,13 +104,16 @@ public struct BubbleMetrics: Equatable, Sendable {
         switch archetype {
         case .tileTwoLine: tileSide = Base.tileSide * factor
         case .tileOnly: tileSide = Base.bareTileSide * factor
-        case .lineWithBar, .stackedText, .switcher: tileSide = 0
+        case .lineWithBar, .stackedText, .switcher, .badge: tileSide = 0
         }
         gap = (archetype == .lineWithBar ? 8 : 10) * factor
         switch archetype {
         case .lineWithBar: trailingPadding = 13 * factor
         case .stackedText: trailingPadding = 12 * factor
         case .tileTwoLine, .tileOnly, .switcher: trailingPadding = 15 * factor
+        // The badge's own inset is BadgeMetrics.padding; this carries the same number
+        // so the public field is not a stray zero if anything ever reads it.
+        case .badge: trailingPadding = BadgeMetrics.Base.padding * factor
         }
         titleSize = (isStacked ? Base.stackedTitleSize : Base.titleSize) * textFactor
         detailSize = baseDetail * textFactor
@@ -119,6 +137,8 @@ public struct BubbleMetrics: Equatable, Sendable {
                 + (Base.stackedRuleGap + 2 * Base.stackedVerticalPadding) * factor
         case .switcher:
             baseHeight = (Base.switcherCellHeight + 2 * Base.switcherPadding) * factor
+        case .badge:
+            baseHeight = BadgeMetrics.bubbleHeight(factor: factor, textFactor: textFactor)
         }
         bubbleRadius = min(theme.cornerRadius * factor, baseHeight / 2)
         let concentric = max(Base.minimumTileRadius, theme.cornerRadius - theme.inset)

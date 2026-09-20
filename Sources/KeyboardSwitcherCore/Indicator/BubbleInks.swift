@@ -94,7 +94,7 @@ struct BubbleInks {
                 titleHex: titleHex(slotHex, display),
                 barHex: legible(raw, minimum: InkLegibility.objectMinimum)
             )
-        case .tileTwoLine, .tileOnly, .switcher:
+        case .tileTwoLine, .tileOnly, .switcher, .badge:
             return SlotColors(tileFillHex: tile.fillHex, glyphHex: tile.glyphHex, titleHex: titleHex(slotHex, display), barHex: nil)
         }
     }
@@ -142,9 +142,15 @@ struct BubbleInks {
     /// large size, the disambiguating mark, or the slot name on the switcher's thumb.
     private func carriesSmallText(symbol: SlotSymbol, display: SwitchIndicatorContentStyle, tileSide: Double) -> Bool {
         let isDouble = symbol.glyph.count > 1
+        // Without a tile the glyph's size is the strip's own; the badge's is smaller
+        // than the switcher's, and both of its sizes sit under the large-object size,
+        // so a badge glyph is always held to the text contrast rule.
+        let strip = theme.archetype == .badge
+            ? (single: BadgeMetrics.Base.glyphSize, double: BadgeMetrics.Base.doubleGlyphSize)
+            : Self.switcherGlyphSizes
         let pointSize = tileSide > 0
             ? tileSide * (isDouble ? Self.doubleGlyphTileRatio : Self.singleGlyphTileRatio)
-            : (isDouble ? Self.switcherGlyphSizes.double : Self.switcherGlyphSizes.single)
+            : (isDouble ? strip.double : strip.single)
         let namesTheThumb = theme.archetype == .switcher && display != .iconOnly
         return pointSize < Self.largeGlyphPointSize || symbol.mark != nil || namesTheThumb
     }

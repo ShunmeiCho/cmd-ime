@@ -85,8 +85,8 @@ final class IndicatorThemeTests: XCTestCase {
 
     func testBuiltInsAreUniqueLegibleThemes() {
         let themes = BuiltInIndicatorThemes.all
-        XCTAssertEqual(themes.count, 12)
-        XCTAssertEqual(Set(themes.map(\.id)).count, 12)
+        XCTAssertEqual(themes.count, 14)
+        XCTAssertEqual(Set(themes.map(\.id)).count, 14)
         XCTAssertEqual(themes.first?.id, BuiltInIndicatorThemes.defaultID)
         for theme in themes {
             XCTAssertTrue(theme.isBuiltIn, theme.id)

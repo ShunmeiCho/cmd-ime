@@ -63,6 +63,13 @@ struct SwitchBubbleView: View {
             StackedTextBubble(model: model).environment(\.layoutDirection, direction)
         case .tileOnly:
             BubbleTile(model: model)
+        case .badge:
+            BadgeStripView(
+                model: model,
+                thumbIndex: presentation.thumbIndex ?? model.activeIndex,
+                stripTravel: presentation.stripTravel,
+                reduceMotion: presentation.reduceMotion
+            )
         case .switcher:
             SwitcherStripView(
                 model: model,

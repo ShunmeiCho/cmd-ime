@@ -157,7 +157,13 @@ final class InputIndicatorController {
     /// The hold is measured from the end of the appear.
     private func scheduleHide(for model: BubbleRenderModel, after appearDuration: Double) {
         hideTask?.cancel()
-        let hold = model.archetype == .switcher ? BubbleMotion.holdSwitcher : BubbleMotion.holdStandard
+        // Exhaustive, with no default: how long a new archetype stays is a decision,
+        // not an inherited value.
+        let hold: Double = switch model.archetype {
+        case .switcher: BubbleMotion.holdSwitcher
+        case .badge: BubbleMotion.holdBadge
+        case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly: BubbleMotion.holdStandard
+        }
         let current = generation
         hideTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64((appearDuration + hold) * 1_000_000_000))

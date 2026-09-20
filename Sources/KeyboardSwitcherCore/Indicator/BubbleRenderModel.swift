@@ -130,7 +130,7 @@ public enum IndicatorBubbleResolver {
             shadowStrength: theme.shadowStrength,
             typography: theme.typography,
             metrics: metrics,
-            cells: theme.archetype == .switcher ? config.slots.map { member in
+            cells: theme.archetype.showsAllSlots ? config.slots.map { member in
                 let memberSymbol = symbols[member.id] ?? SlotSymbol(glyph: SlotSymbolResolver.unknownGlyph)
                 let thumb = inks.colors(for: member, symbol: memberSymbol, display: display, tileSide: metrics.tileSide)
                 return BubbleRenderModel.Cell(

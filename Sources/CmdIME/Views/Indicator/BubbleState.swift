@@ -21,14 +21,26 @@ final class BubbleState: ObservableObject {
     ) {
         generation += 1
         let current = generation
-        let travel = next.archetype == .switcher
-            ? Double(SwitcherStripMetrics(model: next).arrangement.stripTravelCells)
-            : 0
-        let startIndex = fresh ? (next.previousIndex ?? next.activeIndex) : (presentation.thumbIndex ?? next.activeIndex)
+        // Only a strip has a thumb to travel; every other archetype draws the slot
+        // switched to and nothing else.
+        let travels = next.archetype.showsAllSlots && !reduceMotion
+        // Exhaustive, with no default: an archetype that shows every slot has to say
+        // how far its strip travels rather than silently not moving.
+        func stripTravelCells() -> Int {
+            switch next.archetype {
+            case .switcher: SwitcherStripMetrics(model: next).arrangement.stripTravelCells
+            case .badge: BadgeMetrics(model: next).arrangement.stripTravelCells
+            case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly: 0
+            }
+        }
+        let travel = travels ? Double(stripTravelCells()) : 0
+        let startIndex = !travels ? next.activeIndex
+            : fresh ? (next.previousIndex ?? next.activeIndex)
+            : (presentation.thumbIndex ?? next.activeIndex)
 
         let start = BubblePresentation(
-            thumbIndex: reduceMotion ? next.activeIndex : startIndex,
-            stripTravel: reduceMotion ? 0 : travel,
+            thumbIndex: startIndex,
+            stripTravel: travel,
             contentScale: fresh && !reduceMotion ? BubbleMotion.contentSettleScale : 1,
             anchor: anchor,
             fixedSize: fixedSize,
@@ -59,7 +71,10 @@ final class BubbleState: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self, self.generation == current else { return }
             withAnimation(BubbleMotion.contentSettle) { self.presentation.contentScale = 1 }
-            withAnimation(BubbleMotion.thumbSpring) {
+            // Only a strip has a thumb to travel; the other archetypes draw the slot
+            // switched to and nothing else, so there is nothing to animate toward.
+            guard next.archetype.showsAllSlots else { return }
+            withAnimation(next.archetype == .badge ? BubbleMotion.badgeThumbSpring : BubbleMotion.thumbSpring) {
                 self.presentation.thumbIndex = next.activeIndex
                 self.presentation.stripTravel = 0
             }

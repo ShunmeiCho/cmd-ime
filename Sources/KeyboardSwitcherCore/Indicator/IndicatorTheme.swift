@@ -1,7 +1,10 @@
 import Foundation
 
 public enum BubbleArchetype: String, Codable, CaseIterable, Sendable {
-    case tileTwoLine, lineWithBar, stackedText, tileOnly, switcher
+    case tileTwoLine, lineWithBar, stackedText, tileOnly, switcher, badge
+
+    /// Draws every slot with a thumb on the active one, not only the slot switched to.
+    public var showsAllSlots: Bool { self == .switcher || self == .badge }
 }
 
 public enum IndicatorSurface: String, Codable, CaseIterable, Sendable {

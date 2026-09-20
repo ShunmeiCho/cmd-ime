@@ -7,7 +7,38 @@ public enum BuiltInIndicatorThemes {
 
     public static let all: [IndicatorTheme] = [
         glass, liquidGlass, classic, paperOneInk, paperTwoInks, paperSlotInks, typographic, tile, line, switcher, switcherTint, switcherLiquid,
+        badge, badgeTint,
     ]
+
+    /// The caret badge: the switcher's row shrunk to glyph-sized cells, in the system
+    /// material with almost no edge, so it reads as a mark beside the caret rather than
+    /// a panel over the page. Its thumb is the neutral of the appearance, translucent.
+    static let badge = IndicatorTheme(
+        id: "builtin.badge",
+        name: "Badge",
+        archetype: .badge,
+        surface: .liquidGlass,
+        colorSource: .inks,
+        cornerRadius: 14,
+        strokeOpacity: 0.10,
+        washOpacity: 0,
+        highlightStrength: 0,
+        shadowStrength: 0.30
+    )
+
+    /// The same badge carrying the Color setting. A slot-tinted thumb cannot also be
+    /// translucent and still hold the text contrast minimum, so this one is opaque.
+    static let badgeTint = IndicatorTheme(
+        id: "builtin.badge-tint",
+        name: "Badge, Slot Color",
+        archetype: .badge,
+        surface: .liquidGlass,
+        cornerRadius: 14,
+        strokeOpacity: 0.10,
+        washOpacity: 0,
+        highlightStrength: 0,
+        shadowStrength: 0.30
+    )
 
     /// Translucent glass, an opaque slot-coloured tile, a bright title over a dimmer source name.
     static let glass = IndicatorTheme(id: defaultID, name: "Glass")

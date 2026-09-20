@@ -19,6 +19,7 @@ final class BubbleLayoutTests: XCTestCase {
         for stored in all {
             XCTAssertEqual(IndicatorDisplayComposition.effective(stored, for: .stackedText), .textOnly)
             XCTAssertEqual(IndicatorDisplayComposition.effective(stored, for: .tileOnly), .iconOnly)
+            XCTAssertEqual(IndicatorDisplayComposition.effective(stored, for: .badge), .iconOnly)
         }
     }
 
@@ -35,6 +36,58 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertEqual(metrics.detailLineHeight, 14.3, accuracy: 0.0001)
         XCTAssertEqual([metrics.textMinWidth, metrics.textMaxWidth, metrics.maxBubbleWidth], [44, 168, 320])
         XCTAssertEqual(metrics.shadowMargin, 44)
+    }
+
+    // MARK: - Badge
+
+    func testBadgeIsACapsuleMeasuredFromItsGlyph() {
+        let metrics = BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.badge"))
+        XCTAssertEqual(metrics.baseHeight, 24)
+        // The radius is capped at half the height at every factor, so the badge is a
+        // pill rather than a rounded rectangle whatever the theme asks for.
+        XCTAssertEqual(metrics.bubbleRadius, 12)
+        XCTAssertEqual(metrics.tileSide, 0)
+        XCTAssertEqual(BadgeMetrics.cellHeight(factor: 1, textFactor: 1), 18)
+    }
+
+    func testBadgeShrinksInStepWithItsGlyph() {
+        // Every length is the same multiple of its base at the floor as at the top of
+        // the range: the frame never runs ahead of the text.
+        for factor in [BubbleMetrics.badgeMinimumFactor, 1.0, 1.3] {
+            XCTAssertEqual(
+                BadgeMetrics.bubbleHeight(factor: factor, textFactor: factor),
+                24 * factor,
+                accuracy: 0.0001
+            )
+        }
+    }
+
+    func testBadgeFloorsAtAReadableGlyph() {
+        for requested in [0.0, SwitcherConfig.minSwitchIndicatorSizeFactor, 0.69] {
+            let smallest = BubbleMetrics.effectiveFactor(requested, archetype: .badge)
+            XCTAssertEqual(smallest, BubbleMetrics.badgeMinimumFactor, accuracy: 0.0001)
+            XCTAssertGreaterThanOrEqual(
+                BadgeMetrics.glyphSize(textFactor: smallest, isDouble: false),
+                BadgeMetrics.Base.minimumGlyphSize
+            )
+        }
+        // Far below the switcher, whose floor is a name budget the badge does not have.
+        XCTAssertLessThan(BubbleMetrics.badgeMinimumFactor, BubbleMetrics.switcherMinimumFactor)
+    }
+
+    func testBadgeCellBudgetsTheWidestGlyphAndItsMark() {
+        func cells(_ symbols: [SlotSymbol]) -> [BubbleRenderModel.Cell] {
+            symbols.map { BubbleRenderModel.Cell(symbol: $0, name: "", fillHex: "#FFFFFF", glyphHex: "#000000") }
+        }
+        XCTAssertEqual(BadgeMetrics.glyphUnits(for: cells([SlotSymbol(glyph: "中")])), 1.0)
+        XCTAssertEqual(BadgeMetrics.glyphUnits(for: cells([SlotSymbol(glyph: "EN")])), 1.55)
+        // A mark is drawn beside the glyph at a fixed ratio and is never truncated, so
+        // the cell has to hold both; the widest cell sets the width for all of them.
+        XCTAssertEqual(
+            BadgeMetrics.glyphUnits(for: cells([SlotSymbol(glyph: "A"), SlotSymbol(glyph: "中", mark: "简")])),
+            1.62,
+            accuracy: 0.0001
+        )
     }
 
     func testSizeAndTextScaleAreClampedAndMultiplied() {

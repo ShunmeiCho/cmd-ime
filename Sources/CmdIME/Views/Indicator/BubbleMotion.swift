@@ -31,12 +31,19 @@ enum BubbleMotion {
     static let contentSwap = Animation.easeOut(duration: 0.10)
     /// Critically damped: the thumb has no momentum to justify a bounce.
     static let thumbSpring = Animation.spring(response: 0.30, dampingFraction: 1.0)
+    /// The badge's thumb crosses about 22 points between neighbours where the
+    /// switcher's crosses about 48; the switcher's response reads as drag over that
+    /// shorter distance.
+    static let badgeThumbSpring = Animation.spring(response: 0.24, dampingFraction: 1.0)
     static let crossfadeBlur: CGFloat = 2
 
     /// Measured from the end of the appear. The switcher holds longer: its thumb
     /// needs about 0.3 s to settle and the row has more to read.
     static let holdStandard = 0.75
     static let holdSwitcher = 1.10
+    /// Between the two: the badge's thumb still has to arrive, but there are no slot
+    /// names to read.
+    static let holdBadge = 0.85
 
     /// A re-trigger moves the visible bubble only when the caret went further than this.
     static let repositionThreshold: CGFloat = 24
