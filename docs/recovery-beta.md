@@ -91,21 +91,30 @@ There is no setting for this yet — it is configured by hand, on purpose, while
 
 ### Choosing the trigger
 
-**Do not use `option`+letter.** In a password field macOS turns on secure keyboard entry, so no
+**Do not use Shift.** Most Chinese input methods switch between Chinese and English on a Shift
+tap, and CmdIME deliberately never swallows a modifier key, so your input source sees it too.
+Measured 2026-09-21 with WeType: recovery bound to right shift composed 0 times in 10, because the
+Shift that asked for recovery had already put the input source into English before the letters
+were replayed into it. The same build with an `option`+letter trigger composed 8 of 8. A trigger
+your input source also listens to will lose to itself.
+
+**Do not use `option`+letter either.** In a password field macOS turns on secure keyboard entry, so no
 event tap sees your keystroke — recovery correctly never runs, but it also cannot swallow the key,
 and `option+r` types `®` into the password. The same key is also a common global shortcut in other
 apps.
 
-Pick something that produces no character. A tap on a modifier you have not bound is the simplest:
+That leaves less room than it looks. A trigger for recovery has to produce no character, not be a
+common global hotkey, and not be something your input source acts on:
 
-| key | `keyCode` | `keyName` |
-|---|---|---|
-| right shift | 60 | `right-shift` |
-| left shift | 56 | `left-shift` |
-| right control | 62 | `right-control` |
-| left control | 59 | `left-control` |
+| key | `keyCode` | `keyName` | notes |
+|---|---|---|---|
+| left control | 59 | `left-control` | safe, if you have not bound it to a slot |
+| right control | 62 | `right-control` | safe, but many Mac keyboards have no physical right control |
+| left shift | 56 | `left-shift` | **avoid**: your input source probably switches on it |
+| right shift | 60 | `right-shift` | **avoid**: same |
 
-Many Mac keyboards have no physical right control key. Check yours before choosing it.
+If every modifier is already bound to a slot, use a chord that produces no character — `control`
+plus a letter is usually free — rather than taking Shift.
 
 ## Turning it off
 
