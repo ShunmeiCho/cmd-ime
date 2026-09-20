@@ -471,7 +471,13 @@ struct CLI {
         #if os(macOS)
         let attempts = value(after: "--attempts").flatMap(Int.init) ?? 2
         let settle = value(after: "--settle").flatMap(Int.init) ?? 400
-        let runner = LabRunner(config: try loadConfig(), attempts: max(1, attempts), settleMs: max(100, settle))
+        var runner = LabRunner(config: try loadConfig(), attempts: max(1, attempts), settleMs: max(100, settle))
+        runner.restMs = value(after: "--rest").flatMap(Int.init) ?? 0
+        runner.forcesDirect = args.contains("--direct")
+        runner.skipsBaseline = args.contains("--no-baseline")
+        if let slots = value(after: "--slots") {
+            runner.onlySlots = Set(slots.split(separator: ",").map(String.init))
+        }
         try runner.run(json: args.contains("--json"))
         #else
         throw CLIError.unsupportedPlatform
@@ -678,7 +684,7 @@ struct CLI {
               keyboardctl slot remove <slot>
               keyboardctl show
               keyboardctl switch <slot>
-              keyboardctl lab [--attempts N] [--settle MS] [--json]\n              keyboardctl source [--json]
+              keyboardctl lab [--slots a,b] [--attempts N] [--settle MS] [--rest MS] [--json]\n              keyboardctl source [--json]
               keyboardctl source <input-source-id> [<wait-ms>] [--quiet] [--json]
               keyboardctl diagnose [--json]
               keyboardctl listen

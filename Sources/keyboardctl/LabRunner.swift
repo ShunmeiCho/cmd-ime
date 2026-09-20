@@ -20,6 +20,10 @@ struct LabRunner {
         let sourceName: String
         let trigger: String
         var verdicts: [LabVerdict] = []
+        /// What the system reported after each switch, and what the client received. Context for
+        /// a failure: it separates a trigger that was never recognised from one that switched and
+        /// still typed latin.
+        var notes: [String] = []
 
         var passed: Bool { !verdicts.isEmpty && verdicts.allSatisfy { $0 == .pass } }
         var isJudged: Bool {
@@ -33,6 +37,17 @@ struct LabRunner {
     let config: SwitcherConfig
     let attempts: Int
     let settleMs: Int
+    /// Empty runs every slot; otherwise only these slot ids, for narrowing a failure down.
+    var onlySlots: Set<String> = []
+    /// Pause between the baseline check and the trigger. Raising it tells a switch that needs
+    /// time to settle apart from one that fails however long you wait.
+    var restMs: Int = 0
+    /// Ignores the slot's trigger and selects the source directly, which tells a fault in the
+    /// event-tap path apart from one in the selection itself.
+    var forcesDirect = false
+    /// Skips the baseline letter. Only for diagnosing the lab itself: without it an attempt
+    /// cannot tell a previous input method still attached to the client from a real failure.
+    var skipsBaseline = false
     let service = MacInputSourceService()
     private let textEditID = "com.apple.TextEdit"
     private let baselineID = "com.apple.keylayout.ABC"
@@ -56,10 +71,11 @@ struct LabRunner {
 
         var results: [SlotResult] = []
         for slot in config.slots {
+            guard onlySlots.isEmpty || onlySlots.contains(slot.id.rawValue) else { continue }
             guard let source = InputSourceMatcher.bestMatch(for: slot.id, sources: sources, config: config) else {
                 continue
             }
-            let trigger = config.bindings.first {
+            let trigger = forcesDirect ? nil : config.bindings.first {
                 $0.enabled && $0.action.type == .switchInputSource && $0.action.role == slot.id
                     && $0.trigger.kind == .oneShotModifier
             }
@@ -72,7 +88,17 @@ struct LabRunner {
             )
             let expectation = LabExpectation.forSource(id: source.id)
             for _ in 0..<attempts {
-                result.verdicts.append(attempt(source: source, trigger: trigger?.trigger, expectation: expectation))
+                // A void attempt says something about the run, not about the slot, so it is
+                // repeated rather than counted.
+                var verdict = LabVerdict.void(reason: "not run")
+                var note = ""
+                for _ in 0..<3 {
+                    (verdict, note) = attempt(source: source, trigger: trigger?.trigger, expectation: expectation)
+                    if case .void = verdict { continue }
+                    break
+                }
+                result.verdicts.append(verdict)
+                result.notes.append(note)
             }
             results.append(result)
         }
@@ -81,19 +107,37 @@ struct LabRunner {
 
     // MARK: - One attempt
 
-    private func attempt(source: InputSourceInfo, trigger: KeyTrigger?, expectation: LabExpectation?) -> LabVerdict {
+    private func attempt(
+        source: InputSourceInfo,
+        trigger: KeyTrigger?,
+        expectation: LabExpectation?
+    ) -> (LabVerdict, String) {
         clearDocument()
         let textBefore = readText()
 
         // The previous input method can stay attached to the client after a switch; typing one
         // letter in a plain layout first tells that apart from a failure of the slot under test.
-        _ = try? service.selectInputSource(id: baselineID)
-        settle(300)
-        key(45)
-        settle(200)
-        let baseline = readText()
-        clearDocument()
+        var baseline = "n"
+        // The switch away happens either way: without it the next attempt would select a source
+        // that is already current and pass without ever switching.
+        if skipsBaseline {
+            key(53)
+            _ = try? service.selectInputSource(id: baselineID)
+            settle(max(settleMs, 400))
+        }
+        if !skipsBaseline {
+            // Escape first: a composition left pending by the previous attempt would otherwise
+            // take the baseline keystroke, and the input method it belongs to would still be
+            // attached when we typed. That looked exactly like the failure this lab hunts.
+            key(53)
+            _ = try? service.selectInputSource(id: baselineID)
+            settle(max(settleMs, 400))
+            key(45)
+            baseline = readStableText()
+            clearDocument()
+        }
 
+        if restMs > 0 { settle(restMs) }
         if let trigger {
             fire(trigger)
         } else {
@@ -103,10 +147,10 @@ struct LabRunner {
         let reported = try? service.currentInputSource()
 
         guard let expectation else {
-            return LabJudge.judge(
-                LabObservation(textBefore: textBefore, baselineText: baseline, text: "", reportedSourceID: reported?.id),
-                expectation: nil
+            let observation = LabObservation(
+                textBefore: textBefore, baselineText: baseline, text: "", reportedSourceID: reported?.id
             )
+            return (LabJudge.judge(observation, expectation: nil), "reported \(reported?.id ?? "nothing")")
         }
         for code in expectation.keyCodes {
             key(CGKeyCode(code))
@@ -116,18 +160,16 @@ struct LabRunner {
             settle(450)
             key(CGKeyCode(commit))
         }
-        settle(400)
-        let text = readText()
+        let text = readStableText()
         clearDocument()
-        return LabJudge.judge(
-            LabObservation(
-                textBefore: textBefore,
-                baselineText: baseline,
-                text: text,
-                reportedSourceID: reported?.id
-            ),
-            expectation: expectation
+        let observation = LabObservation(
+            textBefore: textBefore,
+            baselineText: baseline,
+            text: text,
+            reportedSourceID: reported?.id
         )
+        let note = "reported \(reported?.id ?? "nothing"), typed \(text.trimmingCharacters(in: .whitespacesAndNewlines))"
+        return (LabJudge.judge(observation, expectation: expectation), note)
     }
 
     private func selectDirectly(_ source: InputSourceInfo) {
@@ -226,6 +268,30 @@ struct LabRunner {
         settle(80)
     }
 
+    /// Reads until the text stops changing. An input method with inline preedit, Squirrel for one,
+    /// shows the pinyin in the client while it composes; reading once, too early, catches that raw
+    /// latin and looks exactly like the failure this lab is meant to catch.
+    private func readStableText(timeoutMs: Int = 2000) -> String {
+        var previous = readText()
+        var stableFor = 0
+        var waited = 0
+        while waited < timeoutMs {
+            settle(120)
+            waited += 120
+            let current = readText()
+            if current == previous {
+                stableFor += 120
+                if stableFor >= 360, !current.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    return current
+                }
+            } else {
+                stableFor = 0
+                previous = current
+            }
+        }
+        return previous
+    }
+
     private func readText() -> String {
         guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: textEditID).first else {
             return ""
@@ -263,6 +329,7 @@ struct LabRunner {
                         "sourceID": result.sourceID,
                         "trigger": result.trigger,
                         "verdicts": result.verdicts.map(Self.describe),
+                        "notes": result.notes,
                     ]
                 },
             ]
@@ -278,6 +345,9 @@ struct LabRunner {
             let detail = result.verdicts.map(Self.describe).joined(separator: ", ")
             print("  \(result.slotName)  [\(result.sourceName)]  via \(result.trigger)")
             print("    \(detail)")
+            for (index, note) in result.notes.enumerated() where result.verdicts[index] != .pass {
+                print("      attempt \(index + 1): \(note)")
+            }
         }
     }
 
