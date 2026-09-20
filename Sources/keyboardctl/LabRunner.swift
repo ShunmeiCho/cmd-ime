@@ -379,6 +379,12 @@ struct LabRunner {
                         "sourceID": result.sourceID,
                         "trigger": result.trigger,
                         "verdicts": result.verdicts.map(Self.describe),
+                        "run": result.verdicts.map(Self.mark).joined(),
+                        "attempts": LabRunShape(verdicts: result.verdicts).attempts,
+                        "failures": LabRunShape(verdicts: result.verdicts).failures,
+                        "longestFailureStreak": LabRunShape(verdicts: result.verdicts).longestFailureStreak,
+                        "longestPassStreak": LabRunShape(verdicts: result.verdicts).longestPassStreak,
+                        "shape": LabRunShape(verdicts: result.verdicts).clustering.summary,
                         "notes": result.notes,
                     ]
                 },
@@ -392,9 +398,11 @@ struct LabRunner {
         print("\(passed.count) of \(judged.count) slots produce the right language in TextEdit")
         print("macOS \(ProcessInfo.processInfo.operatingSystemVersionString), \(attempts) attempts per slot\n")
         for result in results {
-            let detail = result.verdicts.map(Self.describe).joined(separator: ", ")
+            let shape = LabRunShape(verdicts: result.verdicts)
             print("  \(result.slotName)  [\(result.sourceName)]  via \(result.trigger)")
-            print("    \(detail)")
+            // The run as a picture: where the failures sit matters as much as how many there are.
+            print("    \(result.verdicts.map(Self.mark).joined())")
+            print("    \(shape.summary)")
             for (index, note) in result.notes.enumerated() where result.verdicts[index] != .pass {
                 print("      attempt \(index + 1): \(note)")
             }
@@ -402,6 +410,16 @@ struct LabRunner {
                let known = LabKnownIssue.note(sourceID: result.sourceID, failure: failure) {
                 print("      \(known)")
             }
+        }
+    }
+
+    /// One character per attempt, so a thirty-attempt run reads at a glance.
+    private static func mark(_ verdict: LabVerdict) -> String {
+        switch verdict {
+        case .pass: "."
+        case .fail: "x"
+        case .unjudged: "?"
+        case .void: "-"
         }
     }
 
