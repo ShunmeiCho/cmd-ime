@@ -38,7 +38,10 @@ enum IndicatorPreviewModel {
 /// The "Switch indicator" settings card. Controls are the console components of
 /// the settings window; the new design language lives in the bubble it previews.
 struct IndicatorSettingsSection: View {
-    static let unsupportedDisplayHelp = "Not available in this theme."
+    /// A tooltip, so it stands alone as a sentence about the dimmed segments.
+    static let unsupportedDisplayHelp = "The dimmed options are not available in this theme."
+    /// A whole row the current theme leaves nothing to choose in.
+    static let unavailableRowOpacity = 0.45
     static let inksColorCaption = "This theme prints with its own inks."
 
     @ObservedObject var model: AppModel
@@ -105,17 +108,30 @@ struct IndicatorSettingsSection: View {
             VStack(alignment: .leading, spacing: 4) {
                 ConsoleSegmentedControl(
                     options: SwitchIndicatorContentStyle.allCases.map {
-                        ConsoleSegmentOption(value: $0, label: $0.displayName)
+                        // Dimming one segment against another only says something while
+                        // a choice remains; below that the whole row is already quiet.
+                        ConsoleSegmentOption(
+                            value: $0,
+                            label: $0.displayName,
+                            isEnabled: supported.count <= 1 || supported.contains($0)
+                        )
                     },
                     selection: Binding(
-                        get: { model.config.switchIndicatorContentStyle },
+                        // What the bubble is really drawing, so the selected segment is
+                        // never one this theme cannot show.
+                        get: { IndicatorDisplayComposition.effective(model.config.switchIndicatorContentStyle, for: theme.archetype) },
                         set: { if supported.contains($0) { model.setSwitchIndicatorContentStyle($0) } }
                     )
                 )
                 .frame(width: IndicatorPreviewModel.segmentedWidth)
+                // One option left is no choice at all, so the whole row goes quiet, the
+                // way Color does when a theme prints with its own inks. With two or more
+                // left there is still something to pick, and only the rest are dimmed.
+                .disabled(supported.count <= 1)
+                .opacity(supported.count <= 1 ? Self.unavailableRowOpacity : 1)
                 if supported.count < SwitchIndicatorContentStyle.allCases.count {
-                    let names = supported.map(\.displayName).joined(separator: ", ")
-                    Text("\(theme.name) shows \(names) only. \(Self.unsupportedDisplayHelp)")
+                    let names = supported.map(\.displayName).joined(separator: " and ")
+                    Text("\(theme.name) has room for \(names) only. Your choice is kept for the other themes.")
                         .font(.caption2)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -183,7 +199,7 @@ struct IndicatorSettingsSection: View {
                 )
                 .frame(width: IndicatorPreviewModel.segmentedWidth)
                 .disabled(!usesSlotColor)
-                .opacity(usesSlotColor ? 1 : 0.45)
+                .opacity(usesSlotColor ? 1 : Self.unavailableRowOpacity)
                 if !usesSlotColor {
                     Text(Self.inksColorCaption)
                         .font(.caption2)

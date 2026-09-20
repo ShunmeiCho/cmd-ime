@@ -732,6 +732,9 @@ private extension EnvironmentValues {
 struct ConsoleSegmentOption<Value: Hashable>: Identifiable {
     let value: Value
     let label: String
+    /// A segment the current context cannot offer. It stays in place, so the choice on
+    /// offer does not move around, but it is dimmed and does not answer a click.
+    var isEnabled = true
 
     var id: Value {
         value
@@ -739,6 +742,8 @@ struct ConsoleSegmentOption<Value: Hashable>: Identifiable {
 }
 
 struct ConsoleSegmentedControl<Value: Hashable>: View {
+    static var unavailableOpacity: Double { 0.4 }
+
     @Environment(\.consoleControlLabel) private var groupLabel
     let options: [ConsoleSegmentOption<Value>]
     @Binding var selection: Value
@@ -752,6 +757,7 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                     Text(option.label)
                         .font(DesignTokens.Typography.body.weight(.semibold))
                         .foregroundStyle(selection == option.value ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textMuted)
+                        .opacity(option.isEnabled ? 1 : Self.unavailableOpacity)
                         .lineLimit(1)
                         .fixedSize()
                         // A label never touches its segment's edge, whatever width the row gives it.
@@ -760,6 +766,7 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .disabled(!option.isEnabled)
                 .accessibilityLabel(option.label)
                 .accessibilityAddTraits(selection == option.value ? .isSelected : [])
                 .background(
