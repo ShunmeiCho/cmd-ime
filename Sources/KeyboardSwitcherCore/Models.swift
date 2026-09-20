@@ -109,6 +109,8 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
 public enum BindingActionType: String, Codable, Sendable {
     case switchInputSource
     case sendKey
+    /// Put the latin pinyin before the caret back into the slot's Chinese input source.
+    case recoverPinyin
     case disable
 }
 
@@ -129,6 +131,10 @@ public struct BindingAction: Codable, Equatable, Sendable {
 
     public static func sendKey(_ trigger: KeyTrigger) -> BindingAction {
         BindingAction(type: .sendKey, output: trigger)
+    }
+
+    public static func recoverPinyin(_ role: InputRole) -> BindingAction {
+        BindingAction(type: .recoverPinyin, role: role)
     }
 }
 

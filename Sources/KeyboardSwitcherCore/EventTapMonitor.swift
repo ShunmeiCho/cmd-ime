@@ -9,6 +9,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     public var onSwitch: ((InputRole, InputSourceInfo) -> Void)?
     /// A confirmed event-tap switch, including the binding that actually fired.
     public var onTriggeredSwitch: ((InputRole, InputSourceInfo, KeyTrigger) -> Void)?
+    /// The user asked for the latin pinyin before the caret to be put back into the slot's
+    /// Chinese source. The app supplies this; the tap only reports the request.
+    public var onRecoveryRequested: ((InputRole) -> Void)?
 
     /// The event tap runs on the main run loop; recording state must change there too.
     public var isCapturingShortcut: Bool {
@@ -466,6 +469,15 @@ public final class EventTapMonitor: @unchecked Sendable {
                 return
             }
             requestSwitch(to: role, trigger: trigger, evidenceEpoch: evidenceEpoch)
+        case .recoverPinyin:
+            guard let role = action.role else {
+                return
+            }
+            // Out of the callback, like a switch: recovery reads the focused document through
+            // accessibility and must never do that while the event tap is waiting on it.
+            Self.scheduleOnMainQueue(after: 0) { [weak self] in
+                self?.onRecoveryRequested?(role)
+            }
         case .sendKey:
             guard let output = action.output else {
                 return
@@ -627,6 +639,17 @@ public final class EventTapMonitor: @unchecked Sendable {
 
     /// Set by tests to observe the prelude without posting real events.
     var kanaKeyPoster: (() -> Void)?
+
+    /// Posts one plain key press marked as ours, so this monitor's own tap passes it through.
+    /// Recovery replays the pinyin through this.
+    public static func postMarkedKey(keyCode: Int) {
+        for isDown in [true, false] {
+            let event = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(keyCode), keyDown: isDown)
+            event?.flags = []
+            event?.setIntegerValueField(.eventSourceUserData, value: EventTapMonitor.syntheticEventMarker)
+            event?.post(tap: .cghidEventTap)
+        }
+    }
 
     public static func postKanaKeyEvent() {
         for isDown in [true, false] {
