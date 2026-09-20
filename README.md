@@ -409,6 +409,15 @@ legacy slots on the next upgrade.
 
 </details>
 
+## Recovery (beta)
+
+You meant to type Chinese, the switch had not taken, and `nihao` is sitting in your document. One
+key takes those letters back out and replays them into your Chinese input source, so you can pick
+the word you meant; one Command+Z undoes the whole thing.
+
+It is measured in TextEdit with 微信输入法 and refuses everywhere else, it is configured by hand,
+and it is off unless you add the binding yourself. See [docs/recovery-beta.md](docs/recovery-beta.md).
+
 ## Troubleshooting
 
 <details>
