@@ -22,7 +22,8 @@ public struct LabKnownIssue: Equatable, Sendable {
                 + "40, the text client's own input context named this source as its selected "
                 + "source every time, yet no composition ever reached the client and every "
                 + "letter arrived as committed text. Every identity the system exposes was "
-                + "right; the letters were latin anyway."
+                + "right; the letters were latin anyway. Reported upstream: "
+                + "https://github.com/rime/squirrel/issues/1179"
         ),
     ]
 
