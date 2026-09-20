@@ -108,6 +108,13 @@ final class AppModel: ObservableObject {
             isFirstRun = result.isFirstRun
             if let backupURL = result.recoveredBackupURL {
                 recoveryMessage = "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults."
+            } else if result.config.unreadableBindingCount > 0 {
+                // Usually a config written by a newer CmdIME. Everything else was kept, but the
+                // user has to hear that a shortcut of theirs is not going to fire.
+                let count = result.config.unreadableBindingCount
+                recoveryMessage = "\(count) shortcut\(count == 1 ? "" : "s") in your config "
+                    + "\(count == 1 ? "was" : "were") written by a newer version of CmdIME and "
+                    + "\(count == 1 ? "is" : "are") not active. Everything else was kept."
             }
         } catch {
             // A config file exists but could not be moved aside: not a first run.

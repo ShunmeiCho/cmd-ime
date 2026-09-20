@@ -696,6 +696,12 @@ struct CLI {
                 "warning: config was unreadable; backed it up to \(backupURL.path) and reset to defaults.\n",
                 stderr
             )
+        } else if result.config.unreadableBindingCount > 0 {
+            fputs(
+                "warning: \(result.config.unreadableBindingCount) binding(s) in the config were "
+                    + "written by a newer CmdIME and are not active. Everything else was kept.\n",
+                stderr
+            )
         }
         return result.configForCLI
     }

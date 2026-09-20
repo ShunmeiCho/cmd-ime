@@ -138,6 +138,20 @@ public struct BindingAction: Codable, Equatable, Sendable {
     }
 }
 
+/// One entry of the bindings array, which this build may not understand.
+///
+/// A config written by a newer CmdIME can name an action this one has never heard of. Decoding
+/// the array strictly made that one binding cost the user every setting they had: the whole file
+/// failed to decode, was moved aside as corrupt, and the app came up with defaults. Losing the
+/// unreadable binding is the right price; losing the file is not.
+struct LenientKeyBinding: Decodable {
+    let binding: KeyBinding?
+
+    init(from decoder: Decoder) throws {
+        binding = try? KeyBinding(from: decoder)
+    }
+}
+
 public struct KeyBinding: Codable, Equatable, Sendable {
     public var trigger: KeyTrigger
     public var action: BindingAction
@@ -277,6 +291,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     /// Nil selects the default built-in theme. An unknown id is kept as stored.
     public var switchIndicatorThemeID: String?
     public var bindings: [KeyBinding]
+    /// How many bindings in the file this build could not read, so the app can say so instead of
+    /// letting them disappear quietly. Not persisted: it describes one load, not the config.
+    public var unreadableBindingCount = 0
     public var inputSources: [String: RoleInputSourcePreference]
 
     public init(
@@ -505,7 +522,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             forKey: .switchIndicatorCustomRoleColorHexes
         ) ?? [:]
         switchIndicatorThemeID = try container.decodeIfPresent(String.self, forKey: .switchIndicatorThemeID)
-        bindings = try container.decode([KeyBinding].self, forKey: .bindings)
+        let decodedBindings = try container.decode([LenientKeyBinding].self, forKey: .bindings)
+        bindings = decodedBindings.compactMap(\.binding)
+        unreadableBindingCount = decodedBindings.count - bindings.count
         inputSources = try container.decode([String: RoleInputSourcePreference].self, forKey: .inputSources)
         slots = Self.normalizedSlots(
             try container.decodeIfPresent([SwitchSlot].self, forKey: .slots) ?? SwitchSlot.legacyDefaults,

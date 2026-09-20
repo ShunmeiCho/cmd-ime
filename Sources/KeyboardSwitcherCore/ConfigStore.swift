@@ -86,7 +86,12 @@ public struct ConfigStore {
             )
         } catch {
             let backupURL = try backUpUnreadableFile()
-            return ConfigLoadResult(config: SwitcherConfig.default.completingSetup(), recoveredBackupURL: backupURL)
+            let recovered = SwitcherConfig.default.completingSetup()
+            // Write the replacement out now. Moving the unreadable file aside and returning a
+            // config only in memory leaves no config on disk at all, which is what a user saw
+            // when an older build met a binding it did not understand: the file was simply gone.
+            try? save(recovered)
+            return ConfigLoadResult(config: recovered, recoveredBackupURL: backupURL)
         }
     }
 

@@ -134,8 +134,10 @@ final class ConfigStoreTests: XCTestCase {
         let backupURL = try XCTUnwrap(result.recoveredBackupURL)
         XCTAssertTrue(backupURL.lastPathComponent.hasPrefix("config.json.corrupt."))
         XCTAssertEqual(try Data(contentsOf: backupURL), garbage)
-        // The original corrupt file is moved aside, so a later save() cannot clobber the backup.
-        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        // The unreadable bytes are moved aside under their own name, so nothing written later can
+        // clobber them — and a usable config takes their place, rather than leaving no config at all.
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        XCTAssertEqual(try store.load(), SwitcherConfig.default.completingSetup())
         try store.save(.default)
         XCTAssertEqual(try Data(contentsOf: backupURL), garbage)
     }
