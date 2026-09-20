@@ -134,7 +134,7 @@ struct LabRunner {
         // that is already current and pass without ever switching.
         if skipsBaseline {
             key(53)
-            _ = try? service.selectInputSource(id: baselineID)
+            selectFromAnotherProcess(baselineID)
             settle(max(settleMs, 400))
         }
         if !skipsBaseline {
@@ -142,12 +142,17 @@ struct LabRunner {
             // take the baseline keystroke, and the input method it belongs to would still be
             // attached when we typed. That looked exactly like the failure this lab hunts.
             key(53)
-            _ = try? service.selectInputSource(id: baselineID)
+            selectFromAnotherProcess(baselineID)
             settle(max(settleMs, 400))
             key(45)
             baseline = readStableText()
             clearDocument()
         }
+        // Let the client finish with the keys just sent before switching. Measured 2026-09-20:
+        // switching 80 ms after clearing the document made WeType take the replayed letters as
+        // latin in 8 of 10 attempts, while 200 ms passed 10 of 10. Without this wait the lab
+        // manufactures the failure it is looking for and blames the input method for it.
+        settle(Self.quietBeforeSwitchMs)
 
         if restMs > 0 { settle(restMs) }
         if let trigger {
@@ -169,7 +174,7 @@ struct LabRunner {
             settle(200)
         }
         if reselectMs > 0 {
-            _ = try? service.selectInputSource(id: source.id)
+            selectFromAnotherProcess(source.id)
             settle(reselectMs)
         }
         let reported = try? service.currentInputSource()
@@ -200,6 +205,20 @@ struct LabRunner {
         return (LabJudge.judge(observation, expectation: expectation), note)
     }
 
+    /// Selects from a short-lived child process rather than this one.
+    ///
+    /// Measured 2026-09-20: when the process that then synthesises the keystrokes is also the one
+    /// that called TISSelectInputSource, WeType took every letter as committed latin (3 of 3),
+    /// while the same selection made by a separate process composed every time (3 of 3). A lab
+    /// that selected in-process would therefore report a failure of its own making.
+    private func selectFromAnotherProcess(_ id: String) {
+        let child = Process()
+        child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+        child.arguments = ["source", id, "--quiet"]
+        try? child.run()
+        child.waitUntilExit()
+    }
+
     private func selectDirectly(_ source: InputSourceInfo) {
         SwitchActivationPolicy.selectWithKanaPrelude(
             target: source,
@@ -212,7 +231,7 @@ struct LabRunner {
             },
             select: {}
         )
-        _ = try? service.selectInputSource(id: source.id)
+        selectFromAnotherProcess(source.id)
     }
 
     /// Fires the user's own trigger, unmarked, so CmdIME's event tap treats it as a real key press.
@@ -288,6 +307,9 @@ struct LabRunner {
         up.flags = []
         up.post(tap: .cghidEventTap)
     }
+
+    /// How long the client is left alone between the last keystroke and the switch.
+    static let quietBeforeSwitchMs = 200
 
     private func clearDocument() {
         key(0, flags: .maskCommand)  // Command+A
