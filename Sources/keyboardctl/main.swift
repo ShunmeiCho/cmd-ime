@@ -125,6 +125,8 @@ struct CLI {
             try sourceCommand(Array(args.dropFirst()))
         case "diagnose":
             try diagnose(json: args.contains("--json"))
+        case "lab":
+            try runLab()
         case "listen":
             try listen()
         case "slots":
@@ -464,6 +466,23 @@ struct CLI {
     #endif
 
 
+    /// Types into TextEdit through each slot's own trigger and reads the text back.
+    private func runLab() throws {
+        #if os(macOS)
+        let attempts = value(after: "--attempts").flatMap(Int.init) ?? 2
+        let settle = value(after: "--settle").flatMap(Int.init) ?? 400
+        let runner = LabRunner(config: try loadConfig(), attempts: max(1, attempts), settleMs: max(100, settle))
+        try runner.run(json: args.contains("--json"))
+        #else
+        throw CLIError.unsupportedPlatform
+        #endif
+    }
+
+    private func value(after flag: String) -> String? {
+        guard let index = args.firstIndex(of: flag), args.index(after: index) < args.endIndex else { return nil }
+        return args[args.index(after: index)]
+    }
+
     // MARK: - source
 
     /// Every word `run()` dispatches on. A first argument that is not one of these and looks
@@ -659,7 +678,7 @@ struct CLI {
               keyboardctl slot remove <slot>
               keyboardctl show
               keyboardctl switch <slot>
-              keyboardctl source [--json]
+              keyboardctl lab [--attempts N] [--settle MS] [--json]\n              keyboardctl source [--json]
               keyboardctl source <input-source-id> [<wait-ms>] [--quiet] [--json]
               keyboardctl diagnose [--json]
               keyboardctl listen
