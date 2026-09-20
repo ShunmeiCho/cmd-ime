@@ -17,9 +17,13 @@ struct SwitcherStripMetrics {
     static let doubleGlyphSize = 13.0
     static let nameSize = 10.0
     static let textOnlyNameSize = 11.0
-    static let minimumGlyphSize = 15.0
-    static let minimumDoubleGlyphSize = 12.0
-    static let minimumNameSize = 9.0
+    /// Each size stops shrinking exactly where `switcherMinimumFactor` already stops the
+    /// cell, so within the Size and Scale range nothing reaches its floor and the strip
+    /// scales in one piece. Only a theme's own Text setting can push under them, and
+    /// there the floor is doing its real job: keeping the name legible.
+    static let minimumGlyphSize = SwitcherStripMetrics.glyphSize * BubbleMetrics.switcherMinimumFactor
+    static let minimumDoubleGlyphSize = SwitcherStripMetrics.doubleGlyphSize * BubbleMetrics.switcherMinimumFactor
+    static let minimumNameSize = SwitcherStripMetrics.nameSize * BubbleMetrics.switcherMinimumFactor
     static let glyphLineFactor = 1.2
     static let nameLineFactor = 1.3
     static let cellVerticalPadding = 10.0
@@ -41,6 +45,9 @@ struct SwitcherStripMetrics {
     let cellHeight: CGFloat
     let spacing: CGFloat
     let padding: CGFloat
+    let nameTrim: CGFloat
+    let thumbShadowRadius: CGFloat
+    let thumbShadowOffset: CGFloat
     let glyphSize: CGFloat
     let doubleGlyphSize: CGFloat
     let nameSize: CGFloat
@@ -64,7 +71,9 @@ struct SwitcherStripMetrics {
         let widestName = model.display == .iconOnly ? 0 : model.cells
             .map { Double(($0.name as NSString).size(withAttributes: [.font: nameFont]).width) }
             .max() ?? 0
-        let width = min(max(widestName + Self.namePadding, Self.minCellWidth * factor), Self.maxCellWidth * factor)
+        // The air around a name scales with everything else; an absolute padding would
+        // keep its share of a shrinking cell growing.
+        let width = min(max(widestName + Self.namePadding * factor, Self.minCellWidth * factor), Self.maxCellWidth * factor)
 
         let content: Double
         let base: Double
@@ -84,6 +93,10 @@ struct SwitcherStripMetrics {
         cellHeight = max(base * factor, content + Self.cellVerticalPadding * factor).rounded(.up).points
         spacing = (Self.spacing * factor).points
         padding = (Self.padding * factor).points
+        nameTrim = (Self.nameTrim * factor).points
+        // A shadow that keeps its absolute radius grows heavier as the thumb shrinks.
+        thumbShadowRadius = (Self.thumbShadow.radius * factor).points
+        thumbShadowOffset = (Self.thumbShadow.y * factor).points
         glyphSize = glyph.points
         doubleGlyphSize = doubleGlyph.points
         nameSize = name.points
@@ -215,7 +228,7 @@ struct SwitcherStripView: View {
                         .font(BubbleFontResolver.utility(model.typography, size: metrics.nameSize))
                         .lineLimit(1)
                         .truncationMode(.tail)
-                        .frame(width: metrics.cellWidth - SwitcherStripMetrics.nameTrim.points,
+                        .frame(width: metrics.cellWidth - metrics.nameTrim,
                                height: metrics.nameSize * SwitcherStripMetrics.nameLineFactor)
                 }
             }
@@ -237,11 +250,14 @@ struct SwitcherStripView: View {
         let opacity = !isNeutral ? 1
             : model.isDarkSurface ? SwitcherStripMetrics.monochromeThumbOpacity.dark
             : SwitcherStripMetrics.monochromeThumbOpacity.light
-        let shadow = SwitcherStripMetrics.thumbShadow
         return thumbShape
             .fill(Color(bubbleHex: fillHex).opacity(opacity))
             .overlay(thumbShape.strokeBorder(Color.white.opacity(SwitcherStripMetrics.thumbHairlineOpacity), lineWidth: 0.5))
-            .shadow(color: .black.opacity(shadow.opacity), radius: shadow.radius.points, y: shadow.y.points)
+            .shadow(
+                color: .black.opacity(SwitcherStripMetrics.thumbShadow.opacity),
+                radius: metrics.thumbShadowRadius,
+                y: metrics.thumbShadowOffset
+            )
             .frame(width: metrics.cellWidth, height: metrics.cellHeight)
     }
 
