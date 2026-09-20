@@ -85,6 +85,7 @@ struct SlotBoardSection: View {
                 guard let notice else { return }
                 switch notice {
                 case let .rejected(reason): announce(reason)
+                case let .failed(reason): announce(reason)
                 case let .removed(name):
                     undoSlotName = name
                     announce("Removed slot \(name). Undo available.")

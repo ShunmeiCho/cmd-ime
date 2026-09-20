@@ -19,6 +19,7 @@ struct SlotBoardNoticeBar: View {
         case let .removed(name): "Removed slot \(name)"
         case let .found(_, name): "Found input source \(name)"
         case let .rejected(reason): reason
+        case let .failed(reason): reason
         }
     }
 
@@ -51,6 +52,9 @@ struct SlotBoardNoticeBar: View {
             case let .rejected(reason):
                 Label(reason, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(DesignTokens.Colors.warning)
+            case let .failed(reason):
+                Label(reason, systemImage: "exclamationmark.octagon.fill")
+                    .foregroundStyle(DesignTokens.Colors.danger)
             case let .found(sourceID, name):
                 Label("Found \(name)", systemImage: "sparkles")
                 Button("Add Slot") { onAdd(sourceID) }

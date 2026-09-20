@@ -5,6 +5,8 @@ import KeyboardSwitcherCore
 
 enum BoardNotice: Equatable {
     case rejected(String)
+    /// Something the app tried to do did not work; the text is what went wrong.
+    case failed(String)
     case removed(slotName: String)
     case found(sourceID: String, name: String)
 }
@@ -315,7 +317,20 @@ final class AppModel: ObservableObject {
         } catch {
             refreshRuntimeStatus()
             statusText = error.localizedDescription
+            boardNotice = .failed("Could not \(enabled ? "enable" : "disable") the login item. \(error.localizedDescription)")
         }
+    }
+
+    /// macOS 13 asks the user to approve a login item in System Settings; the switch
+    /// stays off until they do.
+    var loginItemNeedsApproval: Bool {
+        loginItem.isAvailable && !loginItem.isEnabled && loginItem.statusText == "Needs approval"
+    }
+
+    func openLoginItemsSettings() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") else { return }
+        NSWorkspace.shared.open(url)
+        statusText = "Opened Login Items settings"
     }
 
     func setSwitchIndicatorVisible(_ visible: Bool) {
@@ -723,6 +738,8 @@ final class AppModel: ObservableObject {
             return true
         } catch {
             statusText = error.localizedDescription
+            // Saving is what every control in the window ends in, so a failure has to be seen.
+            boardNotice = .failed("Could not save settings. \(error.localizedDescription)")
             return false
         }
     }

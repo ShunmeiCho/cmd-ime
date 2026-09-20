@@ -256,6 +256,19 @@ private extension SettingsHeader {
                     .controlSize(.small)
                     .disabled(!model.loginItem.isAvailable)
                 }
+                // Registering succeeds while the switch stays off: macOS waits for the user
+                // to approve the login item in System Settings.
+                if model.loginItemNeedsApproval {
+                    HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Layout.rowGap) {
+                        Label("Approve CmdIME in Login Items", systemImage: "exclamationmark.triangle.fill")
+                            .font(DesignTokens.Typography.auxiliary)
+                            .foregroundStyle(DesignTokens.Colors.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: DesignTokens.Layout.rowGap)
+                        Button("Open") { model.openLoginItemsSettings() }
+                            .fixedSize()
+                    }
+                }
                 HStack {
                     Text("Appearance")
                     Spacer(minLength: DesignTokens.Layout.rowGap)
