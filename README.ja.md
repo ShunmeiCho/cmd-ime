@@ -84,7 +84,7 @@ macOS 13 以降が必要です。以降のアップデートは、アプリ内�
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.7.1 CMDIME_SHA256=37a8e92de27e7a563a5ca65d521ae4aef7363929580e48f02c93d0ab0f19412a bash
+  CMDIME_VERSION=0.8.0 CMDIME_SHA256=85923f4f534be8411b67de352f7dae308afbf621ae870d936a7e11aaccf817f8 bash
 ```
 
 ソースからビルドするには:
@@ -118,14 +118,15 @@ swift test
 <p align="center"><sub>ダーク外観のスロットボード。ここでは 3 つですが、使う入力ソースの数だけ追加できます。</sub></p>
 
 - **キャレットの近くに表示される切り替えインジケーター。** Glass、macOS 26 以降の
-  Liquid Glass、paper 系のスタイル、すべてのスロットを表示する switcher など 12 の
-  組み込みテーマに加え、独自のテーマやフォントも使えます。
+  Liquid Glass、paper 系のスタイル、すべてのスロットを表示する switcher、それを
+  グリフだけに縮めた badge など 14 の組み込みテーマに加え、独自のテーマやフォントも
+  使えます。
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="設定画面にある組み込みインジケーターテーマ 10 種類：Glass、Liquid Glass、Classic、3 種類の paper 系、Typographic、Tile、Line、Switcher。">
 </p>
 
-<p align="center"><sub>設定画面に並ぶ 12 の組み込みテーマのうち 10 種類。</sub></p>
+<p align="center"><sub>設定画面に並ぶ組み込みテーマのうち 10 種類。</sub></p>
 
 - **アプリ内からのアップデート。** 既定では 6 時間ごとに確認し、**Update Now** の横に
   変更点の概要を表示し、権限を保ったままその場でインストールします。
@@ -219,8 +220,9 @@ CmdIME はプログラムから入力ソースを切り替えるため、macOS �
 
 設定画面では、インジケーターを無効にする、組み込みテーマのいずれか(glass、macOS 26
 以降の Liquid Glass、1 色または 2 色のインクを使う paper、テキストのみ、タイルのみ、
-1 行表示、すべてのスロットを表示する switcher)を適用する、プリセットと拡大率
-スライダーでサイズを変更する、アイコン表示とテキスト表示を切り替える、各スロット自身の
+1 行表示、すべてのスロットを表示する switcher、それをグリフだけに縮めた badge)を
+適用する、1 本のスライダー(パーセントが実際に描かれるサイズです)でサイズを変更する、
+アイコン表示とテキスト表示を切り替える、各スロット自身の
 色、システムのアクセントカラー、モノクロのいずれかで色を付ける、といったことができます。
 フォントファミリー、ウェイト、文字サイズはテーマに属しており、組み込みテーマを編集すると
 コピーが作成されます。
@@ -429,6 +431,50 @@ stderr に通知が出力されます。これは、古いバイナリによっ�
 
 </details>
 
+## エディターとスクリプト
+
+Vim、Neovim、Emacs、Helix では、挿入モードを抜けたら英語に戻すために `im-select` や `macism` で
+入力ソースを切り替えるのが一般的です。`keyboardctl source` はその置き換えとして使え、アプリ自身が
+切り替えに使っているのと同じコードです。
+
+```vim
+" Neovim: 挿入モードを抜けたら英語へ、戻るときに元のソースへ。
+let g:cmdime = '/Applications/CmdIME.app/Contents/Resources/keyboardctl'
+augroup cmdime
+  autocmd!
+  autocmd InsertLeave * let b:cmdime_source = trim(system(g:cmdime . ' source'))
+        \ | call system(g:cmdime . ' source com.apple.keylayout.ABC')
+  autocmd InsertEnter * if exists('b:cmdime_source')
+        \ | call system(g:cmdime . ' source ' . b:cmdime_source) | endif
+augroup END
+```
+
+お使いの Mac での入力ソース ID は `keyboardctl scan` で確認できます。
+
+**約束できること、できないこと。** 選択が効かなかったとき `keyboardctl source` は非ゼロで終了し、
+理由を stderr に書きます。ただし広く使われているエディタープラグインはそのどちらも読まないので、
+**エディターがそれを知ることはありません**。何も分からないままになる — それがこの領域の現状であり、
+`keyboardctl lab` がある理由です。あなたの Mac とあなたの入力ソースで切り替えが本当に効くのかを
+知る方法は、実際に打って読み返すことだけです。
+
+```sh
+keyboardctl lab --attempts 30
+```
+
+実行中はキーボードを占有し、TextEdit に入力します。試行ごとに 1 文字を出力するので、失敗が散って
+いるのか固まっているのかが見て分かります。
+
+## 打ち間違えた入力ソースからの復帰(ベータ)
+
+中国語を打つつもりが切り替わっておらず、`nihao` がドキュメントに残ってしまった。キー 1 つでその
+文字列を取り出して中国語入力ソースに打ち直し、変換候補を出して選べるようにします。Command+Z を
+1 回押せば、その一連の操作ごと元に戻せます。
+
+**手動で設定しない限り無効**で、実測していない場所ではすべて拒否します。現在実測済みなのは
+TextEdit と微信輸入法の組み合わせだけで、Safari、Electron 製エディター、パスワード入力欄、その他
+すべては理由を添えて拒否されます。設定方法、制限、実測値は
+[docs/recovery-beta.md](docs/recovery-beta.md) にあります。
+
 ## トラブルシューティング
 
 <details>
@@ -498,8 +544,8 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 リリースをパッケージするには:
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.7.1
-shasum -a 256 dist/CmdIME-0.7.1.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.8.0
+shasum -a 256 dist/CmdIME-0.8.0.zip
 ```
 
 公証付きのパッケージを作成するには、`Developer ID Application` の署名 ID が必要です。
@@ -541,6 +587,17 @@ API に依存しています。Mac App Store での配布には、サンドボ�
 - `Casks`: Homebrew cask のテンプレート
 
 </details>
+
+## コントリビュート
+
+プルリクエストを歓迎します。[CONTRIBUTING.md](CONTRIBUTING.md) をご覧ください。最初のプル
+リクエストには [CLA.md](CLA.md) に同意する 1 行が必要です。著作権はあなたが保持したまま、
+将来ライセンスを変更する際に過去の貢献者全員を探し直さずに済むようにするためのものです。
+
+**Windows:** 要望はありますが、まだ存在しません。誰かが書き始める前に、先に答える価値のある問いが
+あります。このプロジェクトが対象としている不具合 — 切り替えが成功したと報告されるのに、打つと前の
+言語のままになる — は Windows にもあるのか。誰も測っていません。
+[Issue #5](https://github.com/ShunmeiCho/cmd-ime/issues/5) に、どんな協力が役に立つかを書いています。
 
 ## サポート
 

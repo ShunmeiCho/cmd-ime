@@ -77,7 +77,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.7.1 CMDIME_SHA256=37a8e92de27e7a563a5ca65d521ae4aef7363929580e48f02c93d0ab0f19412a bash
+  CMDIME_VERSION=0.8.0 CMDIME_SHA256=85923f4f534be8411b67de352f7dae308afbf621ae870d936a7e11aaccf817f8 bash
 ```
 
 从源码构建：
@@ -107,14 +107,15 @@ swift test
 
 <p align="center"><sub>深色外观下的槽位面板。这里是三个槽位，你用几个输入法就可以加几个。</sub></p>
 
-- **光标附近的切换指示气泡。** 十二种内置主题，包括 Glass、macOS 26 及以上的
-  Liquid Glass、纸张风格，以及显示所有槽位的切换器，另外还支持你自己的主题和字体。
+- **光标附近的切换指示气泡。** 十四种内置主题，包括 Glass、macOS 26 及以上的
+  Liquid Glass、纸张风格、显示所有槽位的切换器，以及把切换器缩到只剩图标的徽章，
+  另外还支持你自己的主题和字体。
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="设置里的 10 个内置指示气泡主题：Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile、Line 和 Switcher。">
 </p>
 
-<p align="center"><sub>设置里 12 个内置主题中的 10 个。</sub></p>
+<p align="center"><sub>设置里内置主题中的 10 个。</sub></p>
 
 - **应用内更新。** 默认每六小时检查一次，在 **Update Now** 旁边附上改动摘要，
   原地安装并保留你的权限。
@@ -194,7 +195,8 @@ CmdIME 通过编程方式切换输入源，因此不会调出 macOS 私有的输
 
 在设置中，切换指示气泡可以关闭，可以选用内置主题之一（Glass（玻璃）、适用于 macOS 26
 及以上的 Liquid Glass、使用一种或两种油墨的纸张风格、纯文字、纯色块、单行，或者显示所有
-槽位的切换器），可以通过预设和缩放滑块调整大小，可以在图标/文字显示之间切换，还可以按
+槽位的切换器，或者把切换器缩到只剩图标的徽章），用一个滑块调整大小、百分比就是它实际
+画出来的尺寸，可以在图标/文字显示之间切换，还可以按
 每个槽位自己的颜色、系统强调色或单色来着色。字体族、字重和文字大小属于主题；编辑内置
 主题时会生成一份副本。
 
@@ -366,6 +368,45 @@ GUI 会把原文件备份为配置文件旁边的 `config.json.before-reset.bak`
 
 </details>
 
+## 编辑器与脚本
+
+Vim、Neovim、Emacs、Helix 用户通常用 `im-select` 或 `macism` 切换输入源，好在离开插入模式时切回
+英文。`keyboardctl source` 可以直接替换它们，而且和 App 自己切换用的是同一份代码。
+
+```vim
+" Neovim：离开插入模式切回英文，回到插入模式时恢复。
+let g:cmdime = '/Applications/CmdIME.app/Contents/Resources/keyboardctl'
+augroup cmdime
+  autocmd!
+  autocmd InsertLeave * let b:cmdime_source = trim(system(g:cmdime . ' source'))
+        \ | call system(g:cmdime . ' source com.apple.keylayout.ABC')
+  autocmd InsertEnter * if exists('b:cmdime_source')
+        \ | call system(g:cmdime . ' source ' . b:cmdime_source) | endif
+augroup END
+```
+
+你这台机器上的输入源 id 用 `keyboardctl scan` 查。
+
+**它承诺什么，不承诺什么。** 切换没生效时，`keyboardctl source` 会以非零状态退出并在 stderr 说明
+原因，但常用的编辑器插件没有一个会读这两样，**所以你的编辑器不会知道**。它什么都不会知道——
+这就是这件事目前的实际状况，也正是 `keyboardctl lab` 存在的理由：要知道切换在你的机器、你的输入
+法上到底成不成，只有真打一段字再读回来。
+
+```sh
+keyboardctl lab --attempts 30
+```
+
+它运行时会接管键盘，往 TextEdit 里打字，每次尝试打印一个字符，这样你能看出失败是散开的还是成片的。
+
+## 打错输入法救回（beta）
+
+你本想打中文，切换没生效，`nihao` 就留在了文档里。按一个键把这串字母取出来、重新送进中文输入法，
+候选框弹出来让你选字，按一次 Command+Z 可以撤销整个过程。
+
+它**默认关闭，需要手工配置**，而且在没有实测过的地方一律拒绝。目前实测过的只有 TextEdit 加
+微信输入法；Safari、Electron 编辑器、密码框以及其它一切都会被拒绝，并给出原因。配置方法、限制和
+实测数据见 [docs/recovery-beta.md](docs/recovery-beta.md)。
+
 ## 故障排除
 
 <details>
@@ -431,8 +472,8 @@ CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)" ./script/build_and_run
 打包发布版本：
 
 ```sh
-CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.7.1
-shasum -a 256 dist/CmdIME-0.7.1.zip
+CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh 0.8.0
+shasum -a 256 dist/CmdIME-0.8.0.zip
 ```
 
 经过公证的打包需要 `Developer ID Application` 签名身份；如果要打包明确标注为未经公证的
@@ -471,6 +512,16 @@ Input Monitoring、登录项以及输入源切换都依赖 macOS API。通过 Ma
 - `Casks`：Homebrew cask 模板
 
 </details>
+
+## 参与贡献
+
+欢迎提交 PR，请先看 [CONTRIBUTING.md](CONTRIBUTING.md)。第一个 PR 需要加一行表示同意
+[CLA.md](CLA.md)——你保留自己的版权，而这份协议让项目将来可以更换许可，不必回头找到每一位
+曾经的贡献者。
+
+**Windows：** 有人问，但它还不存在。在有人动手之前，有个问题值得先回答：Windows 上到底有没有
+这个项目所针对的故障——切换报告成功，打出来仍是上一种语言？没有人量过。
+[Issue #5](https://github.com/ShunmeiCho/cmd-ime/issues/5) 说明了怎样的帮助最有用。
 
 ## 支持
 
