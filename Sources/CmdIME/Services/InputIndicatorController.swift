@@ -281,14 +281,27 @@ final class InputIndicatorController {
 
     // MARK: - Caret
 
+    /// An accessibility reply is served on the focused application's own main thread,
+    /// and this asks for one microseconds after that application was handed an input
+    /// source change. Without a cap the wait is unbounded: measured idle, every
+    /// application answered in well under two milliseconds at the ninetieth percentile
+    /// but produced outliers from seventy milliseconds to nearly a quarter of a second.
+    /// That wait is on our main thread, which also services the event tap, so it holds
+    /// the user's typing. Past the cap the bubble falls back to the pointer, which is
+    /// the same path as an application that reports no caret at all.
+    private static let caretLookupTimeout: Float = 0.05
+
     private func focusedCaretRect() -> CGRect? {
         let systemWide = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(systemWide, Self.caretLookupTimeout)
         var focusedValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
               let focusedValue, CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
             return nil
         }
         let focusedElement = focusedValue as! AXUIElement
+        // The system-wide default does not reach an element that already exists.
+        AXUIElementSetMessagingTimeout(focusedElement, Self.caretLookupTimeout)
 
         var rangeValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,

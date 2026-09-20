@@ -969,8 +969,11 @@ final class AppModel: ObservableObject {
                     self?.statusText = message
                 }
             }
+            // Already on the main thread: the monitor reports from work it scheduled
+            // there itself. Hopping again only pushed the bubble one run-loop turn
+            // further from the key that asked for it.
             nextMonitor.onSwitch = { [weak self] role, source in
-                DispatchQueue.main.async {
+                MainActor.assumeIsolated {
                     self?.showSwitchIndicator(for: role, source: source)
                 }
             }
