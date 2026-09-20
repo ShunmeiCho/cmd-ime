@@ -327,6 +327,9 @@ swift run keyboardctl slot add
 swift run keyboardctl slot add 1 --name Korean
 swift run keyboardctl slot remove japanese
 swift run keyboardctl switch english
+swift run keyboardctl source
+swift run keyboardctl source com.apple.keylayout.ABC
+swift run keyboardctl lab
 swift run keyboardctl diagnose
 swift run keyboardctl diagnose --json
 swift run keyboardctl bind left-command english
@@ -346,6 +349,17 @@ swift run keyboardctl listen
 - `keyboardctl switch <slot>`: selects the matched input source for a slot and confirms
   that macOS applied the switch. If macOS does not apply the selection, it prints an
   error message to `stderr` and exits non-zero.
+- `keyboardctl source [<input-source-id>] [<wait-ms>] [--quiet] [--json]`: with no argument,
+  prints the id of the current input source; with an id, selects it and waits until macOS
+  reports the change (60 ms by default, `0` to skip the wait). It reports separately when an
+  id is unknown, installed but not enabled, or not a keyboard source at all, so a typo and a
+  disabled source do not produce the same message. A bare id works too:
+  `keyboardctl com.apple.keylayout.ABC`. This is the replacement for `im-select` and `macism`
+  in editor integrations; see [Editors and scripts](#editors-and-scripts).
+- `keyboardctl lab [--slots a,b] [--attempts N] [--json]`: the reliability lab. It switches to
+  each slot for real, types into TextEdit, reads the text back through the accessibility API,
+  and judges by what was produced rather than by what macOS reported. Needs Accessibility
+  permission for the terminal running it, and it takes over the keyboard while it runs.
 - `keyboardctl diagnose [--json]`: prints each slot's configured preferences
   (`preferredIDs`, `languagePrefixes`, `nameContains`), the matched input source, and the
   match reason (`preferredID`, `fallbackLanguage`, `languagePrefix`, `nameContains`, or
@@ -408,6 +422,39 @@ binary drops `slots` on save, losing names and tints and potentially restoring r
 legacy slots on the next upgrade.
 
 </details>
+
+## Editors and scripts
+
+Vim, Neovim, Emacs and Helix users usually switch input sources with `im-select` or `macism`, so
+that leaving insert mode goes back to English. `keyboardctl source` is a drop-in replacement, and
+it is the same code the app itself switches with.
+
+```vim
+" Neovim: back to English when you leave insert mode, and restore on the way back in.
+let g:cmdime = '/Applications/CmdIME.app/Contents/Resources/keyboardctl'
+augroup cmdime
+  autocmd!
+  autocmd InsertLeave * let b:cmdime_source = trim(system(g:cmdime . ' source'))
+        \ | call system(g:cmdime . ' source com.apple.keylayout.ABC')
+  autocmd InsertEnter * if exists('b:cmdime_source')
+        \ | call system(g:cmdime . ' source ' . b:cmdime_source) | endif
+augroup END
+```
+
+Run `keyboardctl scan` for the ids on your Mac.
+
+**What this does and does not promise.** `keyboardctl source` exits non-zero and explains itself on
+stderr when a selection does not take, but none of the editor plugins in common use read either, so
+your editor will not know. What it will know is nothing at all — which is the honest state of the
+art here, and the reason for `keyboardctl lab`: the only way to find out whether a switch really
+works on your Mac, with your input sources, is to type something and read it back.
+
+```sh
+keyboardctl lab --attempts 30
+```
+
+It takes over the keyboard while it runs, types into TextEdit, and prints one character per attempt
+so you can see whether failures are spread out or arrive in blocks.
 
 ## Recovery (beta)
 
