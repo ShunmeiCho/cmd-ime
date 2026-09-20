@@ -121,6 +121,8 @@ struct CLI {
             try show()
         case "switch":
             try switchRole()
+        case "source":
+            try sourceCommand(Array(args.dropFirst()))
         case "diagnose":
             try diagnose(json: args.contains("--json"))
         case "listen":
@@ -136,7 +138,10 @@ struct CLI {
         case "quit":
             try quitApp()
         default:
-            throw CLIError.unknownCommand(command)
+            guard SourceCommandPolicy.looksLikeInputSourceID(command, knownCommands: Self.knownCommands) else {
+                throw CLIError.unknownCommand(command)
+            }
+            try sourceCommand(args)
         }
     }
 
@@ -458,6 +463,167 @@ struct CLI {
     }
     #endif
 
+
+    // MARK: - source
+
+    /// Every word `run()` dispatches on. A first argument that is not one of these and looks
+    /// like an input source id is read as one, so `keyboardctl <id>` works like `im-select <id>`.
+    private static let knownCommands: Set<String> = [
+        "help", "--help", "-h", "path", "scan", "init", "show", "switch", "source",
+        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit",
+    ]
+
+    /// Reads or sets the input source by id. Editor plugins call this on every mode change,
+    /// so the read path prints the id and nothing else: Neovim merges a child's stderr into
+    /// stdout, and one stray line there would be stored as the "current input source".
+    private func sourceCommand(_ arguments: [String]) throws {
+        #if os(macOS)
+        let json = arguments.contains("--json")
+        let quiet = arguments.contains("--quiet")
+        let service = MacInputSourceService()
+
+        switch SourceCommandPolicy.parse(arguments) {
+        case .read:
+            guard let current = try service.currentInputSource() else {
+                exit(4)
+            }
+            if json {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                print(String(decoding: try encoder.encode(current), as: UTF8.self))
+            } else {
+                print(current.id)
+            }
+        case let .select(id, waitMilliseconds):
+            try selectSource(id: id, waitMilliseconds: waitMilliseconds, json: json, quiet: quiet, service: service)
+        }
+        #else
+        throw CLIError.unsupportedPlatform
+        #endif
+    }
+
+    #if os(macOS)
+    private func selectSource(
+        id: String,
+        waitMilliseconds: Int?,
+        json: Bool,
+        quiet: Bool,
+        service: MacInputSourceService
+    ) throws {
+        func fail(_ message: String, code: Int32) -> Never {
+            if !quiet { fputs("error: \(message)\n", stderr) }
+            exit(code)
+        }
+
+        let previous = try? service.currentInputSource()
+        let sources = try service.listInputSources()
+        if let rejection = SourceCommandPolicy.rejection(
+            for: id,
+            selectable: sources.map(\.id),
+            keyboardSources: try service.keyboardInputSourceIDs(),
+            isInstalled: service.isInstalled(id: id)
+        ) {
+            fail(rejection.message, code: 1)
+        }
+        guard let target = sources.first(where: { $0.id == id }) else {
+            fail(SourceCommandPolicy.Rejection.unknown(id: id).message, code: 1)
+        }
+
+        let recipes = ActivationRecipeStore().load().recipes
+        let strategy = SwitchActivationPolicy.strategy(for: target, userRecipes: recipes)
+        // The Kana key is posted as a keyboard event, which a process without Accessibility
+        // trust cannot do. Selecting anyway looks like success and types Latin letters.
+        if strategy == .kanaThenSelect, !AXIsProcessTrusted() {
+            fail(
+                "\"\(target.localizedName)\" needs a Kana key press before it activates, and this "
+                    + "process may not post keyboard events. Grant Accessibility to the program that "
+                    + "runs keyboardctl, or switch from CmdIME itself.",
+                code: 5
+            )
+        }
+
+        if previous?.id == id {
+            report(target: target, previous: previous, changed: false, confirmed: true, strategy: strategy, json: json)
+            return
+        }
+
+        SwitchActivationPolicy.selectWithKanaPrelude(
+            target: target,
+            current: { try? service.currentInputSource() },
+            userRecipes: recipes,
+            postKana: EventTapMonitor.postKanaKeyEvent,
+            wait: { delay, then in
+                // Running the loop, not sleeping: a blocked loop keeps TIS's cached current
+                // source stale, so the confirmation below would read the value from before.
+                RunLoop.current.run(until: Date(timeIntervalSinceNow: delay))
+                then()
+            },
+            select: {}
+        )
+
+        do {
+            try service.selectInputSource(id: id)
+        } catch {
+            fail("macOS refused to select \"\(id)\": \(error.localizedDescription)", code: 2)
+        }
+
+        guard waitMilliseconds != 0 else {
+            report(target: target, previous: previous, changed: true, confirmed: false, strategy: strategy, json: json)
+            return
+        }
+
+        let budget = Double(waitMilliseconds ?? 60) / 1000
+        let deadline = Date(timeIntervalSinceNow: budget)
+        var reselected = false
+        while Date() < deadline {
+            RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.005))
+            let current = try? service.currentInputSource()
+            if current?.id == id {
+                report(target: target, previous: previous, changed: true, confirmed: true, strategy: strategy, json: json)
+                return
+            }
+            // Someone else switched while we were confirming: an editor firing on Esc and i can
+            // do that inside this window. Pushing our target back would fight the newer request.
+            guard SourceCommandPolicy.shouldRetrySelection(
+                current: current?.id,
+                target: id,
+                previous: previous?.id
+            ) else {
+                report(target: target, previous: previous, changed: true, confirmed: false, strategy: strategy, json: json)
+                return
+            }
+            if !reselected {
+                reselected = true
+                try? service.selectInputSource(id: id)
+            }
+        }
+        let current = try? service.currentInputSource()
+        fail(InputSourceInfo.verificationMessage(requested: target, current: current ?? nil), code: 3)
+    }
+
+    private func report(
+        target: InputSourceInfo,
+        previous: InputSourceInfo?,
+        changed: Bool,
+        confirmed: Bool,
+        strategy: SwitchActivationStrategy,
+        json: Bool
+    ) {
+        guard json else { return }
+        let payload: [String: Any] = [
+            "id": target.id,
+            "localizedName": target.localizedName,
+            "previousID": previous?.id as Any,
+            "changed": changed,
+            "confirmed": confirmed,
+            "strategy": strategy == .kanaThenSelect ? "kanaThenSelect" : "select",
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]) {
+            print(String(decoding: data, as: UTF8.self))
+        }
+    }
+    #endif
+
     private func argument(at index: Int, name: String) throws -> String {
         guard args.indices.contains(index) else {
             throw CLIError.missingArgument(name)
@@ -493,6 +659,8 @@ struct CLI {
               keyboardctl slot remove <slot>
               keyboardctl show
               keyboardctl switch <slot>
+              keyboardctl source [--json]
+              keyboardctl source <input-source-id> [<wait-ms>] [--quiet] [--json]
               keyboardctl diagnose [--json]
               keyboardctl listen
               keyboardctl bind <trigger> <slot>
@@ -506,6 +674,8 @@ struct CLI {
               keyboardctl bind right-command chinese
               keyboardctl bind option+j japanese
               keyboardctl remap right-control escape
+              keyboardctl source                          # print the current input source id
+              keyboardctl source com.apple.keylayout.ABC  # select it by id, prints nothing
               keyboardctl quit
             """
         )

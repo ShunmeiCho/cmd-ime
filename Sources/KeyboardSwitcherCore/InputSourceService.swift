@@ -272,6 +272,32 @@ public final class MacInputSourceService: InputSourceService {
         }
     }
 
+    /// Ids that can actually be typed into. The selectable set also holds palette sources
+    /// (Character Viewer, Press and Hold), which accept selection but produce no keystrokes.
+    public func keyboardInputSourceIDs() throws -> Set<String> {
+        let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as NSArray
+        var ids = Set<String>()
+        for item in list {
+            let source = item as! TISInputSource
+            guard isEnabledAndSelectCapable(source),
+                  let id = stringProperty(source, kTISPropertyInputSourceID),
+                  let category = stringProperty(source, kTISPropertyInputSourceCategory),
+                  category == (kTISCategoryKeyboardInputSource as String) else { continue }
+            ids.insert(id)
+        }
+        return ids
+    }
+
+    /// Whether the system knows this id at all, enabled or not. Without this, a disabled
+    /// input source and a typo produce the same answer, and the user is told the wrong fix.
+    public func isInstalled(id: String) -> Bool {
+        let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
+        guard let list = TISCreateInputSourceList(filter, true)?.takeRetainedValue() as NSArray? else {
+            return false
+        }
+        return list.count > 0
+    }
+
     private func handleMap() -> [String: TISInputSource] {
         let list = TISCreateInputSourceList(nil, false).takeRetainedValue() as NSArray
         var map: [String: TISInputSource] = [:]
