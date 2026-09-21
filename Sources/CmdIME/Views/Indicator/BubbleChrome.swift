@@ -35,6 +35,18 @@ extension BubbleRenderModel {
         }
     }
 
+    /// True only when a real `NSGlassEffectView` is on screen, which is the only case
+    /// where the material draws its own rim and its own depth. The substrate alone is
+    /// not enough: below macOS 26 a liquid theme falls through to the plain material,
+    /// which supplies neither, and Reduce Transparency and Increase Contrast resolve
+    /// it to `.solid`, which supplies neither either. This and the `#available` in
+    /// `BubbleContainerView.setGlass` are one invariant in two places; change one and
+    /// you must change the other.
+    var usesSystemGlass: Bool {
+        guard case .liquidGlass = substrate else { return false }
+        if #available(macOS 26.0, *) { return true } else { return false }
+    }
+
     private static func isDark(_ hex: String) -> Bool {
         (InkLegibility.contrast(hex, "#FFFFFF") ?? 1) > (InkLegibility.contrast(hex, "#000000") ?? 1)
     }
@@ -61,6 +73,13 @@ enum BubbleChrome {
     static let darkContactShadow = 0.36
     static let lightKeyShadow = 0.30
     static let lightContactShadow = 0.20
+    /// The system material renders its own depth in its drawing pass rather than as a
+    /// CALayer shadow, so a drawn key shadow under it is partly a second shadow. A
+    /// probe found no layer shadow but did find a private `_useReducedShadowRadius`
+    /// property on the class, which means the absence of a layer shadow does not prove
+    /// the absence of a shadow. This scale is a placeholder until that is settled on
+    /// screen: the answer is either 0 or something near this.
+    static let liquidKeyShadowScale = 0.45
     static let keyShadowRadius = 18.0
     static let keyShadowOffset = 8.0
     static let contactShadowRadius = 1.5
@@ -118,7 +137,10 @@ struct BubbleEdges: View {
         let isDark = model.isDarkSurface
 
         ZStack {
-            if model.isGlassLike {
+            // The system material draws its own rim. A black hairline outside it is the
+            // sticker outline, and it is the one stroke that falls outside the glass
+            // frame. Every other surface still needs the separation line.
+            if model.isGlassLike && !model.usesSystemGlass {
                 shape.inset(by: -hairline)
                     .strokeBorder(Color.black.opacity(isDark ? BubbleChrome.darkSeparation : BubbleChrome.lightSeparation),
                                   lineWidth: hairline)
@@ -139,6 +161,10 @@ struct BubbleEdges: View {
         guard model.isGlassLike, !needsDarkBorder else {
             return Color(bubbleHex: model.detailHex).opacity(model.strokeOpacity)
         }
+        // The boost below exists because a white stroke disappears into a plain light
+        // blur. The system material is not that, and boosting 0.10 to 0.4375 over it
+        // draws a bright ring around a small capsule.
+        if model.usesSystemGlass { return Color.white.opacity(model.strokeOpacity) }
         let opacity = isDark ? model.strokeOpacity : min(1, model.strokeOpacity * BubbleChrome.lightInnerStrokeBoost)
         return Color.white.opacity(opacity)
     }
@@ -166,6 +192,7 @@ struct BubbleOutsideShadow: View {
         let shape = BubbleChrome.shape(metrics.bubbleRadius)
         let isDarkGlass = model.isGlassLike && model.isDarkSurface
         let key = (isDarkGlass ? BubbleChrome.darkKeyShadow : BubbleChrome.lightKeyShadow) * strength
+            * (model.usesSystemGlass ? BubbleChrome.liquidKeyShadowScale : 1)
         let contact = (isDarkGlass ? BubbleChrome.darkContactShadow : BubbleChrome.lightContactShadow) * strength
 
         ZStack {
