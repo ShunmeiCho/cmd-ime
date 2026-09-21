@@ -29,6 +29,10 @@ struct SwitchBubbleView: View {
 
     let model: BubbleRenderModel
     var mode: Mode = .preview
+    /// False only for the live panel, where the shadow is drawn by a second hosting
+    /// view that stays outside the system material. It is the one part of the bubble
+    /// that paints beyond the bubble rect, so it is backdrop rather than content.
+    var drawsOutsideShadow = true
     var presentation = BubblePresentation()
 
     var body: some View {
@@ -46,7 +50,7 @@ struct SwitchBubbleView: View {
             .overlay {
                 if model.substrate != .none { BubbleEdges(model: model) }
             }
-            .background { BubbleOutsideShadow(model: model) }
+            .background { if drawsOutsideShadow { BubbleOutsideShadow(model: model) } }
             .fixedSize()
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(model.title), \(model.detail)")

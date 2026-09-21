@@ -88,15 +88,36 @@ final class BubbleState: ObservableObject {
     }
 }
 
-/// Root view of the live panel's hosting view: the bubble, centred in the panel,
-/// whose margin holds the shadow.
+/// The bubble itself. On the liquid path this view is the system material's
+/// `contentView`, so it is laid out to the bubble rect; everywhere else it fills the
+/// panel and centres itself. One view, two regimes, no branch here: the bubble is
+/// fixed-size inside a frame that fills whatever it is given.
 struct LiveBubbleRoot: View {
     @ObservedObject var state: BubbleState
 
     var body: some View {
         ZStack {
             if let model = state.model {
-                SwitchBubbleView(model: model, mode: .live, presentation: state.presentation)
+                SwitchBubbleView(model: model, mode: .live, drawsOutsideShadow: false,
+                                 presentation: state.presentation)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// The bubble's shadow, and nothing else. It lives in a second hosting view that fills
+/// the panel, because it paints into the margin outside the bubble rect and so cannot
+/// go inside the material.
+struct LiveBubbleShadow: View {
+    @ObservedObject var state: BubbleState
+
+    var body: some View {
+        ZStack {
+            if let model = state.model, let size = state.presentation.fixedSize {
+                Color.clear
+                    .frame(width: size.width, height: size.height)
+                    .background { BubbleOutsideShadow(model: model) }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
