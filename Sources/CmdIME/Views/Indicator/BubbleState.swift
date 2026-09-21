@@ -30,7 +30,7 @@ final class BubbleState: ObservableObject {
             switch next.archetype {
             case .switcher: SwitcherStripMetrics(model: next).arrangement.stripTravelCells
             case .badge: BadgeMetrics(model: next).arrangement.stripTravelCells
-            case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly: 0
+            case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly, .mark: 0
             }
         }
         let travel = travels ? Double(stripTravelCells()) : 0

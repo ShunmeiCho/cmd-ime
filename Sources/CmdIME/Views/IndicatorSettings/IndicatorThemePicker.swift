@@ -164,6 +164,9 @@ struct IndicatorThemePicker: View {
             let strip = SwitcherStripMetrics(model: bubble)
             let dots = strip.arrangement.variant == .carousel ? Self.dotsAllowance : 0
             return CGSize(width: strip.windowWidth + 2 * strip.padding, height: strip.cellHeight + 2 * strip.padding + dots)
+        case .mark:
+            let mark = MarkMetrics(model: bubble)
+            return CGSize(width: mark.bubbleWidth.points, height: mark.bubbleHeight.points)
         case .badge:
             let badge = BadgeMetrics(model: bubble)
             let dots = badge.arrangement.variant == .carousel ? Self.dotsAllowance : 0

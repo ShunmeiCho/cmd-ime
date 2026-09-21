@@ -20,6 +20,7 @@ final class BubbleLayoutTests: XCTestCase {
             XCTAssertEqual(IndicatorDisplayComposition.effective(stored, for: .stackedText), .textOnly)
             XCTAssertEqual(IndicatorDisplayComposition.effective(stored, for: .tileOnly), .iconOnly)
             XCTAssertEqual(IndicatorDisplayComposition.effective(stored, for: .badge), .iconOnly)
+            XCTAssertEqual(IndicatorDisplayComposition.effective(stored, for: .mark), .iconOnly)
         }
     }
 
@@ -86,6 +87,40 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertEqual(
             BadgeMetrics.glyphUnits(for: cells([SlotSymbol(glyph: "A"), SlotSymbol(glyph: "中", mark: "简")])),
             1.62,
+            accuracy: 0.0001
+        )
+    }
+
+    // MARK: - Mark
+
+    func testMarkIsACapsuleAroundOneGlyph() {
+        let metrics = BubbleMetrics(sizeFactor: 1, textScale: 1, theme: theme("builtin.mark"))
+        // 13 pt on a 16 pt line, plus 4 pt of air above and below.
+        XCTAssertEqual(metrics.baseHeight, 24)
+        // Capped at half the height at every factor, so the mark is a pill rather than
+        // a rounded rectangle whatever the theme asks for.
+        XCTAssertEqual(metrics.bubbleRadius, 12)
+        XCTAssertEqual(metrics.tileSide, 0)
+    }
+
+    func testMarkShrinksInStepWithItsGlyph() {
+        for factor in [BubbleMetrics.markMinimumFactor, 1.0, 1.3] {
+            XCTAssertEqual(
+                MarkMetrics.bubbleHeight(factor: factor, textFactor: factor),
+                24 * factor,
+                accuracy: 0.0001
+            )
+        }
+    }
+
+    func testMarkCapsuleBudgetsTheGlyphAndItsMark() {
+        XCTAssertEqual(MarkMetrics.contentUnits(for: SlotSymbol(glyph: "\u{4E2D}")), 1.0)
+        XCTAssertEqual(MarkMetrics.contentUnits(for: SlotSymbol(glyph: "EN")), 1.55)
+        // A mark is drawn beside the glyph and is never truncated, so the capsule has
+        // to hold both: 10 pt of mark and a 2 pt gap beside a 13 pt glyph.
+        XCTAssertEqual(
+            MarkMetrics.contentUnits(for: SlotSymbol(glyph: "\u{4E2D}", mark: "\u{7B80}")),
+            1.0 + 10.0 / 13.0 + 2.0 / 13.0,
             accuracy: 0.0001
         )
     }

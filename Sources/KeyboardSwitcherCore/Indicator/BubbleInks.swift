@@ -94,7 +94,7 @@ struct BubbleInks {
                 titleHex: titleHex(slotHex, display),
                 barHex: legible(raw, minimum: InkLegibility.objectMinimum)
             )
-        case .tileTwoLine, .tileOnly, .switcher, .badge:
+        case .tileTwoLine, .tileOnly, .switcher, .badge, .mark:
             return SlotColors(tileFillHex: tile.fillHex, glyphHex: tile.glyphHex, titleHex: titleHex(slotHex, display), barHex: nil)
         }
     }
@@ -145,9 +145,13 @@ struct BubbleInks {
         // Without a tile the glyph's size is the strip's own; the badge's is smaller
         // than the switcher's, and both of its sizes sit under the large-object size,
         // so a badge glyph is always held to the text contrast rule.
-        let strip = theme.archetype == .badge
-            ? (single: BadgeMetrics.Base.glyphSize, double: BadgeMetrics.Base.doubleGlyphSize)
-            : Self.switcherGlyphSizes
+        let strip = switch theme.archetype {
+        case .badge: (single: BadgeMetrics.Base.glyphSize, double: BadgeMetrics.Base.doubleGlyphSize)
+        // The mark sets one glyph at body size, under the large-object size, so it is
+        // always held to the text contrast rule.
+        case .mark: (single: MarkMetrics.Base.glyphSize, double: MarkMetrics.Base.glyphSize)
+        default: Self.switcherGlyphSizes
+        }
         let pointSize = tileSide > 0
             ? tileSide * (isDouble ? Self.doubleGlyphTileRatio : Self.singleGlyphTileRatio)
             : (isDouble ? strip.double : strip.single)

@@ -67,6 +67,8 @@ struct SwitchBubbleView: View {
             StackedTextBubble(model: model).environment(\.layoutDirection, direction)
         case .tileOnly:
             BubbleTile(model: model)
+        case .mark:
+            MarkView(model: model)
         case .badge:
             BadgeStripView(
                 model: model,

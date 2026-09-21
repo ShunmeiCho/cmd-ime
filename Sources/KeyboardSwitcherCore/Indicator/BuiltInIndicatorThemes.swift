@@ -12,7 +12,7 @@ public enum BuiltInIndicatorThemes {
     public static let legacyDefaultID = "builtin.glass"
 
     public static let all: [IndicatorTheme] = [
-        switcher, switcherTint, switcherLiquid, badge, badgeTint,
+        switcher, switcherTint, switcherLiquid, badge, badgeTint, mark, markTint,
         glass, liquidGlass, classic, paperOneInk, paperTwoInks, paperSlotInks, typographic, tile, line,
     ]
 
@@ -30,6 +30,39 @@ public enum BuiltInIndicatorThemes {
         washOpacity: 0,
         highlightStrength: 0,
         shadowStrength: 0.30
+    )
+
+    /// One symbol in the system material and nothing else, the way the system's own
+    /// caret badge reports a switch. Regular weight, because emphasising A, 中 and あ
+    /// alike gives them uneven visual mass.
+    static let mark = IndicatorTheme(
+        id: "builtin.mark",
+        name: "Mark",
+        archetype: .mark,
+        surface: .liquidGlass,
+        colorSource: .inks,
+        cornerRadius: 14,
+        strokeOpacity: 0.10,
+        washOpacity: 0,
+        highlightStrength: 0,
+        shadowStrength: 0.30,
+        typography: IndicatorTypography(displayWeight: .regular)
+    )
+
+    /// The same mark carrying the Color setting: the capsule takes the slot's colour
+    /// and the glyph is knocked out of it, which is the relationship the system's own
+    /// caret badge has.
+    static let markTint = IndicatorTheme(
+        id: "builtin.mark-tint",
+        name: "Mark, Slot Color",
+        archetype: .mark,
+        surface: .liquidGlass,
+        cornerRadius: 14,
+        strokeOpacity: 0.10,
+        washOpacity: 0,
+        highlightStrength: 0,
+        shadowStrength: 0.30,
+        typography: IndicatorTypography(displayWeight: .regular)
     )
 
     /// The same badge carrying the Color setting. A slot-tinted thumb cannot also be

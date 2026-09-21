@@ -184,7 +184,7 @@ final class InputIndicatorController {
         let hold: Double = switch model.archetype {
         case .switcher: BubbleMotion.holdSwitcher
         case .badge: BubbleMotion.holdBadge
-        case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly: BubbleMotion.holdStandard
+        case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly, .mark: BubbleMotion.holdStandard
         }
         let current = generation
         hideTask = Task { @MainActor [weak self] in

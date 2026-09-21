@@ -7,7 +7,7 @@ public enum IndicatorDisplayComposition {
         switch archetype {
         case .tileTwoLine, .lineWithBar, .switcher: [.iconAndText, .iconOnly, .textOnly]
         case .stackedText: [.textOnly]
-        case .tileOnly, .badge: [.iconOnly]
+        case .tileOnly, .badge, .mark: [.iconOnly]
         }
     }
 
@@ -34,12 +34,17 @@ public struct BubbleMetrics: Equatable, Sendable {
     /// switcher's 0.90.
     public static let badgeMinimumFactor = 0.70
 
+    /// The mark sets one glyph at body size and nothing else, so legibility alone
+    /// sets its floor, at the same place the badge's glyph reaches nine points.
+    public static let markMinimumFactor = 0.70
+
     /// Exhaustive on purpose: a new archetype has to state whether it has a floor
     /// rather than inherit none by falling into a default.
     public static func minimumFactor(for archetype: BubbleArchetype) -> Double {
         switch archetype {
         case .switcher: switcherMinimumFactor
         case .badge: badgeMinimumFactor
+        case .mark: markMinimumFactor
         case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly: 0
         }
     }
@@ -104,7 +109,7 @@ public struct BubbleMetrics: Equatable, Sendable {
         switch archetype {
         case .tileTwoLine: tileSide = Base.tileSide * factor
         case .tileOnly: tileSide = Base.bareTileSide * factor
-        case .lineWithBar, .stackedText, .switcher, .badge: tileSide = 0
+        case .lineWithBar, .stackedText, .switcher, .badge, .mark: tileSide = 0
         }
         gap = (archetype == .lineWithBar ? 8 : 10) * factor
         switch archetype {
@@ -114,6 +119,7 @@ public struct BubbleMetrics: Equatable, Sendable {
         // The badge's own inset is BadgeMetrics.padding; this carries the same number
         // so the public field is not a stray zero if anything ever reads it.
         case .badge: trailingPadding = BadgeMetrics.Base.padding * factor
+        case .mark: trailingPadding = MarkMetrics.Base.horizontalPadding * factor
         }
         titleSize = (isStacked ? Base.stackedTitleSize : Base.titleSize) * textFactor
         detailSize = baseDetail * textFactor
@@ -139,6 +145,8 @@ public struct BubbleMetrics: Equatable, Sendable {
             baseHeight = (Base.switcherCellHeight + 2 * Base.switcherPadding) * factor
         case .badge:
             baseHeight = BadgeMetrics.bubbleHeight(factor: factor, textFactor: textFactor)
+        case .mark:
+            baseHeight = MarkMetrics.bubbleHeight(factor: factor, textFactor: textFactor)
         }
         bubbleRadius = min(theme.cornerRadius * factor, baseHeight / 2)
         let concentric = max(Base.minimumTileRadius, theme.cornerRadius - theme.inset)

@@ -113,9 +113,10 @@ A local build needs the same two permissions before global keyboard listening wo
 
 <p align="center"><sub>The slot board in the dark appearance. Three slots here; add one for every input source you use.</sub></p>
 
-- **A switch indicator near the caret.** Fourteen built-in themes, including Glass,
-  Liquid Glass on macOS 26 and later, paper styles, a switcher that shows every slot and
-  a badge that shrinks it to the glyphs, plus your own themes and fonts.
+- **A switch indicator near the caret.** Sixteen built-in themes, including Glass,
+  Liquid Glass on macOS 26 and later, paper styles, a switcher that shows every slot, a
+  badge that shrinks it to the glyphs and a mark that keeps only the source you switched
+  to, plus your own themes and fonts.
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="Ten of the built-in indicator themes in Settings: Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile, Line and Switcher.">

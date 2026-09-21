@@ -107,9 +107,9 @@ swift test
 
 <p align="center"><sub>深色外观下的槽位面板。这里是三个槽位，你用几个输入法就可以加几个。</sub></p>
 
-- **光标附近的切换指示气泡。** 十四种内置主题，包括 Glass、macOS 26 及以上的
-  Liquid Glass、纸张风格、显示所有槽位的切换器，以及把切换器缩到只剩图标的徽章，
-  另外还支持你自己的主题和字体。
+- **光标附近的切换指示气泡。** 十六种内置主题，包括 Glass、macOS 26 及以上的
+  Liquid Glass、纸张风格、显示所有槽位的切换器、把切换器缩到只剩图标的徽章，以及
+  只保留刚切到的那一个输入源的标记，另外还支持你自己的主题和字体。
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="设置里的 10 个内置指示气泡主题：Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile、Line 和 Switcher。">
