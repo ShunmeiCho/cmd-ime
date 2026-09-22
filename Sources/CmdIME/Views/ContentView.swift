@@ -171,7 +171,7 @@ private struct SettingsHeader: View {
                     .fixedSize(horizontal: true, vertical: false)
                 generalMenu
             }
-            Text("CmdIME keeps running after this window closes. Open CmdIME again to return here.")
+            Text("While this window is open, CmdIME is in the Dock and the app switcher. After it closes, CmdIME keeps running in the background with no menu bar icon. Open CmdIME again to return here.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)

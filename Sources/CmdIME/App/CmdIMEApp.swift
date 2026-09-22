@@ -90,13 +90,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @MainActor
-final class AppWindowCoordinator {
+final class AppWindowCoordinator: NSObject, NSWindowDelegate {
     static let shared = AppWindowCoordinator()
 
     private weak var model: AppModel?
     private var settingsWindow: NSWindow?
 
-    private init() {}
+    private override init() {
+        super.init()
+    }
 
     func setModel(_ model: AppModel) {
         self.model = model
@@ -104,6 +106,8 @@ final class AppWindowCoordinator {
 
     func showSettings() {
         if let window = NSApp.windows.first(where: { $0.title == "CmdIME" }) {
+            // A false return leaves the window usable; listening status would overwrite any message.
+            _ = NSApp.setActivationPolicy(.regular)
             window.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -116,8 +120,16 @@ final class AppWindowCoordinator {
 
         let window = settingsWindow ?? makeSettingsWindow(model: model)
         settingsWindow = window
+        _ = NSApp.setActivationPolicy(.regular)
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard let window = notification.object as? NSWindow, window.title == "CmdIME" else {
+            return
+        }
+        _ = NSApp.setActivationPolicy(.accessory)
     }
 
     private func makeSettingsWindow(model: AppModel) -> NSWindow {
@@ -133,6 +145,7 @@ final class AppWindowCoordinator {
         window.styleMask.insert(.fullSizeContentView)
         window.appearance = AppearancePreference.stored.nsAppearance
         window.isReleasedWhenClosed = false
+        window.delegate = self
         window.center()
         window.setFrameAutosaveName("CmdIMESettings")
         window.contentView = NSHostingView(
