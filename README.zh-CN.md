@@ -241,8 +241,8 @@ CmdIME 0.1.10 或更高版本。macOS 把 `com.apple.50onPaletteIM` 暴露为一
 <summary><strong>设置窗口、外观与退出</strong></summary>
 
 CmdIME 是一个后台代理程序。设置窗口只是一个控制面板：关闭窗口不会停止键盘监听。
-发布版本打包时带有 `LSUIElement`，因此应用不会出现在 Dock 或应用切换器中。需要打开设置时，
-再次打开 `CmdIME.app` 即可。
+设置窗口开着时，CmdIME 出现在 Dock 和应用切换器里。窗口关掉后，它仍在后台运行，没有菜单栏图标。
+需要打开设置时，再次打开 `CmdIME.app` 即可。
 
 全新安装后，设置窗口顶部会显示一个三步的 **Setup guide**（设置向导）：允许键盘访问、
 检查检测到的槽位、然后试着切换一次。它可以跳过，之后通过 **General > Show Setup Guide**
