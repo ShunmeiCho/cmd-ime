@@ -263,9 +263,9 @@ source, but it is an auxiliary kana palette, not the normal Hiragana input metho
 <summary><strong>Settings window, appearance and quitting</strong></summary>
 
 CmdIME is a background agent. The settings window is only a control panel: closing it
-does not stop keyboard listening. Release builds are packaged with `LSUIElement`, so the
-app does not appear in the Dock or the app switcher. Open `CmdIME.app` again whenever
-you need Settings.
+does not stop keyboard listening. While Settings is open, CmdIME appears in the Dock and
+the app switcher. After the window closes, it stays in the background with no menu bar
+icon. Open `CmdIME.app` again whenever you need Settings.
 
 A new install opens with a three-step **Setup guide** at the top of Settings: allow
 keyboard access, check the detected slots, then try a switch. It can be skipped, and

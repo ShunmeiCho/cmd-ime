@@ -74,7 +74,7 @@ struct SetupGuideCard: View {
                 if current != .tryIt {
                     // "Try it" closes with the same answer; the earlier steps send the
                     // user to System Settings, or let them skip, before they get there.
-                    Text("CmdIME runs in the background with no Dock or menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use General > Quit CmdIME.")
+                    Text("While Settings is open, CmdIME is in the Dock and the app switcher. After this window closes, it keeps running in the background with no menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use General > Quit CmdIME.")
                         .setupNoteText()
                 }
 
