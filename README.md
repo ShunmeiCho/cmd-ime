@@ -458,8 +458,9 @@ keyboardctl lab --attempts 30
 It takes over the keyboard while it runs, types into TextEdit, and prints one character per attempt
 so you can see whether failures are spread out or arrive in blocks.
 
-An experimental pinyin recovery key also exists, frozen as a beta: it works only in TextEdit with
-微信输入法 and is not being developed further. See [docs/recovery-beta.md](docs/recovery-beta.md).
+An experimental pinyin recovery key also exists. It is **deprecated and will be removed step by
+step in later versions**: it works only in TextEdit with 微信输入法. See
+[docs/recovery-beta.md](docs/recovery-beta.md).
 
 ## Troubleshooting
 
