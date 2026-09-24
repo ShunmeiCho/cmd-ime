@@ -109,12 +109,14 @@ final class AppModel: ObservableObject {
             if let backupURL = result.recoveredBackupURL {
                 recoveryMessage = "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults."
             } else if result.config.unreadableBindingCount > 0 {
-                // Usually a config written by a newer CmdIME. Everything else was kept, but the
-                // user has to hear that a shortcut of theirs is not going to fire.
+                // A config written by a newer CmdIME, or a binding for an action since removed
+                // (pinyin recovery, after 0.8.3). Everything else was kept, but the user has to
+                // hear that a shortcut of theirs is not going to fire.
                 let count = result.config.unreadableBindingCount
                 recoveryMessage = "\(count) shortcut\(count == 1 ? "" : "s") in your config "
-                    + "\(count == 1 ? "was" : "were") written by a newer version of CmdIME and "
-                    + "\(count == 1 ? "is" : "are") not active. Everything else was kept."
+                    + "\(count == 1 ? "uses an action" : "use actions") this version does not have "
+                    + "(from a newer CmdIME, or since removed) and \(count == 1 ? "is" : "are") not active. "
+                    + "Everything else was kept."
             }
         } catch {
             // A config file exists but could not be moved aside: not a first run.

@@ -676,7 +676,8 @@ struct CLI {
         } else if result.config.unreadableBindingCount > 0 {
             fputs(
                 "warning: \(result.config.unreadableBindingCount) binding(s) in the config were "
-                    + "written by a newer CmdIME and are not active. Everything else was kept.\n",
+                    + "use an action this version does not have (from a newer CmdIME, or since removed) "
+                    + "and are not active. Everything else was kept.\n",
                 stderr
             )
         }
