@@ -232,7 +232,8 @@ struct LabRunner {
         let probe = readStableText()
         clearDocument()
         guard LabLatinMode.holds(probeText: probe) else {
-            return "could not leave \(source.localizedName) in latin mode first (probe typed \"\(probe)\")"
+            return "could not leave \(source.localizedName) in latin mode first (probe typed \"\(probe)\"); "
+                + "if its latin-mode key is switched off in its own settings, this case cannot happen to you"
         }
         return nil
     }
