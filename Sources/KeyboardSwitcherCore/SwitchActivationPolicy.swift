@@ -34,6 +34,9 @@ public enum SwitchActivationPolicy {
     /// azooKey and WeType switch reliably without it (12 of 12 and 9 of 9), so they are not listed.
     public static let builtInRecipes = [
         ActivationRecipe(sourceIDPrefix: "com.google.inputmethod.Japanese", strategy: .kanaThenSelect),
+        // azooKey keeps its own alphanumeric/kana mode across selections. Once left in
+        // alphanumeric, a plain select shows azooKey in the menu bar while keys stay latin.
+        ActivationRecipe(sourceIDPrefix: "dev.ensan.inputmethod.azooKeyMac", strategy: .kanaThenSelect),
     ]
 
     public static let delayRangeMs = 0...500
