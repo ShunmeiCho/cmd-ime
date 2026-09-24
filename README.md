@@ -124,6 +124,16 @@ A local build needs the same two permissions before global keyboard listening wo
 
 <p align="center"><sub>All sixteen built-in themes, as they appear in Settings.</sub></p>
 
+- **Your own color for every slot.** Pick any color for a slot: a preset, or any color
+  from the system color picker. Set the indicator's Color to Slot and it fills with
+  that color, so you know where you are before you read the glyph.
+
+<p align="center">
+  <img src="Assets/readme/slot-colors.gif" width="440" alt="The Switcher indicator in the Settings preview cycling through three slots, each highlighted in its own color: red for Japanese, gray for English, blue for Chinese.">
+</p>
+
+<p align="center"><sub>Three slots, three colors of your choosing.</sub></p>
+
 - **Updates from inside the app.** A check every six hours by default, a summary of
   what changed beside **Update Now**, and an in-place install that keeps your
   permissions.
