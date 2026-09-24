@@ -60,6 +60,10 @@ struct LabRunner {
     /// Taps a modifier instead of a plain key as the warm-up: a modifier carries no text and no
     /// meaning in a document, so it is the candidate a real recipe could ship.
     var warmupModifierKeyCode: Int = 0
+    /// Leaves the input method under test in its own latin mode before each switch, so the switch
+    /// has to bring it back to composing. Measured on a real machine 2026-09-24: azooKey selected
+    /// while in alphanumeric mode typed latin, and a lab that never set that state missed it.
+    var leavesLatinMode = false
     let service = MacInputSourceService()
     private let textEditID = "com.apple.TextEdit"
     private let baselineID = "com.apple.keylayout.ABC"
@@ -130,6 +134,9 @@ struct LabRunner {
         // The previous input method can stay attached to the client after a switch; typing one
         // letter in a plain layout first tells that apart from a failure of the slot under test.
         var baseline = "n"
+        if leavesLatinMode, let mode = LabLatinMode.forSource(id: source.id) {
+            if let refusal = enterLatinMode(mode, of: source) { return (.void(reason: refusal), refusal) }
+        }
         // The switch away happens either way: without it the next attempt would select a source
         // that is already current and pass without ever switching.
         if skipsBaseline {
@@ -203,6 +210,31 @@ struct LabRunner {
         )
         let note = "reported \(reported?.id ?? "nothing"), typed \(text.trimmingCharacters(in: .whitespacesAndNewlines))"
         return (LabJudge.judge(observation, expectation: expectation), note)
+    }
+
+    /// Selects `source`, sends its latin-mode key and checks with a probe that the mode took.
+    /// Returns why not when it did not, which voids the attempt rather than failing the switch.
+    private func enterLatinMode(_ mode: LabLatinMode, of source: InputSourceInfo) -> String? {
+        key(53)
+        selectFromAnotherProcess(source.id)
+        settle(max(settleMs, 400))
+        if mode.isModifier {
+            tapModifier(CGKeyCode(mode.keyCode), flag: Self.modifierFlag(forKeyCode: mode.keyCode))
+        } else {
+            key(CGKeyCode(mode.keyCode))
+        }
+        settle(200)
+        clearDocument()
+        for code in LabLatinMode.probeKeyCodes {
+            key(CGKeyCode(code))
+            settle(110)
+        }
+        let probe = readStableText()
+        clearDocument()
+        guard LabLatinMode.holds(probeText: probe) else {
+            return "could not leave \(source.localizedName) in latin mode first (probe typed \"\(probe)\")"
+        }
+        return nil
     }
 
     /// Selects from a short-lived child process rather than this one.

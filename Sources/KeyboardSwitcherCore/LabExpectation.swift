@@ -58,6 +58,11 @@ public struct LabExpectation: Equatable, Sendable {
         keyCodes: [2, 40, 1], letters: "dks", commitKeyCode: space,
         acceptedScalarRanges: hangul, isVerified: false
     )
+    /// Pinyin as the lab types it, for a source nobody has run the lab on yet.
+    public static let unverifiedPinyin = LabExpectation(
+        keyCodes: pinyinKeys, letters: "nihao", commitKeyCode: space,
+        acceptedScalarRanges: han, isVerified: false
+    )
     public static let keyboardLayout = LabExpectation(
         keyCodes: pinyinKeys, letters: "nihao", commitKeyCode: nil,
         acceptedScalarRanges: latin, isVerified: true
@@ -68,6 +73,7 @@ public struct LabExpectation: Equatable, Sendable {
         ("com.apple.keylayout.", keyboardLayout),
         ("com.apple.inputmethod.SCIM.ITABC", pinyin),
         ("com.tencent.inputmethod.wetype.pinyin", pinyin),
+        ("com.bytedance.inputmethod.doubaoime.pinyin", unverifiedPinyin),
         ("im.rime.inputmethod.Squirrel.Hans", pinyin),
         ("im.rime.inputmethod.Squirrel.Hant", pinyin),
         ("dev.ensan.inputmethod.azooKeyMac.Japanese", japanese),
