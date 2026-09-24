@@ -119,10 +119,10 @@ A local build needs the same two permissions before global keyboard listening wo
   to, plus your own themes and fonts.
 
 <p align="center">
-  <img src="Assets/readme/themes.png" width="100%" alt="Ten of the built-in indicator themes in Settings: Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile, Line and Switcher.">
+  <img src="Assets/readme/themes.png" width="100%" alt="All sixteen built-in indicator themes in Settings: three Switchers, two Badges, two Marks, Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile and Line.">
 </p>
 
-<p align="center"><sub>Ten of the built-in themes, as they appear in Settings.</sub></p>
+<p align="center"><sub>All sixteen built-in themes, as they appear in Settings.</sub></p>
 
 - **Updates from inside the app.** A check every six hours by default, a summary of
   what changed beside **Update Now**, and an in-place install that keeps your

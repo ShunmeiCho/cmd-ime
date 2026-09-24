@@ -112,10 +112,10 @@ swift test
   只保留刚切到的那一个输入源的标记，另外还支持你自己的主题和字体。
 
 <p align="center">
-  <img src="Assets/readme/themes.png" width="100%" alt="设置里的 10 个内置指示气泡主题：Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile、Line 和 Switcher。">
+  <img src="Assets/readme/themes.png" width="100%" alt="设置里全部 16 个内置指示气泡主题：三种 Switcher、两种 Badge、两种 Mark、Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile 和 Line。">
 </p>
 
-<p align="center"><sub>设置里内置主题中的 10 个。</sub></p>
+<p align="center"><sub>设置里的全部 16 个内置主题。</sub></p>
 
 - **应用内更新。** 默认每六小时检查一次，在 **Update Now** 旁边附上改动摘要，
   原地安装并保留你的权限。

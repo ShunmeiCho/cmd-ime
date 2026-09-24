@@ -123,10 +123,10 @@ swift test
   テーマに加え、独自のテーマやフォントも使えます。
 
 <p align="center">
-  <img src="Assets/readme/themes.png" width="100%" alt="設定画面にある組み込みインジケーターテーマ 10 種類：Glass、Liquid Glass、Classic、3 種類の paper 系、Typographic、Tile、Line、Switcher。">
+  <img src="Assets/readme/themes.png" width="100%" alt="設定画面にある組み込みインジケーターテーマ全 16 種類：3 種類の Switcher、2 種類の Badge、2 種類の Mark、Glass、Liquid Glass、Classic、3 種類の paper 系、Typographic、Tile、Line。">
 </p>
 
-<p align="center"><sub>設定画面に並ぶ組み込みテーマのうち 10 種類。</sub></p>
+<p align="center"><sub>設定画面に並ぶ組み込みテーマ全 16 種類。</sub></p>
 
 - **アプリ内からのアップデート。** 既定では 6 時間ごとに確認し、**Update Now** の横に
   変更点の概要を表示し、権限を保ったままその場でインストールします。
