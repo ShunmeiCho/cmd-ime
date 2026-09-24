@@ -398,14 +398,8 @@ keyboardctl lab --attempts 30
 
 它运行时会接管键盘，往 TextEdit 里打字，每次尝试打印一个字符，这样你能看出失败是散开的还是成片的。
 
-## 打错输入法救回（beta）
-
-你本想打中文，切换没生效，`nihao` 就留在了文档里。按一个键把这串字母取出来、重新送进中文输入法，
-候选框弹出来让你选字，按一次 Command+Z 可以撤销整个过程。
-
-它**默认关闭，需要手工配置**，而且在没有实测过的地方一律拒绝。目前实测过的只有 TextEdit 加
-微信输入法；Safari、Electron 编辑器、密码框以及其它一切都会被拒绝，并给出原因。配置方法、限制和
-实测数据见 [docs/recovery-beta.md](docs/recovery-beta.md)。
+另有一个实验性的拼音补救键，已冻结为 beta：只在 TextEdit 加微信输入法下可用，不再继续开发。
+详见 [docs/recovery-beta.md](docs/recovery-beta.md)。
 
 ## 故障排除
 

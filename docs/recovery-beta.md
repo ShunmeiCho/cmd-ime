@@ -1,5 +1,9 @@
 # Recovery (beta): put mistyped pinyin back into Chinese
 
+> **Frozen (2026-09-24).** This beta is kept as it is and is not being developed further: it only
+> works in TextEdit with 微信输入法, and the project's effort goes into making the switch itself
+> reliable instead. The code stays, off by default, and nothing below has changed.
+
 You meant to type Chinese, the switch had not taken, and `nihao` is sitting in your document.
 Recovery takes those letters back out, switches to your Chinese input source, and replays them so
 the candidate window opens and you pick the word you meant.

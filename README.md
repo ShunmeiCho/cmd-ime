@@ -458,14 +458,8 @@ keyboardctl lab --attempts 30
 It takes over the keyboard while it runs, types into TextEdit, and prints one character per attempt
 so you can see whether failures are spread out or arrive in blocks.
 
-## Recovery (beta)
-
-You meant to type Chinese, the switch had not taken, and `nihao` is sitting in your document. One
-key takes those letters back out and replays them into your Chinese input source, so you can pick
-the word you meant; one Command+Z undoes the whole thing.
-
-It is measured in TextEdit with 微信输入法 and refuses everywhere else, it is configured by hand,
-and it is off unless you add the binding yourself. See [docs/recovery-beta.md](docs/recovery-beta.md).
+An experimental pinyin recovery key also exists, frozen as a beta: it works only in TextEdit with
+微信输入法 and is not being developed further. See [docs/recovery-beta.md](docs/recovery-beta.md).
 
 ## Troubleshooting
 
