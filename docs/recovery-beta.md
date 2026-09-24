@@ -1,8 +1,10 @@
 # Recovery (beta): put mistyped pinyin back into Chinese
 
-> **Frozen (2026-09-24).** This beta is kept as it is and is not being developed further: it only
-> works in TextEdit with 微信输入法, and the project's effort goes into making the switch itself
-> reliable instead. The code stays, off by default, and nothing below has changed.
+> **Deprecated (2026-09-24), to be removed step by step in later versions.** It only works in
+> TextEdit with 微信输入法, and the project's effort goes into making the switch itself reliable
+> instead. Until it is removed it stays off by default and behaves as described below. If you have
+> bound it, plan to remove the binding; once the feature is gone, a CmdIME that no longer knows the
+> binding drops that one binding, tells you so, and keeps the rest of your config.
 
 You meant to type Chinese, the switch had not taken, and `nihao` is sitting in your document.
 Recovery takes those letters back out, switches to your Chinese input source, and replays them so
