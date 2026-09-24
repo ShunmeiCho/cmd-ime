@@ -36,16 +36,16 @@ enum UpdateNotification {
         NSWorkspace.shared.open(url)
     }
 
-    static func post(version: String) {
+    /// Returns whether the notification was handed to the system, so a version is only marked
+    /// as announced once it actually was.
+    static func post(version: String) async -> Bool {
         let center = UNUserNotificationCenter.current()
-        center.requestAuthorization(options: [.alert]) { granted, _ in
-            // Denied: the settings window still shows the update the next time it opens.
-            guard granted else { return }
-            let content = UNMutableNotificationContent()
-            content.title = "CmdIME \(version) is available"
-            content.body = "Click to open CmdIME and update."
-            center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))
-        }
+        // Denied: the settings window still shows the update the next time it opens.
+        guard (try? await center.requestAuthorization(options: [.alert])) == true else { return false }
+        let content = UNMutableNotificationContent()
+        content.title = "CmdIME \(version) is available"
+        content.body = "Click to open CmdIME and update."
+        return (try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))) != nil
     }
 }
 
