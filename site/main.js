@@ -5,11 +5,6 @@
   var STORAGE_KEY = "cmdime-lang";
   var API_URL = "https://api.github.com/repos/ShunmeiCho/cmd-ime/releases/latest";
   var COPIED_MS = 1600;
-  var TITLES = {
-    "en": "CmdIME by ShunmeiCho - macOS input source switcher, one key per input source",
-    "zh-CN": "CmdIME by ShunmeiCho - macOS 输入法切换工具，每个输入法一个专属键",
-    "ja": "CmdIME by ShunmeiCho - macOS 入力ソース切り替えツール、入力ソースごとに専用キー"
-  };
   var COPIED = { "en": "Copied", "zh-CN": "已复制", "ja": "コピーしました" };
   var COPY_MANUAL = {
     "en": "Copying is blocked here. The command is selected; copy it with Command+C.",
@@ -17,47 +12,12 @@
     "ja": "ここでは自動でコピーできません。コマンドを選択したので、Command+C でコピーしてください。"
   };
 
-  function normalize(tag) {
-    if (!tag) return null;
-    var t = String(tag).toLowerCase();
-    if (t.indexOf("zh") === 0) return "zh-CN";
-    if (t.indexOf("ja") === 0) return "ja";
-    if (t.indexOf("en") === 0) return "en";
-    return null;
-  }
-
-  function readStored() {
-    try { return normalize(window.localStorage.getItem(STORAGE_KEY)); } catch (e) { return null; }
-  }
-
   function writeStored(lang) {
     try { window.localStorage.setItem(STORAGE_KEY, lang); } catch (e) { /* storage unavailable */ }
   }
 
-  function fromQuery() {
-    var m = /[?&]lang=([^&#]+)/.exec(window.location.search);
-    return m ? normalize(decodeURIComponent(m[1])) : null;
-  }
-
-  function fromBrowser() {
-    var list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
-    return normalize(list[0]) || "en";
-  }
-
   function currentLang() {
     return document.documentElement.getAttribute("data-ui") || "en";
-  }
-
-  function apply(lang) {
-    var root = document.documentElement;
-    root.setAttribute("data-ui", lang);
-    root.setAttribute("lang", lang);
-    document.title = TITLES[lang];
-    var buttons = document.querySelectorAll("[data-set-lang]");
-    for (var i = 0; i < buttons.length; i++) {
-      var b = buttons[i];
-      b.setAttribute("aria-pressed", b.getAttribute("data-set-lang") === lang ? "true" : "false");
-    }
   }
 
   function copyText(text) {
@@ -151,14 +111,14 @@
     }, { threshold: 0.35 }).observe(video);
   }
 
-  apply(fromQuery() || readStored() || fromBrowser());
   setupPromo();
 
   document.addEventListener("click", function (event) {
-    var langButton = event.target.closest("[data-set-lang]");
-    if (langButton) {
-      var lang = langButton.getAttribute("data-set-lang");
-      if (LANGS.indexOf(lang) !== -1) { apply(lang); writeStored(lang); }
+    // Each language has its own page; remember the choice so the English page forwards to it.
+    var langLink = event.target.closest("[data-set-lang]");
+    if (langLink) {
+      var lang = langLink.getAttribute("data-set-lang");
+      if (LANGS.indexOf(lang) !== -1) writeStored(lang);
       return;
     }
     var copyButton = event.target.closest("[data-copy]");

@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - "site/**"
+      - "script/build_site.py"
+      - "VERSION"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -33,10 +35,14 @@ jobs:
       - name: Configure Pages
         uses: actions/configure-pages@v6
 
+      # One static page per language, and the structured data's version from VERSION.
+      - name: Build site
+        run: python3 script/build_site.py _site
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v5
         with:
-          path: site
+          path: _site
 
       - name: Deploy
         id: deployment
