@@ -476,8 +476,11 @@ final class AppModel: ObservableObject {
             updateStatus = .available(result)
             guard UpdateReminderPolicy.shouldNotify(latest: result.latestVersion, current: currentVersion,
                                                     state: reminderState) else { return }
-            UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
-            UpdateNotification.post(version: result.latestVersion)
+            // Marked only once posted: a version announced while notifications were off would
+            // otherwise never be announced after they are turned on.
+            if await UpdateNotification.post(version: result.latestVersion) {
+                UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
+            }
         }
     }
 
