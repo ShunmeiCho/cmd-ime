@@ -76,4 +76,28 @@ final class ConfigSurvivesUnknownBindingTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), "a config must exist after recovery")
         XCTAssertNoThrow(try store.load(), "and it must be readable")
     }
+
+    /// Pinyin recovery was removed after 0.8.3. A config that still binds it loses that binding
+    /// and nothing else, which is what the 0.8.3 release notes promised.
+    func testARemovedRecoveryBindingIsDroppedAlone() throws {
+        let (store, url) = try makeStore()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        try write(
+            """
+            {"version":2,"bindings":[
+              {"trigger":{"kind":"oneShotModifier","keyCode":55,"keyName":"left-command","modifiers":[],"gesture":"tap"},
+               "action":{"type":"switchInputSource","role":"english"},"enabled":true},
+              {"trigger":{"kind":"keyPress","keyCode":15,"keyName":"r","modifiers":["control","option"],"gesture":"tap"},
+               "action":{"type":"recoverPinyin","role":"chinese"},"enabled":true}
+            ],"inputSources":{}}
+            """,
+            to: url
+        )
+
+        let result = try store.loadOrRecover()
+
+        XCTAssertNil(result.recoveredBackupURL)
+        XCTAssertEqual(result.config.bindings.map(\.action.role), [InputRole(rawValue: "english")])
+        XCTAssertEqual(result.config.unreadableBindingCount, 1)
+    }
 }

@@ -464,9 +464,6 @@ keyboardctl lab --attempts 30
 実行中はキーボードを占有し、TextEdit に入力します。試行ごとに 1 文字を出力するので、失敗が散って
 いるのか固まっているのかが見て分かります。
 
-実験的なピンイン復帰キーもありますが、**非推奨となり、今後のバージョンで段階的に削除します**。
-TextEdit と微信輸入法の組み合わせでしか動きません。詳しくは [docs/recovery-beta.md](docs/recovery-beta.md)。
-
 ## トラブルシューティング
 
 <details>

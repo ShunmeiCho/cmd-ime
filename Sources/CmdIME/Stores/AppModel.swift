@@ -219,15 +219,6 @@ final class AppModel: ObservableObject {
         .deletingLastPathComponent()
         .appendingPathComponent("keyboardctl")
 
-    /// Recovery selects through that same bundled keyboardctl, in a process of its own.
-    private lazy var recoveryRunner: RecoveryRunner = {
-        let runner = RecoveryRunner(service: inputSources, keyboardctlURL: Self.scannerURL)
-        runner.onMessage = { [weak self] message in
-            MainActor.assumeIsolated { self?.statusText = message }
-        }
-        return runner
-    }()
-
     /// Replaces the list with a snapshot taken by a fresh keyboardctl process.
     /// A newer request supersedes this one; a superseded request reports false.
     @discardableResult
@@ -990,12 +981,6 @@ final class AppModel: ObservableObject {
             nextMonitor.onTriggeredSwitch = { [weak self] role, source, trigger in
                 MainActor.assumeIsolated {
                     self?.triggeredSwitches.send(SetupTriggeredSwitch(slotID: role, sourceID: source.id, trigger: trigger))
-                }
-            }
-            nextMonitor.onRecoveryRequested = { [weak self] role in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    self.recoveryRunner.run(role: role, config: self.config)
                 }
             }
             try nextMonitor.start()

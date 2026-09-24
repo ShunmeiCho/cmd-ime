@@ -288,19 +288,6 @@ public final class MacInputSourceService: InputSourceService {
         return ids
     }
 
-    /// Whether this source is a plain keyboard layout rather than an input method.
-    ///
-    /// Recovery needs it: an external process cannot ask another app's editor whether a
-    /// composition is open, but a keyboard layout has no composition to open, so a layout being
-    /// current is a dependable "nothing is being composed".
-    public func isKeyboardLayout(id: String) -> Bool {
-        let filter = [kTISPropertyInputSourceID as String: id] as CFDictionary
-        guard let list = TISCreateInputSourceList(filter, false)?.takeRetainedValue() as? [TISInputSource],
-              let source = list.first,
-              let type = stringProperty(source, kTISPropertyInputSourceType) else { return false }
-        return type == (kTISTypeKeyboardLayout as String)
-    }
-
     /// Whether the system knows this id at all, enabled or not. Without this, a disabled
     /// input source and a typo produce the same answer, and the user is told the wrong fix.
     public func isInstalled(id: String) -> Bool {

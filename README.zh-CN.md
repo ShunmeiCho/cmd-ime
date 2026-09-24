@@ -398,9 +398,6 @@ keyboardctl lab --attempts 30
 
 它运行时会接管键盘，往 TextEdit 里打字，每次尝试打印一个字符，这样你能看出失败是散开的还是成片的。
 
-另有一个实验性的拼音补救键，**已弃用，会在后续版本中逐步移除**：它只在 TextEdit 加微信输入法下可用。
-详见 [docs/recovery-beta.md](docs/recovery-beta.md)。
-
 ## 故障排除
 
 <details>
