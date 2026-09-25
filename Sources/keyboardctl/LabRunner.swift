@@ -64,15 +64,18 @@ struct LabRunner {
     /// has to bring it back to composing. Measured on a real machine 2026-09-24: azooKey selected
     /// while in alphanumeric mode typed latin, and a lab that never set that state missed it.
     var leavesLatinMode = false
+    /// The app typed into. TextEdit by default; any other app is given a local page holding one
+    /// focused text area, which is how a browser is measured.
+    var clientBundleID = LabRunner.textEditID
     let service = MacInputSourceService()
-    private let textEditID = "com.apple.TextEdit"
+    static let textEditID = "com.apple.TextEdit"
     private let baselineID = "com.apple.keylayout.ABC"
     private let eventSource = CGEventSource(stateID: .hidSystemState)
 
     func run(json: Bool) throws {
         guard AXIsProcessTrusted() else {
             fputs(
-                "error: the lab types into TextEdit and reads the text back, which needs Accessibility.\n"
+                "error: the lab types into \(clientName) and reads the text back, which needs Accessibility.\n"
                     + "Grant it to the program running keyboardctl in System Settings > Privacy & Security > Accessibility.\n",
                 stderr
             )
@@ -176,7 +179,7 @@ struct LabRunner {
             key(CGKeyCode(warmupKeyCode))
             settle(200)
         }
-        if refocuses, let app = NSRunningApplication.runningApplications(withBundleIdentifier: textEditID).first {
+        if refocuses, let app = NSRunningApplication.runningApplications(withBundleIdentifier: clientBundleID).first {
             app.activate(options: [])
             settle(200)
         }
@@ -289,19 +292,55 @@ struct LabRunner {
         }
     }
 
-    // MARK: - Driving TextEdit
+    // MARK: - Driving the client
+
+    /// The name the report uses for the client, since a result only holds for the client it ran in.
+    var clientName: String {
+        guard clientBundleID != Self.textEditID,
+              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: clientBundleID) else {
+            return clientBundleID == Self.textEditID ? "TextEdit" : clientBundleID
+        }
+        return FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
 
     private func openScratchDocument() throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("cmd-ime-lab.txt")
-        try "".write(to: url, atomically: true, encoding: .utf8)
-        NSWorkspace.shared.open(url)
-        for _ in 0..<40 {
+        let isTextEdit = clientBundleID == Self.textEditID
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(isTextEdit ? "cmd-ime-lab.txt" : "cmd-ime-lab.html")
+        try (isTextEdit ? "" : Self.scratchPage).write(to: url, atomically: true, encoding: .utf8)
+        let opener = Process()
+        opener.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        opener.arguments = ["-b", clientBundleID, url.path]
+        try opener.run()
+        opener.waitUntilExit()
+        for _ in 0..<80 {
             settle(100)
-            if frontmostBundleID() == textEditID { return url }
+            if frontmostBundleID() == clientBundleID {
+                if !isTextEdit {
+                    // Chromium builds its accessibility tree only when asked; without this the
+                    // text area's value is not readable. Then let the page load and focus.
+                    let app = NSRunningApplication.runningApplications(withBundleIdentifier: clientBundleID).first
+                    if let app {
+                        AXUIElementSetAttributeValue(
+                            AXUIElementCreateApplication(app.processIdentifier),
+                            "AXManualAccessibility" as CFString, kCFBooleanTrue
+                        )
+                    }
+                    settle(1500)
+                }
+                return url
+            }
         }
-        fputs("error: TextEdit did not come to the front, so nothing was typed.\n", stderr)
+        fputs("error: \(clientName) did not come to the front, so nothing was typed.\n", stderr)
         exit(7)
     }
+
+    /// One text area that takes focus on load, and nothing else that could catch a key.
+    static let scratchPage = """
+        <!doctype html><meta charset="utf-8"><title>cmd-ime-lab</title>
+        <textarea id="t" autofocus style="width:90vw;height:60vh;font-size:24px"></textarea>
+        <script>window.addEventListener("load", function () { document.getElementById("t").focus(); });</script>
+        """
 
     private func frontmostBundleID() -> String? {
         // NSWorkspace refreshes through the run loop; a CLI that never pumps it reads a stale value.
@@ -312,8 +351,8 @@ struct LabRunner {
     /// Every key is guarded: the user can click away at any moment, and this must never type
     /// into whatever they clicked on.
     private func guardFront() {
-        guard frontmostBundleID() == textEditID else {
-            fputs("error: TextEdit lost focus, so the run stopped.\n", stderr)
+        guard frontmostBundleID() == clientBundleID else {
+            fputs("error: \(clientName) lost focus, so the run stopped.\n", stderr)
             exit(8)
         }
     }
@@ -376,7 +415,7 @@ struct LabRunner {
     }
 
     private func readText() -> String {
-        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: textEditID).first else {
+        guard let app = NSRunningApplication.runningApplications(withBundleIdentifier: clientBundleID).first else {
             return ""
         }
         let element = AXUIElementCreateApplication(app.processIdentifier)
@@ -400,7 +439,7 @@ struct LabRunner {
         let passed = judged.filter(\.passed)
         if json {
             let payload: [String: Any] = [
-                "client": "TextEdit",
+                "client": clientName,
                 "macOS": ProcessInfo.processInfo.operatingSystemVersionString,
                 "attemptsPerSlot": attempts,
                 "passed": passed.count,
@@ -428,7 +467,7 @@ struct LabRunner {
             return
         }
         // The client is part of the claim: a number without it is not one we could defend.
-        print("\(passed.count) of \(judged.count) slots produce the right language in TextEdit")
+        print("\(passed.count) of \(judged.count) slots produce the right language in \(clientName)")
         print("macOS \(ProcessInfo.processInfo.operatingSystemVersionString), \(attempts) attempts per slot\n")
         for result in results {
             let shape = LabRunShape(verdicts: result.verdicts)

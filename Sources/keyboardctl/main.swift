@@ -481,6 +481,7 @@ struct CLI {
         runner.warmupKeyCode = value(after: "--warmup").flatMap(Int.init) ?? 0
         runner.warmupModifierKeyCode = value(after: "--warmup-mod").flatMap(Int.init) ?? 0
         runner.leavesLatinMode = args.contains("--latin-first")
+        if let client = value(after: "--client") { runner.clientBundleID = client }
         if let slots = value(after: "--slots") {
             runner.onlySlots = Set(slots.split(separator: ",").map(String.init))
         }
@@ -697,7 +698,7 @@ struct CLI {
               keyboardctl slot remove <slot>
               keyboardctl show
               keyboardctl switch <slot>
-              keyboardctl lab [--slots a,b] [--attempts N] [--settle MS] [--rest MS] [--latin-first] [--json]\n              keyboardctl source [--json]
+              keyboardctl lab [--slots a,b] [--attempts N] [--settle MS] [--rest MS] [--latin-first] [--client BUNDLE-ID] [--json]\n              keyboardctl source [--json]
               keyboardctl source <input-source-id> [<wait-ms>] [--quiet] [--json]
               keyboardctl diagnose [--json]
               keyboardctl listen
