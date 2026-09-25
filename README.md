@@ -243,9 +243,9 @@ the settings window's, unless a theme's tone is fixed.
 
 Selecting a source from the background can leave an input method detached from the
 focused app: the menu bar shows the new source, but Latin letters keep coming out.
-Google Japanese Input does this after you have typed under ABC. For it, CmdIME presses
-the Kana key first, which enters Japanese through the system's own path, and selects
-the slot's source 60 ms later. Other input methods keep the plain select with no added
+Google Japanese Input does this after you have typed under ABC, and azooKey when it was
+left in its alphanumeric mode. For both, CmdIME presses the Kana key first, which enters
+Japanese through the system's own path, and selects the slot's source 60 ms later. Other input methods keep the plain select with no added
 delay.
 
 If another Japanese input method shows the same symptom, add an activation recipe to
@@ -262,6 +262,23 @@ If another Japanese input method shows the same symptom, add an activation recip
 Japanese sources, `delayMs` is limited to 0-500, and an entry that cannot be read is
 skipped and named in the status bar. Please report what worked in an issue so it can
 become built in.
+
+**Chinese input methods.** A pinyin input method can show the same symptom now and then:
+the menu bar shows it, and the letters come out as Latin. This is not caused by CmdIME:
+with CmdIME out of the path, a plain selection through the system API fails at least as
+often. Measured on macOS 27.0 with Doubao (豆包输入法), typing Latin immediately before the
+switch, which is the worst case: 9 of 210 switches in a Chromium browser, 3 of 60 in
+TextEdit, and 6 of 60 with CmdIME not involved. Whether the cause sits in the input method
+or in macOS is not known yet. Nothing tried from outside the input method has helped:
+re-activating the app for Doubao; selecting twice, re-activating and warm-up keys for Rime,
+which is reported upstream in [rime/squirrel#1179](https://github.com/rime/squirrel/issues/1179).
+
+If it happens, switch once more or click into the text field; neither has been measured.
+To measure it in the app you type in:
+
+```sh
+keyboardctl lab --client <app bundle id> --slots <slot id> --attempts 30
+```
 
 If Japanese opens a kana palette instead of Hiragana, refresh input sources or update to
 CmdIME 0.1.10 or later. macOS exposes `com.apple.50onPaletteIM` as a selectable Japanese

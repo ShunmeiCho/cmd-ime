@@ -25,6 +25,16 @@ public struct LabKnownIssue: Equatable, Sendable {
                 + "right; the letters were latin anyway. Reported upstream: "
                 + "https://github.com/rime/squirrel/issues/1179"
         ),
+        LabKnownIssue(
+            sourceIDPrefix: "com.bytedance.inputmethod.doubaoime",
+            failure: .producedLatin,
+            note: "Known, and not caused by CmdIME: measured 2026-09-25 on macOS 27.0. With latin "
+                + "typed just before the switch, about 4 switches in 100 left Doubao selected while "
+                + "the letters came out latin: 9 of 210 in a Chromium browser, 3 of 60 in TextEdit, "
+                + "and 6 of 60 when a plain system selection was made with CmdIME not involved. "
+                + "Re-activating the app after the switch did not help (150 attempts each way). "
+                + "Whether the cause is in the input method or in macOS is not established yet."
+        ),
     ]
 
     public static func note(sourceID: String, failure: LabFailure) -> String? {
