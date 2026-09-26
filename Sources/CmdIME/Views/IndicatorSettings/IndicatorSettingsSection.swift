@@ -17,11 +17,19 @@ enum IndicatorPreviewModel {
         slot: SwitchSlot,
         previous: InputRole? = nil,
         miniatureOf theme: IndicatorTheme? = nil,
-        sizeFactor: Double? = nil
+        sizeFactor: Double? = nil,
+        textScale: Double? = nil
     ) -> BubbleRenderModel? {
         var config = model.config
         if let sizeFactor {
             config.switchIndicatorSizeFactor = sizeFactor
+        }
+        var themes = model.indicatorLibrary.themes
+        // By the theme the bubble resolves to: no id yet (a fresh install) or a missing one
+        // falls back to the default, and the draft has to reach that theme too.
+        let resolvedID = model.indicatorLibrary.theme(id: config.switchIndicatorThemeID).id
+        if let textScale, let index = themes.firstIndex(where: { $0.id == resolvedID }) {
+            themes[index].typography.textScale = textScale
         }
         if let theme {
             config.switchIndicatorThemeID = theme.id
@@ -29,7 +37,7 @@ enum IndicatorPreviewModel {
         }
         return IndicatorBubbleResolver.model(
             config: config,
-            themes: model.indicatorLibrary.themes,
+            themes: themes,
             sources: model.sources,
             slotID: slot.id,
             previousSlotID: previous,
@@ -55,6 +63,8 @@ struct IndicatorSettingsSection: View {
     /// the model reaches every view that watches it, and going through the model on each step
     /// left the knob up to 158 px (four steps) behind a 0.5 s drag; with the draft, 29 px.
     @State private var sizeDraft: Double?
+    /// The same for the Text slider, whose every step also rewrote the theme file.
+    @State private var textScaleDraft: Double?
 
     init(model: AppModel) {
         self.model = model
@@ -67,7 +77,13 @@ struct IndicatorSettingsSection: View {
         CompactSection(title: "Switch indicator") {
             VStack(alignment: .leading, spacing: 10) {
                 enabledRow
-                IndicatorPreviewRow(model: model, library: library, isAdjusting: isAdjusting, sizeDraft: sizeDraft)
+                IndicatorPreviewRow(
+                    model: model,
+                    library: library,
+                    isAdjusting: isAdjusting,
+                    sizeDraft: sizeDraft,
+                    textScaleDraft: textScaleDraft
+                )
                     .opacity(model.config.showSwitchIndicator ? 1 : 0.45)
                 Text("Appears near the focused caret after each switch.")
                     .font(.caption)
@@ -78,7 +94,13 @@ struct IndicatorSettingsSection: View {
                 sizeRow
                 colorRow
                 IndicatorSlotChips(model: model)
-                IndicatorTypographyRows(model: model, library: library, theme: theme, isAdjusting: $isAdjusting)
+                IndicatorTypographyRows(
+                    model: model,
+                    library: library,
+                    theme: theme,
+                    isAdjusting: $isAdjusting,
+                    textScaleDraft: $textScaleDraft
+                )
                 if !theme.isBuiltIn {
                     IndicatorThemeEditor(model: model, theme: theme, isAdjusting: $isAdjusting)
                 }

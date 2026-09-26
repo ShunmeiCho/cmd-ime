@@ -17,10 +17,13 @@ struct IndicatorTypographyRows: View {
     @ObservedObject var library: IndicatorLibrary
     let theme: IndicatorTheme
     @Binding var isAdjusting: Bool
+    /// The Text value while it is dragged; the theme is edited once, on release.
+    @Binding var textScaleDraft: Double?
     @State private var showsFonts = false
     @State private var fontQuery = ""
 
     private var typography: IndicatorTypography { theme.typography }
+    private var textScale: Double { textScaleDraft ?? typography.textScale }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -41,22 +44,33 @@ struct IndicatorTypographyRows: View {
                     )
                 )
             }
-            CompactSettingRow("Text \(Int((typography.textScale * 100).rounded()))%") {
+            CompactSettingRow("Text \(Int((textScale * 100).rounded()))%") {
                 Slider(
                     value: Binding(
-                        get: { typography.textScale },
+                        get: { textScale },
                         set: { scale in
                             let clamped = IndicatorTypography.clampedTextScale(scale)
-                            guard clamped != typography.textScale else { return }
-                            model.editIndicatorTheme { $0.typography.textScale = clamped }
+                            guard clamped != textScale else { return }
+                            // A drag keeps a draft; keys and VoiceOver edit the theme in one step.
+                            if isAdjusting {
+                                textScaleDraft = clamped
+                            } else {
+                                model.editIndicatorTheme { $0.typography.textScale = clamped }
+                            }
                         }
                     ),
                     in: IndicatorTypography.minTextScale...IndicatorTypography.maxTextScale,
                     step: Self.textScaleStep,
-                    onEditingChanged: { isAdjusting = $0 }
+                    onEditingChanged: { editing in
+                        if !editing, let textScaleDraft {
+                            model.editIndicatorTheme { $0.typography.textScale = textScaleDraft }
+                        }
+                        if !editing { textScaleDraft = nil }
+                        isAdjusting = editing
+                    }
                 )
                 .accessibilityLabel("Indicator text size")
-                .accessibilityValue("\(Int((typography.textScale * 100).rounded())) percent")
+                .accessibilityValue("\(Int((textScale * 100).rounded())) percent")
             }
             if theme.isBuiltIn {
                 Text("Changing the text creates an editable copy of \(theme.name).")
