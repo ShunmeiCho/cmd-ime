@@ -45,6 +45,11 @@ final class InputIndicatorController {
     private var target = CGPoint.zero
     private var reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     private var displayOptionsObserver: NSObjectProtocol?
+    /// Each switch asks for the caret off the main thread. An answer for an older switch is dropped
+    /// and that lookup skips its remaining steps; a request it has already sent still runs to its
+    /// answer or timeout.
+    private var caretRequest = 0
+    private var caretLookup: Task<Void, Never>?
 
     init(configStore: ConfigStore) {
         library = IndicatorLibrary(configStore: configStore)
@@ -77,11 +82,30 @@ final class InputIndicatorController {
         ) else { return }
 
         let size = measure(model)
+        let pointer = NSEvent.mouseLocation
+        caretRequest += 1
+        let request = caretRequest
+        caretLookup?.cancel()
+        // The bubble on screen keeps its opacity until present() re-times it: without this, its
+        // hold could run out while the lookup is still waiting and fade it out and back in.
+        if phase == .appearing || phase == .holding { hideTask?.cancel() }
+        // Detached so the lookup starts at once on the concurrent pool instead of queueing
+        // behind the main thread; only the answer comes back to the main actor.
+        caretLookup = Task.detached(priority: .userInitiated) { [weak self] in
+            let axCaret = await Self.focusedCaretAccessibilityRect()
+            await MainActor.run { [weak self] in
+                guard let self, self.caretRequest == request else { return }
+                self.present(model, size: size, pointer: pointer, accessibilityCaret: axCaret)
+            }
+        }
+    }
+
+    /// Places and animates the bubble once the caret lookup has answered (or given up).
+    private func present(_ model: BubbleRenderModel, size: CGSize, pointer: NSPoint, accessibilityCaret: CGRect?) {
         // An app that reports a caret outside every display (some launchers do) gets the pointer instead.
-        let caret = focusedCaretRect().flatMap { rect in
+        let caret = accessibilityCaret.map(convertAccessibilityRect).flatMap { rect in
             NSScreen.screens.contains { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) } ? rect : nil
         }
-        let pointer = NSEvent.mouseLocation
         let newTarget = caret.map { CGPoint(x: $0.midX, y: $0.maxY) } ?? pointer
         let visible = screen(containing: newTarget).visibleFrame
         let visibleRect = BubblePlacement.Rect(x: visible.minX, y: visible.minY, width: visible.width, height: visible.height)
@@ -282,40 +306,60 @@ final class InputIndicatorController {
     // MARK: - Caret
 
     /// An accessibility reply is served on the focused application's own main thread,
-    /// and this asks for one microseconds after that application was handed an input
-    /// source change. Without a cap the wait is unbounded: measured idle, every
-    /// application answered in well under two milliseconds at the ninetieth percentile
-    /// but produced outliers from seventy milliseconds to nearly a quarter of a second.
-    /// That wait is on our main thread, which also services the event tap, so it holds
-    /// the user's typing. Past the cap the bubble falls back to the pointer, which is
-    /// the same path as an application that reports no caret at all.
-    private static let caretLookupTimeout: Float = 0.05
+    /// and this asks for one right after that application was handed an input source
+    /// change. Without a cap the wait is unbounded: measured idle, every application
+    /// answered in well under two milliseconds at the ninetieth percentile but produced
+    /// outliers from seventy milliseconds to nearly a quarter of a second. Measured on
+    /// macOS 27.0 with TextEdit, 51 switches with typing between them: a 50 ms cap timed
+    /// out on 16 lookups (the 35 that answered took 13 ms at the median, 49 ms at most)
+    /// and held typing for up to 76 ms; with this budget all 51 answered. The lookup runs
+    /// off the main thread, which services the event tap, so the wait never holds the
+    /// user's typing; the budget covers the whole lookup, and past it the bubble falls
+    /// back to the pointer, the same path as an application that reports no caret.
+    private nonisolated static let caretLookupBudget: TimeInterval = 0.25
+    /// A step started with less time left than this would only time out.
+    private nonisolated static let minimumStepTimeout: TimeInterval = 0.005
 
-    private func focusedCaretRect() -> CGRect? {
+    /// The focused caret in accessibility coordinates (top-left origin), or nil when the app
+    /// reports none within the budget. Runs on the concurrent pool: no AppKit in here.
+    @concurrent
+    private nonisolated static func focusedCaretAccessibilityRect() async -> CGRect? {
+        // Uptime, not the wall clock, so a clock correction cannot stretch or empty the budget.
+        let deadline = ProcessInfo.processInfo.systemUptime + caretLookupBudget
+        // Each element carries its own timeout (the system-wide one does not reach an element it
+        // returns), so every step gets what is left of the budget. A newer switch cancels this one.
+        func withRemainingBudget(_ element: AXUIElement) -> Bool {
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            guard !Task.isCancelled, remaining > minimumStepTimeout else { return false }
+            AXUIElementSetMessagingTimeout(element, Float(remaining))
+            return true
+        }
+
         let systemWide = AXUIElementCreateSystemWide()
-        AXUIElementSetMessagingTimeout(systemWide, Self.caretLookupTimeout)
         var focusedValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
+        guard withRemainingBudget(systemWide),
+              AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focusedValue) == .success,
               let focusedValue, CFGetTypeID(focusedValue) == AXUIElementGetTypeID() else {
             return nil
         }
         let focusedElement = focusedValue as! AXUIElement
-        // The system-wide default does not reach an element that already exists.
-        AXUIElementSetMessagingTimeout(focusedElement, Self.caretLookupTimeout)
 
         var rangeValue: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
+        guard withRemainingBudget(focusedElement),
+              AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
               let rangeValue else {
             return nil
         }
 
         var boundsValue: CFTypeRef?
-        guard AXUIElementCopyParameterizedAttributeValue(
-            focusedElement,
-            kAXBoundsForRangeParameterizedAttribute as CFString,
-            rangeValue,
-            &boundsValue
-        ) == .success, let boundsValue, CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
+        guard withRemainingBudget(focusedElement),
+              AXUIElementCopyParameterizedAttributeValue(
+                  focusedElement,
+                  kAXBoundsForRangeParameterizedAttribute as CFString,
+                  rangeValue,
+                  &boundsValue
+              ) == .success,
+              let boundsValue, CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
             return nil
         }
 
@@ -326,7 +370,7 @@ final class InputIndicatorController {
         guard AXValueGetType(bounds) == .cgRect, AXValueGetValue(bounds, .cgRect, &rect), rect.height > 0 else {
             return nil
         }
-        return convertAccessibilityRect(rect)
+        return rect
     }
 
     /// Accessibility rects have a top-left origin; AppKit's is bottom-left.
