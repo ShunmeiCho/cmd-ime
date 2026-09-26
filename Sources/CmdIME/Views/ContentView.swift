@@ -743,8 +743,15 @@ struct ConsoleSegmentOption<Value: Hashable>: Identifiable {
 
 struct ConsoleSegmentedControl<Value: Hashable>: View {
     static var unavailableOpacity: Double { 0.4 }
+    /// A click (or VoiceOver's press) slides the selected background to its segment. A change
+    /// from elsewhere, such as a theme that brings its own weight, lands at once: rows above can
+    /// reflow in the same update, and an animation scoped to this control would leave it
+    /// trailing its row. Reduce Motion lands at once too.
+    private static var slide: Animation { .spring(response: 0.26, dampingFraction: 0.86) }
 
     @Environment(\.consoleControlLabel) private var groupLabel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Namespace private var selectionSpace
     let options: [ConsoleSegmentOption<Value>]
     @Binding var selection: Value
 
@@ -752,7 +759,9 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
         HStack(spacing: 0) {
             ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
                 Button {
-                    selection = option.value
+                    withAnimation(DesignTokens.Motion.resolved(Self.slide, reduceMotion: reduceMotion)) {
+                        selection = option.value
+                    }
                 } label: {
                     Text(option.label)
                         .font(DesignTokens.Typography.body.weight(.semibold))
@@ -769,10 +778,7 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
                 .disabled(!option.isEnabled)
                 .accessibilityLabel(option.label)
                 .accessibilityAddTraits(selection == option.value ? .isSelected : [])
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(selection == option.value ? DesignTokens.Colors.overlay(0.12) : .clear)
-                )
+                .background { selectionBackground(for: option) }
 
                 if index < options.count - 1 {
                     Rectangle()
@@ -794,6 +800,16 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(groupLabel)
         .accessibilityValue(options.first { $0.value == selection }?.label ?? "No selection")
+    }
+
+    /// One background, drawn behind the selected segment only, so it can move between them.
+    @ViewBuilder
+    private func selectionBackground(for option: ConsoleSegmentOption<Value>) -> some View {
+        if selection == option.value {
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(DesignTokens.Colors.overlay(0.12))
+                .matchedGeometryEffect(id: "selection", in: selectionSpace)
+        }
     }
 }
 
