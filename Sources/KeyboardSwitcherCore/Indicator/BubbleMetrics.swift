@@ -55,6 +55,37 @@ public struct BubbleMetrics: Equatable, Sendable {
         max(SwitcherConfig.clampedSwitchIndicatorSizeFactor(factor), minimumFactor(for: archetype))
     }
 
+    /// The settings slider moves in five-percent steps, counted from its lower bound.
+    public static let sizeSliderStep = 0.05
+
+    /// The slider's range with its lower bound rounded up onto the step grid. From the 33 %
+    /// floor every stop fell between whole steps (98 %, 103 %, ... 158 %), so neither 100 %
+    /// nor the 160 % maximum could be reached by dragging. A stored value below the bound
+    /// (a migrated 33 %) still draws at its own size; the slider only shows it at the bound.
+    public static func sizeSliderRange(for archetype: BubbleArchetype) -> ClosedRange<Double> {
+        let floorPercent = (effectiveFactor(SwitcherConfig.minSwitchIndicatorSizeFactor, archetype: archetype) * 100).rounded()
+        let stepPercent = (sizeSliderStep * 100).rounded()
+        let lowerPercent = (floorPercent / stepPercent).rounded(.up) * stepPercent
+        return lowerPercent / 100...SwitcherConfig.maxSwitchIndicatorSizeFactor
+    }
+
+    /// A slider value as a whole percentage, so the file keeps 1.0 and not 1.0000000000000002.
+    public static func snappedSizeFactor(_ factor: Double) -> Double {
+        (factor * 100).rounded() / 100
+    }
+
+    /// The size to store for a value the slider reports, or nil to store nothing. A size kept
+    /// below the slider's range shows at its bottom stop, and a step down from there would
+    /// otherwise store that stop, which is larger.
+    public static func sizeFactor(fromSlider value: Double, stored: Double, archetype: BubbleArchetype) -> Double? {
+        let snapped = snappedSizeFactor(value)
+        let bottom = sizeSliderRange(for: archetype).lowerBound
+        if snapped <= bottom, effectiveFactor(stored, archetype: archetype) < bottom {
+            return nil
+        }
+        return snapped
+    }
+
     enum Base {
         static let tileSide = 32.0
         static let bareTileSide = 40.0

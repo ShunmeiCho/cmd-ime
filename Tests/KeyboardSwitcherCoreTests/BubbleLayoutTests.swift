@@ -76,6 +76,38 @@ final class BubbleLayoutTests: XCTestCase {
         XCTAssertLessThan(BubbleMetrics.badgeMinimumFactor, BubbleMetrics.switcherMinimumFactor)
     }
 
+    func testSizeSliderStopsOnWholeFivePercentSteps() {
+        let step = BubbleMetrics.sizeSliderStep
+        for archetype in BubbleArchetype.allCases {
+            let range = BubbleMetrics.sizeSliderRange(for: archetype)
+            XCTAssertGreaterThanOrEqual(
+                range.lowerBound,
+                BubbleMetrics.effectiveFactor(SwitcherConfig.minSwitchIndicatorSizeFactor, archetype: archetype)
+            )
+            // SwiftUI steps from the lower bound, so it and every stop that matters sit on the grid.
+            for stop in [range.lowerBound, SwitcherConfig.defaultSwitchIndicatorSizeFactor, range.upperBound] {
+                let steps = stop / step
+                XCTAssertEqual(steps, steps.rounded(), accuracy: 0.0001, "\(archetype) at \(stop)")
+            }
+        }
+    }
+
+    func testSnappedSizeFactorKeepsAWholePercentage() {
+        let stop = 0.35 + 17 * 0.05 // a real stop from the 35 % floor, 1.2000000000000002 in binary
+        XCTAssertNotEqual(stop, 1.2)
+        XCTAssertEqual(BubbleMetrics.snappedSizeFactor(stop), 1.2)
+        XCTAssertEqual(BubbleMetrics.snappedSizeFactor(1.4800000000000002), 1.48)
+    }
+
+    func testAStepDownNeverRaisesASizeStoredBelowTheSlider() {
+        let bottom = BubbleMetrics.sizeSliderRange(for: .tileOnly).lowerBound
+        let migrated = SwitcherConfig.minSwitchIndicatorSizeFactor
+        XCTAssertLessThan(migrated, bottom)
+        XCTAssertNil(BubbleMetrics.sizeFactor(fromSlider: bottom, stored: migrated, archetype: .tileOnly))
+        XCTAssertEqual(BubbleMetrics.sizeFactor(fromSlider: bottom + 0.05, stored: migrated, archetype: .tileOnly), 0.4)
+        XCTAssertEqual(BubbleMetrics.sizeFactor(fromSlider: bottom, stored: 1.0, archetype: .tileOnly), bottom)
+    }
+
     func testBadgeCellBudgetsTheWidestGlyphAndItsMark() {
         func cells(_ symbols: [SlotSymbol]) -> [BubbleRenderModel.Cell] {
             symbols.map { BubbleRenderModel.Cell(symbol: $0, name: "", fillHex: "#FFFFFF", glyphHex: "#000000") }

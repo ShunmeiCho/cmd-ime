@@ -16,9 +16,13 @@ enum IndicatorPreviewModel {
         model: AppModel,
         slot: SwitchSlot,
         previous: InputRole? = nil,
-        miniatureOf theme: IndicatorTheme? = nil
+        miniatureOf theme: IndicatorTheme? = nil,
+        sizeFactor: Double? = nil
     ) -> BubbleRenderModel? {
         var config = model.config
+        if let sizeFactor {
+            config.switchIndicatorSizeFactor = sizeFactor
+        }
         if let theme {
             config.switchIndicatorThemeID = theme.id
             config.switchIndicatorSizeFactor = miniatureScale
@@ -47,6 +51,10 @@ struct IndicatorSettingsSection: View {
     @ObservedObject var model: AppModel
     @ObservedObject private var library: IndicatorLibrary
     @State private var isAdjusting = false
+    /// The size while the slider is dragged; the model gets it once, on release. A change to
+    /// the model reaches every view that watches it, and going through the model on each step
+    /// left the knob up to 158 px (four steps) behind a 0.5 s drag; with the draft, 29 px.
+    @State private var sizeDraft: Double?
 
     init(model: AppModel) {
         self.model = model
@@ -59,7 +67,7 @@ struct IndicatorSettingsSection: View {
         CompactSection(title: "Switch indicator") {
             VStack(alignment: .leading, spacing: 10) {
                 enabledRow
-                IndicatorPreviewRow(model: model, library: library, isAdjusting: isAdjusting)
+                IndicatorPreviewRow(model: model, library: library, isAdjusting: isAdjusting, sizeDraft: sizeDraft)
                     .opacity(model.config.showSwitchIndicator ? 1 : 0.45)
                 Text("Appears near the focused caret after each switch.")
                     .font(.caption)
@@ -145,7 +153,7 @@ struct IndicatorSettingsSection: View {
     /// to be two that multiplied, so the same percentage meant a different size under
     /// each Size button, and on the switcher the slider bottomed out reading 110 %.
     private var sizeRow: some View {
-        let stored = model.config.switchIndicatorSizeFactor
+        let stored = sizeDraft ?? model.config.switchIndicatorSizeFactor
         let effective = BubbleMetrics.effectiveFactor(stored, archetype: theme.archetype)
         let minimum = BubbleMetrics.effectiveFactor(
             SwitcherConfig.minSwitchIndicatorSizeFactor,
@@ -157,11 +165,27 @@ struct IndicatorSettingsSection: View {
                 Slider(
                     value: Binding(
                         get: { effective },
-                        set: { model.setSwitchIndicatorSizeFactor($0) }
+                        set: { value in
+                            guard let next = BubbleMetrics.sizeFactor(fromSlider: value, stored: stored, archetype: theme.archetype) else {
+                                return
+                            }
+                            // A drag keeps a draft; keys and VoiceOver change the size in one step.
+                            if isAdjusting {
+                                sizeDraft = next
+                            } else {
+                                model.setSwitchIndicatorSizeFactor(next)
+                            }
+                        }
                     ),
-                    in: minimum...SwitcherConfig.maxSwitchIndicatorSizeFactor,
-                    step: 0.05,
-                    onEditingChanged: { isAdjusting = $0 }
+                    in: BubbleMetrics.sizeSliderRange(for: theme.archetype),
+                    step: BubbleMetrics.sizeSliderStep,
+                    onEditingChanged: { editing in
+                        if !editing, let sizeDraft {
+                            model.setSwitchIndicatorSizeFactor(sizeDraft)
+                        }
+                        if !editing { sizeDraft = nil }
+                        isAdjusting = editing
+                    }
                 )
                 .accessibilityLabel("Indicator size")
                 .accessibilityValue("\(percent) percent")

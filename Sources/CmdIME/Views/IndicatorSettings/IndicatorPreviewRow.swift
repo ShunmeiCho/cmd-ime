@@ -22,6 +22,8 @@ struct IndicatorPreviewRow: View {
     @ObservedObject var model: AppModel
     @ObservedObject var library: IndicatorLibrary
     let isAdjusting: Bool
+    /// The size slider's value while it is dragged, before the model has it.
+    var sizeDraft: Double?
 
     @StateObject private var state = BubbleState()
     @State private var page = Page.dark
@@ -141,7 +143,7 @@ struct IndicatorPreviewRow: View {
 
     private var currentModel: BubbleRenderModel? {
         previewedSlot.flatMap {
-            IndicatorPreviewModel.make(model: model, slot: $0, previous: previousSlot)
+            IndicatorPreviewModel.make(model: model, slot: $0, previous: previousSlot, sizeFactor: sizeDraft)
         }
     }
 
