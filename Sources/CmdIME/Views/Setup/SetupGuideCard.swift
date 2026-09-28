@@ -1,63 +1,36 @@
 import KeyboardSwitcherCore
 import SwiftUI
 
-/// The first-run checklist at the top of the settings page. The current step is
-/// derived by `SetupGuideState`; the card only renders it and reports the three
-/// user decisions: Looks right, Finish and Skip.
+/// The first-run checklist: the content of the Setup page. The current step is
+/// derived by `SetupGuideState`; the card only renders it and reports the user
+/// decisions: Looks right, Change, Finish and Skip.
 struct SetupGuideCard: View {
     @ObservedObject var model: AppModel
     @Binding var session: SetupGuideSession
-    let scroll: ScrollViewProxy
     /// Clears the slot board's trigger drafts after the guide rescans or rebuilds slots.
     let resetDrafts: () -> Void
+    /// Change in step 2: opens the Slots page. Setup stays in the sidebar.
+    let onChangeSlots: () -> Void
+    /// Finish, Skip or Close, after the flag is stored: Setup leaves the sidebar.
+    let onClose: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.setupFolds) private var folds
 
     var body: some View {
         let state = model.setupGuideState(session: session)
         Group {
             if let current = state.currentStep {
                 card(state: state, current: current)
-                    .transition(collapseTransition)
+                    .transition(.opacity)
             }
         }
-        .id(SetupGuideNavigation.guideID)
-        // Consume each published value, not just the final rendered config: deletion
-        // must invalidate proof even when the same ID is immediately created again.
-        .onReceive(model.$config) { config in
-            reconcileEvidence(config: config, sources: model.sources)
-        }
-        .onReceive(model.$sources) { sources in
-            reconcileEvidence(config: model.config, sources: sources)
-        }
-        .onChange(of: state.currentStep) { step in
-            guard let step else { return }
-            SetupGuideNavigation.announce("Setup step \(step.rawValue) of \(SetupStep.allCases.count): \(step.title)")
-        }
-        .onChange(of: model.permissions.isReady) { isReady in
-            // The model starts the listener only at launch or on Resume. Inside the
-            // guide a fresh grant should lead straight on to the next step. A grant that
-            // returns after being revoked leaves `isListening` stale, and the old event
-            // tap is not known to recover, so the listener is rebuilt, never trusted.
-            guard isReady, !state.isFinished else { return }
-            if model.isListening {
-                model.stopListening()
-            }
-            model.startListeningIfReady()
-        }
-    }
-
-    private func reconcileEvidence(config: SwitcherConfig, sources: [InputSourceInfo]) {
-        let next = session.triggerEvidence.reconciling(config: config, sources: sources)
-        if next != session.triggerEvidence { session.triggerEvidence = next }
     }
 
     private func card(state: SetupGuideState, current: SetupStep) -> some View {
         CompactSection(title: "Setup guide") {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
-                    Text("Three short steps. Everything stays editable afterwards, and General > Show Setup Guide at the top shows this guide again.")
+                    Text("Three short steps. Everything stays editable afterwards, and General > Show Setup Guide shows this guide again.")
                         .setupBodyText()
                     Spacer(minLength: 8)
                     StatusPill(
@@ -93,7 +66,7 @@ struct SetupGuideCard: View {
     private func content(for step: SetupStep, state: SetupGuideState) -> some View {
         switch step {
         case .permissions:
-            SetupPermissionsStep(model: model, state: state)
+            SetupPermissionsStep(model: model, state: state, session: $session)
         case .review:
             SetupReviewStep(
                 model: model,
@@ -103,13 +76,7 @@ struct SetupGuideCard: View {
                         session.hasConfirmedSlots = true
                     }
                 },
-                onChange: {
-                    withAnimation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion)) {
-                        folds.unfold(.slotBoard)
-                    }
-                    SetupGuideNavigation.scroll(scroll, to: SetupFoldSection.slotBoard)
-                    SetupGuideNavigation.announce("\(SetupFoldSection.slotBoard.title) section opened below the setup guide.")
-                },
+                onChange: onChangeSlots,
                 resetDrafts: resetDrafts
             )
         case .tryIt:
@@ -120,21 +87,78 @@ struct SetupGuideCard: View {
     }
 
     /// Finish, Skip and Close all end here: store the flag, drop the session state
-    /// and let the card collapse toward the header status pill.
+    /// and leave the Setup page.
     private func complete(announcement: String) {
         withAnimation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion)) {
             model.completeSetup()
             session = SetupGuideSession()
         }
+        onClose()
         SetupGuideNavigation.announce(announcement)
     }
+}
 
-    /// The status pill sits at the header's top trailing corner; the card shrinks
-    /// toward it. Reduce Motion gets a plain fade.
-    private var collapseTransition: AnyTransition {
-        reduceMotion
-            ? .opacity
-            : .asymmetric(insertion: .opacity, removal: .scale(scale: 0.9, anchor: .topTrailing).combined(with: .opacity))
+/// The guide's bookkeeping. It sits on the window root, not on the card: the card
+/// lives on the Setup page, and the user can leave that page while the guide is open.
+private struct SetupGuideLifecycle: ViewModifier {
+    @ObservedObject var model: AppModel
+    @Binding var session: SetupGuideSession
+
+    private static let pollInterval = Duration.seconds(1)
+
+    private var currentStep: SetupStep? {
+        model.setupGuideState(session: session).currentStep
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: currentStep) { step in
+                guard let step else { return }
+                SetupGuideNavigation.announce("Setup step \(step.rawValue) of \(SetupStep.allCases.count): \(step.title)")
+            }
+            .task(id: currentStep == .permissions) {
+                // While step 1 is current, flip to Ready while System Settings is still in
+                // front, where macOS allows it.
+                guard currentStep == .permissions else { return }
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: Self.pollInterval)
+                    if MacPermissionStatus.current() != model.permissions {
+                        model.refreshRuntimeStatus()
+                    }
+                }
+            }
+            // Consume each published value, not just the final rendered config: deletion
+            // must invalidate proof even when the same ID is immediately created again.
+            .onReceive(model.$config) { config in
+                reconcileEvidence(config: config, sources: model.sources)
+            }
+            .onReceive(model.$sources) { sources in
+                reconcileEvidence(config: model.config, sources: sources)
+            }
+            .onChange(of: model.permissions.isReady) { isReady in
+                // The model starts the listener only at launch or on Resume. Inside the
+                // guide a fresh grant should lead straight on to the next step. A grant that
+                // returns after being revoked leaves `isListening` stale, and the old event
+                // tap is not known to recover, so the listener is rebuilt, never trusted.
+                guard isReady, !model.setupGuideState(session: session).isFinished else { return }
+                if model.isListening {
+                    model.stopListening()
+                }
+                model.startListeningIfReady()
+            }
+    }
+
+    private func reconcileEvidence(config: SwitcherConfig, sources: [InputSourceInfo]) {
+        let next = session.triggerEvidence.reconciling(config: config, sources: sources)
+        if next != session.triggerEvidence { session.triggerEvidence = next }
+    }
+}
+
+extension View {
+    /// Keeps the setup guide's evidence, listener, step 1 poll and step announcements
+    /// current whichever page is shown.
+    func setupGuideLifecycle(model: AppModel, session: Binding<SetupGuideSession>) -> some View {
+        modifier(SetupGuideLifecycle(model: model, session: session))
     }
 }
 

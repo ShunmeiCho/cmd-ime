@@ -41,6 +41,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidBecomeActive(_ notification: Notification) {
         model.refreshRuntimeStatus()
+        // The General page stays on screen, so a change made in System Settings has to
+        // be picked up on the way back.
+        model.refreshNotificationPermission()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -134,7 +137,7 @@ final class AppWindowCoordinator: NSObject, NSWindowDelegate {
 
     private func makeSettingsWindow(model: AppModel) -> NSWindow {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 820, height: 840),
+            contentRect: NSRect(x: 0, y: 0, width: 820 + DesignTokens.Layout.sidebarWidth, height: 840),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -148,10 +151,17 @@ final class AppWindowCoordinator: NSObject, NSWindowDelegate {
         window.delegate = self
         window.center()
         window.setFrameAutosaveName("CmdIMESettings")
-        window.contentView = NSHostingView(
+        let hostingView = NSHostingView(
             rootView: ContentView(model: model)
-                .frame(minWidth: 720, minHeight: 640)
+                .frame(minWidth: DesignTokens.Layout.sidebarWidth + DesignTokens.Layout.detailMinWidth, minHeight: 640)
         )
+        if #available(macOS 14.0, *) {
+            // As a window's content view the hosting view would otherwise bridge `.all`: the split
+            // view could then retitle the window, which is found by "CmdIME", and add a toolbar
+            // with a sidebar toggle to a sidebar that never collapses. The option is macOS 14 and later.
+            hostingView.sceneBridgingOptions = []
+        }
+        window.contentView = hostingView
         return window
     }
 }

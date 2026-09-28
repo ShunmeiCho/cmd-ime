@@ -10,12 +10,15 @@ typealias SetupTriggerEvents = PassthroughSubject<SetupTriggeredSwitch, Never>
 struct SetupGuideSession: Equatable {
     /// The user pressed "Looks right" in the review step.
     var hasConfirmedSlots = false
-    /// A returning user reopened the guide from General > Setup guide.
+    /// A returning user reopened the guide from General > Show Setup Guide.
     var isReopened = false
     /// Successful trigger/source evidence for the current configuration, never persisted.
     var triggerEvidence = SetupTriggerEvidence()
-    /// Sections unfolded by hand, or by "Change", while the first-run guide is open.
-    var unfoldedSections: Set<SetupFoldSection> = []
+    /// macOS reports some grants only to a fresh process. Once step 1 opened a settings
+    /// pane and a permission still reads as missing, the restart hint appears.
+    var didOpenPermissionSettings = false
+    /// Scheduling a relaunch from step 1 failed; offer Quit instead.
+    var relaunchFailed = false
 }
 
 extension AppModel {
@@ -47,33 +50,19 @@ extension AppModel {
 
 @MainActor
 enum SetupGuideNavigation {
-    /// The id of the guide card inside the settings scroll view.
-    static let guideID = "setupGuide"
-
-    /// Scrolls after the pending state change has been laid out.
-    static func scroll(_ proxy: ScrollViewProxy, to id: some Hashable & Sendable) {
-        DispatchQueue.main.async {
-            let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            withAnimation(DesignTokens.Motion.resolved(DesignTokens.Motion.expandCollapse, reduceMotion: reduceMotion)) {
-                proxy.scrollTo(id, anchor: .top)
-            }
+    /// General > Show Setup Guide. A returning user gets a fresh walk through the steps;
+    /// while the first-run guide is still open the session is kept, so progress made so
+    /// far survives. The caller selects the Setup page.
+    static func showGuide(_ session: Binding<SetupGuideSession>, model: AppModel) {
+        guard model.config.hasCompletedSetup, !session.wrappedValue.isReopened else { return }
+        var next = SetupGuideSession()
+        next.isReopened = true
+        withAnimation(DesignTokens.Motion.resolved(
+            DesignTokens.Motion.expandCollapse,
+            reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        )) {
+            session.wrappedValue = next
         }
-    }
-
-    /// General > Setup guide. While the first-run guide is still open this only
-    /// scrolls back to it, so progress made so far is kept.
-    static func showGuide(_ session: Binding<SetupGuideSession>, model: AppModel, scroll proxy: ScrollViewProxy) {
-        if model.config.hasCompletedSetup, !session.wrappedValue.isReopened {
-            var next = SetupGuideSession()
-            next.isReopened = true
-            withAnimation(DesignTokens.Motion.resolved(
-                DesignTokens.Motion.expandCollapse,
-                reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-            )) {
-                session.wrappedValue = next
-            }
-        }
-        scroll(proxy, to: guideID)
     }
 
     static func announce(_ message: String) {

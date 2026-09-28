@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import SwiftUI
 
 /// Relaunches the app bundle: a detached `/bin/sh` waits for this process to exit and
 /// only then asks LaunchServices to open the bundle again, so two instances (and two
@@ -44,6 +45,34 @@ enum AppRelauncher {
             return true
         } catch {
             return false
+        }
+    }
+}
+
+/// Relaunch CmdIME, or Quit CmdIME when there is no bundle to reopen or scheduling the
+/// reopen failed. Shared by the setup guide and the keyboard-control status in the
+/// sidebar; `failed` lets the caller show the reopen hint that goes with Quit.
+struct RelaunchButton: View {
+    @ObservedObject var model: AppModel
+    var prominent = false
+    @Binding var failed: Bool
+
+    var body: some View {
+        if AppRelauncher.canRelaunch, !failed {
+            Button("Relaunch CmdIME") {
+                if AppRelauncher.scheduleReopenAfterExit() {
+                    model.quit()
+                } else {
+                    failed = true
+                    SetupGuideNavigation.announce("Relaunch is not available. Quit CmdIME and open it again.")
+                }
+            }
+            .buttonStyle(ConsoleButtonStyle(prominent: prominent))
+        } else {
+            Button("Quit CmdIME") {
+                model.quit()
+            }
+            .buttonStyle(ConsoleButtonStyle(prominent: prominent))
         }
     }
 }
