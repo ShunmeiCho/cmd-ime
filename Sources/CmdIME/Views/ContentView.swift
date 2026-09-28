@@ -2,78 +2,125 @@ import AppKit
 import KeyboardSwitcherCore
 import SwiftUI
 
+/// The settings window: a native sidebar with one page per section. The update and
+/// What's New notices sit above every page.
+///
+/// Never give this view a `navigationTitle`: other code finds the window by its title
+/// "CmdIME", and the hosting view does not bridge titles (see `AppWindowCoordinator`).
 struct ContentView: View {
     @ObservedObject var model: AppModel
     @State private var triggerDrafts: [InputRole: String] = [:]
     @State private var triggerTypeDrafts: [InputRole: BindingTriggerType] = [:]
     @State private var setupSession = SetupGuideSession()
+    @State private var navigation: SettingsNavigation
+    /// The sidebar carries the keyboard-control status, so it never collapses.
+    @State private var columns = NavigationSplitViewVisibility.all
 
-    var body: some View {
-        ScrollViewReader { scroll in
-            page(scroll: scroll)
-                .environment(\.setupFolds, SetupFolds(session: $setupSession, isActive: !model.config.hasCompletedSetup))
+    init(model: AppModel) {
+        self.model = model
+        var navigation = SettingsNavigation(isSetupPending: !model.config.hasCompletedSetup)
+        #if DEBUG
+        // Screenshot aid: CMDIME_SCROLL_TO=indicator opens the window on the Indicator page.
+        if ProcessInfo.processInfo.environment["CMDIME_SCROLL_TO"] == "indicator" {
+            navigation.select(.indicator)
         }
+        #endif
+        _navigation = State(initialValue: navigation)
     }
 
-    private func page(scroll: ScrollViewProxy) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
-                SettingsHeader(model: model, status: runtimeStatus, onPrimaryAction: performHeaderAction) {
-                    SetupGuideNavigation.showGuide($setupSession, model: model, scroll: scroll)
-                }
-                if case let .available(result) = model.updateStatus {
-                    UpdateAvailableBar(model: model, version: result.latestVersion)
-                }
-                WhatsNewNoticeBar(model: model, isSetupGuideReopened: setupSession.isReopened)
-                SetupGuideCard(model: model, session: $setupSession, scroll: scroll, resetDrafts: resetDrafts)
-                SlotBoardSection(
-                    model: model,
-                    triggerDrafts: $triggerDrafts,
-                    triggerTypeDrafts: $triggerTypeDrafts,
-                    resetDrafts: resetDrafts,
-                    footer: AnyView(CompactLiveKeysStrip(model: model).setupFold(.liveKeys))
-                )
-                .setupFold(.slotBoard)
-
-                IndicatorSettingsSection(model: model)
-                    .setupFold(.indicator)
-                    .frame(maxWidth: .infinity)
-                    .id("indicator-section")
-                #if DEBUG
-                // Screenshot aid: CMDIME_SCROLL_TO=indicator opens the window on the lower half.
-                Color.clear.frame(height: 0).onAppear {
-                    guard ProcessInfo.processInfo.environment["CMDIME_SCROLL_TO"] == "indicator" else { return }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { scroll.scrollTo("indicator-section", anchor: .top) }
-                }
-                #endif
-            }
-            .padding(22)
-            .frame(maxWidth: DesignTokens.Layout.contentMaxWidth, alignment: .leading)
-            .frame(maxWidth: .infinity)
+    var body: some View {
+        NavigationSplitView(columnVisibility: $columns) {
+            SettingsSidebar(model: model, navigation: $navigation)
+                .navigationSplitViewColumnWidth(DesignTokens.Layout.sidebarWidth)
+        } detail: {
+            detail
         }
-        // One point of padding keeps the scrolling content below the transparent title bar;
-        // without it, rows slide up underneath the window title and the traffic lights.
-        .padding(.top, 1)
-        .background(DesignTokens.Colors.canvas)
-        .background { WindowMaterial().ignoresSafeArea() }
+        .onChange(of: columns) { visibility in
+            if visibility != .all { columns = .all }
+        }
         .followsAppearancePreference()
         .environment(\.slotLook, SlotLook(slots: model.config.slots))
+        .setupGuideLifecycle(model: model, session: $setupSession)
+        .onChange(of: model.boardNotice) { notice in
+            // The Slots page announces its own notices.
+            guard navigation.selection != .slots, case let .failed(reason)? = notice else { return }
+            SetupGuideNavigation.announce(reason)
+        }
         .onAppear {
             resetDrafts()
         }
     }
 
-    private var runtimeStatus: RuntimeStatusPresentation {
-        RuntimeStatusPresentation(model: model)
+    private var detail: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
+                if case let .available(result) = model.updateStatus {
+                    UpdateAvailableBar(model: model, version: result.latestVersion)
+                }
+                // A replayed guide hides the notice only where the two would stack.
+                WhatsNewNoticeBar(model: model,
+                                  isSetupGuideReopened: setupSession.isReopened && navigation.selection == .setup)
+                // Saving and the login item report failures through the board notice, which
+                // the Slots page shows itself; every other page shows them here.
+                if navigation.selection != .slots, case let .failed(reason) = model.boardNotice {
+                    WindowFailureBar(message: reason, onDismiss: model.dismissBoardNotice)
+                }
+                page(navigation.selection)
+            }
+            .padding(22)
+            .frame(maxWidth: DesignTokens.Layout.contentMaxWidth, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
+        // Each page starts at the top.
+        .id(navigation.selection)
+        // One point of padding keeps the scrolling content below the transparent title bar;
+        // without it, rows slide up underneath the window title and the traffic lights.
+        .padding(.top, 1)
+        .background(DesignTokens.Colors.canvas)
+        .background { WindowMaterial().ignoresSafeArea() }
     }
 
-    private func performHeaderAction() {
-        if model.isListening {
-            model.stopListening()
-        } else if model.permissions.isReady {
-            model.startListeningIfReady()
-        } else {
-            model.requestPermissions()
+    @ViewBuilder
+    private func page(_ page: SettingsPage) -> some View {
+        switch page {
+        case .setup:
+            SetupGuideCard(model: model, session: $setupSession, resetDrafts: resetDrafts,
+                           onChangeSlots: openSlotsFromSetup, onClose: { navigation.completeSetup() })
+        case .slots:
+            SlotBoardSection(
+                model: model,
+                triggerDrafts: $triggerDrafts,
+                triggerTypeDrafts: $triggerTypeDrafts,
+                resetDrafts: resetDrafts,
+                footer: AnyView(CompactLiveKeysStrip(model: model))
+            )
+        case .apps:
+            AppsPage(model: model)
+        case .indicator:
+            IndicatorSettingsSection(model: model)
+                .frame(maxWidth: .infinity)
+        case .general:
+            GeneralPage(model: model, onShowSetupGuide: showSetupGuide)
+        case .about:
+            AboutPage()
+        }
+    }
+
+    /// Change in the setup guide's step 2. The guide keeps its place in the sidebar.
+    private func openSlotsFromSetup() {
+        navigation.select(.slots)
+        SetupGuideNavigation.announce("Slots page opened. The setup guide stays in the sidebar.")
+    }
+
+    /// General > Show Setup Guide.
+    private func showSetupGuide() {
+        let wasOpen = !model.setupGuideState(session: setupSession).isFinished
+        SetupGuideNavigation.showGuide($setupSession, model: model)
+        navigation.replaySetup()
+        // A replay starts at a step, which the guide's lifecycle announces; a guide that
+        // was already open only changes page.
+        if wasOpen {
+            SetupGuideNavigation.announce("Setup guide opened.")
         }
     }
 
@@ -86,295 +133,8 @@ struct ContentView: View {
     }
 }
 
-@MainActor
-private struct RuntimeStatusPresentation {
-    let title: String
-    let detail: String
-    let systemImage: String
-    let tone: StatusPill.Tone
-    let primaryActionTitle: String
-    let primaryActionProminent: Bool
-
-    init(model: AppModel) {
-        if model.permissions.isReady && model.sources.isEmpty {
-            title = "No Input Sources"
-            detail = "No input methods are available. Refresh methods or add an input source in System Settings."
-            systemImage = "keyboard.badge.ellipsis"
-            tone = .warning
-            primaryActionTitle = model.isListening ? "Pause" : "Resume"
-            primaryActionProminent = !model.isListening
-        } else if model.isListening {
-            title = "Active"
-            detail = "Listening for your configured shortcuts."
-            systemImage = "checkmark.circle.fill"
-            tone = .success
-            primaryActionTitle = "Pause"
-            primaryActionProminent = false
-        } else if !model.permissions.isReady {
-            title = "Needs Permission"
-            detail = "Grant Accessibility and Input Monitoring to enable global shortcuts."
-            systemImage = "exclamationmark.triangle.fill"
-            tone = .warning
-            primaryActionTitle = "Request Permissions"
-            primaryActionProminent = true
-        } else if model.didListenerFailToStart {
-            title = "Listener Failed"
-            detail = "Keyboard listener could not start. Re-grant permissions, then try again."
-            systemImage = "xmark.octagon.fill"
-            tone = .danger
-            primaryActionTitle = "Retry"
-            primaryActionProminent = true
-        } else {
-            title = "Paused"
-            detail = "Shortcuts are not being captured."
-            systemImage = "pause.circle.fill"
-            tone = .neutral
-            primaryActionTitle = "Resume"
-            primaryActionProminent = true
-        }
-    }
-}
-
-private struct SettingsHeader: View {
-    @ObservedObject var model: AppModel
-    let status: RuntimeStatusPresentation
-    let onPrimaryAction: () -> Void
-    let onShowSetupGuide: () -> Void
-    @State private var showsPermissionDetails = false
-    @State private var showsGeneral = false
-
-    private var needsAttention: Bool {
-        !model.permissions.isReady || model.keyboardControlStatus == "Failed"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
-            HStack(spacing: DesignTokens.Layout.rowGap) {
-                Text("CmdIME")
-                    .font(DesignTokens.Typography.title)
-                    .foregroundStyle(DesignTokens.Colors.textPrimary)
-                StatusPill(text: status.title, systemImage: status.systemImage, tone: status.tone)
-                Spacer(minLength: DesignTokens.Layout.rowGap)
-                Button {
-                    showsPermissionDetails.toggle()
-                } label: {
-                    Label(needsAttention ? "Keyboard access needs attention" : "Keyboard access ready",
-                          systemImage: needsAttention ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                        .font(DesignTokens.Typography.auxiliary)
-                }
-                .buttonStyle(ConsoleButtonStyle())
-                .disabled(needsAttention)
-                .help(needsAttention ? status.detail : "Show or hide keyboard permission details")
-                .accessibilityValue(needsAttention || showsPermissionDetails ? "Expanded" : "Collapsed")
-                Button(status.primaryActionTitle, action: onPrimaryAction)
-                    .buttonStyle(ConsoleButtonStyle(prominent: status.primaryActionProminent))
-                    .fixedSize(horizontal: true, vertical: false)
-                generalMenu
-            }
-            Text("While this window is open, CmdIME is in the Dock and the app switcher. After it closes, CmdIME keeps running in the background with no menu bar icon. Open CmdIME again to return here.")
-                .font(DesignTokens.Typography.auxiliary)
-                .foregroundStyle(DesignTokens.Colors.textMuted)
-                .fixedSize(horizontal: false, vertical: true)
-            if needsAttention || showsPermissionDetails {
-                Divider()
-                if needsAttention {
-                    PermissionsCard(model: model, status: status)
-                        .id(SetupFoldSection.keyboardControl)
-                } else {
-                    PermissionsCard(model: model, status: status)
-                        .setupFold(.keyboardControl)
-                }
-            }
-        }
-        .padding(DesignTokens.Layout.panelInset)
-        .floatingBarSurface()
-    }
-}
-
-private extension SettingsHeader {
-    /// Every action row spans the panel, so the left and right edges line up.
-    /// Says what macOS currently allows, because the switch above cannot override it.
-    @ViewBuilder
-    var notificationPermissionNote: some View {
-        switch model.notificationPermission {
-        case .blocked:
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Notifications for CmdIME are turned off in System Settings.")
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button("Open Notification Settings…") { UpdateNotification.openSystemSettings() }
-            }
-        case .notAsked:
-            Text("macOS will ask for permission the first time there is an update.")
-                .font(DesignTokens.Typography.auxiliary)
-                .foregroundStyle(DesignTokens.Colors.textMuted)
-                .fixedSize(horizontal: false, vertical: true)
-        case .allowed, .unknown:
-            EmptyView()
-        }
-    }
-
-    func generalRow(_ title: String, prominent: Bool = false, destructive: Bool = false,
-                    action: @escaping () -> Void) -> some View {
-        Button(role: destructive ? .destructive : nil, action: action) {
-            Text(title).frame(maxWidth: .infinity)
-        }
-        .buttonStyle(ConsoleButtonStyle(prominent: prominent))
-    }
-
-    static func open(_ address: String) {
-        guard let url = URL(string: address) else { return }
-        NSWorkspace.shared.open(url)
-    }
-
-    /// Everything that used to sit in a General section at the bottom of the page. A popover
-    /// rather than a menu: the toggle, the update result and every button stay visible while
-    /// they act, which a closing menu cannot show.
-    var generalMenu: some View {
-        Button { showsGeneral.toggle() } label: {
-            Label("General", systemImage: "gearshape")
-        }
-        .buttonStyle(ConsoleButtonStyle())
-        .fixedSize()
-        .accessibilityLabel("General")
-        .onChange(of: showsGeneral) { isShown in
-            // The answer can change in System Settings while CmdIME keeps running.
-            if isShown { model.refreshNotificationPermission() }
-        }
-        .appearancePopover(isPresented: $showsGeneral, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
-                HStack {
-                    Text("Launch at login")
-                    Spacer(minLength: DesignTokens.Layout.rowGap)
-                    Toggle("Launch at login", isOn: Binding(
-                        get: { model.loginItem.isEnabled }, set: { model.setLaunchAtLogin($0) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .tint(DesignTokens.Colors.success)
-                    .controlSize(.small)
-                    .disabled(!model.loginItem.isAvailable)
-                }
-                // Registering succeeds while the switch stays off: macOS waits for the user
-                // to approve the login item in System Settings.
-                if model.loginItemNeedsApproval {
-                    HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Layout.rowGap) {
-                        Label("Approve CmdIME in Login Items", systemImage: "exclamationmark.triangle.fill")
-                            .font(DesignTokens.Typography.auxiliary)
-                            .foregroundStyle(DesignTokens.Colors.warning)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: DesignTokens.Layout.rowGap)
-                        Button("Open") { model.openLoginItemsSettings() }
-                            .fixedSize()
-                    }
-                }
-                HStack {
-                    Text("Remember input source per app")
-                    Spacer(minLength: DesignTokens.Layout.rowGap)
-                    Toggle("Remember input source per app", isOn: Binding(
-                        get: { model.config.rememberInputSourcePerApp }, set: { model.setRememberInputSourcePerApp($0) }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .tint(DesignTokens.Colors.success)
-                    .controlSize(.small)
-                }
-                .help("Coming back to an app selects the input source you last used there. Nothing is saved to disk.")
-                // macOS's own per-document switching re-selects sources on every focus change.
-                if model.config.rememberInputSourcePerApp, model.isSystemPerDocumentSwitchingOn {
-                    Label("Turn off \"Automatically switch to a document's input source\" in Keyboard settings; it fights this.",
-                          systemImage: "exclamationmark.triangle.fill")
-                        .font(DesignTokens.Typography.auxiliary)
-                        .foregroundStyle(DesignTokens.Colors.warning)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                HStack {
-                    Text("Appearance")
-                    Spacer(minLength: DesignTokens.Layout.rowGap)
-                    Picker("Appearance", selection: $model.appearance) {
-                        ForEach(AppearancePreference.allCases, id: \.self) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .controlSize(.small)
-                    .fixedSize()
-                }
-                Divider()
-                HStack {
-                    Text(model.updateStatus.message)
-                        .font(DesignTokens.Typography.auxiliary)
-                        .foregroundStyle(DesignTokens.Colors.textMuted)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: DesignTokens.Layout.rowGap)
-                    Button(model.updateStatus.isChecking ? "Checking…" : "Check") { model.checkForUpdates() }
-                        .disabled(model.updateStatus.isChecking)
-                        .fixedSize()
-                }
-                if case .available = model.updateStatus { UpdateActions(model: model) }
-                HStack {
-                    Text("Check automatically")
-                    Spacer(minLength: DesignTokens.Layout.rowGap)
-                    Toggle("Check for updates automatically", isOn: Binding(
-                        get: { model.checksForUpdatesAutomatically }, set: { model.checksForUpdatesAutomatically = $0 }
-                    ))
-                    .labelsHidden()
-                    .toggleStyle(.switch)
-                    .tint(DesignTokens.Colors.success)
-                    .controlSize(.small)
-                }
-                .help("CmdIME asks GitHub for the newest release. Nothing else is sent.")
-                if model.checksForUpdatesAutomatically {
-                    HStack {
-                        Text("Every")
-                        Spacer(minLength: DesignTokens.Layout.rowGap)
-                        Picker("Check every", selection: Binding(
-                            get: { model.updateCheckFrequency }, set: { model.updateCheckFrequency = $0 }
-                        )) {
-                            ForEach(UpdateCheckFrequency.allCases, id: \.self) { Text($0.title).tag($0) }
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .controlSize(.small)
-                        .fixedSize()
-                        .accessibilityLabel("How often to check for updates")
-                    }
-                    HStack {
-                        Text("Notify me about updates")
-                        Spacer(minLength: DesignTokens.Layout.rowGap)
-                        Toggle("Notify me about updates", isOn: Binding(
-                            get: { model.notifiesAboutUpdates }, set: { model.notifiesAboutUpdates = $0 }
-                        ))
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .tint(DesignTokens.Colors.success)
-                        .controlSize(.small)
-                    }
-                    if model.notifiesAboutUpdates { notificationPermissionNote }
-                }
-                Divider()
-                generalRow("Show Setup Guide") {
-                    showsGeneral = false
-                    onShowSetupGuide()
-                }
-                generalRow("Support CmdIME…") { Self.open("https://buymeacoffee.com/shunmeicor7") }
-                generalRow("Star on GitHub…") { Self.open("https://github.com/ShunmeiCho/cmd-ime") }
-                Divider()
-                generalRow("Quit CmdIME", destructive: true) { model.quit() }
-                    .help("Stop the background listener")
-            }
-            .buttonStyle(ConsoleButtonStyle())
-            .font(DesignTokens.Typography.body)
-            .foregroundStyle(DesignTokens.Colors.textPrimary)
-            .padding(16)
-            .frame(width: 300)
-            .background(DesignTokens.Colors.surfaceRaised)
-        }
-    }
-}
-
-/// Update, read the notes, or skip: shared by the top bar and the General panel.
-private struct UpdateActions: View {
+/// Update, read the notes, or skip: shared by the top bar and the General page.
+struct UpdateActions: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
@@ -458,77 +218,27 @@ private struct UpdateAvailableBar: View {
     }
 }
 
-private struct PermissionsCard: View {
-    @ObservedObject var model: AppModel
-    let status: RuntimeStatusPresentation
-    var body: some View { details }
-
-    private var details: some View {
-        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
-            HStack {
-                Text(status.detail)
-                    .font(DesignTokens.Typography.body)
-                    .foregroundStyle(DesignTokens.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer()
-                if !model.permissions.isReady {
-                    Button("Request Permissions") {
-                        model.requestPermissions()
-                    }
-                    .buttonStyle(ConsoleButtonStyle(prominent: true))
-                }
-            }
-
-            HStack(spacing: DesignTokens.Layout.panelGap) {
-                PermissionMiniStatus(
-                    title: "Accessibility",
-                    granted: model.permissions.accessibilityGranted,
-                    actionTitle: "Open",
-                    action: model.openAccessibilitySettings
-                )
-
-                PermissionMiniStatus(
-                    title: "Input Monitoring",
-                    granted: model.permissions.inputMonitoringGranted,
-                    actionTitle: "Open",
-                    action: model.openInputMonitoringSettings
-                )
-            }
-        }
-    }
-}
-
-private struct PermissionMiniStatus: View {
-    let title: String
-    let granted: Bool
-    let actionTitle: String
-    let action: () -> Void
+/// A failure from saving or the login item, drawn like the Slots page's failure notice.
+private struct WindowFailureBar: View {
+    let message: String
+    let onDismiss: () -> Void
 
     var body: some View {
-        HStack(spacing: DesignTokens.Layout.rowGap) {
-            Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                .font(DesignTokens.Typography.body.weight(.semibold))
-                .foregroundStyle(granted ? DesignTokens.Colors.success : DesignTokens.Colors.warning)
-
-            Text(title)
-                .font(DesignTokens.Typography.body.weight(.semibold))
-                .foregroundStyle(DesignTokens.Colors.textPrimary)
-
-            Spacer()
-
-            if granted {
-                Text("Ready")
-                    .font(DesignTokens.Typography.body.weight(.semibold))
-                    .foregroundStyle(DesignTokens.Colors.success)
-            } else {
-                Button(actionTitle, action: action)
-                    .buttonStyle(ConsoleButtonStyle())
-            }
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Label(message, systemImage: "exclamationmark.octagon.fill")
+                .foregroundStyle(DesignTokens.Colors.danger)
+            Spacer(minLength: 0)
+            Button("Dismiss", action: onDismiss)
+                .buttonStyle(ConsoleButtonStyle())
+                .fixedSize()
+                .accessibilityLabel("Dismiss notice: \(message)")
         }
-        .padding(.vertical, DesignTokens.Layout.rowGap)
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), \(granted ? "ready" : "missing")")
+        .font(DesignTokens.Typography.body)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.card)
+            .fill(DesignTokens.Colors.surfaceInset))
+        .accessibilityElement(children: .contain)
     }
 }
 

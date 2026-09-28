@@ -66,7 +66,7 @@ struct SetupTryItStep: View {
             SetupNotice(
                 systemImage: "info.circle.fill",
                 tone: .neutral,
-                text: "While Settings is open, CmdIME is in the Dock and the app switcher. After this window closes, it keeps running in the background with no menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use General > Quit CmdIME. The switch indicator can be customized in the Switch indicator section below."
+                text: "While Settings is open, CmdIME is in the Dock and the app switcher. After this window closes, it keeps running in the background with no menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use General > Quit CmdIME. The switch indicator can be customized on the Indicator page."
             )
 
             HStack(spacing: 8) {

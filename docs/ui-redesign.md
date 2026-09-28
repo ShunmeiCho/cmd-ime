@@ -277,3 +277,33 @@ None of the on-device checks ran (vibrancy in a never-key panel, text contrast
 over a white page at wash 0.45, re-trigger and dismiss reversal, thumb
 retargeting, imported fonts in the live panel). Offscreen renders approximate
 glass with a translucent fill and no blur.
+
+## Decision record — 2026-09-27: Settings sidebar
+
+The owner explicitly approves replacing the single scrolling Settings page with a
+native sidebar (`NavigationSplitView`) and one page per section. This touches the
+frozen "Visual positioning" and "Permission onboarding architecture" items: the
+permission flow keeps its states and actions but moves, as described below. The
+dark console direction, keycap language, live keys strip, slot card architecture
+and indicator style are unchanged inside the pages.
+
+- Pages, in order: Slots (slot board, live keys strip, Reset to Detected), Apps
+  (App Memory toggle; App Rules in a later increment), Indicator (themes, size,
+  text, colour, theme editor), General (launch at login, appearance, update
+  checks, replay the setup guide, Quit CmdIME), About (version and build,
+  release notes, privacy statement, report an issue, support, website). The
+  window opens on Slots.
+- The sidebar is the native one (vibrancy, an SF Symbol plus a label per item);
+  page content keeps the console components and tokens.
+- The keyboard-control status is pinned at the bottom of the sidebar. When
+  permissions are missing or the listener failed, that row expands to the
+  existing actions (Open Settings, Request Permissions, Try Again, Relaunch
+  CmdIME). Permission copy still never implies CmdIME can grant a permission.
+- First run shows Setup as the first sidebar item, selected; the other pages stay
+  reachable. Finish or Skip removes the item; General replays it. The folding of
+  sections below the setup card is retired.
+- Update and What's New notices sit at the top of the detail area on every page.
+- The minimum window width grows by the sidebar width; the Slots page keeps its
+  720-point content minimum.
+
+No menu bar item is added; that red line is unchanged.

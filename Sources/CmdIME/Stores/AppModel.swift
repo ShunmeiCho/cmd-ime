@@ -174,7 +174,7 @@ final class AppModel: ObservableObject {
             Task { await self?.refreshSources() }
         }
         // The coordinator names its retained settings window "CmdIME". Observe
-        // here so setup folding cannot unmount the window lifecycle subscription.
+        // here so switching settings pages cannot unmount the window lifecycle subscription.
         for name in [NSWindow.didBecomeKeyNotification, NSWindow.willCloseNotification] {
             NotificationCenter.default.publisher(for: name)
                 .sink { [weak self] notification in

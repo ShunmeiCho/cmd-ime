@@ -6,13 +6,8 @@ import SwiftUI
 struct SetupPermissionsStep: View {
     @ObservedObject var model: AppModel
     let state: SetupGuideState
-
-    /// macOS reports some grants only to a fresh process. Once a settings pane was
-    /// opened and a permission still reads as missing, the restart hint appears.
-    @State private var didOpenSettings = false
-    @State private var relaunchFailed = false
-
-    private static let pollInterval = Duration.seconds(1)
+    /// Holds the restart-hint flags, so they survive a visit to another page.
+    @Binding var session: SetupGuideSession
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -24,7 +19,7 @@ struct SetupPermissionsStep: View {
                 purpose: "Lets CmdIME handle a trigger before other apps see it, and find the text caret for the switch indicator.",
                 granted: model.permissions.accessibilityGranted
             ) {
-                didOpenSettings = true
+                session.didOpenPermissionSettings = true
                 model.openAccessibilitySettings()
             }
 
@@ -33,14 +28,14 @@ struct SetupPermissionsStep: View {
                 purpose: "Lets CmdIME see key presses while another app is in front, so triggers work everywhere.",
                 granted: model.permissions.inputMonitoringGranted
             ) {
-                didOpenSettings = true
+                session.didOpenPermissionSettings = true
                 model.openInputMonitoringSettings()
             }
 
             if !model.permissions.isReady {
                 HStack(spacing: 10) {
                     Button("Request Permissions") {
-                        didOpenSettings = true
+                        session.didOpenPermissionSettings = true
                         model.requestPermissions()
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
@@ -60,7 +55,7 @@ struct SetupPermissionsStep: View {
                         model.startListeningIfReady()
                     }
                     .buttonStyle(ConsoleButtonStyle())
-                    relaunchButton(prominent: true)
+                    RelaunchButton(model: model, prominent: true, failed: $session.relaunchFailed)
                 }
             } else if model.permissions.isReady, !model.isListening {
                 SetupNotice(
@@ -73,13 +68,13 @@ struct SetupPermissionsStep: View {
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
                 }
-            } else if didOpenSettings, !model.permissions.isReady {
+            } else if session.didOpenPermissionSettings, !model.permissions.isReady {
                 SetupNotice(
                     systemImage: "arrow.clockwise.circle.fill",
                     tone: .neutral,
                     text: "Turned it on and it still reads Missing? macOS sometimes reports a new permission only after the app restarts."
                 ) {
-                    relaunchButton(prominent: false)
+                    RelaunchButton(model: model, prominent: false, failed: $session.relaunchFailed)
                 }
             }
 
@@ -90,7 +85,7 @@ struct SetupPermissionsStep: View {
                     .setupNoteText()
             }
 
-            Text("Privacy: CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers. What you type is never stored and never sent anywhere. The only thing saved is your own configuration.")
+            Text("Privacy: \(SetupGuideCopy.privacy)")
                 .setupNoteText()
         }
         .onChange(of: state.shouldOfferRelaunch) { offered in
@@ -98,42 +93,13 @@ struct SetupPermissionsStep: View {
                 SetupGuideNavigation.announce("The keyboard listener could not start. Try again, or restart CmdIME.")
             }
         }
-        .task {
-            // Flip to Ready while System Settings is still in front, where macOS allows it.
-            while !Task.isCancelled {
-                try? await Task.sleep(for: Self.pollInterval)
-                if MacPermissionStatus.current() != model.permissions {
-                    model.refreshRuntimeStatus()
-                }
-            }
-        }
     }
 
     /// A restart is on offer, but only as "Quit": there is no bundle to reopen, or
     /// scheduling the reopen failed.
     private var showsQuitInsteadOfRelaunch: Bool {
-        let offersRestart = state.shouldOfferRelaunch || (didOpenSettings && !model.permissions.isReady)
-        return offersRestart && (relaunchFailed || !AppRelauncher.canRelaunch)
-    }
-
-    @ViewBuilder
-    private func relaunchButton(prominent: Bool) -> some View {
-        if AppRelauncher.canRelaunch, !relaunchFailed {
-            Button("Relaunch CmdIME") {
-                if AppRelauncher.scheduleReopenAfterExit() {
-                    model.quit()
-                } else {
-                    relaunchFailed = true
-                    SetupGuideNavigation.announce("Relaunch is not available. Quit CmdIME and open it again.")
-                }
-            }
-            .buttonStyle(ConsoleButtonStyle(prominent: prominent))
-        } else {
-            Button("Quit CmdIME") {
-                model.quit()
-            }
-            .buttonStyle(ConsoleButtonStyle(prominent: prominent))
-        }
+        let offersRestart = state.shouldOfferRelaunch || (session.didOpenPermissionSettings && !model.permissions.isReady)
+        return offersRestart && (session.relaunchFailed || !AppRelauncher.canRelaunch)
     }
 }
 

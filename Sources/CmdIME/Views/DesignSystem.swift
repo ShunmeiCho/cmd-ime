@@ -153,6 +153,10 @@ enum DesignTokens {
         static let sourcePanelWidth: CGFloat = 196
         static let slotRowGap: CGFloat = 9
         static let contentMaxWidth: CGFloat = 720
+        /// The settings sidebar is a fixed column, so the window minimum is this plus `detailMinWidth`.
+        static let sidebarWidth: CGFloat = 220
+        /// The page column's minimum: the width the single-page window needed.
+        static let detailMinWidth: CGFloat = 720
         static let labelColumn: CGFloat = 132
         static let fieldHeight: CGFloat = 28
         static let actionButton: CGFloat = 148

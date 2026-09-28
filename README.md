@@ -294,9 +294,9 @@ does not stop keyboard listening. While Settings is open, CmdIME appears in the 
 the app switcher. After the window closes, it stays in the background with no menu bar
 icon. Open `CmdIME.app` again whenever you need Settings.
 
-A new install opens with a three-step **Setup guide** at the top of Settings: allow
-keyboard access, check the detected slots, then try a switch. It can be skipped, and
-**General > Show Setup Guide** brings it back. Users updating from an earlier version
+A new install opens Settings on the **Setup** page, first in the sidebar, with a three-step
+guide: allow keyboard access, check the detected slots, then try a switch. Finishing or skipping
+removes the page, and **General > Show Setup Guide** brings it back. Users updating from an earlier version
 see a one-line notice about what is new instead.
 
 The settings window follows the macOS appearance. **General > Appearance** pins it to

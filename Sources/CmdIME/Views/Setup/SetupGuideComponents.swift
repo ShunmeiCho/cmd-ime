@@ -20,6 +20,8 @@ enum SetupGuideCopy {
     /// How to get the settings window back. Launchpad is gone from macOS 26 on, so
     /// the hint names only what every supported system has.
     static let reopenHint = "To come back to this window, open CmdIME again from Spotlight or the Applications folder."
+    /// Matches what `EventTapMonitor` does. Shown in step 1 and on About.
+    static let privacy = "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers. What you type is never stored and never sent anywhere. The only thing saved is your own configuration."
 }
 
 /// The inset surface used by permission rows and notices.
