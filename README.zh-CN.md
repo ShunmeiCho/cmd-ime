@@ -534,9 +534,9 @@ Input Monitoring、登录项以及输入源切换都依赖 macOS API。通过 Ma
 [CLA.md](CLA.md)——你保留自己的版权，而这份协议让项目将来可以更换许可，不必回头找到每一位
 曾经的贡献者。
 
-**Windows：** 有人问，但它还不存在。在有人动手之前，有个问题值得先回答：Windows 上到底有没有
-这个项目所针对的故障——切换报告成功，打出来仍是上一种语言？没有人量过。
-[Issue #5](https://github.com/ShunmeiCho/cmd-ime/issues/5) 说明了怎样的帮助最有用。
+**Windows：** Windows 版 WinIME 正在筹划中。第一步是测量而不是写代码：Windows 上有没有这个项目所针对的
+故障——切换报告成功，打出来仍是上一种语言？
+[Issue #5](https://github.com/ShunmeiCho/cmd-ime/issues/5) 跟踪这件事，也说明了怎样的帮助最有用。
 
 ## 支持
 

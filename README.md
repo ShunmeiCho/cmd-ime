@@ -603,10 +603,10 @@ Pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Your first on
 agreement to [CLA.md](CLA.md) — you keep your copyright, and it lets the project change its licence
 later without having to find every past contributor.
 
-**Windows:** people ask, and it does not exist. Before anyone writes one, there is a question worth
-answering — does Windows have the failure this project is built around, where a switch reports
-success and typing still produces the previous language? Nobody has measured it.
-[Issue #5](https://github.com/ShunmeiCho/cmd-ime/issues/5) explains what would help.
+**Windows:** WinIME, a Windows counterpart, is in planning. The first step is a measurement, not
+code: does Windows have the failure this project is built around, where a switch reports success and
+typing still produces the previous language?
+[Issue #5](https://github.com/ShunmeiCho/cmd-ime/issues/5) tracks it and explains what would help.
 
 ## Support
 
