@@ -270,6 +270,26 @@ private extension SettingsHeader {
                     }
                 }
                 HStack {
+                    Text("Remember input source per app")
+                    Spacer(minLength: DesignTokens.Layout.rowGap)
+                    Toggle("Remember input source per app", isOn: Binding(
+                        get: { model.config.rememberInputSourcePerApp }, set: { model.setRememberInputSourcePerApp($0) }
+                    ))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(DesignTokens.Colors.success)
+                    .controlSize(.small)
+                }
+                .help("Coming back to an app selects the input source you last used there. Nothing is saved to disk.")
+                // macOS's own per-document switching re-selects sources on every focus change.
+                if model.config.rememberInputSourcePerApp, model.isSystemPerDocumentSwitchingOn {
+                    Label("Turn off \"Automatically switch to a document's input source\" in Keyboard settings; it fights this.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack {
                     Text("Appearance")
                     Spacer(minLength: DesignTokens.Layout.rowGap)
                     Picker("Appearance", selection: $model.appearance) {

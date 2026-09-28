@@ -32,6 +32,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var updateInstallStage: String?
     @Published private(set) var updateInstallError: String?
     @Published private(set) var notificationPermission = NotificationPermission.unknown
+    /// macOS's own "Automatically switch to a document's input source", which fights App Memory.
+    @Published private(set) var isSystemPerDocumentSwitchingOn = false
     /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
     @Published var appearance = AppearancePreference.stored {
         didSet {
@@ -62,6 +64,15 @@ final class AppModel: ObservableObject {
     private(set) lazy var switchIndicator = InputIndicatorController(configStore: configStore)
     private let updates = UpdateService()
     private var monitor: EventTapMonitor?
+    private lazy var appMemory = AppMemoryController(
+        inputSources: inputSources,
+        monitor: { [weak self] in self?.monitor },
+        sources: { [weak self] in self?.sources ?? [] },
+        slotForSourceID: { [weak self] id in
+            guard let self else { return nil }
+            return InputSourceMatcher.slotID(forSelectedSourceID: id, sources: self.sources, config: self.config)
+        }
+    )
     /// The user's recipes from `ActivationRecipeStore`, also used by the Switch button.
     private var activationRecipes: [ActivationRecipe] = []
     private var recordingRole: InputRole?
@@ -156,6 +167,7 @@ final class AppModel: ObservableObject {
     private func observeInputSourceChanges() {
         selectedSourceObserver = InputSourceChangeObserver(change: .selectedSourceChanged) { [weak self] in
             self?.refreshCurrentRole()
+            self?.appMemory.sourceDidChange()
         }
         refreshCurrentRole()
         sourceChangeObserver = InputSourceChangeObserver { [weak self] in
@@ -277,6 +289,7 @@ final class AppModel: ObservableObject {
     func refreshRuntimeStatus() {
         permissions = MacPermissionStatus.current()
         loginItem = loginItems.snapshot()
+        isSystemPerDocumentSwitchingOn = SystemInputSourceSettings.isPerDocumentSwitchingOn()
         if !isListening, permissions.isReady, keyboardControlStatus == "Needs permission" {
             keyboardControlStatus = "Paused"
             statusText = "Permissions ready. Click Resume to start keyboard control."
@@ -346,6 +359,18 @@ final class AppModel: ObservableObject {
         config.showSwitchIndicator = visible
         save()
         statusText = visible ? "Switch indicator enabled" : "Switch indicator disabled"
+    }
+
+    func setRememberInputSourcePerApp(_ enabled: Bool) {
+        config.rememberInputSourcePerApp = enabled
+        save()
+        refreshAppMemory()
+        statusText = enabled ? "Remembering the input source per app" : "No longer remembering input sources per app"
+    }
+
+    /// App Memory follows apps only while it is on and the listener runs.
+    private func refreshAppMemory() {
+        appMemory.update(isEnabled: config.rememberInputSourcePerApp && monitor != nil)
     }
 
     func setSwitchIndicatorSizeFactor(_ factor: Double) {
@@ -977,6 +1002,7 @@ final class AppModel: ObservableObject {
             // further from the key that asked for it.
             nextMonitor.onSwitch = { [weak self] role, source in
                 MainActor.assumeIsolated {
+                    self?.appMemory.switchDidConfirm(sourceID: source.id)
                     self?.showSwitchIndicator(for: role, source: source)
                 }
             }
@@ -990,6 +1016,7 @@ final class AppModel: ObservableObject {
             isListening = true
             keyboardControlStatus = "Active"
             statusText = "Listener started"
+            refreshAppMemory()
             // After the line above, so a skipped recipe is what the status bar ends up showing.
             loadActivationRecipes()
         } catch {
@@ -1008,6 +1035,7 @@ final class AppModel: ObservableObject {
     func stopListening() {
         monitor?.stop()
         monitor = nil
+        refreshAppMemory()
         isListening = false
         keyboardControlStatus = "Paused"
         statusText = "Listener stopped"

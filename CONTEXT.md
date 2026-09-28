@@ -40,9 +40,13 @@ _Avoid_: Test suite, regression test (those mean `swift test`)
 Repairing text typed into the wrong input source — pinyin left as Latin letters because Chinese was never selected. Acts only on a contiguous run of plain ASCII letters before the caret, aborts on anything else, and is undone by a single Command+Z.
 _Avoid_: Correction, autocorrect, translation
 
-**Habit Rule**:
-A per-app default input source that the user confirmed. Usage statistics may propose one; nothing becomes a rule without confirmation, so switching stays predictable.
-_Avoid_: Auto-switch, smart switching, AI switching
+**App Memory**:
+The per-app record of the input source that was last active while that app was in front, used to restore it when the user returns to the app. It covers every way the user changed input source, not only triggers, and lives only while CmdIME runs.
+_Avoid_: Auto-switch, per-app cache, history
+
+**App Rule**:
+A default slot the user set for one app, or "keep as is"; bringing that app to the front selects the slot, and an app with a rule is never restored from App Memory. Usage statistics may propose one, but nothing becomes a rule without the user's confirmation, so switching stays predictable.
+_Avoid_: Habit rule, smart switching, AI switching
 
 ## Dynamic slots (PR1)
 

@@ -776,6 +776,140 @@ final class EventTapMonitorTests: XCTestCase {
         )
     }
 
+    func testSourceSwitchSelectsThatSourceAndReportsItsSlot() {
+        let sources = makeSwitchSources()
+        let service = StubInputSourceService(sources: sources)
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var reported: [(InputRole, String)] = []
+        monitor.onSwitch = { role, source in reported.append((role, source.id)) }
+
+        monitor.requestSwitch(to: sources[2], reportingAs: .chinese)
+        drainMainQueue()
+
+        XCTAssertEqual(service.selectedIDs, ["com.apple.inputmethod.SCIM.ITABC"])
+        XCTAssertEqual(reported.map(\.0), [.chinese])
+        XCTAssertEqual(reported.map(\.1), ["com.apple.inputmethod.SCIM.ITABC"])
+    }
+
+    func testSourceSwitchSelectsTheGivenSourceEvenWhenTheSlotMatchesAnother() {
+        let shuangpin = InputSourceInfo(id: "com.apple.inputmethod.SCIM.Shuangpin", localizedName: "Shuangpin - Simplified", languages: ["zh-Hans"], isSelectCapable: true)
+        let service = StubInputSourceService(sources: makeSwitchSources() + [shuangpin])
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var reported: [String] = []
+        monitor.onSwitch = { _, source in reported.append(source.id) }
+
+        monitor.requestSwitch(to: shuangpin, reportingAs: .chinese)
+        drainMainQueue()
+
+        XCTAssertEqual(service.selectedIDs, [shuangpin.id], "a restore selects what the user had, not the slot's best match")
+        XCTAssertEqual(reported, [shuangpin.id])
+    }
+
+    func testSourceSwitchOutsideEverySlotSelectsWithoutReporting() {
+        let other = InputSourceInfo(id: "com.apple.inputmethod.Korean.2SetKorean", localizedName: "2-Set Korean", languages: ["ko"], isSelectCapable: true)
+        let service = StubInputSourceService(sources: makeSwitchSources() + [other])
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var reports = 0
+        monitor.onSwitch = { _, _ in reports += 1 }
+
+        monitor.requestSwitch(to: other, reportingAs: nil)
+        drainMainQueue()
+
+        XCTAssertEqual(service.selectedIDs, [other.id])
+        XCTAssertEqual(reports, 0)
+    }
+
+    func testSwitchStaysPendingUntilItIsConfirmed() {
+        let sources = makeSwitchSources()
+        let service = StubInputSourceService(sources: sources)
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        XCTAssertFalse(monitor.isSwitchPending)
+
+        monitor.requestSwitch(to: sources[0], reportingAs: .english)
+        XCTAssertTrue(monitor.isSwitchPending, "changes seen before the select runs are the switch's own")
+        drainMainQueue()
+
+        XCTAssertFalse(monitor.isSwitchPending)
+    }
+
+    func testSwitchStaysPendingThroughTheKanaPrelude() {
+        let japanese = InputSourceInfo(id: "com.google.inputmethod.Japanese.base", localizedName: "Hiragana (Google)", languages: ["ja"], isSelectCapable: true)
+        let service = StubInputSourceService(sources: makeSwitchSources() + [japanese])
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var kanaPosted = false
+        monitor.kanaKeyPoster = { kanaPosted = true }
+
+        monitor.requestSwitch(to: japanese, reportingAs: nil)
+        drainMainQueue()
+        XCTAssertTrue(kanaPosted)
+        XCTAssertEqual(service.selectedIDs, [])
+        XCTAssertTrue(monitor.isSwitchPending, "the source the Kana key brings in meanwhile is the switch's own step")
+        drainSingleTapTimer(monitor)
+
+        XCTAssertEqual(service.selectedIDs, [japanese.id])
+        XCTAssertFalse(monitor.isSwitchPending)
+    }
+
+    func testOnlyASourceSwitchCountsAsAPendingRestore() {
+        let sources = makeSwitchSources()
+        let service = StubInputSourceService(sources: sources)
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+
+        monitor.requestSwitch(to: sources[2], reportingAs: .chinese)
+        XCTAssertTrue(monitor.isSourceSwitchPending)
+        tapLeftCommand(monitor)
+
+        XCTAssertTrue(monitor.isSwitchPending)
+        XCTAssertFalse(monitor.isSourceSwitchPending, "a trigger in flight must never be put back")
+    }
+
+    func testSwitchWithNoMatchingSourceIsNoLongerPending() {
+        let monitor = EventTapMonitor(config: .default, inputSources: StubInputSourceService(sources: []))
+        var messages: [String] = []
+        monitor.onMessage = { messages.append($0) }
+
+        tapLeftCommand(monitor)
+        drainMainQueue()
+
+        XCTAssertFalse(monitor.isSwitchPending)
+        XCTAssertEqual(messages.last, "No input method matched this switch slot.")
+    }
+
+    func testFailedSourceSwitchEndsWithoutFallingBack() {
+        let sources = makeSwitchSources()
+        let service = StubInputSourceService(sources: sources)
+        service.failingSelectIDs = [sources[2].id]
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        var messages: [String] = []
+        monitor.onMessage = { messages.append($0) }
+
+        monitor.requestSwitch(to: sources[2], reportingAs: .chinese)
+        drainMainQueue()
+
+        XCTAssertEqual(service.selectedIDs, [], "a concrete source has no fallback to try")
+        XCTAssertFalse(monitor.isSwitchPending)
+        XCTAssertEqual(messages.last?.hasPrefix("Could not select Pinyin - Simplified"), true)
+    }
+
+    func testTriggerSupersedesAPendingSourceSwitch() {
+        let japanese = InputSourceInfo(id: "com.google.inputmethod.Japanese.base", localizedName: "Hiragana (Google)", languages: ["ja"], isSelectCapable: true)
+        let service = StubInputSourceService(sources: makeSwitchSources() + [japanese])
+        let monitor = EventTapMonitor(config: .default, inputSources: service)
+        // Setting the poster lets a stopped monitor take the Kana path; the stub's nil current
+        // source stands in for a non-Japanese layout.
+        var kanaPosted = false
+        monitor.kanaKeyPoster = { kanaPosted = true }
+
+        monitor.requestSwitch(to: japanese, reportingAs: nil)
+        drainMainQueue()
+        XCTAssertTrue(kanaPosted)
+        XCTAssertEqual(service.selectedIDs, [], "the restore waits behind its Kana prelude")
+        tapLeftCommand(monitor)
+        drainSingleTapTimer(monitor)
+
+        XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"], "the trigger pressed after a restore wins; the restore never selects")
+    }
+
     private func drainMainQueue() {
         let drained = expectation(description: "main queue drained")
         DispatchQueue.main.async {
@@ -856,6 +990,8 @@ private final class StubInputSourceService: InputSourceService {
     private(set) var selectedIDs: [String] = []
     /// Per id, how many `currentInputSource()` reads after selecting it still return nil.
     var unconfirmedReads: [String: Int] = [:]
+    /// Ids whose selection throws, as TISSelectInputSource does for a source that went away.
+    var failingSelectIDs: Set<String> = []
     var log: [String] = []
 
     init(sources: [InputSourceInfo] = []) {
@@ -879,6 +1015,9 @@ private final class StubInputSourceService: InputSourceService {
     }
 
     func selectInputSource(id: String) throws {
+        if failingSelectIDs.contains(id) {
+            throw NSError(domain: "StubInputSourceService", code: -50, userInfo: [NSLocalizedDescriptionKey: "selection refused"])
+        }
         selectedID = id
         selectedIDs.append(id)
         log.append("select:\(id)")

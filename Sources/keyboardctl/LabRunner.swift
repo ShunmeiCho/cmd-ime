@@ -67,6 +67,9 @@ struct LabRunner {
     /// The app typed into. TextEdit by default; any other app is given a local page holding one
     /// focused text area, which is how a browser is measured.
     var clientBundleID = LabRunner.textEditID
+    /// Checks App Memory: after each switch, go to this app, use the plain layout there, and come
+    /// back. The running CmdIME has to bring the slot's source back before anything is typed.
+    var awayBundleID: String?
     let service = MacInputSourceService()
     static let textEditID = "com.apple.TextEdit"
     private let baselineID = "com.apple.keylayout.ABC"
@@ -80,6 +83,16 @@ struct LabRunner {
                 stderr
             )
             exit(6)
+        }
+        if let awayBundleID {
+            guard config.rememberInputSourcePerApp else {
+                fputs("error: --away measures App Memory; turn on \"Remember input source per app\" in CmdIME first.\n", stderr)
+                exit(9)
+            }
+            guard awayBundleID != clientBundleID else {
+                fputs("error: --away needs an app other than the client (\(clientBundleID)).\n", stderr)
+                exit(9)
+            }
         }
         let sources = try service.listInputSources()
         let originalSource = try? service.currentInputSource()
@@ -171,6 +184,19 @@ struct LabRunner {
             selectDirectly(source)
         }
         settle(settleMs)
+        if let awayBundleID {
+            guard bringToFront(awayBundleID) else {
+                return (.void(reason: "\(awayBundleID) did not come to the front"), "")
+            }
+            // What the user does in the other app: type in a plain layout.
+            selectFromAnotherProcess(baselineID)
+            settle(max(settleMs, 400))
+            guard bringToFront(clientBundleID) else {
+                return (.void(reason: "\(clientName) did not come back to the front"), "")
+            }
+            // Room for the restore, Kana prelude included.
+            settle(max(settleMs, 400))
+        }
         if warmupModifierKeyCode > 0 {
             tapModifier(CGKeyCode(warmupModifierKeyCode), flag: Self.modifierFlag(forKeyCode: warmupModifierKeyCode))
             settle(200)
@@ -341,6 +367,24 @@ struct LabRunner {
         <textarea id="t" autofocus style="width:90vw;height:60vh;font-size:24px"></textarea>
         <script>window.addEventListener("load", function () { document.getElementById("t").focus(); });</script>
         """
+
+    /// Activates `bundleID`, launching it if needed, and waits until it is in front.
+    private func bringToFront(_ bundleID: String) -> Bool {
+        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).first {
+            app.activate(options: [])
+        } else {
+            let opener = Process()
+            opener.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+            opener.arguments = ["-b", bundleID]
+            guard (try? opener.run()) != nil else { return false }
+            opener.waitUntilExit()
+        }
+        for _ in 0..<40 {
+            settle(100)
+            if frontmostBundleID() == bundleID { return true }
+        }
+        return false
+    }
 
     private func frontmostBundleID() -> String? {
         // NSWorkspace refreshes through the run loop; a CLI that never pumps it reads a stale value.

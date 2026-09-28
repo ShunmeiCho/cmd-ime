@@ -61,11 +61,15 @@ private struct DiagnosisReport: Encodable {
 
     let currentInputSourceID: String?
     let currentInputSourceName: String?
+    let rememberInputSourcePerApp: Bool
+    let systemPerDocumentSwitching: Bool
     let slots: [SlotEntry]
 
-    init(current: InputSourceInfo?, roles: [RoleDiagnosis]) {
+    init(current: InputSourceInfo?, config: SwitcherConfig, systemPerDocumentSwitching: Bool, roles: [RoleDiagnosis]) {
         currentInputSourceID = current?.id
         currentInputSourceName = current?.localizedName
+        rememberInputSourcePerApp = config.rememberInputSourcePerApp
+        self.systemPerDocumentSwitching = systemPerDocumentSwitching
         slots = roles.map { diagnosis in
             SlotEntry(
                 slot: diagnosis.slot.id.rawValue,
@@ -237,6 +241,7 @@ struct CLI {
         let config = try loadConfig()
         let sources = try service.listInputSources()
         let current = try service.currentInputSource()
+        let perDocumentSwitching = SystemInputSourceSettings.isPerDocumentSwitchingOn()
 
         let reports = config.slots.map { slot -> RoleDiagnosis in
             let preference = config.preference(for: slot.id)
@@ -248,12 +253,22 @@ struct CLI {
         if json {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let payload = DiagnosisReport(current: current, roles: reports)
+            let payload = DiagnosisReport(
+                current: current,
+                config: config,
+                systemPerDocumentSwitching: perDocumentSwitching,
+                roles: reports
+            )
             print(String(decoding: try encoder.encode(payload), as: UTF8.self))
             return
         }
 
         print("Current input source: \(current.map { "\($0.localizedName) (\($0.id))" } ?? "unknown")")
+        // App Memory itself lives in the running app's memory; only the setting is in the config.
+        print("Remember input source per app: \(config.rememberInputSourcePerApp ? "on" : "off")")
+        if perDocumentSwitching {
+            print("macOS \"Automatically switch to a document's input source\": on (it fights per-app memory)")
+        }
         for report in reports {
             print("")
             print("[\(report.slot.id.rawValue)] \(report.slot.name)")
@@ -482,6 +497,7 @@ struct CLI {
         runner.warmupModifierKeyCode = value(after: "--warmup-mod").flatMap(Int.init) ?? 0
         runner.leavesLatinMode = args.contains("--latin-first")
         if let client = value(after: "--client") { runner.clientBundleID = client }
+        if let away = value(after: "--away") { runner.awayBundleID = away }
         if let slots = value(after: "--slots") {
             runner.onlySlots = Set(slots.split(separator: ",").map(String.init))
         }
@@ -698,7 +714,7 @@ struct CLI {
               keyboardctl slot remove <slot>
               keyboardctl show
               keyboardctl switch <slot>
-              keyboardctl lab [--slots a,b] [--attempts N] [--settle MS] [--rest MS] [--latin-first] [--client BUNDLE-ID] [--json]\n              keyboardctl source [--json]
+              keyboardctl lab [--slots a,b] [--attempts N] [--settle MS] [--rest MS] [--latin-first] [--client BUNDLE-ID] [--away BUNDLE-ID] [--json]\n              keyboardctl source [--json]
               keyboardctl source <input-source-id> [<wait-ms>] [--quiet] [--json]
               keyboardctl diagnose [--json]
               keyboardctl listen

@@ -29,6 +29,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             if newValue {
                 // Also retire actions/retries queued just before the recorder opened.
                 switchGeneration &+= 1
+                pendingSwitchDeadline = nil
             }
         }
     }
@@ -58,6 +59,39 @@ public final class EventTapMonitor: @unchecked Sendable {
     private var pendingTapEvidenceEpoch: UUID?
     /// When the last posted Kana key has had time to take effect.
     private var kanaSettlesAt = Date.distantPast
+    /// Set while the current switch is neither confirmed nor abandoned. The deadline covers the
+    /// longest Kana delay plus the confirmation retry, so a switch that never reports cannot
+    /// leave the flag set.
+    private var pendingSwitchDeadline: Date?
+    static let pendingSwitchBudget: TimeInterval = 1.0
+
+    /// True while a switch this monitor started is still in flight. Input-source changes seen
+    /// meanwhile are its own intermediate steps (a Kana prelude, a retry), not the user's.
+    public var isSwitchPending: Bool {
+        precondition(Thread.isMainThread)
+        return (pendingSwitchDeadline?.timeIntervalSinceNow ?? 0) > 0
+    }
+
+    /// True while the switch in flight is one of `requestSwitch(to:reportingAs:)`, never a
+    /// trigger: only such a switch may be put back when the app it was meant for is left.
+    public var isSourceSwitchPending: Bool {
+        isSwitchPending && pendingTargetIsSource
+    }
+    private var pendingTargetIsSource = false
+
+    /// What a switch aims at: a slot resolved through the matcher, or one concrete source
+    /// (App Memory restores a source the user had, which may belong to no slot).
+    private enum SwitchTarget {
+        case slot(InputRole)
+        case source(InputSourceInfo, reportingAs: InputRole?)
+
+        var role: InputRole? {
+            switch self {
+            case .slot(let role): role
+            case .source(_, let role): role
+            }
+        }
+    }
 
     public static func scheduleOnMainQueue(after delay: TimeInterval, _ work: @escaping () -> Void) {
         // The event tap and all TIS calls live on the main thread, and `work` only
@@ -176,6 +210,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         pressedModifierKeyCodes.removeAll()
         modifierEvidenceEpochs.removeAll()
         pendingTapEvidenceEpoch = nil
+        pendingSwitchDeadline = nil
     }
 
     public func updateConfig(_ config: SwitcherConfig) {
@@ -479,10 +514,29 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// Called from the event tap callback: only records the request and returns, so
     /// the callback never waits on TIS selection or confirmation retries.
     private func requestSwitch(to role: InputRole, trigger: KeyTrigger, evidenceEpoch: UUID?) {
+        request(.slot(role), trigger: trigger, evidenceEpoch: evidenceEpoch)
+    }
+
+    /// Selects one concrete source through the same path as a trigger: a newer switch or
+    /// trigger supersedes it, the Kana prelude applies, and only a confirmed selection reports.
+    /// `role` is the slot `onSwitch` reports, if the source belongs to one; without it the
+    /// switch is silent. Call on the main thread.
+    public func requestSwitch(to source: InputSourceInfo, reportingAs role: InputRole?) {
+        precondition(Thread.isMainThread)
+        request(.source(source, reportingAs: role), trigger: nil, evidenceEpoch: nil)
+    }
+
+    private func request(_ target: SwitchTarget, trigger: KeyTrigger?, evidenceEpoch: UUID?) {
         switchGeneration &+= 1
         let generation = switchGeneration
+        pendingSwitchDeadline = Date(timeIntervalSinceNow: Self.pendingSwitchBudget)
+        if case .source = target {
+            pendingTargetIsSource = true
+        } else {
+            pendingTargetIsSource = false
+        }
         Self.scheduleOnMainQueue(after: 0) { [weak self] in
-            self?.beginSwitch(to: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+            self?.beginSwitch(to: target, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
         }
     }
 
@@ -490,9 +544,60 @@ public final class EventTapMonitor: @unchecked Sendable {
         generation == switchGeneration
     }
 
-    private func beginSwitch(to role: InputRole, generation: Int, trigger: KeyTrigger, evidenceEpoch: UUID?) {
+    /// The current switch ended, confirmed or not. A superseded one leaves the flag to its successor.
+    private func endSwitch(_ generation: Int) {
+        if isCurrentSwitch(generation) {
+            pendingSwitchDeadline = nil
+        }
+    }
+
+    private func beginSwitch(to target: SwitchTarget, generation: Int, trigger: KeyTrigger?, evidenceEpoch: UUID?) {
         guard isCurrentSwitch(generation) else {
             return
+        }
+        guard let source = resolvedSource(for: target) else {
+            onMessage?("No input method matched this switch slot.")
+            endSwitch(generation)
+            return
+        }
+        // Only a live tap posts keys; a monitor that was never started has nothing to activate.
+        // The strategy check comes first so unlisted input methods do no extra work, not even a TIS read.
+        guard kanaKeyPoster != nil || isRunning,
+              SwitchActivationPolicy.strategy(for: source, userRecipes: activationRecipes) == .kanaThenSelect,
+              SwitchActivationPolicy.needsKanaPrelude(target: source, current: try? inputSources.currentInputSource(), userRecipes: activationRecipes) else {
+            // A Kana key from a switch this one superseded may still be taking effect; selecting
+            // before it lands would let the system's Kana switch override this one.
+            let wait = kanaSettlesAt.timeIntervalSinceNow
+            guard wait > 0 else {
+                select(source, target: target, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+                return
+            }
+            Self.scheduleOnMainQueue(after: wait) { [weak self] in
+                guard let self, self.isCurrentSwitch(generation) else {
+                    return
+                }
+                self.select(source, target: target, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+            }
+            return
+        }
+        (kanaKeyPoster ?? Self.postKanaKeyEvent)()
+        let delay = SwitchActivationPolicy.kanaToSelectDelay(for: source, userRecipes: activationRecipes)
+        kanaSettlesAt = Date(timeIntervalSinceNow: delay)
+        Self.scheduleOnMainQueue(after: delay) { [weak self] in
+            guard let self, self.isCurrentSwitch(generation) else {
+                return
+            }
+            self.select(source, target: target, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
+        }
+    }
+
+    private func resolvedSource(for target: SwitchTarget) -> InputSourceInfo? {
+        let role: InputRole
+        switch target {
+        case .source(let source, _):
+            return source
+        case .slot(let slot):
+            role = slot
         }
         if resolvedSources[role] == nil {
             refreshResolvedSources()
@@ -507,62 +612,39 @@ public final class EventTapMonitor: @unchecked Sendable {
                 onMessage?("Input source refresh failed: \(error.localizedDescription)")
             }
         }
-        guard let source = resolvedSources[role] else {
-            onMessage?("No input method matched this switch slot.")
-            return
-        }
-        // Only a live tap posts keys; a monitor that was never started has nothing to activate.
-        // The strategy check comes first so unlisted input methods do no extra work, not even a TIS read.
-        guard kanaKeyPoster != nil || isRunning,
-              SwitchActivationPolicy.strategy(for: source, userRecipes: activationRecipes) == .kanaThenSelect,
-              SwitchActivationPolicy.needsKanaPrelude(target: source, current: try? inputSources.currentInputSource(), userRecipes: activationRecipes) else {
-            // A Kana key from a switch this one superseded may still be taking effect; selecting
-            // before it lands would let the system's Kana switch override this one.
-            let wait = kanaSettlesAt.timeIntervalSinceNow
-            guard wait > 0 else {
-                select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
-                return
-            }
-            Self.scheduleOnMainQueue(after: wait) { [weak self] in
-                guard let self, self.isCurrentSwitch(generation) else {
-                    return
-                }
-                self.select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
-            }
-            return
-        }
-        (kanaKeyPoster ?? Self.postKanaKeyEvent)()
-        let delay = SwitchActivationPolicy.kanaToSelectDelay(for: source, userRecipes: activationRecipes)
-        kanaSettlesAt = Date(timeIntervalSinceNow: delay)
-        Self.scheduleOnMainQueue(after: delay) { [weak self] in
-            guard let self, self.isCurrentSwitch(generation) else {
-                return
-            }
-            self.select(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch)
-        }
+        return resolvedSources[role]
     }
 
-    private func select(_ source: InputSourceInfo, role: InputRole, generation: Int, trigger: KeyTrigger, evidenceEpoch: UUID?) {
+    private func select(_ source: InputSourceInfo, target: SwitchTarget, generation: Int, trigger: KeyTrigger?, evidenceEpoch: UUID?) {
+        let role = target.role
         selectAndReport(source, role: role, generation: generation, trigger: trigger, evidenceEpoch: evidenceEpoch, prefix: nil) { [weak self] originalError in
             guard let self else {
                 return
             }
+            // Only a slot can fall back; a concrete source either selects or it does not.
+            guard case .slot(let slot) = target else {
+                self.onMessage?("Could not select \(source.localizedName): \(originalError.localizedDescription)")
+                self.endSwitch(generation)
+                return
+            }
             self.refreshResolvedSources()
-            guard let fallback = self.resolvedSources[role], fallback.id != source.id else {
+            guard let fallback = self.resolvedSources[slot], fallback.id != source.id else {
                 // No different source to fall back to; surface the real reason
                 // instead of the generic "Action failed".
                 self.onMessage?("Could not switch this slot: \(originalError.localizedDescription)")
+                self.endSwitch(generation)
                 return
             }
             self.selectAndReport(
                 fallback,
-                role: role,
+                role: slot,
                 generation: generation,
                 trigger: trigger,
                 evidenceEpoch: evidenceEpoch,
                 prefix: "\(source.localizedName) failed: \(originalError.localizedDescription)"
             ) { [weak self] error in
                 self?.onMessage?("Action failed: \(error.localizedDescription)")
+                self?.endSwitch(generation)
             }
         }
     }
@@ -571,9 +653,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// confirmed. Runs on the main thread; retries are scheduled, not slept.
     private func selectAndReport(
         _ source: InputSourceInfo,
-        role: InputRole,
+        role: InputRole?,
         generation: Int,
-        trigger: KeyTrigger,
+        trigger: KeyTrigger?,
         evidenceEpoch: UUID?,
         prefix: String?,
         onError: @escaping (Error) -> Void
@@ -592,6 +674,7 @@ public final class EventTapMonitor: @unchecked Sendable {
                 switch result {
                 case .success(let current):
                     self.report(current: current, requested: source, role: role, trigger: trigger, evidenceEpoch: evidenceEpoch, prefix: prefix)
+                    self.endSwitch(generation)
                 case .failure(let error):
                     onError(error)
                 }
@@ -599,14 +682,16 @@ public final class EventTapMonitor: @unchecked Sendable {
         )
     }
 
-    private func report(current: InputSourceInfo?, requested source: InputSourceInfo, role: InputRole, trigger: KeyTrigger, evidenceEpoch: UUID?, prefix: String?) {
+    private func report(current: InputSourceInfo?, requested source: InputSourceInfo, role: InputRole?, trigger: KeyTrigger?, evidenceEpoch: UUID?, prefix: String?) {
         guard current?.id == source.id else {
             onMessage?(InputSourceInfo.verificationMessage(requested: source, current: current))
             return
         }
-        onSwitch?(role, source)
-        if !isCapturingShortcut, let evidenceEpoch, evidenceEpoch == triggerEvidenceEpoch {
-            onTriggeredSwitch?(role, source, trigger)
+        if let role {
+            onSwitch?(role, source)
+            if !isCapturingShortcut, let trigger, let evidenceEpoch, evidenceEpoch == triggerEvidenceEpoch {
+                onTriggeredSwitch?(role, source, trigger)
+            }
         }
         if let prefix {
             onMessage?("\(prefix). Selected refreshed input method \(source.localizedName).")
