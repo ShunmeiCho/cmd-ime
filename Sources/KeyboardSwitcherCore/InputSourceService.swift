@@ -238,11 +238,11 @@ public final class MacInputSourceService: InputSourceService {
         // The source set was just enumerated; drop cached handles so the next
         // selection rebuilds against the current set.
         handleCache.invalidate()
-        return list.compactMap { item -> InputSourceInfo? in
+        return InputSourceMatcher.uniqueByID(list.compactMap { item -> InputSourceInfo? in
             let source = item as! TISInputSource
             guard isEnabledAndSelectCapable(source) else { return nil }
             return inputSourceInfo(from: source)
-        }
+        })
     }
 
     public func currentInputSource() throws -> InputSourceInfo? {
