@@ -82,8 +82,33 @@ if [[ ! -d "$APP_SOURCE" ]]; then
   exit 1
 fi
 
+# Another product also ships an app named CmdIME.app (different bundle id). Only ever stop or
+# replace this one, identified by its bundle id, never by name alone.
+BUNDLE_ID="com.shunmei.cmd-ime"
+bundle_id_of() {
+  /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$1/Contents/Info.plist" 2>/dev/null || true
+}
+
+if [[ "$(bundle_id_of "$APP_SOURCE")" != "$BUNDLE_ID" ]]; then
+  echo "error: the downloaded $APP_NAME.app is not $BUNDLE_ID." >&2
+  exit 1
+fi
+if [[ -e "$APP_TARGET" ]]; then
+  EXISTING_ID="$(bundle_id_of "$APP_TARGET")"
+  if [[ "$EXISTING_ID" != "$BUNDLE_ID" ]]; then
+    echo "error: $APP_TARGET is another app (bundle id: ${EXISTING_ID:-unknown}), not CmdIME ($BUNDLE_ID)." >&2
+    echo "Refusing to replace it. Move that app first, or set CMDIME_INSTALL_DIR to install somewhere else." >&2
+    exit 1
+  fi
+fi
+
 echo "Stopping any running $APP_NAME instance..."
-pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+for pid in $(pgrep -x "$APP_NAME" 2>/dev/null || true); do
+  exe="$(ps -o comm= -p "$pid" 2>/dev/null || true)"
+  if [[ "$(bundle_id_of "${exe%/Contents/MacOS/*}")" == "$BUNDLE_ID" ]]; then
+    kill "$pid" 2>/dev/null || true
+  fi
+done
 
 rm -rf "$APP_TARGET"
 ditto "$APP_SOURCE" "$APP_TARGET"
