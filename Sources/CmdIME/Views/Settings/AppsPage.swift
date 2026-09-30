@@ -61,6 +61,14 @@ struct AppsPage: View {
                 .foregroundStyle(DesignTokens.Colors.textMuted)
         } else {
             VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+                HStack {
+                    Text("Remembered now")
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                    Spacer(minLength: DesignTokens.Layout.rowGap)
+                    Button("Forget All") { model.forgetAllRememberedSources() }
+                        .fixedSize()
+                }
                 ForEach(entries, id: \.app.id) { entry in
                     HStack(spacing: DesignTokens.Layout.rowGap) {
                         Image(nsImage: entry.app.icon)
@@ -76,11 +84,6 @@ struct AppsPage: View {
                             .fixedSize()
                             .accessibilityLabel("Forget the input source remembered for \(entry.app.name)")
                     }
-                }
-                HStack {
-                    Spacer()
-                    Button("Forget All") { model.forgetAllRememberedSources() }
-                        .fixedSize()
                 }
             }
         }
