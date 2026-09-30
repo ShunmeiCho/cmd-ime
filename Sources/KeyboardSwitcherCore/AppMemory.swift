@@ -130,6 +130,27 @@ public struct AppMemoryTracker: Equatable, Sendable {
         remember(sourceID, for: frontmostAppID)
     }
 
+    /// A switch the user asked for with a trigger was confirmed while `actualFrontmostAppID` is in
+    /// front. The activation notification for that app can still be on its way: without this, it
+    /// would arrive after the user's choice, restore over it and file the chosen source as the
+    /// previous app's memory. So the activation is taken here first, with trigger semantics (no
+    /// automatic switch, nothing remembered for the app left, whose memory already holds its last
+    /// source), and the late notification then finds the app already in front and does nothing.
+    public mutating func triggerConfirmed(
+        sourceID: String,
+        actualFrontmostAppID: String?,
+        isRegularApp: Bool = true,
+        context: AppMemoryContext
+    ) {
+        if let actual = actualFrontmostAppID, actual != frontmostAppID, isRegularApp || actual == ownAppID {
+            frontmostAppID = actual
+            forced = nil
+            beforeForced = nil
+            sourceBeforeRestore = nil
+        }
+        switchConfirmed(sourceID: sourceID, context: context)
+    }
+
     /// Secure input ended while `frontmostAppID` stayed in front. If the source is still the one
     /// macOS forced, says to select the one it replaced.
     public mutating func secureInputEnded(currentSourceID: String?, context: AppMemoryContext) -> Restore {

@@ -61,11 +61,23 @@ final class AppMemoryController {
         afterTrackerChange()
     }
 
-    /// The monitor confirmed a switch it made (a trigger or a restore).
+    /// The monitor confirmed a switch it made (a trigger or a restore). It reports before it ends
+    /// the switch, so a trigger still reads as pending here; for one, the app really in front is
+    /// read now rather than waiting for its activation notification, which may come later.
     func switchDidConfirm(sourceID: String) {
         guard isActive else { return }
-        let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        tracker.switchConfirmed(sourceID: sourceID, context: context(frontmostPID: frontmost))
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let context = context(frontmostPID: frontmost?.processIdentifier)
+        if context.isTriggerPending {
+            tracker.triggerConfirmed(
+                sourceID: sourceID,
+                actualFrontmostAppID: Self.appID(of: frontmost),
+                isRegularApp: frontmost?.activationPolicy == .regular,
+                context: context
+            )
+        } else {
+            tracker.switchConfirmed(sourceID: sourceID, context: context)
+        }
         afterTrackerChange()
     }
 
