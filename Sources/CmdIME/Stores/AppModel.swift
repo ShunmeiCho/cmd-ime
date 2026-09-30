@@ -519,8 +519,9 @@ final class AppModel: ObservableObject {
     }
 
     func setCapsLockIndicatorVisible(_ visible: Bool) {
-        config.showCapsLockIndicator = visible
-        save()
+        var next = config
+        next.showCapsLockIndicator = visible
+        guard commitShowingWindowFailure(next) else { return }
         statusText = visible ? "Caps Lock indicator enabled" : "Caps Lock indicator disabled"
     }
 
@@ -532,7 +533,7 @@ final class AppModel: ObservableObject {
         do {
             let next = try config.replacingPeekBinding(with: trigger)
             if next != config {
-                guard commit(next) else { return statusText }
+                guard commitShowingWindowFailure(next) else { return statusText }
             }
             statusText = trigger.map { "\(SwitcherConfig.peekDisplayName): \($0.displayName)" }
                 ?? "Removed the \(SwitcherConfig.peekDisplayName) trigger"
@@ -976,6 +977,15 @@ final class AppModel: ObservableObject {
             } else {
                 reportBoardFailure(message)
             }
+        }
+    }
+
+    /// `commit` for controls outside the slot board: a failed save shows the window-wide notice,
+    /// as `save()` does, since the board's own notice only appears on the Slots page.
+    func commitShowingWindowFailure(_ next: SwitcherConfig) -> Bool {
+        commit(next) { [self] message in
+            statusText = message
+            boardNotice = .failed("Could not save settings. \(message)")
         }
     }
 
