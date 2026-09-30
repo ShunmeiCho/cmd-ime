@@ -142,12 +142,18 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// `appID` came to the front. Remembers `currentSourceID` for the app being left, since a
     /// change notification can arrive late or not at all, then says what to select, if anything.
     /// `slotOfSource` names the slot a source belongs to, so a slot target already in place is left.
+    /// An app that is not a regular app (a menu bar agent, or a system alert such as
+    /// UserNotificationCenter) is not somewhere the user types: its activation is ignored, so
+    /// nothing is remembered for it and a change made meanwhile stays with the app underneath.
+    /// CmdIME itself always counts, whatever its activation policy at that moment.
     public mutating func appActivated(
         _ appID: String,
+        isRegularApp: Bool = true,
         currentSourceID: String?,
         context: AppMemoryContext,
         slotOfSource: (String) -> InputRole? = { _ in nil }
     ) -> Restore {
+        guard isRegularApp || appID == ownAppID else { return .none }
         guard appID != frontmostAppID else { return .none }
         if !context.isRestorePending {
             sourceBeforeRestore = nil

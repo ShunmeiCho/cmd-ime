@@ -40,7 +40,8 @@ public enum AppRuleBoard {
 
     /// Dropping an app on a lane creates its rule or moves the existing one where it stands in the
     /// list. Remember survives a move between slots; "Keep as is" never remembers. A lane for a
-    /// deleted slot takes no new apps, and CmdIME itself never gets a rule.
+    /// deleted slot takes no new apps (a chip dropped back on it changes nothing), and CmdIME
+    /// itself never gets a rule.
     public static func drop(
         appID: String,
         name: String?,
@@ -50,11 +51,11 @@ public enum AppRuleBoard {
     ) -> DropResult {
         guard !appID.isEmpty else { return .refused("That is not an app.") }
         guard appID != ownAppID else { return .refused("CmdIME never switches input sources for itself.") }
+        let existing = config.appRule(for: appID)
+        guard existing?.target != target else { return .unchanged }
         if case .slot(let id) = target, config.slot(id) == nil {
             return .refused("That slot was deleted. Drop the app on another slot.")
         }
-        let existing = config.appRule(for: appID)
-        guard existing?.target != target else { return .unchanged }
         let rule = AppRule(
             appID: appID,
             name: name ?? existing?.name,
@@ -120,8 +121,9 @@ public enum AppCandidateList {
     }
 }
 
-/// The text a dragged app or rule chip carries inside the settings window. Other text dropped on
-/// the board is not an app and is ignored.
+/// What a dragged app or rule chip carries inside the settings window, as UTF-8 under the board's
+/// private drag types (never as plain text, so it cannot land in another app). Anything that does
+/// not decode is not an app and is ignored.
 public enum AppDragPayload {
     static let prefix = "cmdime-app\n"
 

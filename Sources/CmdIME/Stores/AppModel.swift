@@ -11,6 +11,21 @@ enum BoardNotice: Equatable {
     case found(sourceID: String, name: String)
 }
 
+/// What the Apps page says about the last App Rule edit, under its board; VoiceOver hears it too.
+/// Kept apart from `BoardNotice` so a rule that could not be saved is reported where it was
+/// edited, not later on the Slots page.
+enum AppRuleNotice: Equatable {
+    case done(String)
+    case refused(String)
+    case failed(String)
+
+    var text: String {
+        switch self {
+        case .done(let text), .refused(let text), .failed(let text): text
+        }
+    }
+}
+
 /// The outcome of the last Export or Import on the General page, shown under its buttons.
 enum SettingsTransferMessage: Equatable {
     case done(String)
@@ -32,6 +47,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var slotNotices: [InputRole: String] = [:]
 
     @Published private(set) var boardNotice: BoardNotice?
+    @Published private(set) var appRuleNotice: AppRuleNotice?
     @Published private(set) var canUndoRemoval = false
     @Published private(set) var newSourceIDs: Set<String> = []
     /// Non-nil while an update is being installed; the text is shown as is.
@@ -538,8 +554,10 @@ final class AppModel: ObservableObject {
     }
 
     func setAppRule(_ rule: AppRule) {
-        if commit(config.setting(rule)) {
-            statusText = "Rule saved for \(rule.name ?? rule.appID)"
+        if commitFromAppsPage(config.setting(rule)) {
+            reportAppRule(.done(rule.rememberInstead
+                ? "\(rule.name ?? rule.appID) remembers its input source"
+                : "Rule saved for \(rule.name ?? rule.appID)"))
         }
     }
 
@@ -549,26 +567,55 @@ final class AppModel: ObservableObject {
         case .unchanged:
             return
         case .refused(let reason):
-            statusText = reason
+            reportAppRule(.refused(reason))
         case .changed(let next):
-            if commit(next) {
-                statusText = "Rule saved for \(next.appRule(for: appID)?.name ?? appID)"
+            if commitFromAppsPage(next) {
+                let appName = next.appRule(for: appID)?.name ?? appID
+                switch target {
+                case .keepAsIs: reportAppRule(.done("\(appName) keeps its input source"))
+                case .slot(let id): reportAppRule(.done("\(appName) now gets \(config.displayName(for: id))"))
+                }
             }
         }
     }
 
+    /// A file dropped on the rule board that is not an app.
+    func refuseNonAppDrop() {
+        reportAppRule(.refused("Only apps can get a rule."))
+    }
+
     func removeAppRule(for appID: String) {
-        if commit(config.removingAppRule(for: appID)) {
-            statusText = "Rule removed"
+        let appName = config.appRule(for: appID)?.name ?? appID
+        if commitFromAppsPage(config.removingAppRule(for: appID)) {
+            reportAppRule(.done("Rule removed for \(appName)"))
         }
     }
 
     func setAppDefaultSlot(_ slot: InputRole?) {
         var next = config
         next.appDefaultSlot = slot
-        if commit(next) {
+        if commitFromAppsPage(next) {
             statusText = slot.map { "Apps without a rule start in \(config.displayName(for: $0))" }
                 ?? "Apps without a rule keep their input source"
+        }
+    }
+
+    /// Clears the Apps page notice; with `notice`, only while it is still the one shown, so an
+    /// expired confirmation never clears a newer message.
+    func dismissAppRuleNotice(_ notice: AppRuleNotice? = nil) {
+        guard notice == nil || notice == appRuleNotice else { return }
+        appRuleNotice = nil
+    }
+
+    private func reportAppRule(_ notice: AppRuleNotice) {
+        statusText = notice.text
+        appRuleNotice = notice
+    }
+
+    /// `commit` for edits made on the Apps page: a failed save is reported there.
+    private func commitFromAppsPage(_ next: SwitcherConfig) -> Bool {
+        commit(next) { [self] message in
+            reportAppRule(.failed("Could not save the change. \(message)"))
         }
     }
 
@@ -923,6 +970,18 @@ final class AppModel: ObservableObject {
     }
 
     private func commit(_ next: SwitcherConfig, failureSlot: InputRole? = nil) -> Bool {
+        commit(next) { [self] message in
+            if let failureSlot {
+                reportSlotFailure(message, for: failureSlot)
+            } else {
+                reportBoardFailure(message)
+            }
+        }
+    }
+
+    /// Saves first and assigns `config` only on success, so a failed save changes nothing;
+    /// `onFailure` gets the error text.
+    private func commit(_ next: SwitcherConfig, onFailure: (String) -> Void) -> Bool {
         do {
             try configStore.save(next)
             config = next
@@ -932,11 +991,7 @@ final class AppModel: ObservableObject {
             refreshAppMemory()
             return true
         } catch {
-            if let failureSlot {
-                reportSlotFailure(error.localizedDescription, for: failureSlot)
-            } else {
-                reportBoardFailure(error.localizedDescription)
-            }
+            onFailure(error.localizedDescription)
             return false
         }
     }

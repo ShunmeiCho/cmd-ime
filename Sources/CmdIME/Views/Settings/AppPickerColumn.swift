@@ -8,6 +8,8 @@ struct AppPickerColumn: View {
     @Binding var query: String
     let apps: [InstalledApp]
     let lanes: [AppRuleBoard.Lane]
+    /// True until the installed-app scan behind the search has finished.
+    let isScanningInstalled: Bool
     @State private var isTargeted = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -23,8 +25,16 @@ struct AppPickerColumn: View {
                     }
                 }
             }
-            .frame(minHeight: 120, maxHeight: 280)
-            if let note {
+            .frame(minHeight: Self.listMinHeight, maxHeight: Self.listMaxHeight)
+            if isSearching, isScanningInstalled {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Looking through installed apps…")
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                }
+                .accessibilityElement(children: .combine)
+            } else if let note {
                 Text(note)
                     .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
@@ -34,23 +44,36 @@ struct AppPickerColumn: View {
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                .fill(isTargeted ? DesignTokens.Colors.danger.opacity(0.08) : DesignTokens.Colors.surfaceInset)
+                .fill(isTargeted ? DesignTokens.Colors.danger.opacity(Self.removeFillOpacity) : DesignTokens.Colors.surfaceInset)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                .strokeBorder(isTargeted ? DesignTokens.Colors.danger.opacity(0.5) : DesignTokens.Colors.separator, lineWidth: 1)
+                .strokeBorder(isTargeted ? DesignTokens.Colors.danger.opacity(Self.removeStrokeOpacity) : DesignTokens.Colors.separator, lineWidth: 1)
         )
         .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion), value: isTargeted)
-        .onDrop(of: [.utf8PlainText], isTargeted: $isTargeted) { providers in
-            AppDropReader.read(providers, acceptsFiles: false) { [model] id, _ in
-                // Only a rule chip dragged back removes something; an app row dropped here is a no-op.
+        // Only a rule chip dragged back lights the list up and removes its rule; the list's own
+        // rows and files are refused before the drop.
+        .onDrop(of: AppDropReader.listTypes, delegate: AppDropTarget(
+            types: AppDropReader.listTypes,
+            accepts: { $0.hasItemsConforming(to: AppDropReader.listTypes) },
+            isTargeted: $isTargeted,
+            found: { [model] id, _ in
                 if model.config.appRule(for: id) != nil { model.removeAppRule(for: id) }
             }
-        }
+        ))
+    }
+
+    private static let listMinHeight: CGFloat = 120
+    private static let listMaxHeight: CGFloat = 280
+    private static let removeFillOpacity = 0.08
+    private static let removeStrokeOpacity = 0.5
+
+    private var isSearching: Bool {
+        !query.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     private var note: String? {
-        if !query.trimmingCharacters(in: .whitespaces).isEmpty {
+        if isSearching {
             return apps.isEmpty ? "No app matches." : nil
         }
         return apps.isEmpty ? "Every running app has a rule. Search to find others." : "Running apps. Search to find others."
@@ -79,7 +102,7 @@ private struct AppPickerRow: View {
         .contentShape(Rectangle())
         .onHover { hover = $0 }
         .help("Drag onto a slot to give \(app.name) a rule")
-        .onDrag { AppDropReader.provider(appID: app.id, name: app.name) }
+        .onDrag { AppDropReader.provider(appID: app.id, name: app.name, isRule: false) }
         .contextMenu {
             ForEach(lanes, id: \.target) { lane in
                 Button("Add to \(look.title(lane))") { model.dropApp(appID: app.id, name: app.name, on: lane.target) }

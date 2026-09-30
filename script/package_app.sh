@@ -164,6 +164,29 @@ cat >"$INFO_PLIST" <<PLIST
   <string>CmdIME listens for your configured keyboard shortcuts to switch input sources.</string>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>com.shunmei.cmd-ime.app-reference</string>
+      <key>UTTypeDescription</key>
+      <string>CmdIME app reference</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+    </dict>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>com.shunmei.cmd-ime.app-rule</string>
+      <key>UTTypeDescription</key>
+      <string>CmdIME app rule</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+    </dict>
+  </array>
 </dict>
 </plist>
 PLIST
