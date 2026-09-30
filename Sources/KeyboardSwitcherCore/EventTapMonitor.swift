@@ -39,6 +39,8 @@ public final class EventTapMonitor: @unchecked Sendable {
     private let addGlobalMouseDownMonitor: GlobalMouseDownMonitorInstaller
     private let addLocalMouseDownMonitor: LocalMouseDownMonitorInstaller
     private let removeMouseDownMonitor: MouseDownMonitorRemover
+    /// Monotonic seconds; how long a one-shot modifier was held is measured with it.
+    private let now: () -> TimeInterval
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var mouseDownMonitors: [Any] = []
@@ -118,11 +120,23 @@ public final class EventTapMonitor: @unchecked Sendable {
         mask | CGEventMask(1 << eventType.rawValue)
     }
 
-    static let mouseDownEventMask: NSEvent.EventTypeMask = [
+    /// Events that cancel a pending one-shot modifier: a click, or a scroll (Command-scroll
+    /// zooms, and releasing Command afterwards must not switch).
+    static let oneShotCancelEventMask: NSEvent.EventTypeMask = [
         .leftMouseDown,
         .rightMouseDown,
         .otherMouseDown,
+        .scrollWheel,
     ]
+
+    /// Scroll momentum keeps arriving after the fingers lift, and a touch that does not move
+    /// posts zero-delta phase events; only a scroll the user is making cancels a tap.
+    static func cancelsOneShot(_ event: NSEvent) -> Bool {
+        guard event.type == .scrollWheel else {
+            return true
+        }
+        return event.momentumPhase.isEmpty && (event.scrollingDeltaX != 0 || event.scrollingDeltaY != 0)
+    }
 
     public convenience init(config: SwitcherConfig, inputSources: InputSourceService = MacInputSourceService()) {
         self.init(
@@ -139,13 +153,15 @@ public final class EventTapMonitor: @unchecked Sendable {
         inputSources: InputSourceService,
         addGlobalMouseDownMonitor: @escaping GlobalMouseDownMonitorInstaller,
         addLocalMouseDownMonitor: @escaping LocalMouseDownMonitorInstaller,
-        removeMouseDownMonitor: @escaping MouseDownMonitorRemover
+        removeMouseDownMonitor: @escaping MouseDownMonitorRemover,
+        now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime }
     ) {
         self.config = config
         self.inputSources = inputSources
         self.addGlobalMouseDownMonitor = addGlobalMouseDownMonitor
         self.addLocalMouseDownMonitor = addLocalMouseDownMonitor
         self.removeMouseDownMonitor = removeMouseDownMonitor
+        self.now = now
     }
 
     deinit {
@@ -280,13 +296,16 @@ public final class EventTapMonitor: @unchecked Sendable {
             return
         }
 
-        if let globalMonitor = addGlobalMouseDownMonitor(Self.mouseDownEventMask, { [weak self] _ in
+        if let globalMonitor = addGlobalMouseDownMonitor(Self.oneShotCancelEventMask, { [weak self] event in
+            guard Self.cancelsOneShot(event) else { return }
             self?.cancelOneShotFromMouseDown()
         }) {
             mouseDownMonitors.append(globalMonitor)
         }
-        if let localMonitor = addLocalMouseDownMonitor(Self.mouseDownEventMask, { [weak self] event in
-            self?.cancelOneShotFromMouseDown()
+        if let localMonitor = addLocalMouseDownMonitor(Self.oneShotCancelEventMask, { [weak self] event in
+            if Self.cancelsOneShot(event) {
+                self?.cancelOneShotFromMouseDown()
+            }
             return event
         }) {
             mouseDownMonitors.append(localMonitor)
@@ -328,6 +347,11 @@ public final class EventTapMonitor: @unchecked Sendable {
         pendingSingleTapTimer?.isValid ?? false
     }
 
+    /// Seconds until the pending single-tap flush timer stops waiting for a second tap.
+    var pendingSingleTapRemainingForTesting: TimeInterval? {
+        pendingSingleTapTimer.map { $0.fireDate.timeIntervalSinceNow }
+    }
+
     @discardableResult
     func handleFlagsChangedForTesting(_ event: CGEvent) -> Unmanaged<CGEvent>? {
         handleFlagsChanged(event)
@@ -358,7 +382,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
         if isPress {
             modifierEvidenceEpochs[keyCode] = triggerEvidenceEpoch
-            oneShotState.modifierDown(trigger)
+            oneShotState.modifierDown(trigger, at: now())
             // Pressed while another modifier is physically held: a chord, not a tap.
             if let heldKeyCode = pressedModifierKeyCodes.first(where: { $0 != keyCode }) {
                 oneShotState.keyDown(heldKeyCode)
@@ -370,7 +394,8 @@ public final class EventTapMonitor: @unchecked Sendable {
         let hasBinding = hasOneShotBinding(for: trigger)
         let output = oneShotState.modifierUp(
             trigger,
-            hasDoubleTapBinding: hasDoubleTapBinding(for: trigger)
+            hasDoubleTapBinding: hasDoubleTapBinding(for: trigger),
+            at: now()
         )
 
         guard hasBinding else {
@@ -387,9 +412,12 @@ public final class EventTapMonitor: @unchecked Sendable {
                 perform(binding.action, trigger: binding.trigger, evidenceEpoch: evidenceEpoch)
             }
         case .wait:
-            if binding(for: trigger) != nil || hasDoubleTapBinding(for: trigger) {
+            let hasSingleTapBinding = binding(for: trigger) != nil
+            if hasSingleTapBinding || hasDoubleTapBinding(for: trigger) {
                 pendingTapEvidenceEpoch = pressEpoch
-                scheduleSingleTapFlush()
+                scheduleSingleTapFlush(
+                    after: OneShotModifierState.secondTapWindow(hasSingleTapBinding: hasSingleTapBinding)
+                )
             }
         }
 
@@ -480,9 +508,9 @@ public final class EventTapMonitor: @unchecked Sendable {
         return binding(for: doubleTap) != nil
     }
 
-    private func scheduleSingleTapFlush() {
+    private func scheduleSingleTapFlush(after window: TimeInterval) {
         pendingSingleTapTimer?.invalidate()
-        pendingSingleTapTimer = Timer.scheduledTimer(withTimeInterval: OneShotModifierState.doubleTapWindow, repeats: false) { [weak self] _ in
+        pendingSingleTapTimer = Timer.scheduledTimer(withTimeInterval: window, repeats: false) { [weak self] _ in
             guard let self, !self.isCapturingShortcut else {
                 return
             }

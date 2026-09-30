@@ -33,7 +33,14 @@ public enum InputSourceMatcher {
 
     /// Decodes the existing keyboardctl scan --json array without changing its order.
     public static func decodeScanJSON(_ data: Data) throws -> [InputSourceInfo] {
-        try JSONDecoder().decode([InputSourceInfo].self, from: data)
+        uniqueByID(try JSONDecoder().decode([InputSourceInfo].self, from: data))
+    }
+
+    /// Keeps the first source for each id, in order. TIS can list one source twice
+    /// (seen with Sogou and Doubao, ISP #116), and every list keyed by id breaks on that.
+    public static func uniqueByID(_ sources: [InputSourceInfo]) -> [InputSourceInfo] {
+        var seen = Set<String>()
+        return sources.filter { seen.insert($0.id).inserted }
     }
 
     /// Returns the first slot whose resolved source is selected, including fallback matches.

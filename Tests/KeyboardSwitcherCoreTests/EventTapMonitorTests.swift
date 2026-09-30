@@ -43,7 +43,7 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertTrue(localHandler?(event) === event)
         monitor.stop()
 
-        XCTAssertEqual(installedMasks, [EventTapMonitor.mouseDownEventMask, EventTapMonitor.mouseDownEventMask])
+        XCTAssertEqual(installedMasks, [EventTapMonitor.oneShotCancelEventMask, EventTapMonitor.oneShotCancelEventMask])
         XCTAssertEqual(removedTokens.count, 2)
         XCTAssertTrue(removedTokens[0] === globalToken)
         XCTAssertTrue(removedTokens[1] === localToken)
@@ -559,6 +559,124 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(monitor.releaseOneShotModifierForTesting(trigger), .wait)
     }
 
+    func testScrollCancelsPendingOneShotModifier() {
+        var globalHandler: ((NSEvent) -> Void)?
+        var localHandler: ((NSEvent) -> NSEvent?)?
+        let monitor = EventTapMonitor(
+            config: .default,
+            inputSources: StubInputSourceService(),
+            addGlobalMouseDownMonitor: { _, handler in
+                globalHandler = handler
+                return NSObject()
+            },
+            addLocalMouseDownMonitor: { _, handler in
+                localHandler = handler
+                return NSObject()
+            },
+            removeMouseDownMonitor: { _ in }
+        )
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command")
+        let scroll = makeScrollEvent(deltaY: 4)
+
+        monitor.installMouseDownMonitor()
+        monitor.setOneShotModifierDownForTesting(trigger)
+        globalHandler?(scroll)
+        XCTAssertEqual(monitor.releaseOneShotModifierForTesting(trigger), .wait)
+
+        monitor.setOneShotModifierDownForTesting(trigger)
+        XCTAssertTrue(localHandler?(scroll) === scroll)
+        XCTAssertEqual(monitor.releaseOneShotModifierForTesting(trigger), .wait)
+    }
+
+    func testScrollMomentumAndMotionlessTouchesDoNotCancelOneShotModifier() {
+        var globalHandler: ((NSEvent) -> Void)?
+        let monitor = EventTapMonitor(
+            config: .default,
+            inputSources: StubInputSourceService(),
+            addGlobalMouseDownMonitor: { _, handler in
+                globalHandler = handler
+                return NSObject()
+            },
+            addLocalMouseDownMonitor: { _, _ in NSObject() },
+            removeMouseDownMonitor: { _ in }
+        )
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command")
+
+        monitor.installMouseDownMonitor()
+        monitor.setOneShotModifierDownForTesting(trigger)
+        globalHandler?(makeScrollEvent(deltaY: 4, momentumPhase: .continuous))
+        globalHandler?(makeScrollEvent(deltaY: 0))
+
+        XCTAssertEqual(monitor.releaseOneShotModifierForTesting(trigger), .trigger(trigger))
+    }
+
+    func testModifierHeldPastTheHoldCapDoesNotSwitch() {
+        var clock: TimeInterval = 100
+        let inputSources = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(
+            config: .default,
+            inputSources: inputSources,
+            addGlobalMouseDownMonitor: { _, _ in NSObject() },
+            addLocalMouseDownMonitor: { _, _ in NSObject() },
+            removeMouseDownMonitor: { _ in },
+            now: { clock }
+        )
+        var switchedRoles: [InputRole] = []
+        monitor.onSwitch = { role, _ in switchedRoles.append(role) }
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        clock += OneShotModifierState.maximumTapHold + 0.1
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(switchedRoles, [])
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        clock += 0.1
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+        XCTAssertEqual(switchedRoles, [.english])
+    }
+
+    func testDoubleTapOnlyKeyWaitsLongerForTheSecondTapThanASharedKey() throws {
+        let doubleTap = try ShortcutParser.parse("double-left-command")
+        var doubleTapOnly = SwitcherConfig.default
+        doubleTapOnly.bindings.removeAll { $0.trigger.kind == .oneShotModifier && $0.trigger.keyCode == 55 }
+        doubleTapOnly.bindings.append(KeyBinding(trigger: doubleTap, action: .switchInputSource(.japanese)))
+        var shared = SwitcherConfig.default
+        shared.bindings.append(KeyBinding(trigger: doubleTap, action: .switchInputSource(.japanese)))
+
+        for (config, window) in [
+            (doubleTapOnly, OneShotModifierState.doubleTapOnlyWindow),
+            (shared, OneShotModifierState.doubleTapWindow),
+        ] {
+            let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+            _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+            _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+
+            let remaining = try XCTUnwrap(monitor.pendingSingleTapRemainingForTesting)
+            XCTAssertEqual(remaining, window, accuracy: 0.05)
+            monitor.stop()
+        }
+    }
+
+    func testDoubleTapOnlyKeyAcceptsASecondTapAfterTheSharedWindow() throws {
+        var config = SwitcherConfig.default
+        config.bindings.removeAll { $0.trigger.kind == .oneShotModifier && $0.trigger.keyCode == 55 }
+        config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("double-left-command"), action: .switchInputSource(.japanese)))
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var switchedRoles: [InputRole] = []
+        monitor.onSwitch = { role, _ in switchedRoles.append(role) }
+
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        RunLoop.current.run(until: Date().addingTimeInterval(OneShotModifierState.doubleTapWindow + 0.05))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55, flags: [.maskCommand]))
+        _ = monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 55))
+        drainMainQueue()
+
+        XCTAssertEqual(switchedRoles, [.japanese])
+    }
+
     func testUnboundModifierShortcutDoesNotPoisonNextOneShotModifier() {
         let inputSources = StubInputSourceService(sources: makeSwitchSources())
         let monitor = EventTapMonitor(config: .default, inputSources: inputSources)
@@ -948,6 +1066,19 @@ private func makeLeftMouseDownEvent() -> NSEvent {
         clickCount: 1,
         pressure: 0
     )!
+}
+
+private func makeScrollEvent(deltaY: Int32, momentumPhase: CGMomentumScrollPhase = .none) -> NSEvent {
+    let event = CGEvent(
+        scrollWheelEvent2Source: nil,
+        units: .pixel,
+        wheelCount: 1,
+        wheel1: deltaY,
+        wheel2: 0,
+        wheel3: 0
+    )!
+    event.setIntegerValueField(.scrollWheelEventMomentumPhase, value: Int64(momentumPhase.rawValue))
+    return NSEvent(cgEvent: event)!
 }
 
 private func makeKeyboardEvent(keyCode: Int, flags: CGEventFlags = [], keyDown: Bool = true) -> CGEvent {

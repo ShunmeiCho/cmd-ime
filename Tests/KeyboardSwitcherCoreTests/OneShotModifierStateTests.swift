@@ -90,4 +90,39 @@ final class OneShotModifierStateTests: XCTestCase {
         XCTAssertEqual(state.flushPendingSingleTap(), trigger)
     }
 
+    func testModifierHeldPastTheHoldCapDoesNotTrigger() {
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command")
+        var state = OneShotModifierState()
+
+        state.modifierDown(trigger, at: 10)
+
+        XCTAssertEqual(state.modifierUp(trigger, at: 10 + OneShotModifierState.maximumTapHold + 0.05), .wait)
+    }
+
+    func testModifierReleasedWithinTheHoldCapTriggers() {
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command")
+        var state = OneShotModifierState()
+
+        state.modifierDown(trigger, at: 10)
+
+        XCTAssertEqual(state.modifierUp(trigger, at: 10 + OneShotModifierState.maximumTapHold - 0.05), .trigger(trigger))
+    }
+
+    func testLongHoldDropsAPendingFirstTap() {
+        let trigger = KeyTrigger(kind: .oneShotModifier, keyCode: 55, keyName: "left-command")
+        var state = OneShotModifierState()
+
+        state.modifierDown(trigger, at: 10)
+        XCTAssertEqual(state.modifierUp(trigger, hasDoubleTapBinding: true, at: 10.05), .wait)
+        state.modifierDown(trigger, at: 10.1)
+        XCTAssertEqual(state.modifierUp(trigger, hasDoubleTapBinding: true, at: 11.5), .wait)
+
+        XCTAssertNil(state.flushPendingSingleTap())
+    }
+
+    func testDoubleTapOnlyKeysWaitLongerForTheSecondTap() {
+        XCTAssertEqual(OneShotModifierState.secondTapWindow(hasSingleTapBinding: true), OneShotModifierState.doubleTapWindow)
+        XCTAssertEqual(OneShotModifierState.secondTapWindow(hasSingleTapBinding: false), OneShotModifierState.doubleTapOnlyWindow)
+        XCTAssertGreaterThan(OneShotModifierState.doubleTapOnlyWindow, OneShotModifierState.doubleTapWindow)
+    }
 }

@@ -15,6 +15,18 @@ final class InputSourceMatcherTests: XCTestCase {
         ])
     }
 
+    func testScanJSONKeepsTheFirstSourceForARepeatedID() throws {
+        let json = #"[{"id":"sogou","localizedName":"First","languages":["zh-Hans"],"isSelectCapable":true},{"id":"abc","localizedName":"ABC","languages":["en"],"isSelectCapable":true},{"id":"sogou","localizedName":"Again","languages":["zh-Hans"],"isSelectCapable":true}]"#
+        let decoded = try InputSourceMatcher.decodeScanJSON(Data(json.utf8))
+        XCTAssertEqual(decoded.map(\.id), ["sogou", "abc"])
+        XCTAssertEqual(decoded.first?.localizedName, "First")
+    }
+
+    func testUniqueByIDPreservesOrderOfFirstOccurrences() {
+        let sources = [source("b"), source("a"), source("b", selectable: false), source("c"), source("a")]
+        XCTAssertEqual(InputSourceMatcher.uniqueByID(sources), [source("b"), source("a"), source("c")])
+    }
+
     func testScanJSONAcceptsEmptyList() throws {
         XCTAssertEqual(try InputSourceMatcher.decodeScanJSON(Data("[]\n".utf8)), [])
     }
