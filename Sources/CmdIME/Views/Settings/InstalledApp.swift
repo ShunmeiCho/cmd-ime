@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardSwitcherCore
 import UniformTypeIdentifiers
 
 /// Name and icon for an app id (a bundle id, or the executable path of an app without one), the
@@ -37,6 +38,37 @@ struct InstalledApp: Identifiable, Hashable {
         self.name = name
     }
 
+    /// The app an .app bundle on disk stands for; nil for anything that is not one.
+    init?(bundleURL url: URL) {
+        guard url.pathExtension == "app", let bundle = Bundle(url: url),
+              let id = AppRuleBoard.appID(bundleIdentifier: bundle.bundleIdentifier,
+                                          executablePath: bundle.executableURL?.path) else { return nil }
+        self.init(id: id, name: Self.displayName(of: url))
+    }
+
+    var candidate: AppCandidate { AppCandidate(id: id, name: name) }
+
+    /// The folders apps are normally installed in, for the rule board's search.
+    private static var appFolders: [URL] {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        return ["/Applications", "/Applications/Utilities", "/System/Applications", "/System/Applications/Utilities"]
+            .map { URL(fileURLWithPath: $0) } + [home.appendingPathComponent("Applications")]
+    }
+
+    /// Apps installed in the usual folders. It reads every bundle, so call it off the main thread.
+    static func installed() -> [InstalledApp] {
+        appFolders.flatMap { folder -> [InstalledApp] in
+            let contents = (try? FileManager.default.contentsOfDirectory(
+                at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
+            )) ?? []
+            return contents.compactMap { InstalledApp(bundleURL: $0) }
+        }
+    }
+
+    private static func displayName(of url: URL) -> String {
+        FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
+    }
+
     /// Regular apps running now, CmdIME excluded, by name: suggestions for a new rule.
     static func running() -> [InstalledApp] {
         let own = Bundle.main.bundleIdentifier
@@ -59,8 +91,6 @@ struct InstalledApp: Identifiable, Hashable {
         panel.allowsMultipleSelection = false
         panel.prompt = "Add Rule"
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
-        let bundle = Bundle(url: url)
-        guard let id = bundle?.bundleIdentifier ?? bundle?.executableURL?.path else { return nil }
-        return InstalledApp(id: id, name: FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: ""))
+        return InstalledApp(bundleURL: url)
     }
 }
