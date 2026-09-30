@@ -97,8 +97,11 @@ struct ContentView: View {
         case .apps:
             AppsPage(model: model)
         case .indicator:
-            IndicatorSettingsSection(model: model)
-                .frame(maxWidth: .infinity)
+            VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
+                IndicatorSettingsSection(model: model)
+                PeekAndCapsLockSection(model: model)
+            }
+            .frame(maxWidth: .infinity)
         case .general:
             GeneralPage(model: model, onShowSetupGuide: showSetupGuide)
         case .about:

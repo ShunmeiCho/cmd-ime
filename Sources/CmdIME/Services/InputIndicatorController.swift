@@ -80,7 +80,30 @@ final class InputIndicatorController {
             source: source,
             context: .current()
         ) else { return }
+        show(model)
+    }
 
+    /// Caps Lock turned on or off: the bubble in the colours of `slotID`, or of the first slot.
+    func showCapsLock(
+        isOn: Bool,
+        slotID: InputRole?,
+        source: InputSourceInfo?,
+        config: SwitcherConfig,
+        sources: [InputSourceInfo]
+    ) {
+        guard let model = IndicatorBubbleResolver.capsLockModel(
+            isOn: isOn,
+            config: config,
+            themes: library.themes,
+            sources: sources,
+            slotID: slotID,
+            source: source,
+            context: .current()
+        ) else { return }
+        show(model)
+    }
+
+    private func show(_ model: BubbleRenderModel) {
         let size = measure(model)
         let pointer = NSEvent.mouseLocation
         caretRequest += 1
