@@ -234,6 +234,37 @@ struct AppRuleTrackerTests {
         #expect(tracker.appActivated(terminal, currentSourceID: pinyin, context: quiet, slotOfSource: slotOf) == .selectSlot(englishSlot))
     }
 
+    /// WeChat is left with Pinyin; Terminal has a Chinese rule; the user taps English in Terminal and
+    /// the trigger is confirmed before Terminal's activation notification is handled.
+    private func trackerAfterEarlyTrigger() -> AppMemoryTracker {
+        var tracker = tracker(AppActivationSettings(
+            remembersPerApp: true,
+            rules: [AppRule(appID: terminal, target: .slot(chineseSlot))],
+            slotIDs: slots
+        ))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+        let confirming = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        tracker.triggerConfirmed(sourceID: abc, actualFrontmostAppID: terminal, context: confirming)
+        return tracker
+    }
+
+    @Test("a trigger confirmed before its app's activation arrives wins, and the app left keeps its memory")
+    func triggerConfirmedBeforeLateActivation() {
+        var tracker = trackerAfterEarlyTrigger()
+
+        #expect(tracker.appActivated(terminal, currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+        #expect(tracker.frontmostAppID == terminal)
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
+    @Test("after a trigger confirmed early, the next app to come to the front is restored as usual")
+    func nextActivationAfterEarlyTriggerRestores() {
+        var tracker = trackerAfterEarlyTrigger()
+        _ = tracker.appActivated(terminal, currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+
+        #expect(tracker.appActivated(wechat, currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .select(sourceID: pinyin))
+    }
+
     @Test("a rule switch still pending when its app is left is put back")
     func pendingRuleSwitchIsPutBack() {
         var tracker = tracker(AppActivationSettings(
