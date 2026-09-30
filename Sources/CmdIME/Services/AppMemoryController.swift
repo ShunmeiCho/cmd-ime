@@ -128,6 +128,7 @@ final class AppMemoryController {
             isRegularApp: app.activationPolicy == .regular,
             currentSourceID: currentSourceID(),
             context: context(frontmostPID: app.processIdentifier),
+            actualFrontmostAppID: NSWorkspace.shared.frontmostApplication.flatMap(Self.appID(of:)),
             slotOfSource: slotForSourceID
         )
         afterTrackerChange()

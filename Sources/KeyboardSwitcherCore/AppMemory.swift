@@ -178,9 +178,13 @@ public struct AppMemoryTracker: Equatable, Sendable {
         isRegularApp: Bool = true,
         currentSourceID: String?,
         context: AppMemoryContext,
+        actualFrontmostAppID: String? = nil,
         slotOfSource: (String) -> InputRole? = { _ in nil }
     ) -> Restore {
         guard isRegularApp || appID == ownAppID else { return .none }
+        // A notice for an app that is no longer in front arrived late, after a newer activation
+        // (and maybe a trigger confirmed there): acting on it would switch the app in front.
+        if let actualFrontmostAppID, actualFrontmostAppID != appID { return .none }
         guard appID != frontmostAppID else { return .none }
         if !context.isRestorePending {
             sourceBeforeRestore = nil

@@ -257,6 +257,29 @@ struct AppRuleTrackerTests {
         #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
     }
 
+    @Test("a late notice for an app no longer in front is ignored, so it cannot undo a confirmed trigger")
+    func staleActivationOfAnotherAppIsIgnored() {
+        var tracker = tracker(AppActivationSettings(
+            remembersPerApp: true,
+            rules: [AppRule(appID: terminal, target: .slot(chineseSlot)), AppRule(appID: rdp, target: .slot(chineseSlot))],
+            slotIDs: slots
+        ))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+        // In front: wechat -> rdp -> terminal; neither notice handled yet. The trigger is confirmed in terminal.
+        let confirming = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        tracker.triggerConfirmed(sourceID: abc, actualFrontmostAppID: terminal, context: confirming)
+
+        let staleRDP = tracker.appActivated(rdp, currentSourceID: abc, context: quiet,
+                                            actualFrontmostAppID: terminal, slotOfSource: slotOf)
+        let lateTerminal = tracker.appActivated(terminal, currentSourceID: abc, context: quiet,
+                                                actualFrontmostAppID: terminal, slotOfSource: slotOf)
+
+        #expect(staleRDP == .none)
+        #expect(lateTerminal == .none)
+        #expect(tracker.frontmostAppID == terminal)
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
     @Test("after a trigger confirmed early, the next app to come to the front is restored as usual")
     func nextActivationAfterEarlyTriggerRestores() {
         var tracker = trackerAfterEarlyTrigger()
