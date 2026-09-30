@@ -543,6 +543,20 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// A drop on the Apps page's rule board: the rule decision is core `AppRuleBoard.drop`.
+    func dropApp(appID: String, name: String?, on target: AppRuleTarget) {
+        switch AppRuleBoard.drop(appID: appID, name: name, on: target, in: config, ownAppID: Bundle.main.bundleIdentifier) {
+        case .unchanged:
+            return
+        case .refused(let reason):
+            statusText = reason
+        case .changed(let next):
+            if commit(next) {
+                statusText = "Rule saved for \(next.appRule(for: appID)?.name ?? appID)"
+            }
+        }
+    }
+
     func removeAppRule(for appID: String) {
         if commit(config.removingAppRule(for: appID)) {
             statusText = "Rule removed"
