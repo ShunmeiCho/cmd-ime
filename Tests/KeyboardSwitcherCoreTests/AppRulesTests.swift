@@ -280,6 +280,39 @@ struct AppRuleTrackerTests {
         #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
     }
 
+    @Test("late notices reconcile to the menu bar owner, so a change under a system alert stays with that app")
+    func lateNoticesReconcileToTheAppUnderneath() {
+        var tracker = tracker(AppActivationSettings(remembersPerApp: true, slotIDs: slots))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+        // In front: wechat -> rdp -> a system alert over rdp; both notices handled while rdp owns the menu bar.
+        _ = tracker.appActivated(rdp, currentSourceID: pinyin, context: quiet,
+                                 actualFrontmostAppID: rdp, slotOfSource: slotOf)
+        _ = tracker.appActivated("com.apple.UserNotificationCenter", currentSourceID: pinyin, context: quiet,
+                                 actualFrontmostAppID: rdp, slotOfSource: slotOf)
+        tracker.sourceChanged(to: abc, context: quiet)
+        _ = tracker.appActivated(wechat, currentSourceID: abc, context: quiet,
+                                 actualFrontmostAppID: wechat, slotOfSource: slotOf)
+
+        #expect(tracker.rememberedSourceID(for: rdp) == abc)
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
+    @Test("a round trip that ended before any of its notices was handled reads as never having left")
+    func unseenRoundTripIsNotAReturn() {
+        var tracker = tracker(AppActivationSettings(
+            rules: [AppRule(appID: wechat, target: .slot(chineseSlot))], slotIDs: slots
+        ))
+        // wechat -> rdp -> wechat, both notices handled once wechat is back in front.
+        let staleRDP = tracker.appActivated(rdp, currentSourceID: abc, context: quiet,
+                                            actualFrontmostAppID: wechat, slotOfSource: slotOf)
+        let lateWeChat = tracker.appActivated(wechat, currentSourceID: abc, context: quiet,
+                                              actualFrontmostAppID: wechat, slotOfSource: slotOf)
+
+        #expect(staleRDP == .none)
+        #expect(lateWeChat == .none)
+        #expect(tracker.frontmostAppID == wechat)
+    }
+
     @Test("after a trigger confirmed early, the next app to come to the front is restored as usual")
     func nextActivationAfterEarlyTriggerRestores() {
         var tracker = trackerAfterEarlyTrigger()

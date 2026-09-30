@@ -173,18 +173,23 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// UserNotificationCenter) is not somewhere the user types: its activation is ignored, so
     /// nothing is remembered for it and a change made meanwhile stays with the app underneath.
     /// CmdIME itself always counts, whatever its activation policy at that moment.
+    ///
+    /// An activation notice is a prompt to look, not a record of what is in front: notices can
+    /// queue up behind other main-thread work. With `actualFrontmostAppID` (the app that owns the
+    /// menu bar when the notice is handled) the tracker reconciles to that app instead of the one
+    /// named in the notice; `isRegularApp` then describes that app. A late notice for an app
+    /// already left becomes a no-op, so it cannot undo a trigger confirmed since; a round trip
+    /// that completed before any of its notices was handled reads as never having left.
     public mutating func appActivated(
-        _ appID: String,
+        _ noticedAppID: String,
         isRegularApp: Bool = true,
         currentSourceID: String?,
         context: AppMemoryContext,
         actualFrontmostAppID: String? = nil,
         slotOfSource: (String) -> InputRole? = { _ in nil }
     ) -> Restore {
+        let appID = actualFrontmostAppID ?? noticedAppID
         guard isRegularApp || appID == ownAppID else { return .none }
-        // A notice for an app that is no longer in front arrived late, after a newer activation
-        // (and maybe a trigger confirmed there): acting on it would switch the app in front.
-        if let actualFrontmostAppID, actualFrontmostAppID != appID { return .none }
         guard appID != frontmostAppID else { return .none }
         if !context.isRestorePending {
             sourceBeforeRestore = nil
