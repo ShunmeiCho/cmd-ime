@@ -85,6 +85,14 @@ struct AppRuleBoardDropTests {
         #expect(AppRuleBoard.drop(appID: terminal, name: "Terminal", on: .slot(english), in: start, ownAppID: own) == .unchanged)
     }
 
+    @Test("a chip dropped back on its own deleted-slot lane changes nothing")
+    func deletedLaneOwnChipIsUnchanged() {
+        let gone = InputRole(rawValue: "korean")
+        let start = config(rules: [AppRule(appID: terminal, target: .slot(gone))])
+
+        #expect(AppRuleBoard.drop(appID: terminal, name: nil, on: .slot(gone), in: start, ownAppID: own) == .unchanged)
+    }
+
     @Test("CmdIME itself, an empty id and a deleted slot's lane are refused")
     func refusals() {
         let start = config(rules: [])

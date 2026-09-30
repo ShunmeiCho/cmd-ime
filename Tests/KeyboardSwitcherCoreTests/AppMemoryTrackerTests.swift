@@ -165,6 +165,32 @@ struct AppMemoryTrackerTests {
         #expect(tracker.appActivated(wechat, currentSourceID: abc, context: quiet) == .select(sourceID: pinyin))
     }
 
+    @Test("a system agent that comes to the front is not remembered and a change there stays with the app underneath")
+    func nonRegularAppIsIgnored() {
+        let notificationCenter = "com.apple.UserNotificationCenter"
+        var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat)
+        tracker.sourceChanged(to: pinyin, context: quiet)
+
+        #expect(tracker.appActivated(notificationCenter, isRegularApp: false, currentSourceID: pinyin, context: quiet) == .none)
+        tracker.sourceChanged(to: abc, context: quiet)
+
+        #expect(tracker.frontmostAppID == wechat)
+        #expect(tracker.rememberedSourceID(for: notificationCenter) == nil)
+        #expect(tracker.rememberedSourceID(for: wechat) == abc)
+    }
+
+    @Test("CmdIME counts as the app in front even while it is not a regular app")
+    func ownAppCountsWhateverItsPolicy() {
+        var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat)
+        tracker.sourceChanged(to: pinyin, context: quiet)
+
+        _ = tracker.appActivated(own, isRegularApp: false, currentSourceID: pinyin, context: quiet)
+        tracker.sourceChanged(to: abc, context: quiet)
+
+        #expect(tracker.frontmostAppID == own)
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
     @Test("reactivating the app already in front changes nothing")
     func sameAppActivationIsIgnored() {
         var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat)

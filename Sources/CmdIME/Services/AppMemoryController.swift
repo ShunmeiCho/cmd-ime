@@ -82,7 +82,7 @@ final class AppMemoryController {
     private func start() {
         tracker = AppMemoryTracker(
             ownAppID: Self.ownAppID,
-            frontmostAppID: Self.appID(of: NSWorkspace.shared.frontmostApplication),
+            frontmostAppID: Self.trackedAppID(of: NSWorkspace.shared.frontmostApplication),
             settings: settings
         )
         // Only activations are observed, never terminations: an app that quits and comes back
@@ -113,6 +113,7 @@ final class AppMemoryController {
         guard isActive, isPermitted, let app, let appID = Self.appID(of: app) else { return }
         let restore = tracker.appActivated(
             appID,
+            isRegularApp: app.activationPolicy == .regular,
             currentSourceID: currentSourceID(),
             context: context(frontmostPID: app.processIdentifier),
             slotOfSource: slotForSourceID
@@ -238,5 +239,12 @@ final class AppMemoryController {
     /// Bundle id, or the executable path for an app without one.
     private static func appID(of app: NSRunningApplication?) -> String? {
         app?.bundleIdentifier ?? app?.executableURL?.path
+    }
+
+    /// The app in front when following starts, if it is one the tracker follows (see
+    /// `AppMemoryTracker.appActivated`): a regular app, or CmdIME.
+    private static func trackedAppID(of app: NSRunningApplication?) -> String? {
+        guard let app, let id = appID(of: app) else { return nil }
+        return app.activationPolicy == .regular || id == ownAppID ? id : nil
     }
 }
