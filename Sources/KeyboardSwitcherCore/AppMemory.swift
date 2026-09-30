@@ -13,6 +13,12 @@ public struct AppMemoryContext: Equatable, Sendable {
     /// it on is charged to that one app; that fails safe and is narrower than a system-wide gate.
     public var isSecureInputInFrontmostApp: Bool
 
+    /// A switch the user asked for with a trigger is still in flight. An app coming to the front
+    /// meanwhile must not start an automatic switch: it would supersede the trigger.
+    public var isTriggerPending: Bool {
+        isOwnSwitchPending && !isRestorePending
+    }
+
     public init(
         isOwnSwitchPending: Bool = false,
         isRestorePending: Bool = false,
@@ -174,7 +180,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         // While a restore is pending, the current source is its intermediate step (the source
         // a Kana key brought in), not what the user arrived with.
         let arrivalSourceID = pendingBefore ?? currentSourceID
-        let canRestore = appID != ownAppID && !context.isSecureInputInFrontmostApp
+        let canRestore = appID != ownAppID && !context.isSecureInputInFrontmostApp && !context.isTriggerPending
         let target = canRestore
             ? settings.target(for: appID, rememberedSourceID: remembered[appID])
             : .none
@@ -188,8 +194,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
         default:
             break
         }
-        // Never restore into CmdIME or a password field, but still retire a restore meant for
-        // the app just left.
+        // Never restore into CmdIME, a password field or over a trigger in flight, but still
+        // retire a restore meant for the app just left.
         if let pendingBefore {
             return .putBack(sourceID: pendingBefore)
         }

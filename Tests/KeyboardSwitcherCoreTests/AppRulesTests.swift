@@ -193,6 +193,47 @@ struct AppRuleTrackerTests {
         #expect(tracker.rememberedSources.isEmpty)
     }
 
+    @Test("an app that comes to the front while a trigger is in flight starts no automatic switch")
+    func triggerInFlightBlocksAutomaticSwitches() {
+        let trigger = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        var ruled = tracker(AppActivationSettings(
+            rules: [AppRule(appID: terminal, target: .slot(englishSlot))], slotIDs: slots
+        ))
+        var defaulted = tracker(AppActivationSettings(defaultSlot: chineseSlot, slotIDs: slots))
+        var remembering = tracker(AppActivationSettings(remembersPerApp: true, slotIDs: slots))
+        remembering.sourceChanged(to: pinyin, context: quiet)
+        _ = remembering.appActivated(terminal, currentSourceID: pinyin, context: quiet)
+        remembering.sourceChanged(to: abc, context: quiet)
+        _ = remembering.appActivated(wechat, currentSourceID: abc, context: quiet)
+
+        #expect(ruled.appActivated(terminal, currentSourceID: pinyin, context: trigger, slotOfSource: slotOf) == .none)
+        #expect(defaulted.appActivated(terminal, currentSourceID: abc, context: trigger, slotOfSource: slotOf) == .none)
+        #expect(remembering.appActivated(terminal, currentSourceID: pinyin, context: trigger) == .none)
+        #expect(ruled.frontmostAppID == terminal)
+    }
+
+    @Test("the source a trigger is switching through does not replace the memory of the app left behind")
+    func triggerInFlightIsNotRecorded() {
+        var tracker = tracker(AppActivationSettings(remembersPerApp: true, slotIDs: slots))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+
+        let trigger = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        _ = tracker.appActivated(terminal, currentSourceID: abc, context: trigger)
+
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
+    @Test("an app that comes to the front before a trigger still asks for its rule; the trigger supersedes it later")
+    func activationBeforeTriggerStillSwitches() {
+        var tracker = tracker(AppActivationSettings(
+            rules: [AppRule(appID: terminal, target: .slot(englishSlot))], slotIDs: slots
+        ))
+
+        // The monitor then retires this switch when the trigger arrives
+        // (EventTapMonitorTests.testTriggerSupersedesAPendingSourceSwitch).
+        #expect(tracker.appActivated(terminal, currentSourceID: pinyin, context: quiet, slotOfSource: slotOf) == .selectSlot(englishSlot))
+    }
+
     @Test("a rule switch still pending when its app is left is put back")
     func pendingRuleSwitchIsPutBack() {
         var tracker = tracker(AppActivationSettings(
