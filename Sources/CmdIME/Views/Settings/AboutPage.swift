@@ -5,6 +5,7 @@ import SwiftUI
 /// Version and build, release notes, the privacy statement, feedback and support links.
 struct AboutPage: View {
     @ObservedObject var model: AppModel
+    @State private var didCopyDiagnostics = false
     private static let releasesURL = "https://github.com/\(UpdatePackage.repository)/releases"
     private static let repositoryURL = "https://github.com/\(UpdatePackage.repository)"
     private static let websiteURL = "https://shunmeicho.github.io/cmd-ime/"
@@ -63,11 +64,23 @@ struct AboutPage: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             CompactSection(title: "Feedback and support") {
-                HStack(spacing: DesignTokens.Layout.rowGap) {
-                    Button("Report an Issue…", action: Self.reportIssue)
-                        .help("Opens a new GitHub issue with the CmdIME and macOS versions filled in.")
-                    Button("Support CmdIME…") { Self.open(Self.supportURL) }
-                    Button("Star on GitHub…") { Self.open(Self.repositoryURL) }
+                VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+                    HStack(spacing: DesignTokens.Layout.rowGap) {
+                        Button("Report an Issue…", action: Self.reportIssue)
+                            .help("Opens a new GitHub issue with the CmdIME and macOS versions filled in.")
+                        Button("Copy Diagnostics") {
+                            model.copyDiagnostics()
+                            didCopyDiagnostics = true
+                        }
+                        .help("Copies your versions, permissions, slots and the input source each slot finds, for an issue report. Nothing you typed is included.")
+                        Button("Support CmdIME…") { Self.open(Self.supportURL) }
+                        Button("Star on GitHub…") { Self.open(Self.repositoryURL) }
+                    }
+                    if didCopyDiagnostics {
+                        Text("Copied. Paste it into the issue.")
+                            .font(DesignTokens.Typography.auxiliary)
+                            .foregroundStyle(DesignTokens.Colors.textMuted)
+                    }
                 }
             }
         }

@@ -32,63 +32,6 @@ enum CLIError: Error, LocalizedError {
     }
 }
 
-/// A role's configured preference paired with the match `keyboardctl
-/// diagnose` computed for it, via the same `InputSourceMatcher.match` the
-/// switch pipeline uses.
-private struct RoleDiagnosis {
-    let slot: SwitchSlot
-    let duplicateSlots: [String]
-    let preference: RoleInputSourcePreference
-    let result: InputSourceMatchResult
-}
-
-/// `--json` payload for `keyboardctl diagnose`.
-private struct DiagnosisReport: Encodable {
-    struct SlotEntry: Encodable {
-        let slot: String
-        let name: String
-        let duplicateSlots: [String]
-        let preferredIDs: [String]
-        let fallbackLanguage: String?
-        let languagePrefixes: [String]
-        let nameContains: [String]
-        let matchedSourceID: String?
-        let matchedSourceName: String?
-        let matchedSourceLanguages: [String]?
-        let matchTier: String
-        let matchedValue: String?
-    }
-
-    let currentInputSourceID: String?
-    let currentInputSourceName: String?
-    let rememberInputSourcePerApp: Bool
-    let systemPerDocumentSwitching: Bool
-    let slots: [SlotEntry]
-
-    init(current: InputSourceInfo?, config: SwitcherConfig, systemPerDocumentSwitching: Bool, roles: [RoleDiagnosis]) {
-        currentInputSourceID = current?.id
-        currentInputSourceName = current?.localizedName
-        rememberInputSourcePerApp = config.rememberInputSourcePerApp
-        self.systemPerDocumentSwitching = systemPerDocumentSwitching
-        slots = roles.map { diagnosis in
-            SlotEntry(
-                slot: diagnosis.slot.id.rawValue,
-                name: diagnosis.slot.name,
-                duplicateSlots: diagnosis.duplicateSlots,
-                preferredIDs: diagnosis.preference.preferredIDs,
-                fallbackLanguage: diagnosis.preference.fallbackLanguage,
-                languagePrefixes: diagnosis.preference.languagePrefixes,
-                nameContains: diagnosis.preference.nameContains,
-                matchedSourceID: diagnosis.result.source?.id,
-                matchedSourceName: diagnosis.result.source?.localizedName,
-                matchedSourceLanguages: diagnosis.result.source?.languages,
-                matchTier: diagnosis.result.tier.rawValue,
-                matchedValue: diagnosis.result.matchedValue
-            )
-        }
-    }
-}
-
 struct CLI {
     var args: [String]
     var configURL: URL
@@ -146,6 +89,10 @@ struct CLI {
             try quitApp()
         case "app-rule":
             try manageAppRule()
+        case "export":
+            try exportSettings()
+        case "import":
+            try importSettings()
         default:
             guard SourceCommandPolicy.looksLikeInputSourceID(command, knownCommands: Self.knownCommands) else {
                 throw CLIError.unknownCommand(command)
@@ -242,56 +189,13 @@ struct CLI {
         let service = MacInputSourceService()
         let config = try loadConfig()
         let sources = try service.listInputSources()
-        let current = try service.currentInputSource()
-        let perDocumentSwitching = SystemInputSourceSettings.isPerDocumentSwitchingOn()
-
-        let reports = config.slots.map { slot -> RoleDiagnosis in
-            let preference = config.preference(for: slot.id)
-            let result = InputSourceMatcher.match(for: slot.id, sources: sources, config: config)
-            let duplicates = config.duplicateSlotIDs(for: slot.id, sources: sources).map(\.rawValue)
-            return RoleDiagnosis(slot: slot, duplicateSlots: duplicates, preference: preference, result: result)
-        }
-
-        if json {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            let payload = DiagnosisReport(
-                current: current,
-                config: config,
-                systemPerDocumentSwitching: perDocumentSwitching,
-                roles: reports
-            )
-            print(String(decoding: try encoder.encode(payload), as: UTF8.self))
-            return
-        }
-
-        print("Current input source: \(current.map { "\($0.localizedName) (\($0.id))" } ?? "unknown")")
-        // App Memory itself lives in the running app's memory; only the setting is in the config.
-        print("Remember input source per app: \(config.rememberInputSourcePerApp ? "on" : "off")")
-        print("App rules: \(config.appRules.count); apps without a rule: \(config.appDefaultSlot.map { config.displayName(for: $0) } ?? "keep as is"); switch back after password fields: \(config.restoreAfterPasswordField ? "on" : "off")")
-        if perDocumentSwitching {
-            print("macOS \"Automatically switch to a document's input source\": on (it fights per-app memory)")
-        }
-        for report in reports {
-            print("")
-            print("[\(report.slot.id.rawValue)] \(report.slot.name)")
-            if !report.duplicateSlots.isEmpty {
-                print("  duplicate with: \(report.duplicateSlots.joined(separator: ", "))")
-            }
-            print("  preferredIDs: \(report.preference.preferredIDs.joined(separator: ", "))")
-            if let language = report.preference.fallbackLanguage {
-                print("  fallbackLanguage: \(language)")
-            }
-            print("  languagePrefixes: \(report.preference.languagePrefixes.joined(separator: ", "))")
-            print("  nameContains: \(report.preference.nameContains.joined(separator: ", "))")
-            if let source = report.result.source {
-                print("  matched: \(source.localizedName) (\(source.id)) languages=\(source.languages.joined(separator: ","))")
-            } else {
-                print("  matched: none")
-            }
-            let matchedValueText = report.result.matchedValue.map { " (\($0))" } ?? ""
-            print("  reason: \(report.result.tier.rawValue)\(matchedValueText)")
-        }
+        let report = DiagnosisReport(
+            current: try service.currentInputSource(),
+            config: config,
+            sources: sources,
+            systemPerDocumentSwitching: SystemInputSourceSettings.isPerDocumentSwitchingOn()
+        )
+        print(json ? report.json : report.text)
         #else
         throw CLIError.unsupportedPlatform
         #endif
@@ -337,6 +241,45 @@ struct CLI {
         config.upsertRemapBinding(trigger: trigger, output: output)
         try save(config, to: store)
         print("Remapped \(trigger.displayName) to \(output.displayName)")
+    }
+
+    // MARK: - export / import
+
+    /// Recipes travel with the config folder here, so `--config <scratch>` never reads or
+    /// writes the live activation-recipes.json. For the default config it is the same file.
+    private var settingsTransfer: SettingsTransfer {
+        SettingsTransfer(
+            store: ConfigStore(url: configURL),
+            recipesURL: configURL.deletingLastPathComponent().appendingPathComponent(SettingsTransfer.recipesFileName)
+        )
+    }
+
+    private func exportSettings() throws {
+        let destination = URL(fileURLWithPath: try argument(at: 1, name: "new-folder"))
+        let plan = try settingsTransfer.export(to: destination)
+        print("Exported settings to \(destination.path)")
+        print(Self.contentsLine(plan))
+    }
+
+    private func importSettings() throws {
+        let folder = URL(fileURLWithPath: try argument(at: 1, name: "folder"))
+        let result = try settingsTransfer.importSettings(from: folder)
+        print("Imported settings from \(folder.path)")
+        print(Self.contentsLine(result.plan))
+        if let backup = result.backupURL {
+            print("Previous settings: \(backup.path)")
+        }
+        if result.plan.config.unreadableBindingCount > 0 {
+            fputs("warning: \(result.plan.config.unreadableBindingCount) binding(s) use an action this version "
+                + "does not have and were left out.\n", stderr)
+        }
+        // A running CmdIME picks up the new config.json by itself and then reads themes,
+        // fonts and recipes again. With an identical config.json it sees no change.
+    }
+
+    private static func contentsLine(_ plan: SettingsImportPlan) -> String {
+        let recipes = plan.includesActivationRecipes ? ", activation recipes" : ""
+        return "  config.json, \(plan.themeFileNames.count) theme(s), \(plan.fontFileNames.count) font(s)\(recipes)"
     }
 
     func requireSlot(_ query: String, in config: SwitcherConfig) throws -> SwitchSlot {
@@ -521,7 +464,7 @@ struct CLI {
     /// like an input source id is read as one, so `keyboardctl <id>` works like `im-select <id>`.
     private static let knownCommands: Set<String> = [
         "help", "--help", "-h", "path", "scan", "init", "show", "switch", "source",
-        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "app-rule",
+        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "app-rule", "export", "import",
     ]
 
     /// Reads or sets the input source by id. Editor plugins call this on every mode change,
@@ -728,6 +671,8 @@ struct CLI {
               keyboardctl app-rule remove <bundle-id>
               keyboardctl quit
               keyboardctl path
+              keyboardctl export <new-folder>
+              keyboardctl import <folder>
 
             Examples (slot IDs depend on detected sources; run keyboardctl slots):
               keyboardctl init

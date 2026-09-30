@@ -11,6 +11,12 @@ enum BoardNotice: Equatable {
     case found(sourceID: String, name: String)
 }
 
+/// The outcome of the last Export or Import on the General page, shown under its buttons.
+enum SettingsTransferMessage: Equatable {
+    case done(String)
+    case failed(String)
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var config: SwitcherConfig
@@ -36,6 +42,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var isSystemPerDocumentSwitchingOn = false
     /// What App Memory holds right now, app id to source id; empty while it is not running.
     @Published private(set) var rememberedSources: [String: String] = [:]
+    @Published private(set) var settingsTransferMessage: SettingsTransferMessage?
     /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
     @Published var appearance = AppearancePreference.stored {
         didSet {
@@ -49,6 +56,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var sourceRefreshMessage: String?
     private var selectedSourceObserver: InputSourceChangeObserver?
     private var sourceChangeObserver: InputSourceChangeObserver?
+    private var configWatcher: ConfigFileWatcher?
     private var settingsWindowSubscriptions: Set<AnyCancellable> = []
     private var hasSourceBaseline = false
     private var sourceRefreshGeneration = 0
@@ -164,11 +172,128 @@ final class AppModel: ObservableObject {
             }
         }
         observeInputSourceChanges()
+        configWatcher = ConfigFileWatcher(fileURL: configStore.url) { [weak self] in
+            self?.reloadConfigFromDisk()
+        }
         refreshRuntimeStatus()
         startListeningIfReady()
         if let recoveryMessage {
             statusText = recoveryMessage
         }
+    }
+
+    /// Picks up config.json edits made outside the app (`keyboardctl`, an editor, an import).
+    /// The app's own saves read back as unchanged and do nothing.
+    func reloadConfigFromDisk() {
+        switch ConfigReload.decide(fileData: try? Data(contentsOf: configStore.url), applied: config) {
+        case .unchanged:
+            return
+        case let .unreadable(reason):
+            // Kept as is: a later save here copies the file aside before replacing it.
+            statusText = "config.json changed but could not be read (\(reason)). Keeping the current settings."
+        case let .apply(next):
+            applyConfigFromDisk(next)
+            statusText = "Applied the changes made to config.json"
+        }
+    }
+
+    /// Makes settings that are already on disk the live ones, without saving them again.
+    /// Themes, fonts and recipes are read again too: `keyboardctl import` writes them
+    /// together with the config.
+    private func applyConfigFromDisk(_ next: SwitcherConfig) {
+        // The removed slot a pending Undo would restore may no longer fit the new slots.
+        invalidateUndo()
+        config = next
+        reconcileNewSources()
+        monitor?.updateConfig(next)
+        refreshCurrentRole()
+        refreshAppMemory()
+        indicatorOccasions.update()
+        indicatorLibrary.reloadThemes()
+        indicatorLibrary.reloadFonts()
+        loadActivationRecipes()
+    }
+
+    /// Where Export Settings suggests saving: a folder name that does not exist yet.
+    var suggestedExportName: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "CmdIME Settings \(formatter.string(from: Date()))"
+    }
+
+    func exportSettings(to destination: URL) {
+        do {
+            let plan = try SettingsTransfer(store: configStore).export(to: destination)
+            statusText = "Exported settings with \(plan.themeFileNames.count) theme(s) and "
+                + "\(plan.fontFileNames.count) font(s) to \(destination.lastPathComponent)"
+            settingsTransferMessage = .done(statusText)
+        } catch {
+            reportSettingsTransferFailure(error)
+        }
+    }
+
+    /// What the folder would import, for the confirmation; nil (with the reason shown) when it is refused.
+    func inspectSettingsImport(_ folder: URL) -> SettingsImportPlan? {
+        do {
+            return try SettingsTransfer(store: configStore).inspect(folder)
+        } catch {
+            reportSettingsTransferFailure(error)
+            return nil
+        }
+    }
+
+    /// Checks the folder first; nothing changes when it is refused.
+    func importSettings(from folder: URL) {
+        do {
+            let result = try SettingsTransfer(store: configStore).importSettings(from: folder)
+            applyConfigFromDisk(result.config)
+            var message = "Imported settings from \(folder.lastPathComponent)."
+            if let backup = result.backupURL {
+                message += " The previous ones are in \(backup.deletingLastPathComponent().lastPathComponent)/\(backup.lastPathComponent)."
+            }
+            if result.plan.config.unreadableBindingCount > 0 {
+                message += " \(result.plan.config.unreadableBindingCount) trigger(s) use an action this version does not have and were left out."
+            }
+            statusText = message
+            settingsTransferMessage = .done(message)
+        } catch {
+            reportSettingsTransferFailure(error)
+        }
+    }
+
+    /// The `keyboardctl diagnose` text with the app's versions, listener state and
+    /// permissions on top, put on the clipboard for an issue report. Nothing typed is in it.
+    func copyDiagnostics() {
+        refreshRuntimeStatus()
+        let summary = DiagnosisReport.appSummary(
+            appVersion: Self.currentVersion,
+            build: Bundle.main.infoDictionary?["CFBundleVersion"] as? String,
+            macOSVersion: ProcessInfo.processInfo.operatingSystemVersion,
+            keyboardControl: keyboardControlStatus,
+            accessibilityGranted: permissions.accessibilityGranted,
+            inputMonitoringGranted: permissions.inputMonitoringGranted
+        )
+        let report = DiagnosisReport(
+            current: try? inputSources.currentInputSource(),
+            config: config,
+            sources: sources,
+            systemPerDocumentSwitching: isSystemPerDocumentSwitchingOn
+        )
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(summary + "\n\n" + report.text, forType: .string)
+        statusText = "Copied diagnostics to the clipboard"
+    }
+
+    func revealSettingsBackups() {
+        let backups = configStore.url.deletingLastPathComponent()
+            .appendingPathComponent(SettingsTransfer.backupsFolderName, isDirectory: true)
+        indicatorLibrary.revealInFinder(backups)
+    }
+
+    private func reportSettingsTransferFailure(_ error: any Error) {
+        statusText = error.localizedDescription
+        settingsTransferMessage = .failed(error.localizedDescription)
     }
 
     private func refreshCurrentRole() {
