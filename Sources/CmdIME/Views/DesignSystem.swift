@@ -421,7 +421,7 @@ struct RoleBadge: View {
             .scaleEffect(reduceMotion ? 1 : (isActive ? 1.02 : 1))
             .animation(DesignTokens.Motion.stateChange, value: isActive)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(slotLook.name(for: role)) role")
+            .accessibilityLabel("\(slotLook.name(for: role)) slot")
             .accessibilityValue(isActive ? String(localized: "Last switched") : String(localized: "Available"))
     }
 }

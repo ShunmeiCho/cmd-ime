@@ -812,7 +812,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ はエクスポートされた CmdIME 設定フォルダではありません。config.json がありません。"
+            "value": "%@ は書き出された CmdIME 設定フォルダではありません。config.json がありません。"
           }
         }
       }
@@ -1105,26 +1105,26 @@
         }
       }
     },
-    "%@ role": {
+    "%@ slot": {
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ role"
+            "value": "%@ slot"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 角色"
+            "value": "%@ 槽位"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ の役割"
+            "value": "スロット %@"
           }
         }
       }
@@ -1982,13 +1982,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "气泡仍显示时切换，或使用 Peek，会显示所有槽位。"
+            "value": "气泡仍显示时切换，或使用速览，会显示所有槽位。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バブルの表示中に切り替えたときと Peek では、すべてのスロットを表示します。"
+            "value": "バブルの表示中に切り替えたときとクイックビューでは、すべてのスロットを表示します。"
           }
         }
       }
@@ -2012,7 +2012,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このアプリについて"
+            "value": "情報"
           }
         }
       }
@@ -2798,7 +2798,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "切换应用"
+            "value": "切换应用时"
           }
         },
         "ja": {
@@ -2852,7 +2852,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "切り替え後、入力中のカーソル付近に表示します。"
+            "value": "切り替え後、キャレットの近くに表示します。"
           }
         }
       }
@@ -5582,7 +5582,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "删除"
+            "value": "Delete"
           }
         },
         "ja": {
@@ -6014,7 +6014,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "单独轻点两次 %@"
+            "value": "单独双击 %@"
           }
         },
         "ja": {
@@ -6470,7 +6470,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "间隔"
+            "value": "频率"
           }
         },
         "ja": {
@@ -7292,7 +7292,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "非表示にするアプリ"
+            "value": "非表示のアプリ"
           }
         }
       }
@@ -7604,7 +7604,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "インポートが途中で停止しました：%@"
+            "value": "読み込みが途中で停止しました：%@"
           }
         }
       }
@@ -8756,7 +8756,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "1 行"
+            "value": "ライン"
           }
         }
       }
@@ -8804,7 +8804,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Liquid Glass"
+            "value": "リキッドガラス"
           }
         }
       }
@@ -9092,7 +9092,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "これでよい"
+            "value": "問題ありません"
           }
         }
       }
@@ -9350,7 +9350,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "缺失"
+            "value": "未授权"
           }
         },
         "ja": {
@@ -9734,7 +9734,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "需要权限"
+            "value": "需要授权"
           }
         },
         "ja": {
@@ -9865,26 +9865,26 @@
         }
       }
     },
-    "New in 0.6: updates install from here with Update Now, and CmdIME checks for them a few times a day (General > Check automatically).": {
+    "New in 0.12: App Rules on the Apps page, a bubble for every switch, Peek, and settings export and import.": {
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "New in 0.6: updates install from here with Update Now, and CmdIME checks for them a few times a day (General > Check automatically)."
+            "value": "New in 0.12: App Rules on the Apps page, a bubble for every switch, Peek, and settings export and import."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "0.6 新功能：点击“立即更新”即可在此安装更新，CmdIME 每天会检查数次（通用 > 自动检查）。"
+            "value": "0.12 新增：Apps 页的应用规则、任何切换都有气泡提示、速览，以及设置导出与导入。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "0.6 の新機能：「今すぐアップデート」でここから更新をインストールできます。CmdIME は 1 日に数回確認します（一般 > 自動で確認）。"
+            "value": "0.12 の新機能：「アプリ」ページのアプリのルール、すべての切り替えで表示されるバブル、クイックビュー、設定の書き出しと読み込み。"
           }
         }
       }
@@ -9974,7 +9974,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 触发键未设置，槽位 %@"
+            "value": "槽位 %2$@ 未设置%1$@触发键"
           }
         },
         "ja": {
@@ -10868,7 +10868,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": ".ttf、.otf、.ttc ファイルのみインポートできます。"
+            "value": ".ttf、.otf、.ttc ファイルのみ読み込めます。"
           }
         }
       }
@@ -11540,7 +11540,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Peek"
+            "value": "クイックビュー"
           }
         }
       }
@@ -11582,7 +11582,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "权限已就绪。点击“继续”以启动键盘控制。"
+            "value": "权限已就绪。点击“恢复”以启动键盘控制。"
           }
         },
         "ja": {
@@ -13334,7 +13334,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "回车"
+            "value": "Return"
           }
         },
         "ja": {
@@ -15524,7 +15524,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "パスワード欄の後で元に戻す"
+            "value": "パスワード欄のあとに元の入力ソースに戻す"
           }
         }
       }
@@ -16094,7 +16094,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "单独轻点 %@"
+            "value": "单独单击 %@"
           }
         },
         "ja": {
@@ -16364,7 +16364,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在の config.json を読み込めないため、エクスポートしませんでした：%@"
+            "value": "現在の config.json を読み込めないため、書き出しませんでした：%@"
           }
         }
       }
@@ -16988,7 +16988,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "エクスポートする設定がまだありません。"
+            "value": "書き出す設定がまだありません。"
           }
         }
       }
@@ -17558,7 +17558,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已开启却仍显示“缺失”？macOS 有时需要在应用重启后才报告新权限。"
+            "value": "已开启却仍显示“未授权”？macOS 有时需要在应用重启后才报告新权限。"
           }
         },
         "ja": {
@@ -17900,7 +17900,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "CmdIME をアップデートしてからインポートしてください。"
+            "value": "CmdIME をアップデートしてから読み込んでください。"
           }
         }
       }
