@@ -92,7 +92,7 @@ struct SlotColorPopover: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Color \(hex) for \(slot.name)")
-        .accessibilityValue(selected ? "Selected" : "Not selected")
+        .accessibilityValue(selected ? String(localized: "Selected") : String(localized: "Not selected"))
         .accessibilityAddTraits(selected ? [.isSelected] : [])
         .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.stateChange,
                    value: selected)

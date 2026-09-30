@@ -16,8 +16,8 @@ struct SlotBoardNoticeBar: View {
 
     private var noticeSummary: String {
         switch notice {
-        case let .removed(name): "Removed slot \(name)"
-        case let .found(_, name): "Found input source \(name)"
+        case let .removed(name): String(localized: "Removed slot \(name)")
+        case let .found(_, name): String(localized: "Found input source \(name)")
         case let .rejected(reason): reason
         case let .failed(reason): reason
         }
@@ -67,15 +67,15 @@ struct SlotBoardNoticeBar: View {
                 Button("Undo", action: onUndo)
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
                     .accessibilityFocused($undoFocused)
-                    .accessibilityLabel(removalName.map { "Undo removal of \($0) slot" } ?? "Undo last slot removal")
+                    .accessibilityLabel(removalName.map { String(localized: "Undo removal of \($0) slot") } ?? String(localized: "Undo last slot removal"))
             }
             Spacer(minLength: 0)
-            Button(discardsUndo ? "Discard" : "Dismiss", action: onDismiss)
+            Button(discardsUndo ? String(localized: "Discard") : String(localized: "Dismiss"), action: onDismiss)
                 .buttonStyle(ConsoleButtonStyle())
-                .help(discardsUndo ? "Discard the opportunity to restore this removed slot." : "Hide this message. Any pending Undo remains available.")
+                .help(discardsUndo ? String(localized: "Discard the opportunity to restore this removed slot.") : String(localized: "Hide this message. Any pending Undo remains available."))
                 .accessibilityLabel(discardsUndo
-                    ? removalName.map { "Discard Undo for removed \($0) slot" } ?? "Discard last slot removal Undo"
-                    : "Dismiss notice: \(noticeSummary)")
+                    ? removalName.map { String(localized: "Discard Undo for removed \($0) slot") } ?? String(localized: "Discard last slot removal Undo")
+                    : String(localized: "Dismiss notice: \(noticeSummary)"))
         }
     }
 

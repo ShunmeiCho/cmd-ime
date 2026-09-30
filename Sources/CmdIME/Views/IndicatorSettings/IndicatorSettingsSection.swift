@@ -53,10 +53,10 @@ enum IndicatorPreviewModel {
 /// the settings window; the new design language lives in the bubble it previews.
 struct IndicatorSettingsSection: View {
     /// A tooltip, so it stands alone as a sentence about the dimmed segments.
-    static let unsupportedDisplayHelp = "The dimmed options are not available in this theme."
+    static let unsupportedDisplayHelp = String(localized: "The dimmed options are not available in this theme.")
     /// A whole row the current theme leaves nothing to choose in.
     static let unavailableRowOpacity = 0.45
-    static let inksColorCaption = "This theme prints with its own inks."
+    static let inksColorCaption = String(localized: "This theme prints with its own inks.")
 
     @ObservedObject var model: AppModel
     @ObservedObject private var library: IndicatorLibrary
@@ -76,7 +76,7 @@ struct IndicatorSettingsSection: View {
     private var theme: IndicatorTheme { library.theme(id: model.config.switchIndicatorThemeID) }
 
     var body: some View {
-        CompactSection(title: "Switch indicator") {
+        CompactSection(title: String(localized: "Switch indicator")) {
             VStack(alignment: .leading, spacing: 10) {
                 enabledRow
                 IndicatorPreviewRow(
@@ -116,7 +116,7 @@ struct IndicatorSettingsSection: View {
     }
 
     private var enabledRow: some View {
-        CompactSettingRow("Enabled") {
+        CompactSettingRow(String(localized: "Enabled")) {
             Toggle(
                 "Show switch indicator",
                 isOn: Binding(
@@ -136,7 +136,7 @@ struct IndicatorSettingsSection: View {
     /// layout cannot show is disabled and the bubble coerces it for drawing only.
     private var displayRow: some View {
         let supported = IndicatorDisplayComposition.supported(theme.archetype)
-        return CompactSettingRow("Display") {
+        return CompactSettingRow(String(localized: "Display")) {
             VStack(alignment: .leading, spacing: 4) {
                 ConsoleSegmentedControl(
                     options: SwitchIndicatorContentStyle.allCases.map {
@@ -162,8 +162,8 @@ struct IndicatorSettingsSection: View {
                 .disabled(supported.count <= 1)
                 .opacity(supported.count <= 1 ? Self.unavailableRowOpacity : 1)
                 if supported.count < SwitchIndicatorContentStyle.allCases.count {
-                    let names = supported.map(\.displayName).joined(separator: " and ")
-                    Text("\(theme.name) has room for \(names) only. Your choice is kept for the other themes.")
+                    let names = supported.map(\.displayName).joined(separator: String(localized: " and "))
+                    Text("\(theme.localizedDisplayName) has room for \(names) only. Your choice is kept for the other themes.")
                         .font(.caption2)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
@@ -185,7 +185,7 @@ struct IndicatorSettingsSection: View {
         )
         let percent = Int((effective * 100).rounded())
         return VStack(alignment: .leading, spacing: 4) {
-            CompactSettingRow("Size \(percent)%") {
+            CompactSettingRow(String(localized: "Size \(percent)%")) {
                 Slider(
                     value: Binding(
                         get: { effective },
@@ -221,7 +221,7 @@ struct IndicatorSettingsSection: View {
             // A theme that stops early says so, rather than leaving a slider that
             // looks free and is not.
             if minimum > SwitcherConfig.minSwitchIndicatorSizeFactor {
-                Text("\(theme.name) does not shrink below \(Int((minimum * 100).rounded()))%.")
+                Text("\(theme.localizedDisplayName) does not shrink below \(Int((minimum * 100).rounded()))%.")
                     .font(.caption2)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
@@ -230,7 +230,7 @@ struct IndicatorSettingsSection: View {
 
     private var colorRow: some View {
         let usesSlotColor = theme.colorSource == .slot
-        return CompactSettingRow("Color") {
+        return CompactSettingRow(String(localized: "Color")) {
             VStack(alignment: .leading, spacing: 4) {
                 ConsoleSegmentedControl(
                     options: SwitchIndicatorColorStyle.selectable.map {

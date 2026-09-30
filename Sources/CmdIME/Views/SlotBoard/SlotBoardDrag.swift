@@ -91,7 +91,7 @@ final class SlotBoardDragController: ObservableObject {
         endResources()
         if case let .source(id) = payload {
             guard let source = sources.first(where: { $0.id == id }) else {
-                reject("This input source is no longer available.")
+                reject(String(localized: "This input source is no longer available."))
                 return false
             }
             switch config.sourceUsage(of: source, among: sources) {
@@ -318,7 +318,7 @@ final class SlotBoardDragController: ObservableObject {
                 originalOrder: originalOrder, draggedID: draggedID,
                 previousNeighbor: previousNeighbor, nextNeighbor: nextNeighbor,
                 currentOrder: currentOrder()) else {
-            discardPendingCommit(reason: "Slots changed during the drag. Try dragging again.")
+            discardPendingCommit(reason: String(localized: "Slots changed during the drag. Try dragging again."))
             return false
         }
         pendingIndex = nil // consume before invoking application code (reentrancy safe)
@@ -326,7 +326,7 @@ final class SlotBoardDragController: ObservableObject {
         if result, case let .slot(id) = payload, sourceIndex != index { pulseAction?(id) }
         // The commit callback owns the specific model notice. A generic ghost
         // reason must never overwrite a persistence/core error in that notice.
-        if !result, rejectionReason == nil { rejectionReason = "The slot could not be changed." }
+        if !result, rejectionReason == nil { rejectionReason = String(localized: "The slot could not be changed.") }
         return result
     }
 

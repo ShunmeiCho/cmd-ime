@@ -12,21 +12,21 @@ public enum SettingsTransferError: Error, Equatable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .destinationExists(path):
-            "\(path) already exists. Choose a new name; nothing is ever written over."
+            CoreLocalization.text("%@ already exists. Choose a new name; nothing is ever written over.", String(describing: path))
         case .nothingToExport:
-            "There are no settings to export yet."
+            CoreLocalization.text("There are no settings to export yet.")
         case let .unreadableCurrentConfig(reason):
-            "The current config.json cannot be read, so it was not exported: \(reason)"
+            CoreLocalization.text("The current config.json cannot be read, so it was not exported: %@", String(describing: reason))
         case let .notAnExport(path):
-            "\(path) is not an exported CmdIME settings folder: it has no config.json."
+            CoreLocalization.text("%@ is not an exported CmdIME settings folder: it has no config.json.", String(describing: path))
         case let .newerVersion(found, supported):
-            "These settings come from a newer CmdIME (config version \(found); this one reads up to \(supported)). "
-                + "Update CmdIME, then import them."
+            CoreLocalization.text("These settings come from a newer CmdIME (config version %@; this one reads up to %@). ", String(describing: found), String(describing: supported))
+                + CoreLocalization.text("Update CmdIME, then import them.")
         case let .unreadableConfig(reason):
-            "The config.json in this folder cannot be read: \(reason)"
+            CoreLocalization.text("The config.json in this folder cannot be read: %@", String(describing: reason))
         case let .importFailed(backup, reason):
-            "Import stopped partway: \(reason)"
-                + (backup.map { " Your previous settings are in \($0)." } ?? "")
+            CoreLocalization.text("Import stopped partway: %@", String(describing: reason))
+                + (backup.map { CoreLocalization.text(" Your previous settings are in %@.", String(describing: $0)) } ?? "")
         }
     }
 }

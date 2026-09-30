@@ -61,22 +61,22 @@ struct SetupSlotSentenceRow: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(triggers.isEmpty ? "\(target) has no key yet" : "\(instruction) to switch to \(target)")
-        .accessibilityValue(isTried.map { $0 ? "Tried" : "Not tried yet" } ?? "")
+        .accessibilityLabel(triggers.isEmpty ? String(localized: "\(target) has no key yet") : String(localized: "\(instruction) to switch to \(target)"))
+        .accessibilityValue(isTried.map { $0 ? String(localized: "Tried") : String(localized: "Not tried yet") } ?? "")
     }
 
     private var instruction: String {
-        guard !triggers.isEmpty else { return "No key yet" }
+        guard !triggers.isEmpty else { return String(localized: "No key yet") }
         let phrases = triggers.map { SetupTriggerPhrase(trigger: $0).instruction }
         // One sentence: only the first phrase keeps its capital.
         return ([phrases[0]] + phrases.dropFirst().map { $0.prefix(1).lowercased() + $0.dropFirst() })
-            .joined(separator: ", or ")
+            .joined(separator: String(localized: ", or "))
     }
 
     /// "English (ABC)", or just the slot name when the source carries the same name.
     private var target: String {
-        guard let source else { return "\(slot.name) (no input source matched)" }
-        return source.localizedName == slot.name ? slot.name : "\(slot.name) (\(source.localizedName))"
+        guard let source else { return String(localized: "\(slot.name) (no input source matched)") }
+        return source.localizedName == slot.name ? slot.name : String(localized: "\(slot.name) (\(source.localizedName))")
     }
 
     private static func symbols(for trigger: KeyTrigger) -> String {

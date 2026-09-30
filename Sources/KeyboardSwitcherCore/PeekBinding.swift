@@ -8,14 +8,14 @@ public enum PeekBindingError: Error, Equatable, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case let .reservedByMacOS(trigger): "\(trigger.displayName) is reserved by macOS input source switching"
-        case let .conflictingBinding(binding): "The trigger \(binding.trigger.displayName) is already assigned."
+        case let .reservedByMacOS(trigger): CoreLocalization.text("%@ is reserved by macOS input source switching", String(describing: trigger.displayName))
+        case let .conflictingBinding(binding): CoreLocalization.text("The trigger %@ is already assigned.", String(describing: binding.trigger.displayName))
         }
     }
 }
 
 extension SwitcherConfig {
-    public static let peekDisplayName = "Show Current Input Source"
+    public static let peekDisplayName = CoreLocalization.text("Show Current Input Source")
 
     public var peekBinding: KeyBinding? {
         bindings.first { $0.enabled && $0.action.type == .showIndicator }
@@ -50,10 +50,10 @@ extension SwitcherConfig {
     /// What a conflict message calls the owner of `binding`.
     public func ownerDescription(of binding: KeyBinding) -> String {
         switch binding.action.type {
-        case .switchInputSource: binding.action.role.map { displayName(for: $0) } ?? "another binding"
-        case .sendKey: "a key remap"
+        case .switchInputSource: binding.action.role.map { displayName(for: $0) } ?? CoreLocalization.text("another binding")
+        case .sendKey: CoreLocalization.text("a key remap")
         case .showIndicator: Self.peekDisplayName
-        case .disable: "another binding"
+        case .disable: CoreLocalization.text("another binding")
         }
     }
 

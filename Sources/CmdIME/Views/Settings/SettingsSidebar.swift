@@ -36,12 +36,12 @@ extension SettingsPage {
     /// The sidebar row: a title and an SF Symbol available on macOS 13.
     var label: (title: String, systemImage: String) {
         switch self {
-        case .setup: ("Setup", "checklist")
-        case .slots: ("Slots", "keyboard")
-        case .apps: ("Apps", "square.stack.3d.up")
-        case .indicator: ("Indicator", "text.bubble")
-        case .general: ("General", "gearshape")
-        case .about: ("About", "info.circle")
+        case .setup: (String(localized: "Setup"), "checklist")
+        case .slots: (String(localized: "Slots"), "keyboard")
+        case .apps: (String(localized: "Apps"), "square.stack.3d.up")
+        case .indicator: (String(localized: "Indicator"), "text.bubble")
+        case .general: (String(localized: "General"), "gearshape")
+        case .about: (String(localized: "About"), "info.circle")
         }
     }
 }

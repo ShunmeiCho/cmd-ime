@@ -49,7 +49,7 @@ public enum InputSourceKind: Equatable, Sendable {
 
     public func title(fallback: String) -> String {
         switch self {
-        case .english: "English"
+        case .english: CoreLocalization.text("English")
         case .chinese: "中文"
         case .japanese: "日本語"
         case .unknown: fallback

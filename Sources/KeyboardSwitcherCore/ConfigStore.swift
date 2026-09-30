@@ -27,7 +27,7 @@ public enum ConfigStoreError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case let .backupFailed(url, underlying):
-            "Could not back up previous settings to \(url.path): \(underlying.localizedDescription)"
+            CoreLocalization.text("Could not back up previous settings to %@: %@", String(describing: url.path), String(describing: underlying.localizedDescription))
         }
     }
 }

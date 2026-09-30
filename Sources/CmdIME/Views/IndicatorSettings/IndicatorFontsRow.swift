@@ -42,12 +42,12 @@ struct IndicatorFontsRow: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 if entry.isLoaded {
-                    Text(entry.families.joined(separator: ", ") + (users.isEmpty ? "" : " - used by \(users.joined(separator: ", "))"))
+                    Text(entry.families.joined(separator: ", ") + (users.isEmpty ? "" : String(localized: " - used by \(users.joined(separator: ", "))")))
                         .font(.caption2)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                         .lineLimit(2)
                 } else {
-                    IndicatorNotice(text: "Could not be loaded")
+                    IndicatorNotice(text: String(localized: "Could not be loaded"))
                 }
             }
             Spacer(minLength: 0)
@@ -61,7 +61,7 @@ struct IndicatorFontsRow: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = FontStore.allowedExtensions.compactMap { UTType(filenameExtension: $0) }
         panel.allowsMultipleSelection = true
-        panel.message = "Fonts are copied into CmdIME's fonts folder and used by CmdIME only."
+        panel.message = String(localized: "Fonts are copied into CmdIME's fonts folder and used by CmdIME only.")
         guard panel.runModal() == .OK else { return }
         library.importFonts(from: panel.urls)
     }

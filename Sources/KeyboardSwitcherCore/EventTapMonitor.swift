@@ -215,7 +215,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
         installMouseDownMonitor()
-        onMessage?("Listener started.")
+        onMessage?(CoreLocalization.text("Listener started."))
     }
 
     public func stop() {
@@ -271,7 +271,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             }
         } catch {
             resolvedSources.removeAll()
-            onMessage?("Input source refresh failed: \(error.localizedDescription)")
+            onMessage?(CoreLocalization.text("Input source refresh failed: %@", String(describing: error.localizedDescription)))
         }
     }
 
@@ -609,7 +609,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             return
         }
         guard let source = resolvedSource(for: target) else {
-            onMessage?("No input method matched this switch slot.")
+            onMessage?(CoreLocalization.text("No input method matched this switch slot."))
             endSwitch(generation)
             return
         }
@@ -662,7 +662,7 @@ public final class EventTapMonitor: @unchecked Sendable {
                 resolvedSources[role] = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config)
             } catch {
                 resolvedSources[role] = nil
-                onMessage?("Input source refresh failed: \(error.localizedDescription)")
+                onMessage?(CoreLocalization.text("Input source refresh failed: %@", String(describing: error.localizedDescription)))
             }
         }
         return resolvedSources[role]
@@ -676,7 +676,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             }
             // Only a slot can fall back; a concrete source either selects or it does not.
             guard case .slot(let slot) = target else {
-                self.onMessage?("Could not select \(source.localizedName): \(originalError.localizedDescription)")
+                self.onMessage?(CoreLocalization.text("Could not select %@: %@", String(describing: source.localizedName), String(describing: originalError.localizedDescription)))
                 self.endSwitch(generation)
                 return
             }
@@ -684,7 +684,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             guard let fallback = self.resolvedSources[slot], fallback.id != source.id else {
                 // No different source to fall back to; surface the real reason
                 // instead of the generic "Action failed".
-                self.onMessage?("Could not switch this slot: \(originalError.localizedDescription)")
+                self.onMessage?(CoreLocalization.text("Could not switch this slot: %@", String(describing: originalError.localizedDescription)))
                 self.endSwitch(generation)
                 return
             }
@@ -694,9 +694,9 @@ public final class EventTapMonitor: @unchecked Sendable {
                 generation: generation,
                 trigger: trigger,
                 evidenceEpoch: evidenceEpoch,
-                prefix: "\(source.localizedName) failed: \(originalError.localizedDescription)"
+                prefix: CoreLocalization.text("%@ failed: %@", String(describing: source.localizedName), String(describing: originalError.localizedDescription))
             ) { [weak self] error in
-                self?.onMessage?("Action failed: \(error.localizedDescription)")
+                self?.onMessage?(CoreLocalization.text("Action failed: %@", String(describing: error.localizedDescription)))
                 self?.endSwitch(generation)
             }
         }
@@ -749,9 +749,9 @@ public final class EventTapMonitor: @unchecked Sendable {
             onSilentSwitch?(source)
         }
         if let prefix {
-            onMessage?("\(prefix). Selected refreshed input method \(source.localizedName).")
+            onMessage?(CoreLocalization.text("%@. Selected refreshed input method %@.", String(describing: prefix), String(describing: source.localizedName)))
         } else {
-            onMessage?("Selected \(source.localizedName).")
+            onMessage?(CoreLocalization.text("Selected %@.", String(describing: source.localizedName)))
         }
     }
 
@@ -876,9 +876,9 @@ public enum EventTapError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .missingPermissions:
-            "Accessibility and Input Monitoring permissions are required before keyboard control can start."
+            CoreLocalization.text("Accessibility and Input Monitoring permissions are required before keyboard control can start.")
         case .failedToCreateEventTap:
-            "Failed to create keyboard event tap. Grant Accessibility and Input Monitoring permissions, then retry."
+            CoreLocalization.text("Failed to create keyboard event tap. Grant Accessibility and Input Monitoring permissions, then retry.")
         }
     }
 }

@@ -113,7 +113,7 @@ struct ContentView: View {
     /// Change in the setup guide's step 2. The guide keeps its place in the sidebar.
     private func openSlotsFromSetup() {
         navigation.select(.slots)
-        SetupGuideNavigation.announce("Slots page opened. The setup guide stays in the sidebar.")
+        SetupGuideNavigation.announce(String(localized: "Slots page opened. The setup guide stays in the sidebar."))
     }
 
     /// General > Show Setup Guide.
@@ -124,7 +124,7 @@ struct ContentView: View {
         // A replay starts at a step, which the guide's lifecycle announces; a guide that
         // was already open only changes page.
         if wasOpen {
-            SetupGuideNavigation.announce("Setup guide opened.")
+            SetupGuideNavigation.announce(String(localized: "Setup guide opened."))
         }
     }
 
@@ -267,7 +267,7 @@ private struct CompactLiveKeysStrip: View {
                 }
                 HStack(alignment: .top, spacing: DesignTokens.Layout.rowGap) {
                     ForEach(Self.leftModifierKeys, id: \.self) { modifierKey($0).frame(width: Self.modifierWidth) }
-                    LiveStripKey("space")
+                    LiveStripKey(String(localized: "space"), fillsWidth: true)
                     ForEach(Self.rightModifierKeys, id: \.self) { modifierKey($0).frame(width: Self.modifierWidth) }
                 }
             }
@@ -284,7 +284,7 @@ private struct CompactLiveKeysStrip: View {
                 role: entry.slot,
                 isActive: model.activeRole == entry.slot
             )
-            .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
+            .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.localizedDisplayName)")
         }
     }
 
@@ -312,7 +312,7 @@ private struct CompactLiveKeysStrip: View {
                     LiveStripKey(keycap.label, role: entry.slot,
                                  detail: [keycap.detail, gesture].compactMap { $0 }.joined(separator: " "),
                                  isActive: model.activeRole == entry.slot, fillsWidth: true)
-                        .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.displayName)")
+                        .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.localizedDisplayName)")
                 }
             }
         }
@@ -453,7 +453,7 @@ struct CompactSettingRow<Content: View>: View {
 }
 
 private struct ConsoleControlLabelKey: EnvironmentKey {
-    static let defaultValue = "Trigger type"
+    static let defaultValue = String(localized: "Trigger type")
 }
 
 private extension EnvironmentValues {
@@ -533,7 +533,7 @@ struct ConsoleSegmentedControl<Value: Hashable>: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel(groupLabel)
-        .accessibilityValue(options.first { $0.value == selection }?.label ?? "No selection")
+        .accessibilityValue(options.first { $0.value == selection }?.label ?? String(localized: "No selection"))
     }
 
     /// One background, drawn behind the selected segment only, so it can move between them.

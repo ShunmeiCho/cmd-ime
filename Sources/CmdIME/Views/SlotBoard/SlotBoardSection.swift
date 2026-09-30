@@ -42,10 +42,10 @@ struct SlotBoardSection: View {
                 .accessibilitySortPriority(2)
                 VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
                     HStack(spacing: DesignTokens.Layout.rowGap) {
-                        SectionLabel("Slots")
+                        SectionLabel(String(localized: "Slots"))
                         Spacer(minLength: 0)
                         AddSlotMenu(sources: model.unassignedSources, onAdd: add, onOpenSettings: showKeyboardSettings)
-                        ConsoleMenuButton(title: "Manage") {
+                        ConsoleMenuButton(title: String(localized: "Manage")) {
                             Button("Reset to Detected") {
                                 guard commitPendingRename() else { return }
                                 showsResetConfirmation = true
@@ -88,8 +88,8 @@ struct SlotBoardSection: View {
                 case let .failed(reason): announce(reason)
                 case let .removed(name):
                     undoSlotName = name
-                    announce("Removed slot \(name). Undo available.")
-                case let .found(_, name): announce("Found \(name). Add Slot available.")
+                    announce(String(localized: "Removed slot \(name). Undo available."))
+                case let .found(_, name): announce(String(localized: "Found \(name). Add Slot available."))
                 }
                 // Drag rejection must not scroll the board under the held pointer.
                 guard drag.payload == nil else { return }
@@ -134,7 +134,7 @@ struct SlotBoardSection: View {
             if reduced { beginPulse(generation: seatGeneration) }
         }
         .confirmationDialog(
-            "Rebuild slots from installed input sources?",
+            String(localized: "Rebuild slots from installed input sources?"),
             isPresented: $showsResetConfirmation,
             titleVisibility: .visible
         ) {
@@ -167,7 +167,7 @@ struct SlotBoardSection: View {
                 if succeeded {
                     renamingSlotID = nil
                     pendingRenameCommit = nil
-                    announce("Renamed slot \(model.config.displayName(for: slot.id)).")
+                    announce(String(localized: "Renamed slot \(model.config.displayName(for: slot.id))."))
                 } else {
                     announce(model.slotNotices[slot.id] ?? model.statusText)
                 }
@@ -260,7 +260,7 @@ struct SlotBoardSection: View {
         let source = model.matchedSource(for: slot.id)
         var reason: String?
         if let source, case let .owned(owner) = model.sourceUsage(of: source), owner != slot.id {
-            reason = "Already pinned to \(model.config.displayName(for: owner)). Choose another input source."
+            reason = String(localized: "Already pinned to \(model.config.displayName(for: owner)). Choose another input source.")
         }
         return SlotMatchNotice(slotName: slot.name, explanation: explanation, preferredName: preferredName,
                                pinUnavailableReason: reason) {
@@ -292,12 +292,12 @@ struct SlotBoardSection: View {
             return model.config.slot(id) == nil ? SlotError.unknownSlot(id).localizedDescription : nil
         case let .source(id):
             guard let source = model.selectableSources.first(where: { $0.id == id }) else {
-                return "This input source is no longer available."
+                return String(localized: "This input source is no longer available.")
             }
             switch model.sourceUsage(of: source) {
             case .available: return nil
-            case let .owned(owner): return "Already in slot \(model.config.displayName(for: owner))"
-            case let .resolved(owner, _): return "Fallback for \(model.config.displayName(for: owner))"
+            case let .owned(owner): return String(localized: "Already in slot \(model.config.displayName(for: owner))")
+            case let .resolved(owner, _): return String(localized: "Fallback for \(model.config.displayName(for: owner))")
             }
         }
     }
@@ -314,7 +314,7 @@ struct SlotBoardSection: View {
             model.moveSlot(id, toFinalIndex: index)
             guard model.config.slots == expected else { return false }
             if source != index {
-                announce("\(model.config.displayName(for: id)) moved to position \(min(index + 1, expected.count)) of \(expected.count).")
+                announce(String(localized: "\(model.config.displayName(for: id)) moved to position \(min(index + 1, expected.count)) of \(expected.count)."))
             }
             return true
         case let .source(id):
@@ -327,7 +327,7 @@ struct SlotBoardSection: View {
             resetDrafts()
             focusedSlotID = added
             if !drag.isForcingCompletion { seat(added, waitForLayout: !drag.reduceMotion) }
-            announce("Added slot \(model.config.displayName(for: added)) at position \(index + 1) of \(model.config.slots.count).")
+            announce(String(localized: "Added slot \(model.config.displayName(for: added)) at position \(index + 1) of \(model.config.slots.count)."))
             return true
         }
     }
@@ -355,8 +355,8 @@ struct SlotBoardSection: View {
         focusedSlotID = id
         revealRequest = (id, UUID())
         let position = (model.config.slots.firstIndex(where: { $0.id == id }) ?? 0) + 1
-        let trigger = model.bindingText(for: id)
-        announce("Added slot \(model.config.displayName(for: id)) at position \(position) of \(model.config.slots.count). Trigger \(trigger.isEmpty ? "not assigned" : trigger).")
+        let trigger = model.trigger(for: id)?.localizedDisplayName ?? ""
+        announce(String(localized: "Added slot \(model.config.displayName(for: id)) at position \(position) of \(model.config.slots.count). Trigger \(trigger.isEmpty ? String(localized: "not assigned") : trigger)."))
     }
 
     private func move(_ id: InputRole, by offset: Int) {
@@ -366,7 +366,7 @@ struct SlotBoardSection: View {
         guard before != model.config.slots else { return }
         seat(id)
         let position = (model.config.slots.firstIndex(where: { $0.id == id }) ?? 0) + 1
-        announce("\(model.config.displayName(for: id)) moved to position \(position) of \(model.config.slots.count).")
+        announce(String(localized: "\(model.config.displayName(for: id)) moved to position \(position) of \(model.config.slots.count)."))
     }
 
     private func remove(_ id: InputRole) {
@@ -385,7 +385,7 @@ struct SlotBoardSection: View {
             focusedSlotID = restored.id
             seat(restored.id)
             if case .rejected = model.boardNotice { return }
-            announce("Restored slot \(restored.name).")
+            announce(String(localized: "Restored slot \(restored.name)."))
         }
     }
 
@@ -438,7 +438,7 @@ private struct AddSlotMenu: View {
     let onOpenSettings: () -> Void
 
     var body: some View {
-        ConsoleMenuButton(title: "Add Slot", systemImage: "plus") {
+        ConsoleMenuButton(title: String(localized: "Add Slot"), systemImage: "plus") {
             if sources.isEmpty {
                 Button("All input sources are in slots") {}.disabled(true)
                 Button("Open Keyboard Settings…", action: onOpenSettings)
@@ -451,6 +451,6 @@ private struct AddSlotMenu: View {
         }
         .fixedSize()
         .accessibilityLabel("Add slot from input sources")
-        .accessibilityValue(sources.isEmpty ? "All input sources are in slots" : "\(sources.count) available input sources")
+        .accessibilityValue(sources.isEmpty ? String(localized: "All input sources are in slots") : String(localized: "\(sources.count) available input sources"))
     }
 }

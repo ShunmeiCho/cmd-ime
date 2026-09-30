@@ -43,8 +43,8 @@ enum UpdateNotification {
         // Denied: the settings window still shows the update the next time it opens.
         guard (try? await center.requestAuthorization(options: [.alert])) == true else { return false }
         let content = UNMutableNotificationContent()
-        content.title = "CmdIME \(version) is available"
-        content.body = "Click to open CmdIME and update."
+        content.title = String(localized: "CmdIME \(version) is available")
+        content.body = String(localized: "Click to open CmdIME and update.")
         return (try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))) != nil
     }
 }

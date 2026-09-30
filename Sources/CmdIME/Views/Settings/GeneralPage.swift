@@ -10,11 +10,11 @@ struct GeneralPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
-            CompactSection(title: "General") { startupRows }
-            CompactSection(title: "Updates") { updateRows }
-            CompactSection(title: "Setup guide") { setupGuideRow }
-            CompactSection(title: "Settings file") { settingsFileRows }
-            CompactSection(title: "Running in the background") { quitRows }
+            CompactSection(title: String(localized: "General")) { startupRows }
+            CompactSection(title: String(localized: "Updates")) { updateRows }
+            CompactSection(title: String(localized: "Setup guide")) { setupGuideRow }
+            CompactSection(title: String(localized: "Settings file")) { settingsFileRows }
+            CompactSection(title: String(localized: "Running in the background")) { quitRows }
         }
         .buttonStyle(ConsoleButtonStyle())
         .font(DesignTokens.Typography.body)
@@ -71,7 +71,7 @@ struct GeneralPage: View {
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: DesignTokens.Layout.rowGap)
-                Button(model.updateStatus.isChecking ? "Checking…" : "Check") { model.checkForUpdates() }
+                Button(model.updateStatus.isChecking ? String(localized: "Checking…") : String(localized: "Check")) { model.checkForUpdates() }
                     .disabled(model.updateStatus.isChecking)
                     .fixedSize()
             }
@@ -180,8 +180,8 @@ struct GeneralPage: View {
     private func exportSettings() {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = model.suggestedExportName
-        panel.message = "CmdIME saves your settings in a new folder with this name."
-        panel.prompt = "Export"
+        panel.message = String(localized: "CmdIME saves your settings in a new folder with this name.")
+        panel.prompt = String(localized: "Export")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         model.exportSettings(to: url)
     }
@@ -191,19 +191,17 @@ struct GeneralPage: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a folder made by Export Settings."
-        panel.prompt = "Import"
+        panel.message = String(localized: "Choose a folder made by Export Settings.")
+        panel.prompt = String(localized: "Import")
         guard panel.runModal() == .OK, let folder = panel.url,
               let plan = model.inspectSettingsImport(folder) else { return }
 
         let alert = NSAlert()
-        alert.messageText = "Replace your settings with the ones in \"\(folder.lastPathComponent)\"?"
-        let recipes = plan.includesActivationRecipes ? ", activation recipes" : ""
-        alert.informativeText = "It has \(plan.config.slots.count) slot(s), \(plan.themeFileNames.count) theme(s), "
-            + "\(plan.fontFileNames.count) font(s)\(recipes). Your current settings are copied to a backup folder first "
-            + "and take effect again if you import that folder."
-        alert.addButton(withTitle: "Import")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "Replace your settings with the ones in \"\(folder.lastPathComponent)\"?")
+        let recipes = plan.includesActivationRecipes ? String(localized: ", activation recipes") : ""
+        alert.informativeText = String(localized: "It has \(plan.config.slots.count) slot(s), \(plan.themeFileNames.count) theme(s), \(plan.fontFileNames.count) font(s)\(recipes). Your current settings are copied to a backup folder first and take effect again if you import that folder.")
+        alert.addButton(withTitle: String(localized: "Import"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         model.importSettings(from: folder)
     }

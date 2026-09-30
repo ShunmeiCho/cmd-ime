@@ -74,9 +74,9 @@ struct AppPickerColumn: View {
 
     private var note: String? {
         if isSearching {
-            return apps.isEmpty ? "No app matches." : nil
+            return apps.isEmpty ? String(localized: "No app matches.") : nil
         }
-        return apps.isEmpty ? "Every running app has a rule. Search to find others." : "Running apps. Search to find others."
+        return apps.isEmpty ? String(localized: "Every running app has a rule. Search to find others.") : String(localized: "Running apps. Search to find others.")
     }
 }
 

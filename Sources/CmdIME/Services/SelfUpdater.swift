@@ -19,18 +19,18 @@ enum SelfUpdateError: Error, LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notInstalledAsApp: "This copy is not an app bundle, so it cannot replace itself."
-        case let .locationNotWritable(path): "CmdIME cannot write to \(path). Update with the install command instead."
-        case let .unknownVersion(version): "\"\(version)\" is not a release version."
-        case let .downloadFailed(reason): "The download failed: \(reason)"
-        case .checksumUnavailable: "The release has no published checksum, so the download was not installed."
+        case .notInstalledAsApp: String(localized: "This copy is not an app bundle, so it cannot replace itself.")
+        case let .locationNotWritable(path): String(localized: "CmdIME cannot write to \(path). Update with the install command instead.")
+        case let .unknownVersion(version): String(localized: "\"\(version)\" is not a release version.")
+        case let .downloadFailed(reason): String(localized: "The download failed: \(reason)")
+        case .checksumUnavailable: String(localized: "The release has no published checksum, so the download was not installed.")
         case let .checksumMismatch(expected, actual):
-            "Checksum mismatch (expected \(expected.prefix(12))…, got \(actual.prefix(12))…). Nothing was installed."
-        case .unpackFailed: "The downloaded archive could not be unpacked."
-        case .signatureInvalid: "The downloaded app's code signature is not valid. Nothing was installed."
-        case .signedByAnotherTeam: "The downloaded app is signed by a different developer. Nothing was installed."
-        case let .wrongVersion(found): "The archive contains version \(found), not the one requested."
-        case let .replaceFailed(reason): "The app could not be replaced: \(reason)"
+            String(localized: "Checksum mismatch (expected \(String(expected.prefix(12)))…, got \(String(actual.prefix(12)))…). Nothing was installed.")
+        case .unpackFailed: String(localized: "The downloaded archive could not be unpacked.")
+        case .signatureInvalid: String(localized: "The downloaded app's code signature is not valid. Nothing was installed.")
+        case .signedByAnotherTeam: String(localized: "The downloaded app is signed by a different developer. Nothing was installed.")
+        case let .wrongVersion(found): String(localized: "The archive contains version \(found), not the one requested.")
+        case let .replaceFailed(reason): String(localized: "The app could not be replaced: \(reason)")
         }
     }
 }
@@ -44,6 +44,14 @@ enum SelfUpdater {
         case downloading = "Downloading…"
         case verifying = "Verifying…"
         case installing = "Installing…"
+
+        var displayName: String {
+            switch self {
+            case .downloading: String(localized: "Downloading…")
+            case .verifying: String(localized: "Verifying…")
+            case .installing: String(localized: "Installing…")
+            }
+        }
     }
 
     static var canUpdateInPlace: Bool {
@@ -80,7 +88,7 @@ enum SelfUpdater {
             checksumText = String(decoding: checksumData, as: UTF8.self)
             let (downloaded, response) = try await URLSession.shared.download(from: urls.zip)
             guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                throw SelfUpdateError.downloadFailed("the server answered \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+                throw SelfUpdateError.downloadFailed(String(localized: "the server answered \((response as? HTTPURLResponse)?.statusCode ?? 0)"))
             }
             try FileManager.default.moveItem(at: downloaded, to: zipURL)
         } catch let error as SelfUpdateError {

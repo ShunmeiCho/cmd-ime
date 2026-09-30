@@ -84,15 +84,15 @@ public enum SlotError: Error, Equatable, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .sourceAlreadyUsed: "This input source is already preferred by another slot."
-        case .lastSlot: "The last slot cannot be removed."
-        case .invalidName: "A slot name cannot be empty."
-        case .duplicateName: "Another slot already uses this name. Choose a different name."
-        case let .invalidTintHex(input): "Invalid slot color \(input.debugDescription). Use six hexadecimal digits, such as #4D8CFF."
-        case let .unknownSlot(id): "Unknown slot \"\(id.rawValue)\"."
-        case let .slotAlreadyExists(id): "Slot \"\(id.rawValue)\" already exists."
-        case .invalidSource: "Choose a selectable input source."
-        case let .invalidSymbol(input): "Invalid slot symbol \(input.debugDescription). Use one or two characters."
+        case .sourceAlreadyUsed: CoreLocalization.text("This input source is already preferred by another slot.")
+        case .lastSlot: CoreLocalization.text("The last slot cannot be removed.")
+        case .invalidName: CoreLocalization.text("A slot name cannot be empty.")
+        case .duplicateName: CoreLocalization.text("Another slot already uses this name. Choose a different name.")
+        case let .invalidTintHex(input): CoreLocalization.text("Invalid slot color %@. Use six hexadecimal digits, such as #4D8CFF.", String(describing: input.debugDescription))
+        case let .unknownSlot(id): CoreLocalization.text("Unknown slot \"%@\".", String(describing: id.rawValue))
+        case let .slotAlreadyExists(id): CoreLocalization.text("Slot \"%@\" already exists.", String(describing: id.rawValue))
+        case .invalidSource: CoreLocalization.text("Choose a selectable input source.")
+        case let .invalidSymbol(input): CoreLocalization.text("Invalid slot symbol %@. Use one or two characters.", String(describing: input.debugDescription))
         }
     }
 }

@@ -39,9 +39,9 @@ public enum UpdateCheckFrequency: String, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .sixHours: "6 hours"
-        case .daily: "Daily"
-        case .weekly: "Weekly"
+        case .sixHours: CoreLocalization.text("6 hours")
+        case .daily: CoreLocalization.text("Daily")
+        case .weekly: CoreLocalization.text("Weekly")
         }
     }
 }

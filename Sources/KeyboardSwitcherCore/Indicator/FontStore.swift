@@ -17,12 +17,12 @@ public enum FontStoreError: Error, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .unsupportedType: "Only .ttf, .otf and .ttc files can be imported."
-        case .tooLarge: "This font file is larger than \(FontStore.maxFileBytes / (1024 * 1024)) MB."
-        case let .invalidName(name): "\(name.debugDescription) cannot be used as a font file name."
-        case let .notFound(name): "The font file \(name.debugDescription) was not found."
-        case let .copyFailed(reason): "Could not copy the font: \(reason)"
-        case let .removeFailed(reason): "Could not remove the font: \(reason)"
+        case .unsupportedType: CoreLocalization.text("Only .ttf, .otf and .ttc files can be imported.")
+        case .tooLarge: CoreLocalization.text("This font file is larger than %@ MB.", String(describing: FontStore.maxFileBytes / (1024 * 1024)))
+        case let .invalidName(name): CoreLocalization.text("%@ cannot be used as a font file name.", String(describing: name.debugDescription))
+        case let .notFound(name): CoreLocalization.text("The font file %@ was not found.", String(describing: name.debugDescription))
+        case let .copyFailed(reason): CoreLocalization.text("Could not copy the font: %@", String(describing: reason))
+        case let .removeFailed(reason): CoreLocalization.text("Could not remove the font: %@", String(describing: reason))
         }
     }
 }

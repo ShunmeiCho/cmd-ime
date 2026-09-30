@@ -45,7 +45,7 @@ struct SlotCard: View {
                 dragHandle.accessibilityHidden(true)
                 Button { openColor() } label: {
                     RoleBadge(role: slot.id, symbol: presentation.symbol, size: 31, isActive: isActive)
-                        .accessibilityValue(isActive ? "Current" : "Available")
+                        .accessibilityValue(isActive ? String(localized: "Current") : String(localized: "Available"))
                 }
                 // The badge tile is the control; a second chrome box around it read as a nested frame.
                 .buttonStyle(SlotBadgeButtonStyle())
@@ -165,11 +165,11 @@ struct SlotCard: View {
     }
 
     private var accessibilityStatus: String {
-        var values = [isActive ? "Current" : "Not current"]
-        if source == nil { values.append("Not matched") }
-        if sourceStatus == .duplicate { values.append("Duplicate") }
-        if sourceStatus == .sourceMissing { values.append("Source missing") }
-        if !hasTrigger { values.append("No trigger yet - record one") }
+        var values = [isActive ? String(localized: "Current") : String(localized: "Not current")]
+        if source == nil { values.append(String(localized: "Not matched")) }
+        if sourceStatus == .duplicate { values.append(String(localized: "Duplicate")) }
+        if sourceStatus == .sourceMissing { values.append(String(localized: "Source missing")) }
+        if !hasTrigger { values.append(String(localized: "No trigger yet - record one")) }
         if let warning { values.append(warning) }
         return values.joined(separator: ", ")
     }
@@ -247,7 +247,7 @@ private struct SlotMenuItems: View {
         Divider()
         Button("Remove Slot", role: .destructive, action: onRemove)
             .disabled(count <= 1)
-            .help(count <= 1 ? (SlotError.lastSlot.errorDescription ?? "Keep at least one slot.") : "Remove this slot")
+            .help(count <= 1 ? (SlotError.lastSlot.errorDescription ?? String(localized: "Keep at least one slot.")) : String(localized: "Remove this slot"))
     }
 }
 
@@ -420,7 +420,7 @@ private extension View {
 
 extension SlotBoardSection {
     func inputSourcePicker(for role: InputRole, source: InputSourceInfo?, isGhost: Bool = false) -> some View {
-        ConsoleMenuButton(title: source?.localizedName ?? "Choose input source",
+        ConsoleMenuButton(title: source?.localizedName ?? String(localized: "Choose input source"),
                           tint: SlotLook(slots: model.config.slots).tint(for: role),
                           warning: source == nil) {
             if source == nil {
@@ -437,7 +437,7 @@ extension SlotBoardSection {
             }
         }
         .disabled(isGhost)
-        .help(source?.localizedName ?? "Choose input source")
+        .help(source?.localizedName ?? String(localized: "Choose input source"))
     }
 }
 

@@ -1,3 +1,4 @@
+import Foundation
 import KeyboardSwitcherCore
 
 extension AppModel {
@@ -7,7 +8,7 @@ extension AppModel {
     func setSwitchIndicatorThemeID(_ id: String?) {
         config.switchIndicatorThemeID = id
         save()
-        statusText = "Switch indicator theme set to \(indicatorLibrary.theme(id: id).name)"
+        statusText = String(localized: "Switch indicator theme set to \(indicatorLibrary.theme(id: id).localizedDisplayName)")
     }
 
     /// Applies a change to when the indicator appears and how long it stays.
@@ -24,7 +25,7 @@ extension AppModel {
         do {
             config = try config.settingSlotSymbol(symbol, for: id)
             save()
-            statusText = "Updated symbol for \(config.displayName(for: id))"
+            statusText = String(localized: "Updated symbol for \(config.displayName(for: id))")
             return nil
         } catch {
             return error.localizedDescription

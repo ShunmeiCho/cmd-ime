@@ -35,14 +35,14 @@ public enum IndicatorThemeIssue: Error, Equatable, Sendable {
 
     public var message: String {
         switch self {
-        case let .unreadable(reason): "The theme could not be read: \(reason)"
-        case .notJSON: "The file is not valid JSON."
-        case let .unsupportedSchema(version): "Theme schema \(version) is not supported by this version of CmdIME."
-        case let .invalidHex(key, value): "\(key) must be a colour such as #2148B8, not \(value.debugDescription)."
-        case let .unknownValue(key, value): "\(key) has the unknown value \(value.debugDescription)."
-        case let .incompatible(key, other): "This \(key) cannot be combined with this \(other)."
-        case let .reservedID(id): "The id \(id.debugDescription) is reserved for built-in themes."
-        case let .duplicateID(id): "Another theme already uses the id \(id.debugDescription)."
+        case let .unreadable(reason): CoreLocalization.text("The theme could not be read: %@", String(describing: reason))
+        case .notJSON: CoreLocalization.text("The file is not valid JSON.")
+        case let .unsupportedSchema(version): CoreLocalization.text("Theme schema %@ is not supported by this version of CmdIME.", String(describing: version))
+        case let .invalidHex(key, value): CoreLocalization.text("%@ must be a colour such as #2148B8, not %@.", String(describing: key), String(describing: value.debugDescription))
+        case let .unknownValue(key, value): CoreLocalization.text("%@ has the unknown value %@.", String(describing: key), String(describing: value.debugDescription))
+        case let .incompatible(key, other): CoreLocalization.text("This %@ cannot be combined with this %@.", String(describing: key), String(describing: other))
+        case let .reservedID(id): CoreLocalization.text("The id %@ is reserved for built-in themes.", String(describing: id.debugDescription))
+        case let .duplicateID(id): CoreLocalization.text("Another theme already uses the id %@.", String(describing: id.debugDescription))
         }
     }
 }
@@ -174,7 +174,7 @@ extension IndicatorTheme {
     /// malformed colour or an impossible combination rejects the file with a named issue.
     public static func decoding(_ data: Data, fileName: String) -> Result<IndicatorTheme, IndicatorThemeIssue> {
         guard data.count <= maxFileBytes else {
-            return .failure(.unreadable("the file is larger than \(maxFileBytes / 1024) KB"))
+            return .failure(.unreadable(CoreLocalization.text("the file is larger than %@ KB", String(describing: maxFileBytes / 1024))))
         }
         guard (try? JSONSerialization.jsonObject(with: data)) is [String: Any] else { return .failure(.notJSON) }
         let decoder = JSONDecoder()
@@ -184,10 +184,10 @@ extension IndicatorTheme {
         } catch let issue as IndicatorThemeIssue {
             return .failure(issue)
         } catch let DecodingError.keyNotFound(key, _) {
-            return .failure(.unreadable("\(key.stringValue) is missing"))
+            return .failure(.unreadable(CoreLocalization.text("%@ is missing", String(describing: key.stringValue))))
         } catch let DecodingError.typeMismatch(_, context), let DecodingError.valueNotFound(_, context) {
             let path = context.codingPath.map(\.stringValue).joined(separator: ".")
-            return .failure(.unreadable("\(path) has the wrong type"))
+            return .failure(.unreadable(CoreLocalization.text("%@ has the wrong type", String(describing: path))))
         } catch {
             return .failure(.unreadable(error.localizedDescription))
         }
@@ -202,7 +202,7 @@ extension IndicatorTheme {
             .map { URL(fileURLWithPath: $0).deletingPathExtension().lastPathComponent }
         let rawID = try container.decodeIfPresent(String.self, forKey: .id) ?? fileStem ?? ""
         guard !rawID.lowercased().hasPrefix(Self.builtInPrefix) else { throw IndicatorThemeIssue.reservedID(rawID) }
-        guard let id = Self.sanitizedID(rawID) else { throw IndicatorThemeIssue.unreadable("id is empty") }
+        guard let id = Self.sanitizedID(rawID) else { throw IndicatorThemeIssue.unreadable(CoreLocalization.text("id is empty")) }
 
         let archetype: BubbleArchetype = try container.indicatorValue(forKey: .archetype) ?? .tileTwoLine
         let surface: IndicatorSurface = try container.indicatorValue(forKey: .surface) ?? .glass

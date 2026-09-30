@@ -36,11 +36,25 @@ enum SettingsTransferMessage: Equatable {
 final class AppModel: ObservableObject {
     @Published var config: SwitcherConfig
     @Published var sources: [InputSourceInfo] = []
-    @Published var statusText = "Ready"
+    @Published var statusText = String(localized: "Ready")
     @Published var isListening = false
     @Published var activeRole: InputRole?
     let triggeredSwitches = SetupTriggerEvents()
-    @Published var keyboardControlStatus = "Starting"
+    // Keep machine/report state in English; only the presentation is localized.
+    @Published private var keyboardControlState = "Starting"
+    var isKeyboardControlPaused: Bool { keyboardControlState == "Paused" }
+
+    var keyboardControlStatus: String {
+        switch keyboardControlState {
+        case "Starting": String(localized: "Starting")
+        case "Needs permission": String(localized: "Needs permission")
+        case "Paused": String(localized: "Paused")
+        case "Active": String(localized: "Active")
+        case "Failed": String(localized: "Failed")
+        default: keyboardControlState
+        }
+    }
+
     @Published var permissions = MacPermissionStatus.current()
     @Published var loginItem = LoginItemService().snapshot()
     @Published var updateStatus: UpdateStatus
@@ -154,21 +168,20 @@ final class AppModel: ObservableObject {
             initialConfig = result.config
             isFirstRun = result.isFirstRun
             if let backupURL = result.recoveredBackupURL {
-                recoveryMessage = "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults."
+                recoveryMessage = String(localized: "Config was unreadable; backed it up to \(backupURL.lastPathComponent) and reset to defaults.")
             } else if result.config.unreadableBindingCount > 0 {
                 // A config written by a newer CmdIME, or a binding for an action since removed
                 // (pinyin recovery, after 0.8.3). Everything else was kept, but the user has to
                 // hear that a shortcut of theirs is not going to fire.
                 let count = result.config.unreadableBindingCount
-                recoveryMessage = "\(count) shortcut\(count == 1 ? "" : "s") in your config "
-                    + "\(count == 1 ? "uses an action" : "use actions") this version does not have "
-                    + "(from a newer CmdIME, or since removed) and \(count == 1 ? "is" : "are") not active. "
-                    + "Everything else was kept."
+                recoveryMessage = count == 1
+                    ? String(localized: "1 shortcut in your config uses an action this version does not have (from a newer CmdIME, or since removed) and is not active. Everything else was kept.")
+                    : String(localized: "\(count) shortcuts in your config use actions this version does not have (from a newer CmdIME, or since removed) and are not active. Everything else was kept.")
             }
         } catch {
             // A config file exists but could not be moved aside: not a first run.
             initialConfig = SwitcherConfig.default.completingSetup()
-            recoveryMessage = "Could not read config: \(error.localizedDescription). Using defaults."
+            recoveryMessage = String(localized: "Could not read config: \(error.localizedDescription). Using defaults.")
         }
 
         self.isFreshConfig = isFirstRun
@@ -181,7 +194,7 @@ final class AppModel: ObservableObject {
                 do {
                     try configStore.save(config)
                 } catch {
-                    recoveryMessage = "Could not save detected slots: \(error.localizedDescription)"
+                    recoveryMessage = String(localized: "Could not save detected slots: \(error.localizedDescription)")
                 }
             } else {
                 recoveryMessage = statusText
@@ -206,10 +219,10 @@ final class AppModel: ObservableObject {
             return
         case let .unreadable(reason):
             // Kept as is: a later save here copies the file aside before replacing it.
-            statusText = "config.json changed but could not be read (\(reason)). Keeping the current settings."
+            statusText = String(localized: "config.json changed but could not be read (\(reason)). Keeping the current settings.")
         case let .apply(next):
             applyConfigFromDisk(next)
-            statusText = "Applied the changes made to config.json"
+            statusText = String(localized: "Applied the changes made to config.json")
         }
     }
 
@@ -235,14 +248,13 @@ final class AppModel: ObservableObject {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
-        return "CmdIME Settings \(formatter.string(from: Date()))"
+        return String(localized: "CmdIME Settings \(formatter.string(from: Date()))")
     }
 
     func exportSettings(to destination: URL) {
         do {
             let plan = try SettingsTransfer(store: configStore).export(to: destination)
-            statusText = "Exported settings with \(plan.themeFileNames.count) theme(s) and "
-                + "\(plan.fontFileNames.count) font(s) to \(destination.lastPathComponent)"
+            statusText = String(localized: "Exported settings with \(plan.themeFileNames.count) theme(s) and \(plan.fontFileNames.count) font(s) to \(destination.lastPathComponent)")
             settingsTransferMessage = .done(statusText)
         } catch {
             reportSettingsTransferFailure(error)
@@ -264,12 +276,12 @@ final class AppModel: ObservableObject {
         do {
             let result = try SettingsTransfer(store: configStore).importSettings(from: folder)
             applyConfigFromDisk(result.config)
-            var message = "Imported settings from \(folder.lastPathComponent)."
+            var message = String(localized: "Imported settings from \(folder.lastPathComponent).")
             if let backup = result.backupURL {
-                message += " The previous ones are in \(backup.deletingLastPathComponent().lastPathComponent)/\(backup.lastPathComponent)."
+                message += String(localized: " The previous ones are in \(backup.deletingLastPathComponent().lastPathComponent)/\(backup.lastPathComponent).")
             }
             if result.plan.config.unreadableBindingCount > 0 {
-                message += " \(result.plan.config.unreadableBindingCount) trigger(s) use an action this version does not have and were left out."
+                message += String(localized: " \(result.plan.config.unreadableBindingCount) trigger(s) use an action this version does not have and were left out.")
             }
             statusText = message
             settingsTransferMessage = .done(message)
@@ -286,7 +298,7 @@ final class AppModel: ObservableObject {
             appVersion: Self.currentVersion,
             build: Bundle.main.infoDictionary?["CFBundleVersion"] as? String,
             macOSVersion: ProcessInfo.processInfo.operatingSystemVersion,
-            keyboardControl: keyboardControlStatus,
+            keyboardControl: keyboardControlState,
             accessibilityGranted: permissions.accessibilityGranted,
             inputMonitoringGranted: permissions.inputMonitoringGranted
         )
@@ -298,7 +310,7 @@ final class AppModel: ObservableObject {
         )
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(summary + "\n\n" + report.text, forType: .string)
-        statusText = "Copied diagnostics to the clipboard"
+        statusText = String(localized: "Copied diagnostics to the clipboard")
     }
 
     func revealSettingsBackups() {
@@ -380,7 +392,7 @@ final class AppModel: ObservableObject {
             monitor?.updateConfig(config)
         }
         refreshCurrentRole()
-        statusText = "Found \(sources.count) input sources"
+        statusText = String(localized: "Found \(sources.count) input sources")
         // Refresh is also when an edited recipes file is picked up.
         loadActivationRecipes()
     }
@@ -405,8 +417,8 @@ final class AppModel: ObservableObject {
             apply(scanned: result.sources, isFreshSnapshot: result.fallbackReason == nil)
             guard announce else { return true }
             sourceRefreshMessage = result.fallbackReason == nil
-                ? "Updated - \(selectableSources.count) input sources"
-                : "Listed \(selectableSources.count) input sources; removed ones may linger until relaunch"
+                ? String(localized: "Updated - \(selectableSources.count) input sources")
+                : String(localized: "Listed \(selectableSources.count) input sources; removed ones may linger until relaunch")
             refreshMessageTask = Task { [weak self] in
                 do { try await Task.sleep(nanoseconds: 3_000_000_000) }
                 catch { return }
@@ -446,9 +458,9 @@ final class AppModel: ObservableObject {
         permissions = MacPermissionStatus.current()
         loginItem = loginItems.snapshot()
         isSystemPerDocumentSwitchingOn = SystemInputSourceSettings.isPerDocumentSwitchingOn()
-        if !isListening, permissions.isReady, keyboardControlStatus == "Needs permission" {
-            keyboardControlStatus = "Paused"
-            statusText = "Permissions ready. Click Resume to start keyboard control."
+        if !isListening, permissions.isReady, keyboardControlState == "Needs permission" {
+            keyboardControlState = "Paused"
+            statusText = String(localized: "Permissions ready. Click Resume to start keyboard control.")
         }
     }
 
@@ -459,12 +471,12 @@ final class AppModel: ObservableObject {
 
     func openAccessibilitySettings() {
         openPrivacySettings(anchor: "Privacy_Accessibility")
-        statusText = "Opened Accessibility settings"
+        statusText = String(localized: "Opened Accessibility settings")
     }
 
     func openInputMonitoringSettings() {
         openPrivacySettings(anchor: "Privacy_ListenEvent")
-        statusText = "Opened Input Monitoring settings"
+        statusText = String(localized: "Opened Input Monitoring settings")
     }
 
     private func openPrivacySettings(anchor: String) {
@@ -480,8 +492,8 @@ final class AppModel: ObservableObject {
         refreshRuntimeStatus()
         guard permissions.isReady else {
             isListening = false
-            keyboardControlStatus = "Needs permission"
-            statusText = "Grant permissions, then resume keyboard control"
+            keyboardControlState = "Needs permission"
+            statusText = String(localized: "Grant permissions, then resume keyboard control")
             return
         }
         startListening()
@@ -491,37 +503,39 @@ final class AppModel: ObservableObject {
         do {
             try loginItems.setEnabled(enabled)
             refreshRuntimeStatus()
-            statusText = enabled ? "Login item enabled" : "Login item disabled"
+            statusText = enabled ? String(localized: "Login item enabled") : String(localized: "Login item disabled")
         } catch {
             refreshRuntimeStatus()
             statusText = error.localizedDescription
-            boardNotice = .failed("Could not \(enabled ? "enable" : "disable") the login item. \(error.localizedDescription)")
+            boardNotice = .failed(enabled
+                ? String(localized: "Could not enable the login item. \(error.localizedDescription)")
+                : String(localized: "Could not disable the login item. \(error.localizedDescription)"))
         }
     }
 
     /// macOS 13 asks the user to approve a login item in System Settings; the switch
     /// stays off until they do.
     var loginItemNeedsApproval: Bool {
-        loginItem.isAvailable && !loginItem.isEnabled && loginItem.statusText == "Needs approval"
+        loginItem.isAvailable && !loginItem.isEnabled && loginItem.statusText == String(localized: "Needs approval")
     }
 
     func openLoginItemsSettings() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") else { return }
         NSWorkspace.shared.open(url)
-        statusText = "Opened Login Items settings"
+        statusText = String(localized: "Opened Login Items settings")
     }
 
     func setSwitchIndicatorVisible(_ visible: Bool) {
         config.showSwitchIndicator = visible
         save()
         indicatorOccasions.update()
-        statusText = visible ? "Switch indicator enabled" : "Switch indicator disabled"
+        statusText = visible ? String(localized: "Switch indicator enabled") : String(localized: "Switch indicator disabled")
     }
 
     func setCapsLockIndicatorVisible(_ visible: Bool) {
         config.showCapsLockIndicator = visible
         save()
-        statusText = visible ? "Caps Lock indicator enabled" : "Caps Lock indicator disabled"
+        statusText = visible ? String(localized: "Caps Lock indicator enabled") : String(localized: "Caps Lock indicator disabled")
     }
 
     var peekTrigger: KeyTrigger? { config.peekBinding?.trigger }
@@ -534,11 +548,11 @@ final class AppModel: ObservableObject {
             if next != config {
                 guard commit(next) else { return statusText }
             }
-            statusText = trigger.map { "\(SwitcherConfig.peekDisplayName): \($0.displayName)" }
-                ?? "Removed the \(SwitcherConfig.peekDisplayName) trigger"
+            statusText = trigger.map { String(localized: "\(SwitcherConfig.peekDisplayName): \($0.localizedDisplayName)") }
+                ?? String(localized: "Removed the \(SwitcherConfig.peekDisplayName) trigger")
             return nil
         } catch .conflictingBinding(let binding) {
-            let reason = "\(binding.trigger.displayName) is already used by \(config.ownerDescription(of: binding))"
+            let reason = String(localized: "\(binding.trigger.localizedDisplayName) is already used by \(config.ownerDescription(of: binding))")
             statusText = reason
             return reason
         } catch {
@@ -550,14 +564,14 @@ final class AppModel: ObservableObject {
     func setRememberInputSourcePerApp(_ enabled: Bool) {
         config.rememberInputSourcePerApp = enabled
         save()
-        statusText = enabled ? "Remembering the input source per app" : "No longer remembering input sources per app"
+        statusText = enabled ? String(localized: "Remembering the input source per app") : String(localized: "No longer remembering input sources per app")
     }
 
     func setAppRule(_ rule: AppRule) {
         if commitFromAppsPage(config.setting(rule)) {
             reportAppRule(.done(rule.rememberInstead
-                ? "\(rule.name ?? rule.appID) remembers its input source"
-                : "Rule saved for \(rule.name ?? rule.appID)"))
+                ? String(localized: "\(rule.name ?? rule.appID) remembers its input source")
+                : String(localized: "Rule saved for \(rule.name ?? rule.appID)")))
         }
     }
 
@@ -572,8 +586,8 @@ final class AppModel: ObservableObject {
             if commitFromAppsPage(next) {
                 let appName = next.appRule(for: appID)?.name ?? appID
                 switch target {
-                case .keepAsIs: reportAppRule(.done("\(appName) keeps its input source"))
-                case .slot(let id): reportAppRule(.done("\(appName) now gets \(config.displayName(for: id))"))
+                case .keepAsIs: reportAppRule(.done(String(localized: "\(appName) keeps its input source")))
+                case .slot(let id): reportAppRule(.done(String(localized: "\(appName) now gets \(config.displayName(for: id))")))
                 }
             }
         }
@@ -581,13 +595,13 @@ final class AppModel: ObservableObject {
 
     /// A file dropped on the rule board that is not an app.
     func refuseNonAppDrop() {
-        reportAppRule(.refused("Only apps can get a rule."))
+        reportAppRule(.refused(String(localized: "Only apps can get a rule.")))
     }
 
     func removeAppRule(for appID: String) {
         let appName = config.appRule(for: appID)?.name ?? appID
         if commitFromAppsPage(config.removingAppRule(for: appID)) {
-            reportAppRule(.done("Rule removed for \(appName)"))
+            reportAppRule(.done(String(localized: "Rule removed for \(appName)")))
         }
     }
 
@@ -595,8 +609,8 @@ final class AppModel: ObservableObject {
         var next = config
         next.appDefaultSlot = slot
         if commitFromAppsPage(next) {
-            statusText = slot.map { "Apps without a rule start in \(config.displayName(for: $0))" }
-                ?? "Apps without a rule keep their input source"
+            statusText = slot.map { String(localized: "Apps without a rule start in \(config.displayName(for: $0))") }
+                ?? String(localized: "Apps without a rule keep their input source")
         }
     }
 
@@ -615,7 +629,7 @@ final class AppModel: ObservableObject {
     /// `commit` for edits made on the Apps page: a failed save is reported there.
     private func commitFromAppsPage(_ next: SwitcherConfig) -> Bool {
         commit(next) { [self] message in
-            reportAppRule(.failed("Could not save the change. \(message)"))
+            reportAppRule(.failed(String(localized: "Could not save the change. \(message)")))
         }
     }
 
@@ -623,7 +637,7 @@ final class AppModel: ObservableObject {
         var next = config
         next.restoreAfterPasswordField = enabled
         if commit(next) {
-            statusText = enabled ? "Switching back after password fields" : "No longer switching back after password fields"
+            statusText = enabled ? String(localized: "Switching back after password fields") : String(localized: "No longer switching back after password fields")
         }
     }
 
@@ -645,19 +659,19 @@ final class AppModel: ObservableObject {
         let clamped = SwitcherConfig.clampedSwitchIndicatorSizeFactor(factor)
         config.switchIndicatorSizeFactor = clamped
         save()
-        statusText = "Switch indicator size set to \(Int((clamped * 100).rounded()))%"
+        statusText = String(localized: "Switch indicator size set to \(Int((clamped * 100).rounded()))%")
     }
 
     func setSwitchIndicatorColorStyle(_ style: SwitchIndicatorColorStyle) {
         config.switchIndicatorColorStyle = style
         save()
-        statusText = "Switch indicator color set to \(style.displayName)"
+        statusText = String(localized: "Switch indicator color set to \(style.displayName)")
     }
 
     func setSwitchIndicatorContentStyle(_ style: SwitchIndicatorContentStyle) {
         config.switchIndicatorContentStyle = style
         save()
-        statusText = "Switch indicator display set to \(style.displayName)"
+        statusText = String(localized: "Switch indicator display set to \(style.displayName)")
     }
 
     var previewSlot: SwitchSlot? {
@@ -671,7 +685,7 @@ final class AppModel: ObservableObject {
 
         let currentVersion = Self.currentVersion
         updateStatus = .checking(currentVersion: currentVersion)
-        statusText = "Checking for updates"
+        statusText = String(localized: "Checking for updates")
 
         Task {
             do {
@@ -780,18 +794,18 @@ final class AppModel: ObservableObject {
     func installAvailableUpdate() {
         guard case let .available(result) = updateStatus, updateInstallStage == nil else { return }
         updateInstallError = nil
-        updateInstallStage = SelfUpdater.Stage.downloading.rawValue
+        updateInstallStage = SelfUpdater.Stage.downloading.displayName
         Task {
             do {
                 try await SelfUpdater.install(version: result.latestVersion) { [weak self] stage in
-                    self?.updateInstallStage = stage.rawValue
+                    self?.updateInstallStage = stage.displayName
                 }
-                updateInstallStage = "Restarting…"
+                updateInstallStage = String(localized: "Restarting…")
                 if AppRelauncher.scheduleReopenAfterExit() {
                     quit()
                 } else {
                     updateInstallStage = nil
-                    updateInstallError = "Updated. Quit CmdIME and open it again to use the new version."
+                    updateInstallError = String(localized: "Updated. Quit CmdIME and open it again to use the new version.")
                 }
             } catch {
                 updateInstallStage = nil
@@ -806,7 +820,7 @@ final class AppModel: ObservableObject {
             return
         }
         NSWorkspace.shared.open(url)
-        statusText = "Opened CmdIME release page"
+        statusText = String(localized: "Opened CmdIME release page")
     }
 
     func resetSlotsFromDetectedSources() {
@@ -819,10 +833,10 @@ final class AppModel: ObservableObject {
             reconcileNewSources()
             refreshCurrentRole()
             monitor?.updateConfig(rebuilt)
-            statusText = "Rebuilt \(rebuilt.slots.count) slots from installed input sources"
+            statusText = String(localized: "Rebuilt \(rebuilt.slots.count) slots from installed input sources")
         } catch {
             // Keep the live config and monitor untouched if backup or save fails.
-            statusText = "Could not rebuild slots: \(error.localizedDescription)"
+            statusText = String(localized: "Could not rebuild slots: \(error.localizedDescription)")
         }
     }
 
@@ -847,10 +861,10 @@ final class AppModel: ObservableObject {
         switch sourceUsage(of: source) {
         case .available: break
         case let .owned(owner):
-            reportBoardFailure("Already in slot \(config.displayName(for: owner))")
+            reportBoardFailure(String(localized: "Already in slot \(config.displayName(for: owner))"))
             return nil
         case let .resolved(owner, _):
-            reportBoardFailure("Fallback for \(config.displayName(for: owner))")
+            reportBoardFailure(String(localized: "Fallback for \(config.displayName(for: owner))"))
             return nil
         }
         do {
@@ -858,7 +872,7 @@ final class AppModel: ObservableObject {
             guard commit(added.config) else { return nil }
             invalidateUndo()
             boardNotice = nil
-            statusText = "Added slot \(added.slot.name)"
+            statusText = String(localized: "Added slot \(added.slot.name)")
             return added.slot.id
         } catch {
             reportBoardFailure(error.localizedDescription)
@@ -879,7 +893,7 @@ final class AppModel: ObservableObject {
         guard next.slots != config.slots, commit(next) else { return }
         invalidateUndo()
         boardNotice = nil
-        statusText = "Moved slot \(config.displayName(for: id))"
+        statusText = String(localized: "Moved slot \(config.displayName(for: id))")
     }
 
     @discardableResult
@@ -891,7 +905,7 @@ final class AppModel: ObservableObject {
                 invalidateUndo()
             }
             clearSlotNotice(for: id)
-            statusText = "Renamed slot to \(config.displayName(for: id))"
+            statusText = String(localized: "Renamed slot to \(config.displayName(for: id))")
             return true
         } catch {
             reportSlotFailure(error.localizedDescription, for: id)
@@ -908,7 +922,7 @@ final class AppModel: ObservableObject {
             if activeRole == id { activeRole = nil }
             clearSlotNotice(for: id)
             boardNotice = .removed(slotName: result.removed.slot.name)
-            statusText = "Removed slot \(result.removed.slot.name). Undo available."
+            statusText = String(localized: "Removed slot \(result.removed.slot.name). Undo available.")
         } catch {
             reportSlotFailure(error.localizedDescription, for: id)
         }
@@ -921,10 +935,10 @@ final class AppModel: ObservableObject {
             guard commit(restored.config) else { return }
             invalidateUndo()
             boardNotice = nil
-            statusText = "Restored slot \(removed.slot.name)"
+            statusText = String(localized: "Restored slot \(removed.slot.name)")
             if !restored.skippedBindings.isEmpty {
-                let triggers = restored.skippedBindings.map { $0.binding.trigger.displayName }.joined(separator: ", ")
-                let message = "Restored slot, but conflicting triggers were not restored: \(triggers)"
+                let triggers = restored.skippedBindings.map { $0.binding.trigger.localizedDisplayName }.joined(separator: ", ")
+                let message = String(localized: "Restored slot, but conflicting triggers were not restored: \(triggers)")
                 reportSlotFailure(message, for: removed.slot.id)
                 reportBoardFailure(message)
             }
@@ -961,7 +975,7 @@ final class AppModel: ObservableObject {
                 invalidateUndo()
             }
             clearSlotNotice(for: id)
-            statusText = "Updated tint for \(config.displayName(for: id))"
+            statusText = String(localized: "Updated tint for \(config.displayName(for: id))")
             return true
         } catch {
             reportSlotFailure(error.localizedDescription, for: id)
@@ -998,7 +1012,7 @@ final class AppModel: ObservableObject {
 
     func setInputSourceID(_ id: String, for role: InputRole) {
         guard let source = selectableSources.first(where: { $0.id == id }) else {
-            statusText = "Input source not found: \(id)"
+            statusText = String(localized: "Input source not found: \(id)")
             return
         }
 
@@ -1009,7 +1023,7 @@ final class AppModel: ObservableObject {
             if save() {
                 reconcileNewSources()
                 clearSlotNotice(for: role)
-                statusText = "Switch slot set to \(source.localizedName)"
+                statusText = String(localized: "Switch slot set to \(source.localizedName)")
             }
         } catch {
             reportSlotFailure(error.localizedDescription, for: role)
@@ -1022,8 +1036,8 @@ final class AppModel: ObservableObject {
 
     func inputSourceMenuTitle(_ source: InputSourceInfo, for role: InputRole) -> String {
         switch inputSourceSelection(source, for: role) {
-        case let .swap(other): "\(source.localizedName) — swap with \(config.displayName(for: other))"
-        case let .usedBy(other): "\(source.localizedName) — used by \(config.displayName(for: other))"
+        case let .swap(other): String(localized: "\(source.localizedName) — swap with \(config.displayName(for: other))")
+        case let .usedBy(other): String(localized: "\(source.localizedName) — used by \(config.displayName(for: other))")
         default: source.localizedName
         }
     }
@@ -1043,12 +1057,12 @@ final class AppModel: ObservableObject {
             monitor?.updateConfig(config)
             refreshCurrentRole()
             refreshAppMemory()
-            statusText = "Saved \(configStore.url.path)"
+            statusText = String(localized: "Saved \(configStore.url.path)")
             return true
         } catch {
             statusText = error.localizedDescription
             // Saving is what every control in the window ends in, so a failure has to be seen.
-            boardNotice = .failed("Could not save settings. \(error.localizedDescription)")
+            boardNotice = .failed(String(localized: "Could not save settings. \(error.localizedDescription)"))
             return false
         }
     }
@@ -1058,7 +1072,7 @@ final class AppModel: ObservableObject {
             scan()
         }
         guard let source = matchedSource(for: role) else {
-            reportSlotFailure("No input source matched this slot", for: role)
+            reportSlotFailure(String(localized: "No input source matched this slot"), for: role)
             return
         }
         settingsSwitchDeadline = Date(timeIntervalSinceNow: Self.settingsSwitchBudget)
@@ -1083,7 +1097,7 @@ final class AppModel: ObservableObject {
             }
             showSwitchIndicator(for: role, source: source)
             clearSlotNotice(for: role)
-            statusText = "Selected \(source.localizedName)"
+            statusText = String(localized: "Selected \(source.localizedName)")
         } catch {
             reportSlotFailure(error.localizedDescription, for: role)
         }
@@ -1126,7 +1140,7 @@ final class AppModel: ObservableObject {
                 invalidateUndo()
             }
             clearSlotNotice(for: role)
-            statusText = trigger.map { "Saved trigger \($0.displayName)" } ?? "Removed trigger"
+            statusText = trigger.map { String(localized: "Saved trigger \($0.localizedDisplayName)") } ?? String(localized: "Removed trigger")
             return nil
         } catch {
             reportSlotFailure(error.localizedDescription, for: role)
@@ -1146,13 +1160,13 @@ final class AppModel: ObservableObject {
     func recordedTriggerConflict(_ trigger: KeyTrigger, for role: InputRole,
                                  category: SlotTriggerCategory) -> String? {
         if trigger.isReservedMacInputSourceShortcut {
-            return "\(trigger.displayName) is reserved by macOS input source switching"
+            return String(localized: "\(trigger.localizedDisplayName) is reserved by macOS input source switching")
         }
         do {
             _ = try config.replacingSwitchBinding(for: role, category: category, with: trigger)
             return nil
         } catch SlotTriggerCategoryError.conflictingBinding(let binding) {
-            return "\(trigger.displayName) is already used by \(config.ownerDescription(of: binding))"
+            return String(localized: "\(trigger.localizedDisplayName) is already used by \(config.ownerDescription(of: binding))")
         } catch {
             return error.localizedDescription
         }
@@ -1160,13 +1174,13 @@ final class AppModel: ObservableObject {
 
     func recordedTriggerConflict(_ trigger: KeyTrigger, for role: InputRole) -> String? {
         if trigger.isReservedMacInputSourceShortcut {
-            return "\(trigger.displayName) is reserved by macOS input source switching"
+            return String(localized: "\(trigger.localizedDisplayName) is reserved by macOS input source switching")
         }
         if let conflictRole = config.oneShotModifierConflict(for: trigger, excluding: role) {
-            return "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))"
+            return String(localized: "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))")
         }
         if let conflict = config.conflictingBinding(for: trigger, excluding: role) {
-            return "\(trigger.displayName) is already used by \(config.ownerDescription(of: conflict))"
+            return String(localized: "\(trigger.localizedDisplayName) is already used by \(config.ownerDescription(of: conflict))")
         }
         return nil
     }
@@ -1193,7 +1207,7 @@ final class AppModel: ObservableObject {
             invalidateUndo()
         }
         clearSlotNotice(for: role)
-        statusText = trigger.map { "Saved trigger \($0.displayName)" } ?? "Removed trigger"
+        statusText = trigger.map { String(localized: "Saved trigger \($0.localizedDisplayName)") } ?? String(localized: "Removed trigger")
         return nil
     }
 
@@ -1216,7 +1230,7 @@ final class AppModel: ObservableObject {
             return
         }
         if gesture == .doubleTap, trigger.kind != .oneShotModifier {
-            reportSlotFailure("Double tap requires a single modifier key", for: role)
+            reportSlotFailure(String(localized: "Double tap requires a single modifier key"), for: role)
             return
         }
         trigger.gesture = gesture
@@ -1234,7 +1248,7 @@ final class AppModel: ObservableObject {
             return nil
         }
 
-        return "\(readableOneShotName(trigger.keyName)) already used by \(config.displayName(for: conflictRole))"
+        return String(localized: "\(readableOneShotName(trigger.keyName)) already used by \(config.displayName(for: conflictRole))")
     }
 
     func matchedSource(for role: InputRole) -> InputSourceInfo? {
@@ -1255,8 +1269,8 @@ final class AppModel: ObservableObject {
         refreshRuntimeStatus()
         guard permissions.isReady else {
             isListening = false
-            keyboardControlStatus = "Needs permission"
-            statusText = "Grant permissions, then resume keyboard control"
+            keyboardControlState = "Needs permission"
+            statusText = String(localized: "Grant permissions, then resume keyboard control")
             return
         }
 
@@ -1296,22 +1310,22 @@ final class AppModel: ObservableObject {
             try nextMonitor.start()
             monitor = nextMonitor
             isListening = true
-            keyboardControlStatus = "Active"
-            statusText = "Listener started"
+            keyboardControlState = "Active"
+            statusText = String(localized: "Listener started")
             refreshAppMemory()
             // After the line above, so a skipped recipe is what the status bar ends up showing.
             loadActivationRecipes()
         } catch {
             isListening = false
-            keyboardControlStatus = permissions.isReady ? "Failed" : "Needs permission"
+            keyboardControlState = permissions.isReady ? "Failed" : "Needs permission"
             statusText = error.localizedDescription
         }
     }
 
     /// The listener could not start although both permissions read as granted. Kept
-    /// beside the assignment above: the status string itself is display copy.
+    /// beside the assignment above; compare raw state, not translated display copy.
     var didListenerFailToStart: Bool {
-        keyboardControlStatus == "Failed"
+        keyboardControlState == "Failed"
     }
 
     func stopListening() {
@@ -1319,8 +1333,8 @@ final class AppModel: ObservableObject {
         monitor = nil
         refreshAppMemory()
         isListening = false
-        keyboardControlStatus = "Paused"
-        statusText = "Listener stopped"
+        keyboardControlState = "Paused"
+        statusText = String(localized: "Listener stopped")
     }
 
     func quit() {
@@ -1360,11 +1374,11 @@ final class AppModel: ObservableObject {
     /// Peek asks for the bubble explicitly, so it shows even with the switch bubble turned off.
     private func showPeekIndicator() {
         guard let source = try? inputSources.currentInputSource() else {
-            statusText = "No input source is selected"
+            statusText = String(localized: "No input source is selected")
             return
         }
         guard let role = InputSourceMatcher.slotID(forSelectedSourceID: source.id, sources: sources, config: config) else {
-            statusText = "\(source.localizedName) is not in a slot"
+            statusText = String(localized: "\(source.localizedName) is not in a slot")
             return
         }
         switchIndicator.show(slotID: role, previousSlotID: nil, source: source, config: config, sources: sources, isPeek: true)
@@ -1382,21 +1396,21 @@ final class AppModel: ObservableObject {
     private func readableOneShotName(_ keyName: String) -> String {
         switch keyName {
         case "left-command":
-            return "Left Command"
+            return String(localized: "Left Command")
         case "right-command":
-            return "Right Command"
+            return String(localized: "Right Command")
         case "left-option":
-            return "Left Option"
+            return String(localized: "Left Option")
         case "right-option":
-            return "Right Option"
+            return String(localized: "Right Option")
         case "left-control":
-            return "Left Control"
+            return String(localized: "Left Control")
         case "right-control":
-            return "Right Control"
+            return String(localized: "Right Control")
         case "left-shift":
-            return "Left Shift"
+            return String(localized: "Left Shift")
         case "right-shift":
-            return "Right Shift"
+            return String(localized: "Right Shift")
         default:
             return keyName
         }
@@ -1429,13 +1443,13 @@ enum UpdateStatus: Equatable {
     var message: String {
         switch self {
         case .idle(let currentVersion):
-            "Current \(currentVersion)"
+            String(localized: "Current \(currentVersion)")
         case .checking:
-            "Checking GitHub releases"
+            String(localized: "Checking GitHub releases")
         case .upToDate(let result):
-            "Up to date: \(result.currentVersion)"
+            String(localized: "Up to date: \(result.currentVersion)")
         case .available(let result):
-            "New version \(result.latestVersion) available"
+            String(localized: "New version \(result.latestVersion) available")
         case .failed(_, let message):
             message
         }

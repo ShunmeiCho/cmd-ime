@@ -14,7 +14,7 @@ struct SourceListColumn: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
             HStack(spacing: DesignTokens.Layout.rowGap) {
-                SectionLabel("Input sources")
+                SectionLabel(String(localized: "Input sources"))
                 Spacer(minLength: 0)
                 Button(action: onRefresh) {
                     Image(systemName: "arrow.clockwise").frame(width: 22, height: 24)
@@ -96,9 +96,9 @@ struct SourceRow: View {
     private var isNew: Bool { isAvailable && model.newSourceIDs.contains(source.id) }
     private var name: String {
         switch usage {
-        case .available: "Available"
-        case let .owned(id): "\(rejected ? "Already in slot" : "In use ·") \(model.config.displayName(for: id))"
-        case let .resolved(id, _): "Fallback for \(model.config.displayName(for: id))"
+        case .available: String(localized: "Available")
+        case let .owned(id): rejected ? String(localized: "Already in slot \(model.config.displayName(for: id))") : String(localized: "In use · \(model.config.displayName(for: id))")
+        case let .resolved(id, _): String(localized: "Fallback for \(model.config.displayName(for: id))")
         }
     }
     private var icon: String {
@@ -129,7 +129,7 @@ struct SourceRow: View {
             .buttonStyle(.plain)
             .accessibilityLabel(source.localizedName)
             .accessibilityValue(accessibilityUsage)
-            .accessibilityHint(isAvailable ? "Add as a slot" : "Show the slot using this input source")
+            .accessibilityHint(isAvailable ? String(localized: "Add as a slot") : String(localized: "Show the slot using this input source"))
             Spacer(minLength: 0)
             if case let .resolved(owner, _) = usage {
                 Button {
@@ -186,11 +186,11 @@ struct SourceRow: View {
     private var accessibilityUsage: String {
         let state: String
         switch usage {
-        case .available: state = "Available"
-        case let .owned(owner): state = "Used by \(model.config.displayName(for: owner))"
-        case let .resolved(owner, _): state = "Used by \(model.config.displayName(for: owner)) as a fallback"
+        case .available: state = String(localized: "Available")
+        case let .owned(owner): state = String(localized: "Used by \(model.config.displayName(for: owner))")
+        case let .resolved(owner, _): state = String(localized: "Used by \(model.config.displayName(for: owner)) as a fallback")
         }
-        return isNew ? "New, \(state)" : state
+        return isNew ? String(localized: "New, \(state)") : state
     }
 
     var body: some View {

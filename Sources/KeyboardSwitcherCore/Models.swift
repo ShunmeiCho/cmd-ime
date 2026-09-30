@@ -206,11 +206,11 @@ public enum SwitchIndicatorSize: String, Codable, CaseIterable, Identifiable, Se
     public var displayName: String {
         switch self {
         case .small:
-            "Small"
+            CoreLocalization.text("Small")
         case .medium:
-            "Medium"
+            CoreLocalization.text("Medium")
         case .large:
-            "Large"
+            CoreLocalization.text("Large")
         }
     }
 }
@@ -231,13 +231,13 @@ public enum SwitchIndicatorColorStyle: String, Codable, CaseIterable, Identifiab
     public var displayName: String {
         switch self {
         case .role:
-            "Slot"
+            CoreLocalization.text("Slot")
         case .accent:
-            "Accent"
+            CoreLocalization.text("Accent")
         case .monochrome:
-            "Mono"
+            CoreLocalization.text("Mono")
         case .custom:
-            "Custom"
+            CoreLocalization.text("Custom")
         }
     }
 }
@@ -254,11 +254,11 @@ public enum SwitchIndicatorContentStyle: String, Codable, CaseIterable, Identifi
     public var displayName: String {
         switch self {
         case .iconAndText:
-            "Icon + Text"
+            CoreLocalization.text("Icon + Text")
         case .iconOnly:
-            "Icon"
+            CoreLocalization.text("Icon")
         case .textOnly:
-            "Text"
+            CoreLocalization.text("Text")
         }
     }
 }
@@ -648,7 +648,7 @@ public struct InputSourceInfo: Codable, Equatable, Sendable {
 
         let visibleLanguages = languages.prefix(4)
         let suffix = languages.count > visibleLanguages.count
-            ? " +\(languages.count - visibleLanguages.count) more"
+            ? CoreLocalization.text(" +%@ more", String(describing: languages.count - visibleLanguages.count))
             : ""
         return visibleLanguages.joined(separator: ", ") + suffix
     }
@@ -656,8 +656,8 @@ public struct InputSourceInfo: Codable, Equatable, Sendable {
     /// Message for when a requested input-source selection did not take effect.
     public static func verificationMessage(requested: InputSourceInfo, current: InputSourceInfo?) -> String {
         if let current {
-            return "Requested \(requested.localizedName), but macOS still reports \(current.localizedName)."
+            return CoreLocalization.text("Requested %@, but macOS still reports %@.", String(describing: requested.localizedName), String(describing: current.localizedName))
         }
-        return "Requested \(requested.localizedName), but macOS did not report the active input source."
+        return CoreLocalization.text("Requested %@, but macOS did not report the active input source.", String(describing: requested.localizedName))
     }
 }

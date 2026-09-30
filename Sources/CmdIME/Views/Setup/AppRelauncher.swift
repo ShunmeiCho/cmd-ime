@@ -64,7 +64,7 @@ struct RelaunchButton: View {
                     model.quit()
                 } else {
                     failed = true
-                    SetupGuideNavigation.announce("Relaunch is not available. Quit CmdIME and open it again.")
+                    SetupGuideNavigation.announce(String(localized: "Relaunch is not available. Quit CmdIME and open it again."))
                 }
             }
             .buttonStyle(ConsoleButtonStyle(prominent: prominent))

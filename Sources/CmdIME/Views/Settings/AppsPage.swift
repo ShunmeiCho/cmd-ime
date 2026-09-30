@@ -8,10 +8,10 @@ struct AppsPage: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
-            CompactSection(title: "App Rules") { AppRulesSection(model: model) }
-            CompactSection(title: "App Memory") { memoryRows }
-            CompactSection(title: "Other apps") { defaultSlotRows }
-            CompactSection(title: "Password fields") { passwordRows }
+            CompactSection(title: String(localized: "App Rules")) { AppRulesSection(model: model) }
+            CompactSection(title: String(localized: "App Memory")) { memoryRows }
+            CompactSection(title: String(localized: "Other apps")) { defaultSlotRows }
+            CompactSection(title: String(localized: "Password fields")) { passwordRows }
         }
         .buttonStyle(ConsoleButtonStyle())
         .font(DesignTokens.Typography.body)
@@ -56,7 +56,7 @@ struct AppsPage: View {
             .map { (app: InstalledApp(id: $0.key, fallbackName: model.config.appRule(for: $0.key)?.name), sourceID: $0.value) }
             .sorted { $0.app.name.localizedStandardCompare($1.app.name) == .orderedAscending }
         if entries.isEmpty {
-            Text(model.isListening ? "Nothing remembered yet." : "Nothing is remembered while keyboard control is paused.")
+            Text(model.isListening ? String(localized: "Nothing remembered yet.") : String(localized: "Nothing is remembered while keyboard control is paused."))
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
         } else {

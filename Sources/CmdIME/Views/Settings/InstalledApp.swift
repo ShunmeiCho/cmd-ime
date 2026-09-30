@@ -76,7 +76,7 @@ struct InstalledApp: Identifiable, Hashable {
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Add Rule"
+        panel.prompt = String(localized: "Add Rule")
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         return InstalledApp(bundleURL: url)
     }

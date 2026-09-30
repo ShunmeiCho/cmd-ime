@@ -8,31 +8,34 @@ public struct SetupTriggerPhrase: Equatable, Sendable {
     public let keys: String
     /// A one-shot modifier only counts when it is pressed and released by itself.
     public let isAlone: Bool
+    private let instructionFormat: String
 
     public init(trigger: KeyTrigger) {
         switch trigger.kind {
         case .oneShotModifier:
-            verb = trigger.gesture == .doubleTap ? "Double-tap" : "Tap"
+            verb = trigger.gesture == .doubleTap ? CoreLocalization.text("Double-tap") : CoreLocalization.text("Tap")
             keys = Self.readableName(trigger.keyName)
             isAlone = true
+            instructionFormat = trigger.gesture == .doubleTap ? "Double-tap %@ alone" : "Tap %@ alone"
         case .keyPress:
-            verb = "Press"
+            verb = CoreLocalization.text("Press")
             keys = (trigger.modifiers.map(Self.readableName) + [Self.readableName(trigger.keyName)])
                 .joined(separator: " + ")
             isAlone = false
+            instructionFormat = "Press %@"
         }
     }
 
     /// "Tap Left Command alone", "Double-tap Right Option alone", "Press Option + J".
     public var instruction: String {
-        isAlone ? "\(verb) \(keys) alone" : "\(verb) \(keys)"
+        CoreLocalization.text(instructionFormat, keys)
     }
 
     private static func readableName(_ modifier: Modifier) -> String {
         switch modifier {
         case .capsLock: "Caps Lock"
         case .fn: "Fn"
-        default: modifier.rawValue.capitalized
+        default: CoreLocalization.displayName(modifier.rawValue.capitalized)
         }
     }
 
@@ -40,7 +43,7 @@ public struct SetupTriggerPhrase: Equatable, Sendable {
     /// The minus key is named "-": it has no words to split, so it stays as it is.
     private static func readableName(_ keyName: String) -> String {
         let words = keyName.split(separator: "-")
-        return words.isEmpty ? keyName : words.map { $0.capitalized }.joined(separator: " ")
+        return CoreLocalization.displayName(words.isEmpty ? keyName : words.map { $0.capitalized }.joined(separator: " "))
     }
 }
 

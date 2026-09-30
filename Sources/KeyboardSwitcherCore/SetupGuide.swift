@@ -164,15 +164,15 @@ public struct SetupUnboundSlots: Equatable, Sendable {
         if names.count <= Self.displayedNameLimit {
             namesText = names.joined(separator: ", ")
         } else {
-            namesText = "\(names.prefix(Self.displayedNameLimit).joined(separator: ", ")), and \(names.count - Self.displayedNameLimit) more"
+            namesText = CoreLocalization.text("%@, and %@ more", String(describing: names.prefix(Self.displayedNameLimit).joined(separator: ", ")), String(describing: names.count - Self.displayedNameLimit))
         }
         let currentState = names.count == 1
-            ? "\(namesText) has no trigger yet."
-            : "\(names.count) slots have no trigger yet: \(namesText)."
+            ? CoreLocalization.text("%@ has no trigger yet.", String(describing: namesText))
+            : CoreLocalization.text("%@ slots have no trigger yet: %@.", String(describing: names.count), String(describing: namesText))
         let policy = slotCount > SetupGuideState.automaticTriggerLimit
-            ? " On first detection, CmdIME automatically assigns up to \(SetupGuideState.automaticTriggerLimit) keys."
+            ? CoreLocalization.text(" On first detection, CmdIME automatically assigns up to %@ keys.", String(describing: SetupGuideState.automaticTriggerLimit))
             : ""
-        return "\(currentState) Use Change to bind one.\(policy)"
+        return CoreLocalization.text("%@ Use Change to bind one.%@", String(describing: currentState), String(describing: policy))
     }
 }
 

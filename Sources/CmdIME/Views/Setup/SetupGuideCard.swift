@@ -27,19 +27,19 @@ struct SetupGuideCard: View {
     }
 
     private func card(state: SetupGuideState, current: SetupStep) -> some View {
-        CompactSection(title: "Setup guide") {
+        CompactSection(title: String(localized: "Setup guide")) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 10) {
                     Text("Three short steps. Everything stays editable afterwards, and General > Show Setup Guide shows this guide again.")
                         .setupBodyText()
                     Spacer(minLength: 8)
                     StatusPill(
-                        text: "Step \(current.rawValue) of \(SetupStep.allCases.count)",
+                        text: String(localized: "Step \(current.rawValue) of \(SetupStep.allCases.count)"),
                         systemImage: "list.number",
                         tone: .neutral
                     )
-                    Button(session.isReopened ? "Close Guide" : "Skip Setup") {
-                        complete(announcement: session.isReopened ? "Setup guide closed." : "Setup skipped. The guide stays available under General.")
+                    Button(session.isReopened ? String(localized: "Close Guide") : String(localized: "Skip Setup")) {
+                        complete(announcement: session.isReopened ? String(localized: "Setup guide closed.") : String(localized: "Setup skipped. The guide stays available under General."))
                     }
                     .buttonStyle(ConsoleButtonStyle())
                 }
@@ -81,7 +81,7 @@ struct SetupGuideCard: View {
             )
         case .tryIt:
             SetupTryItStep(model: model, session: $session) {
-                complete(announcement: "Setup finished. CmdIME keeps running in the background.")
+                complete(announcement: String(localized: "Setup finished. CmdIME keeps running in the background."))
             }
         }
     }
@@ -114,7 +114,7 @@ private struct SetupGuideLifecycle: ViewModifier {
         content
             .onChange(of: currentStep) { step in
                 guard let step else { return }
-                SetupGuideNavigation.announce("Setup step \(step.rawValue) of \(SetupStep.allCases.count): \(step.title)")
+                SetupGuideNavigation.announce(String(localized: "Setup step \(step.rawValue) of \(SetupStep.allCases.count): \(step.title)"))
             }
             .task(id: currentStep == .permissions) {
                 // While step 1 is current, flip to Ready while System Settings is still in
@@ -227,17 +227,17 @@ private struct SetupStepSection<Content: View>: View {
     }
 
     private var statusText: String {
-        if isComplete { return "Done" }
-        return isCurrent ? "Current step" : "Up next"
+        if isComplete { return String(localized: "Done") }
+        return isCurrent ? String(localized: "Current step") : String(localized: "Up next")
     }
 }
 
 extension SetupStep {
     var title: String {
         switch self {
-        case .permissions: "Allow keyboard access"
-        case .review: "Check what was detected"
-        case .tryIt: "Try it"
+        case .permissions: String(localized: "Allow keyboard access")
+        case .review: String(localized: "Check what was detected")
+        case .tryIt: String(localized: "Try it")
         }
     }
 }

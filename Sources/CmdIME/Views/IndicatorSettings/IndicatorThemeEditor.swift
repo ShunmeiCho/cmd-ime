@@ -36,14 +36,14 @@ struct IndicatorThemeEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel("Editing \(theme.name)")
+            SectionLabel(String(localized: "Editing \(theme.localizedDisplayName)"))
 
             if theme.surface != .none {
-                CompactSettingRow("Surface") {
+                CompactSettingRow(String(localized: "Surface")) {
                     ConsoleSegmentedControl(
-                        options: [ConsoleSegmentOption(value: PaperSurface.glass, label: "Glass"),
-                                  ConsoleSegmentOption(value: PaperSurface.liquid, label: "Liquid"),
-                                  ConsoleSegmentOption(value: PaperSurface.paper, label: "Paper")],
+                        options: [ConsoleSegmentOption(value: PaperSurface.glass, label: String(localized: "Glass")),
+                                  ConsoleSegmentOption(value: PaperSurface.liquid, label: String(localized: "Liquid")),
+                                  ConsoleSegmentOption(value: PaperSurface.paper, label: String(localized: "Paper"))],
                         selection: Binding(
                             get: { PaperSurface(theme.surface) },
                             set: { surface in edit { Self.setSurface(surface.surface, on: &$0) } }
@@ -55,10 +55,10 @@ struct IndicatorThemeEditor: View {
 
             if theme.surface == .paper { paperRows }
 
-            CompactSettingRow("Color from") {
+            CompactSettingRow(String(localized: "Color from")) {
                 ConsoleSegmentedControl(
-                    options: [ConsoleSegmentOption(value: IndicatorColorSource.slot, label: "Each slot"),
-                              ConsoleSegmentOption(value: IndicatorColorSource.inks, label: "One color")],
+                    options: [ConsoleSegmentOption(value: IndicatorColorSource.slot, label: String(localized: "Each slot")),
+                              ConsoleSegmentOption(value: IndicatorColorSource.inks, label: String(localized: "One color"))],
                     selection: Binding(get: { theme.colorSource }, set: { source in edit { $0.colorSource = source } })
                 )
                 .frame(width: 210)
@@ -67,17 +67,17 @@ struct IndicatorThemeEditor: View {
             // On glass the one colour fills the tile or the switcher thumb; paper has its own ink rows.
             if theme.surface != .paper, theme.colorSource == .inks {
                 inkRow(
-                    "Highlight",
-                    options: InkCatalog.inks.map { ($0.name, $0.hex) },
+                    String(localized: "Highlight"),
+                    options: InkCatalog.inks.map { (IndicatorCatalogLabel.localized($0.name), $0.hex) },
                     selectedHex: theme.tileInkHex,
                     issueKey: "tileInkHex",
-                    clearTitle: "Neutral"
+                    clearTitle: String(localized: "Neutral")
                 ) { hex, theme in theme.tileInkHex = hex }
             }
 
             // Only a Mark can grow into the Badge row; see AdaptiveBubbleLayout.
             if theme.archetype == .mark {
-                CompactSettingRow("Expand while switching") {
+                CompactSettingRow(String(localized: "Expand while switching")) {
                     Toggle(
                         "Expand while switching",
                         isOn: Binding(
@@ -94,11 +94,11 @@ struct IndicatorThemeEditor: View {
                 }
             }
 
-            slider("Corners", value: theme.cornerRadius, range: IndicatorTheme.Limits.cornerRadius.range, step: 1,
-                   display: "\(Int(theme.cornerRadius.rounded())) pt") { value, theme in theme.cornerRadius = value }
-            slider("Stroke", value: theme.strokeOpacity, range: IndicatorTheme.Limits.strokeOpacity.range, step: 0.02,
+            slider(String(localized: "Corners"), value: theme.cornerRadius, range: IndicatorTheme.Limits.cornerRadius.range, step: 1,
+                   display: String(localized: "\(Int(theme.cornerRadius.rounded())) pt")) { value, theme in theme.cornerRadius = value }
+            slider(String(localized: "Stroke"), value: theme.strokeOpacity, range: IndicatorTheme.Limits.strokeOpacity.range, step: 0.02,
                    display: percent(theme.strokeOpacity)) { value, theme in theme.strokeOpacity = value }
-            slider("Shadow", value: theme.shadowStrength, range: IndicatorTheme.Limits.shadowStrength.range, step: 0.05,
+            slider(String(localized: "Shadow"), value: theme.shadowStrength, range: IndicatorTheme.Limits.shadowStrength.range, step: 0.05,
                    display: percent(theme.shadowStrength)) { value, theme in theme.shadowStrength = value }
         }
     }
@@ -108,26 +108,26 @@ struct IndicatorThemeEditor: View {
     @ViewBuilder
     private var paperRows: some View {
         inkRow(
-            "Paper",
-            options: InkCatalog.substrates.map { ($0.name, $0.hex) },
+            String(localized: "Paper"),
+            options: InkCatalog.substrates.map { (IndicatorCatalogLabel.localized($0.name), $0.hex) },
             selectedHex: substrateHex,
             issueKey: nil
         ) { hex, theme in theme.substrateHex = hex }
 
         inkRow(
-            "Text ink",
-            options: InkLegibility.textInks(on: substrateHex).map { ($0.name, $0.hex) },
+            String(localized: "Text ink"),
+            options: InkLegibility.textInks(on: substrateHex).map { (IndicatorCatalogLabel.localized($0.name), $0.hex) },
             selectedHex: theme.textInkHex ?? IndicatorTheme.defaultPaperTextInkHex,
             issueKey: "textInkHex"
         ) { hex, theme in theme.textInkHex = hex }
 
         if theme.colorSource == .inks {
             inkRow(
-                "Tile ink",
-                options: InkLegibility.tileInks(on: substrateHex).map { ($0.name, $0.hex) },
+                String(localized: "Tile ink"),
+                options: InkLegibility.tileInks(on: substrateHex).map { (IndicatorCatalogLabel.localized($0.name), $0.hex) },
                 selectedHex: theme.tileInkHex,
                 issueKey: "tileInkHex",
-                clearTitle: "Same as text"
+                clearTitle: String(localized: "Same as text")
             ) { hex, theme in theme.tileInkHex = hex }
 
             pairsRow
@@ -139,7 +139,7 @@ struct IndicatorThemeEditor: View {
     private var pairsRow: some View {
         let jobs = InkCatalog.pairs.compactMap { InkLegibility.assignment(for: $0, on: substrateHex) }
         if !jobs.isEmpty {
-            CompactSettingRow("Pairs") {
+            CompactSettingRow(String(localized: "Pairs")) {
                 HStack(spacing: 6) {
                     ForEach(jobs, id: \.textInk.id) { pair in
                         let isSelected = theme.textInkHex == pair.textInk.hex && theme.tileInkHex == pair.tileInk.hex
@@ -159,8 +159,8 @@ struct IndicatorThemeEditor: View {
                             .padding(SelectionRing.ringGap + SelectionRing.ringWidth)
                         }
                         .buttonStyle(.plain)
-                        .help("\(pair.textInk.name) text, \(pair.tileInk.name) tile")
-                        .accessibilityLabel("\(pair.textInk.name) text with \(pair.tileInk.name) tile")
+                        .help("\(IndicatorCatalogLabel.localized(pair.textInk.name)) text, \(IndicatorCatalogLabel.localized(pair.tileInk.name)) tile")
+                        .accessibilityLabel("\(IndicatorCatalogLabel.localized(pair.textInk.name)) text with \(IndicatorCatalogLabel.localized(pair.tileInk.name)) tile")
                         .accessibilityAddTraits(isSelected ? .isSelected : [])
                     }
                     Spacer(minLength: 0)
@@ -210,7 +210,7 @@ struct IndicatorThemeEditor: View {
                 }
                 if let issue = issues.first(where: { $0.key == issueKey }) {
                     IndicatorNotice(text: String(
-                        format: "%@ contrast %.1f:1, below %.1f:1", title, issue.ratio, issue.minimum
+                        format: String(localized: "%@ contrast %.1f:1, below %.1f:1"), title, issue.ratio, issue.minimum
                     ))
                 }
             }
@@ -250,7 +250,7 @@ struct IndicatorThemeEditor: View {
     }
 
     private func percent(_ value: Double) -> String {
-        "\(Int((value * 100).rounded()))%"
+        String(localized: "\(Int((value * 100).rounded()))%")
     }
 
     private func edit(_ change: (inout IndicatorTheme) -> Void) {

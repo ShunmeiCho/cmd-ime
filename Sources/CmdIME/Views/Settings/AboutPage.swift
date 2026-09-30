@@ -17,13 +17,13 @@ struct AboutPage: View {
     }
 
     private static var versionText: String {
-        let version = "Version \(AppModel.currentVersion)"
-        return build.map { "\(version) (\($0))" } ?? version
+        let version = String(localized: "Version \(AppModel.currentVersion)")
+        return build.map { String(localized: "\(version) (\($0))") } ?? version
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
-            CompactSection(title: "About") {
+            CompactSection(title: String(localized: "About")) {
                 VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
                     HStack(spacing: DesignTokens.Layout.panelGap) {
                         Image(nsImage: NSApp.applicationIconImage)
@@ -42,7 +42,7 @@ struct AboutPage: View {
                     }
                     HStack(spacing: DesignTokens.Layout.rowGap) {
                         // Where a Mac user looks for it; General keeps the automatic-check settings.
-                        Button(model.updateStatus.isChecking ? "Checking…" : "Check for Updates") {
+                        Button(model.updateStatus.isChecking ? String(localized: "Checking…") : String(localized: "Check for Updates")) {
                             model.checkForUpdates()
                         }
                         .disabled(model.updateStatus.isChecking)
@@ -58,12 +58,12 @@ struct AboutPage: View {
                     if case .available = model.updateStatus { UpdateActions(model: model) }
                 }
             }
-            CompactSection(title: "Privacy") {
+            CompactSection(title: String(localized: "Privacy")) {
                 Text(SetupGuideCopy.privacy)
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            CompactSection(title: "Feedback and support") {
+            CompactSection(title: String(localized: "Feedback and support")) {
                 VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
                     HStack(spacing: DesignTokens.Layout.rowGap) {
                         Button("Report an Issue…", action: Self.reportIssue)
