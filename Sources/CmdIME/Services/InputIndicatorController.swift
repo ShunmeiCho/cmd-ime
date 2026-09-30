@@ -50,6 +50,8 @@ final class InputIndicatorController {
     /// answer or timeout.
     private var caretRequest = 0
     private var caretLookup: Task<Void, Never>?
+    /// From the config of the latest show; only its hold is read here.
+    private var behavior = SwitchIndicatorBehavior()
 
     init(configStore: ConfigStore) {
         library = IndicatorLibrary(configStore: configStore)
@@ -81,6 +83,7 @@ final class InputIndicatorController {
             context: .current()
         ) else { return }
 
+        behavior = config.switchIndicatorBehavior
         let size = measure(model)
         let pointer = NSEvent.mouseLocation
         caretRequest += 1
@@ -205,11 +208,12 @@ final class InputIndicatorController {
         hideTask?.cancel()
         // Exhaustive, with no default: how long a new archetype stays is a decision,
         // not an inherited value.
-        let hold: Double = switch model.archetype {
+        let themeHold: Double = switch model.archetype {
         case .switcher: BubbleMotion.holdSwitcher
         case .badge: BubbleMotion.holdBadge
         case .tileTwoLine, .lineWithBar, .stackedText, .tileOnly, .mark: BubbleMotion.holdStandard
         }
+        let hold = behavior.hold(automatic: themeHold)
         let current = generation
         hideTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64((appearDuration + hold) * 1_000_000_000))

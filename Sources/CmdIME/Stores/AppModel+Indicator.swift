@@ -10,6 +10,14 @@ extension AppModel {
         statusText = "Switch indicator theme set to \(indicatorLibrary.theme(id: id).name)"
     }
 
+    /// Applies a change to when the indicator appears and how long it stays.
+    func editSwitchIndicatorBehavior(status: String, _ change: (inout SwitchIndicatorBehavior) -> Void) {
+        change(&config.switchIndicatorBehavior)
+        save()
+        indicatorOccasions.update()
+        statusText = status
+    }
+
     /// Sets or clears (nil or blank) a slot's symbol override. Returns the message to
     /// show beside the field when the symbol is not acceptable.
     func setSlotSymbol(_ symbol: String?, for id: InputRole) -> String? {
