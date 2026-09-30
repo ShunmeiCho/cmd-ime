@@ -104,10 +104,10 @@ swift test
   快捷键。任选其中几种设置；设置了的任意一种都会切换到该槽位。
 
 <p align="center">
-  <img src="Assets/readme/slot-board.png" width="640" alt="深色外观下的 CmdIME 设置窗口：左侧是已安装的输入源，右侧是三个槽位及各自的单击、双击和快捷键触发，下方是 Live keys。">
+  <img src="Assets/readme/slot-board.png" width="640" alt="深色外观下 CmdIME 设置窗口的 Slots 页：左侧是侧栏和已安装的输入源，右侧是三个槽位及各自的单击、双击和快捷键触发，下方是 Live keys。">
 </p>
 
-<p align="center"><sub>深色外观下的槽位面板。这里是三个槽位，你用几个输入法就可以加几个。</sub></p>
+<p align="center"><sub>Slots 页。这里是三个槽位，你用几个输入源就可以加几个。</sub></p>
 
 - **光标附近的切换指示气泡。** 十八种内置主题，包括 Glass、macOS 26 及以上的
   Liquid Glass、纸张风格、显示所有槽位的切换器、把切换器缩到只剩图标的徽章、只保留刚
@@ -115,10 +115,16 @@ swift test
   时再切一次或者用 Peek，就展开成徽章那样的一整排。另外还支持你自己的主题和字体。
 
 <p align="center">
-  <img src="Assets/readme/themes.png" width="100%" alt="设置里全部 16 个内置指示气泡主题：三种 Switcher、两种 Badge、两种 Mark、Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile 和 Line。">
+  <img src="Assets/readme/themes.png" width="100%" alt="设置里全部 18 个内置指示气泡主题：三种 Switcher、两种 Badge、两种 Mark、两种 Adaptive、Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile 和 Line。">
 </p>
 
-<p align="center"><sub>设置里的内置主题（截图时还没有两个 Adaptive 主题）。</sub></p>
+<p align="center"><sub>设置里的全部 18 个内置主题。</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/adaptive.gif" width="640" alt="在文本编辑里输入 hello，切到中文时只出现一个「中」字标记，紧接着切到日文，标记展开成 A 中 あ 一整排，然后输入ありがとう。">
+</p>
+
+<p align="center"><sub>Adaptive：单次切换只显示一个字形，气泡还在时再切换就展开成整排。</sub></p>
 
 - **每个槽位的颜色完全由你决定。** 可以选预设色，也可以用系统取色器挑任意颜色。
   把指示气泡的「Color」设为 Slot，气泡就用这个颜色，不用看字也知道自己在哪个输入源。
@@ -134,10 +140,36 @@ swift test
   可以让 CmdIME 记住你在每个应用里最后用的输入源（默认关闭，只保存在内存里）；可以给其余
   所有应用指定一个槽位；还能在离开密码框后切回原来的输入源，否则 macOS 会一直停在 ABC
   （默认开启）。你按下的触发键始终优先。
+
+<p align="center">
+  <img src="Assets/readme/per-app.gif" width="720" alt="两个并排的演示应用：Code 设了英文规则，Chat 设了中文规则。点 Chat 出现「中」气泡并输入你好；点 Code 出现 A 并输入 git push；回到 Chat 输入好的。">
+</p>
+
+<p align="center"><sub>应用规则：Code 用英文，Chat 用中文，点一下就切过去。</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/apps-drag.gif" width="640" alt="Apps 页的应用规则面板：把搜索结果里的 WeChat 拖到中文栏，再把 Chat 拖到日文栏。">
+</p>
+
+<p align="center"><sub>把应用拖到某个槽位上，它就用这个槽位。</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/password.gif" width="640" alt="一个登录窗口：Name 栏输入你好，进入 Password 栏时 macOS 切到 ABC（气泡 A），到 Note 栏时切回中文（气泡「中」），再次输入你好。">
+</p>
+
+<p align="center"><sub>离开密码框后，原来的输入源自动回来。</sub></p>
+
 - **不止 CmdIME 自己的切换，任何切换都有提示。** 用 Control+Space、地球仪键或菜单栏
   切换时也会显示气泡，切换应用后也可以显示。可以在指定应用里隐藏气泡，也可以设置它停留
   多久。**Peek** 触发键在不切换的情况下显示当前输入源；还有一个可选的 Caps Lock 气泡，
   在 Caps Lock 打开或关闭时显示。
+
+<p align="center">
+  <img src="Assets/readme/outside-switch.gif" width="640" alt="在文本编辑里按 Control+Space 切到中文，出现「中」气泡并输入你好；再按 Control+Space 出现 A，输入 world。">
+</p>
+
+<p align="center"><sub>Control+Space 不是 CmdIME 的触发键，气泡照样出现。</sub></p>
+
 - **可以带走的设置。** 把槽位、触发键、应用规则、主题、字体和激活配方导出到一个文件夹，
   在另一台 Mac 上导入。`keyboardctl` 或编辑器对配置的修改，在 CmdIME 运行时直接生效。
   About 页的 **Copy Diagnostics** 会整理好报告问题需要的信息。
@@ -146,10 +178,10 @@ swift test
 - **跟随浅色和深色的设置窗口，** 也可以固定为你选的那一种。
 
 <p align="center">
-  <img src="Assets/readme/general.png" width="520" alt="浅色外观下的 General 面板：开机启动、外观、检查更新、检查频率和更新通知。">
+  <img src="Assets/readme/general.png" width="640" alt="深色外观下的 General 页：开机启动、外观、更新、设置向导、设置文件和退出 CmdIME。">
 </p>
 
-<p align="center"><sub>浅色外观下的 General：外观、检查更新和通知。</sub></p>
+<p align="center"><sub>General：外观、更新，以及设置的导出和导入。</sub></p>
 
 - **`keyboardctl`，** 一个命令行工具，用于扫描、绑定、切换、应用规则、迁移设置和诊断，
   另外还有在本机上实测的可靠性检查（Reliability Lab）。
@@ -278,6 +310,12 @@ Peek 和 Caps Lock 气泡同样需要键盘控制在运行。
 
 <details>
 <summary><strong>按应用设定输入源</strong></summary>
+
+<p align="center">
+  <img src="Assets/readme/apps.png" width="640" alt="深色外观下的 Apps 页：应用规则面板里 Code 在英文栏、WeChat 在中文栏、Chat 在日文栏、Screen Sharing 在 Keep as is；App Memory 记着一个应用；其他应用设为中文；以及密码框切回开关。">
+</p>
+
+<p align="center"><sub>Apps 页：应用规则、App Memory、其他应用的槽位和密码框切回开关。</sub></p>
 
 Apps 页面决定某个应用切到前台时发生什么。它做的每次切换都和触发键走同一条路径，所以
 切换应用后马上按下的触发键始终优先。

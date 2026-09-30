@@ -110,10 +110,10 @@ same two permissions before global keyboard listening works.
   set switches to that slot.
 
 <p align="center">
-  <img src="Assets/readme/slot-board.png" width="640" alt="The CmdIME settings window in the dark appearance: installed input sources on the left, three slots with their single-tap, double-tap and shortcut triggers on the right, and Live keys below.">
+  <img src="Assets/readme/slot-board.png" width="640" alt="The Slots page of the CmdIME settings window in the dark appearance: the sidebar, installed input sources on the left, three slots with their single-tap, double-tap and shortcut triggers, and Live keys below.">
 </p>
 
-<p align="center"><sub>The slot board in the dark appearance. Three slots here; add one for every input source you use.</sub></p>
+<p align="center"><sub>The Slots page. Three slots here; add one for every input source you use.</sub></p>
 
 - **A switch indicator near the caret.** Eighteen built-in themes, including Glass,
   Liquid Glass on macOS 26 and later, paper styles, a switcher that shows every slot, a
@@ -123,10 +123,16 @@ same two permissions before global keyboard listening works.
   and fonts.
 
 <p align="center">
-  <img src="Assets/readme/themes.png" width="100%" alt="All sixteen built-in indicator themes in Settings: three Switchers, two Badges, two Marks, Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile and Line.">
+  <img src="Assets/readme/themes.png" width="100%" alt="All eighteen built-in indicator themes in Settings: three Switchers, two Badges, two Marks, two Adaptive, Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile and Line.">
 </p>
 
-<p align="center"><sub>The built-in themes as they appear in Settings (before the two Adaptive themes were added).</sub></p>
+<p align="center"><sub>All eighteen built-in themes, as they appear in Settings.</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/adaptive.gif" width="640" alt="Typing hello in TextEdit, switching to Chinese shows a single 中 mark, switching straight on to Japanese widens it into the row A 中 あ, then ありがとう is typed.">
+</p>
+
+<p align="center"><sub>Adaptive: one switch shows the mark; switch again while it is up and it widens into the row.</sub></p>
 
 - **Your own color for every slot.** Pick any color for a slot: a preset, or any color
   from the system color picker. Set the indicator's Color to Slot and it fills with
@@ -144,11 +150,37 @@ same two permissions before global keyboard listening works.
   in each app (off by default, kept in memory only); pick a slot for every other app; and
   switch back after a password field, where macOS leaves ABC selected (on by default). A
   trigger you press still wins.
+
+<p align="center">
+  <img src="Assets/readme/per-app.gif" width="720" alt="Two demo apps side by side, Code with an App Rule for English and Chat with one for Chinese. Clicking Chat shows the 中 bubble and 你好 is typed; clicking Code shows A and git push is typed; back in Chat, 好的.">
+</p>
+
+<p align="center"><sub>App Rules: Code gets English, Chat gets Chinese. Clicking between them is all it takes.</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/apps-drag.gif" width="640" alt="The App Rules board on the Apps page: WeChat is dragged from the search results onto the Chinese lane, then Chat onto the Japanese lane.">
+</p>
+
+<p align="center"><sub>Drag an app onto a slot to give it that slot.</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/password.gif" width="640" alt="A sign-in window: 你好 in the Name field, the Password field makes macOS switch to ABC (bubble A), and the Note field gets Chinese back (bubble 中) so 你好 comes out again.">
+</p>
+
+<p align="center"><sub>After a password field, the input source you had comes back.</sub></p>
+
 - **An indicator for every switch, not only CmdIME's.** It also shows when the input
   source changes through Control+Space, the Globe key or the menu bar, and optionally
   after an app switch. Hide it in chosen apps and set how long it stays. A **Peek**
   trigger shows the current input source without switching, and an optional Caps Lock
   bubble shows when Caps Lock turns on or off.
+
+<p align="center">
+  <img src="Assets/readme/outside-switch.gif" width="640" alt="In TextEdit, pressing Control+Space switches to Chinese and the 中 bubble appears; 你好 is typed; Control+Space again shows A and world is typed.">
+</p>
+
+<p align="center"><sub>Control+Space is not CmdIME, and the bubble still shows.</sub></p>
+
 - **Settings you can move.** Export your slots, triggers, App Rules, themes, fonts and
   activation recipes to a folder and import them on another Mac. Edits that `keyboardctl`
   or an editor makes to the config apply while CmdIME runs. **Copy Diagnostics** on About
@@ -159,10 +191,10 @@ same two permissions before global keyboard listening works.
 - **A settings window that follows light and dark,** or stays on the one you pick.
 
 <p align="center">
-  <img src="Assets/readme/general.png" width="520" alt="The General panel in the light appearance: Launch at login, Appearance, update check, how often to check, and update notifications.">
+  <img src="Assets/readme/general.png" width="640" alt="The General page in the dark appearance: Launch at login, Appearance, updates, Setup Guide, the settings file and Quit CmdIME.">
 </p>
 
-<p align="center"><sub>General in the light appearance: appearance, update checks and notifications.</sub></p>
+<p align="center"><sub>General: appearance, updates, and exporting or importing your settings.</sub></p>
 
 - **`keyboardctl`,** a command-line tool for scanning, binding, switching, App Rules,
   moving settings and diagnosing, plus the on-device reliability lab.
@@ -306,6 +338,12 @@ Peek and the Caps Lock bubble also need keyboard control to be running.
 
 <details>
 <summary><strong>Per-app input sources</strong></summary>
+
+<p align="center">
+  <img src="Assets/readme/apps.png" width="640" alt="The Apps page in the dark appearance: the App Rules board with Code on English, WeChat on Chinese, Chat on Japanese and Screen Sharing on Keep as is; App Memory with one remembered app; Other apps set to Chinese; and the password-field switch.">
+</p>
+
+<p align="center"><sub>The Apps page: App Rules, App Memory, a slot for other apps and the password-field switch.</sub></p>
 
 The Apps page decides what happens when an app comes to the front. Each switch it makes
 goes through the same path as a trigger, so a trigger you press right after switching

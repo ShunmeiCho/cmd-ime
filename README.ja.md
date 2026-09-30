@@ -115,10 +115,10 @@ swift test
   かまわず、設定したどのトリガーでもそのスロットに切り替わります。
 
 <p align="center">
-  <img src="Assets/readme/slot-board.png" width="640" alt="ダーク外観の CmdIME 設定ウィンドウ：左にインストール済みの入力ソース、右に 3 つのスロットとそれぞれのシングルタップ、ダブルタップ、ショートカットのトリガー、下に Live keys。">
+  <img src="Assets/readme/slot-board.png" width="640" alt="ダーク外観の CmdIME 設定ウィンドウの Slots ページ：左にサイドバーとインストール済みの入力ソース、右に 3 つのスロットとそれぞれのシングルタップ、ダブルタップ、ショートカットのトリガー、下に Live keys。">
 </p>
 
-<p align="center"><sub>ダーク外観のスロットボード。ここでは 3 つですが、使う入力ソースの数だけ追加できます。</sub></p>
+<p align="center"><sub>Slots ページ。ここでは 3 つですが、使う入力ソースの数だけ追加できます。</sub></p>
 
 - **キャレットの近くに表示される切り替えインジケーター。** Glass、macOS 26 以降の
   Liquid Glass、paper 系のスタイル、すべてのスロットを表示する switcher、それを
@@ -127,10 +127,16 @@ swift test
   Adaptive テーマなど 18 の組み込みテーマに加え、独自のテーマやフォントも使えます。
 
 <p align="center">
-  <img src="Assets/readme/themes.png" width="100%" alt="設定画面にある組み込みインジケーターテーマ全 16 種類：3 種類の Switcher、2 種類の Badge、2 種類の Mark、Glass、Liquid Glass、Classic、3 種類の paper 系、Typographic、Tile、Line。">
+  <img src="Assets/readme/themes.png" width="100%" alt="設定画面にある組み込みインジケーターテーマ全 18 種類：3 種類の Switcher、2 種類の Badge、2 種類の Mark、2 種類の Adaptive、Glass、Liquid Glass、Classic、3 種類の paper 系、Typographic、Tile、Line。">
 </p>
 
-<p align="center"><sub>設定画面に並ぶ組み込みテーマ(Adaptive 2 種類の追加前)。</sub></p>
+<p align="center"><sub>設定画面に並ぶ組み込みテーマ全 18 種類。</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/adaptive.gif" width="640" alt="テキストエディットで hello と入力し、中国語に切り替えると「中」のマークだけが出て、すぐ日本語に切り替えると A 中 あ の一列に広がり、ありがとうと入力される。">
+</p>
+
+<p align="center"><sub>Adaptive：1 回の切り替えではマークだけ、表示中にもう一度切り替えると一列に広がります。</sub></p>
 
 - **スロットごとの色は自由に決められます。** プリセットから選ぶことも、システムの
   カラーピッカーで好きな色を選ぶこともできます。インジケーターの Color を Slot にすると
@@ -149,10 +155,36 @@ swift test
   保持)。それ以外のアプリ全体にスロットを 1 つ割り当てることも、パスワード欄のあとに元の
   入力ソースへ戻すこともできます(初期状態はオン。macOS はパスワード欄のあと ABC のままに
   します)。押したトリガーは常に優先されます。
+
+<p align="center">
+  <img src="Assets/readme/per-app.gif" width="720" alt="並んだ 2 つのデモアプリ。Code には英語、Chat には中国語の App Rule。Chat をクリックすると「中」が出て你好と入力、Code をクリックすると A が出て git push、Chat に戻って好的。">
+</p>
+
+<p align="center"><sub>App Rules：Code は英語、Chat は中国語。クリックするだけで切り替わります。</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/apps-drag.gif" width="640" alt="Apps ページの App Rules ボード：検索結果の WeChat を中国語のレーンに、続いて Chat を日本語のレーンにドラッグする。">
+</p>
+
+<p align="center"><sub>アプリをスロットにドラッグすると、そのスロットが割り当てられます。</sub></p>
+
+<p align="center">
+  <img src="Assets/readme/password.gif" width="640" alt="サインインウインドウ：Name 欄で你好、Password 欄に入ると macOS が ABC に切り替え（バブル A）、Note 欄で中国語に戻り（バブル「中」）、もう一度你好と入力。">
+</p>
+
+<p align="center"><sub>パスワード欄のあと、元の入力ソースが戻ります。</sub></p>
+
 - **CmdIME 以外の切り替えにもインジケーター。** Control+Space、地球儀キー、メニューバーで
   切り替えたときもバブルが出ます。アプリの切り替え後に出すこともできます。特定のアプリでは
   隠せますし、表示時間も選べます。**Peek** トリガーは切り替えずに今の入力ソースを表示し、
   オンにすれば Caps Lock のオン・オフでもバブルが出ます。
+
+<p align="center">
+  <img src="Assets/readme/outside-switch.gif" width="640" alt="テキストエディットで Control+Space を押すと中国語に切り替わり「中」のバブルが出て你好と入力、もう一度 Control+Space で A が出て world と入力。">
+</p>
+
+<p align="center"><sub>Control+Space は CmdIME のトリガーではありませんが、バブルは出ます。</sub></p>
+
 - **持ち運べる設定。** スロット、トリガー、App Rules、テーマ、フォント、アクティベーション
   レシピをフォルダーに書き出し、別の Mac で読み込めます。`keyboardctl` やエディターによる
   設定の変更は、CmdIME の実行中にそのまま反映されます。About の **Copy Diagnostics** で、
@@ -162,10 +194,10 @@ swift test
 - **ライトとダークに追従する設定ウィンドウ。** どちらかに固定することもできます。
 
 <p align="center">
-  <img src="Assets/readme/general.png" width="520" alt="ライト外観の General パネル：ログイン時に起動、外観、アップデートの確認、確認の頻度、アップデート通知。">
+  <img src="Assets/readme/general.png" width="640" alt="ダーク外観の General ページ：ログイン時に起動、外観、アップデート、セットアップガイド、設定ファイル、CmdIME を終了。">
 </p>
 
-<p align="center"><sub>ライト外観の General：外観、アップデートの確認と通知。</sub></p>
+<p align="center"><sub>General：外観、アップデート、設定の書き出しと読み込み。</sub></p>
 
 - **`keyboardctl`。** スキャン、バインド、切り替え、App Rules、設定の移行、診断のための
   コマンドラインツールです。実機で確かめる Reliability Lab(信頼性チェック)も備えています。
@@ -319,6 +351,12 @@ Peek と Caps Lock のバブルも、キーボード操作が有効なときに�
 
 <details>
 <summary><strong>アプリごとの入力ソース</strong></summary>
+
+<p align="center">
+  <img src="Assets/readme/apps.png" width="640" alt="ダーク外観の Apps ページ：App Rules ボードに英語の Code、中国語の WeChat、日本語の Chat、Keep as is の Screen Sharing。App Memory に記憶中のアプリ 1 つ、その他のアプリは中国語、パスワード欄の切り替えスイッチ。">
+</p>
+
+<p align="center"><sub>Apps ページ：App Rules、App Memory、その他のアプリのスロット、パスワード欄のスイッチ。</sub></p>
 
 Apps ページは、アプリが前面に来たときに何をするかを決めます。ここでの切り替えはすべて
 トリガーと同じ経路を通るため、アプリを切り替えた直後に押したトリガーは常に優先されます。
