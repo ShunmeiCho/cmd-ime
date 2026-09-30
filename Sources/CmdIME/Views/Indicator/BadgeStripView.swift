@@ -18,6 +18,8 @@ struct BadgeStripView: View {
     /// Carousel only: cells the strip is still displaced by.
     let stripTravel: Double
     let reduceMotion: Bool
+    /// Adaptive growth only: how far each slot's glyph has arrived. Empty everywhere else.
+    var reveal: [Int: Double] = [:]
 
     var body: some View {
         let metrics = BadgeMetrics(model: model)
@@ -115,6 +117,7 @@ struct BadgeStripView: View {
             )
             .foregroundStyle(color)
             .frame(width: metrics.cellWidth.points, height: metrics.cellHeight.points)
+            .modifier(GlyphArrival(amount: reveal[slotIndex]))
         }
     }
 
@@ -165,6 +168,22 @@ struct BadgeStripView: View {
             }
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// A glyph arriving while the adaptive row grows: faded and slightly small, never from
+/// nothing. Without an amount the glyph is drawn exactly as before.
+private struct GlyphArrival: ViewModifier {
+    let amount: Double?
+
+    func body(content: Content) -> some View {
+        if let amount {
+            content
+                .opacity(amount)
+                .scaleEffect(AdaptiveExpansion.revealScale(amount))
+        } else {
+            content
+        }
     }
 }
 

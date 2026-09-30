@@ -33,6 +33,9 @@ final class BubbleContainerView: NSView {
     /// An `NSGlassEffectView`; typed loosely because the class only exists on macOS 26+.
     private var liquidView: NSView?
     private var maskCache: (key: MaskKey, image: NSImage)?
+    /// Adaptive bubbles only: the pill inside a panel sized for the Badge row, with the
+    /// shadow margin around it. Nil, the default, keeps every other bubble filling the panel.
+    private var pill: (rect: CGRect, shadowMargin: CGFloat)?
 
     init(state: BubbleState) {
         bubbleHost = NSHostingView(rootView: LiveBubbleRoot(state: state))
@@ -60,10 +63,21 @@ final class BubbleContainerView: NSView {
 
     override func layout() {
         super.layout()
-        shadowHost.frame = bounds
+        layoutHosts()
+    }
+
+    private func layoutHosts() {
+        shadowHost.frame = pill.map { $0.rect.insetBy(dx: -$0.shadowMargin, dy: -$0.shadowMargin) } ?? bounds
         // Never while it is inside the material: there AppKit pins it to the glass with
         // constraints, and setting a frame fights them.
-        if bubbleHost.superview === self { bubbleHost.frame = bounds }
+        if bubbleHost.superview === self { bubbleHost.frame = pill?.rect ?? bounds }
+    }
+
+    /// Places the SwiftUI hosts on the adaptive pill at once, in the same frame as the
+    /// glass; nil puts them back to filling the panel.
+    func setPill(_ rect: CGRect?, shadowMargin: CGFloat) {
+        pill = rect.map { ($0, shadowMargin) }
+        layoutHosts()
     }
 
     /// The material only processes what it is given as its content view. A sibling
@@ -85,7 +99,7 @@ final class BubbleContainerView: NSView {
         bubbleHost.translatesAutoresizingMaskIntoConstraints = true
         bubbleHost.autoresizingMask = [.width, .height]
         addSubview(bubbleHost)
-        bubbleHost.frame = bounds
+        bubbleHost.frame = pill?.rect ?? bounds
         isBubbleHostInGlass = false
     }
 

@@ -12,6 +12,12 @@ public enum AdaptiveBubbleLayout {
         case peek
     }
 
+    /// Whether the theme the config selects (after the same fallback the resolver applies)
+    /// is adaptive, so the panel can keep room for the row before the row is drawn.
+    public static func isAdaptive(themeID: String?, in themes: [IndicatorTheme]) -> Bool {
+        IndicatorBubbleResolver.resolvedTheme(id: themeID, in: themes).theme.isAdaptive
+    }
+
     public static func archetype(for theme: IndicatorTheme, occasion: Occasion) -> BubbleArchetype {
         guard theme.isAdaptive else { return theme.archetype }
         switch occasion {

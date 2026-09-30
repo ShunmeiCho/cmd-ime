@@ -17,7 +17,8 @@ final class BubbleState: ObservableObject {
         fresh: Bool,
         anchor: UnitPoint,
         fixedSize: CGSize?,
-        reduceMotion: Bool
+        reduceMotion: Bool,
+        expansion: BubbleExpansion? = nil
     ) {
         generation += 1
         let current = generation
@@ -34,10 +35,10 @@ final class BubbleState: ObservableObject {
             }
         }
         let travel = travels ? Double(stripTravelCells()) : 0
-        // An adaptive theme growing from its Mark into the Badge row (or back): the new layout
-        // settles out of the anchor corner like an appearance, and its thumb starts on the slot
-        // the Mark was showing.
-        let morphs = !fresh && model.map { $0.archetype != next.archetype } == true
+        // An adaptive theme growing from its Mark into the Badge row: the thumb starts on the
+        // slot the Mark was showing. The growth itself is the pill's (see `updateGrowth`), so
+        // nothing settles here. Every other theme re-triggers exactly as it always has.
+        let morphs = !fresh && expansion != nil && model.map { $0.archetype != next.archetype } == true
         let startIndex = !travels ? next.activeIndex
             : fresh || morphs ? (next.previousIndex ?? next.activeIndex)
             : (presentation.thumbIndex ?? next.activeIndex)
@@ -45,10 +46,11 @@ final class BubbleState: ObservableObject {
         let start = BubblePresentation(
             thumbIndex: startIndex,
             stripTravel: travel,
-            contentScale: (fresh || morphs) && !reduceMotion ? BubbleMotion.contentSettleScale : 1,
+            contentScale: fresh && !reduceMotion ? BubbleMotion.contentSettleScale : 1,
             anchor: anchor,
             fixedSize: fixedSize,
-            reduceMotion: reduceMotion
+            reduceMotion: reduceMotion,
+            expansion: expansion
         )
         var immediate = Transaction()
         immediate.disablesAnimations = true
@@ -59,6 +61,14 @@ final class BubbleState: ObservableObject {
                 presentation = start
             }
         } else if reduceMotion {
+            // An adaptive pill takes its new size at once, together with the glass under it,
+            // so the crossfade below never shows a stroke or fill narrower than the glass.
+            if expansion != nil {
+                withTransaction(immediate) {
+                    presentation.fixedSize = fixedSize
+                    presentation.expansion = expansion
+                }
+            }
             // The thumb and the emphasis crossfade in place.
             withAnimation(BubbleMotion.contentSwap) {
                 model = next
@@ -82,6 +92,17 @@ final class BubbleState: ObservableObject {
                 self.presentation.thumbIndex = next.activeIndex
                 self.presentation.stripTravel = 0
             }
+        }
+    }
+
+    /// One frame of the adaptive growth, driven by the controller's clock together with
+    /// the glass. Never animated by SwiftUI: a second clock would drift from the glass.
+    func updateGrowth(fixedSize: CGSize, expansion: BubbleExpansion) {
+        var immediate = Transaction()
+        immediate.disablesAnimations = true
+        withTransaction(immediate) {
+            presentation.fixedSize = fixedSize
+            presentation.expansion = expansion
         }
     }
 
