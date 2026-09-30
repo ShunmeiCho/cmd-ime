@@ -325,7 +325,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         rememberInputSourcePerApp: Bool = false,
         appRules: [AppRule] = [],
         appDefaultSlot: InputRole? = nil,
-        restoreAfterPasswordField: Bool = false,
+        restoreAfterPasswordField: Bool = true,
         showCapsLockIndicator: Bool = false,
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
@@ -560,7 +560,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         rememberInputSourcePerApp = try container.decodeIfPresent(Bool.self, forKey: .rememberInputSourcePerApp) ?? false
         appRules = (try container.decodeIfPresent([LenientAppRule].self, forKey: .appRules) ?? []).compactMap(\.rule)
         appDefaultSlot = try container.decodeIfPresent(InputRole.self, forKey: .appDefaultSlot)
-        restoreAfterPasswordField = try container.decodeIfPresent(Bool.self, forKey: .restoreAfterPasswordField) ?? false
+        restoreAfterPasswordField = try container.decodeIfPresent(Bool.self, forKey: .restoreAfterPasswordField) ?? true
         showCapsLockIndicator = try container.decodeIfPresent(Bool.self, forKey: .showCapsLockIndicator) ?? false
         let decodedBindings = try container.decode([LenientKeyBinding].self, forKey: .bindings)
         bindings = decodedBindings.compactMap(\.binding)

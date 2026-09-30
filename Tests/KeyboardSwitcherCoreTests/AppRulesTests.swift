@@ -91,7 +91,7 @@ struct AppActivationSettingsTests {
 }
 
 struct AppRuleConfigTests {
-    @Test("a config from before App Rules reads no rules, no default, and password put-back off")
+    @Test("a config from before App Rules reads no rules, no default, and password put-back on")
     func missingKeysDecodeDefaults() throws {
         let json = Data(#"{"version": 3, "bindings": [], "inputSources": {}}"#.utf8)
 
@@ -99,7 +99,7 @@ struct AppRuleConfigTests {
 
         #expect(config.appRules.isEmpty)
         #expect(config.appDefaultSlot == nil)
-        #expect(!config.restoreAfterPasswordField)
+        #expect(config.restoreAfterPasswordField)
     }
 
     @Test("rules, the default slot and the password setting survive a save and reload")
@@ -111,13 +111,13 @@ struct AppRuleConfigTests {
             AppRule(appID: wechat, target: .slot(chineseSlot), rememberInstead: true),
         ]
         config.appDefaultSlot = englishSlot
-        config.restoreAfterPasswordField = true
+        config.restoreAfterPasswordField = false
 
         let decoded = try JSONDecoder().decode(SwitcherConfig.self, from: JSONEncoder().encode(config))
 
         #expect(decoded.appRules == config.appRules)
         #expect(decoded.appDefaultSlot == englishSlot)
-        #expect(decoded.restoreAfterPasswordField)
+        #expect(!decoded.restoreAfterPasswordField)
     }
 
     @Test("a rule this build cannot read is dropped, not the whole file")

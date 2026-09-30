@@ -299,7 +299,7 @@ apps always wins.
   password field is never remembered, and neither is CmdIME's own settings window.
 - **Other apps**: a slot for apps with no rule and nothing remembered, or **Keep as is**
   (the default). With App Memory on, the slot is used only on an app's first visit.
-- **Password fields** (off by default): in a password field macOS switches to an ASCII
+- **Password fields** (on by default): in a password field macOS switches to an ASCII
   input source such as ABC and leaves it there afterwards. When the field is done and the
   same app is still in front, CmdIME puts back the input source you had. Switching apps
   first cancels it. An app with a **Keep as is** rule is left alone here too.
