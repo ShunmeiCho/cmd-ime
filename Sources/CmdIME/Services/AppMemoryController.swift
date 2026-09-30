@@ -130,7 +130,8 @@ final class AppMemoryController {
             noticedID,
             isRegularApp: actual.activationPolicy == .regular,
             currentSourceID: currentSourceID(),
-            context: context(frontmostPID: actual.processIdentifier),
+            // Secure input belongs to the process in front, which a system alert can be; identity comes from `actual`.
+            context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             actualFrontmostAppID: Self.appID(of: actual),
             slotOfSource: slotForSourceID
         )
