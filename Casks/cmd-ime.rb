@@ -7,6 +7,7 @@ cask "cmd-ime" do
   desc "Custom macOS input-source switcher with configurable shortcuts"
   homepage "https://github.com/ShunmeiCho/cmd-ime"
 
+  depends_on arch: :arm64
   depends_on macos: :ventura
 
   app "CmdIME.app"

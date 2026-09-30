@@ -61,7 +61,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 **Accessibility**（辅助功能）和 **Input Monitoring**（输入监控）；应用内的设置向导会带你
 完成这两项授权和第一次切换。
 
-需要 macOS 13 或更高版本。之后的更新可以在应用内通过 **Update Now**（立即更新）安装。
+需要 macOS 13 或更高版本，且为 Apple 芯片的 Mac（暂不支持 Intel Mac）。之后的更新可以在应用内通过 **Update Now**（立即更新）安装。
 
 > [!NOTE]
 > CmdIME 目前是预览版本：已签名，但未经公证。一行命令的安装脚本是最顺畅的方式。

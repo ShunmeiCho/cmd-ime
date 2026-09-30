@@ -24,6 +24,13 @@ if [[ "$(uname -s)" != "Darwin" ]]; then
   exit 1
 fi
 
+# hw.optional.arm64 is 1 on Apple silicon even when this shell runs under Rosetta,
+# where uname -m would say x86_64.
+if [[ "$(sysctl -n hw.optional.arm64 2>/dev/null || echo 0)" != "1" ]]; then
+  echo "CmdIME needs an Apple silicon Mac; Intel Macs are not supported yet." >&2
+  exit 1
+fi
+
 mkdir -p "$INSTALL_DIR" 2>/dev/null || true
 if [[ ! -d "$INSTALL_DIR" || ! -w "$INSTALL_DIR" ]]; then
   INSTALL_DIR="$HOME/Applications"

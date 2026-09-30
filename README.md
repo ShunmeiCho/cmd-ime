@@ -64,7 +64,7 @@ SHA-256, installs `CmdIME.app` in `/Applications`, links `keyboardctl` and opens
 app. Then allow **Accessibility** and **Input Monitoring** in System Settings >
 Privacy & Security; the in-app Setup guide walks you through both and a first switch.
 
-Requires macOS 13 or later. Later updates install from inside the app with
+Requires macOS 13 or later on an Apple silicon Mac (Intel Macs are not supported yet). Later updates install from inside the app with
 **Update Now**.
 
 > [!NOTE]

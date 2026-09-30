@@ -66,7 +66,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 ください。アプリ内の Setup guide(セットアップガイド)が、この 2 つの許可と最初の
 切り替えまでを案内します。
 
-macOS 13 以降が必要です。以降のアップデートは、アプリ内の **Update Now**(今すぐ
+macOS 13 以降の Apple シリコン搭載 Mac が必要です(Intel Mac には未対応)。以降のアップデートは、アプリ内の **Update Now**(今すぐ
 アップデート)からインストールできます。
 
 > [!NOTE]
