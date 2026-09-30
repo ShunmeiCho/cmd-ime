@@ -308,14 +308,15 @@ struct CLI {
         }
     }
 
-    /// The bytes of each theme, font and recipes file the import writes, keyed by path.
-    private static func resourceSnapshot(for plan: SettingsImportPlan, in transfer: SettingsTransfer) -> [String: Data] {
+    /// Size and SHA-256 of each theme, font and recipes file the import writes, keyed by path;
+    /// fingerprints, not contents, so a large font collection is never held in memory.
+    private static func resourceSnapshot(for plan: SettingsImportPlan, in transfer: SettingsTransfer) -> [String: FileFingerprint] {
         let urls = plan.themeFileNames.map { transfer.store.themesDirectoryURL.appendingPathComponent($0) }
             + plan.fontFileNames.map { transfer.store.fontsDirectoryURL.appendingPathComponent($0) }
             + (plan.includesActivationRecipes ? [transfer.recipesURL] : [])
-        var snapshot: [String: Data] = [:]
+        var snapshot: [String: FileFingerprint] = [:]
         for url in urls {
-            snapshot[url.path] = try? Data(contentsOf: url)
+            snapshot[url.path] = FileFingerprint.of(url)
         }
         return snapshot
     }
