@@ -283,7 +283,11 @@ struct CLI {
 
     private func importSettings() throws {
         let folder = URL(fileURLWithPath: try argument(at: 1, name: "folder"))
-        let result = try settingsTransfer.importSettings(from: folder)
+        let transfer = settingsTransfer
+        let plan = try transfer.inspect(folder)
+        let configBefore = try? Data(contentsOf: transfer.store.url)
+        let resourcesBefore = Self.resourceSnapshot(for: plan, in: transfer)
+        let result = try transfer.importSettings(from: folder)
         print("Imported settings from \(folder.path)")
         print(Self.contentsLine(result.plan))
         if let backup = result.backupURL {
@@ -293,8 +297,27 @@ struct CLI {
             fputs("warning: \(result.plan.config.unreadableBindingCount) binding(s) use an action this version "
                 + "does not have and were left out.\n", stderr)
         }
-        // A running CmdIME picks up the new config.json by itself and then reads themes,
-        // fonts and recipes again. With an identical config.json it sees no change.
+        // A running CmdIME picks up a changed config.json by itself and then reads themes,
+        // fonts and recipes again; an identical config.json, the same test it applies, is ignored.
+        let appliedBefore = configBefore.flatMap { try? JSONDecoder().decode(SwitcherConfig.self, from: $0).migrated() }
+        if let appliedBefore,
+           ConfigReload.decide(fileData: try? Data(contentsOf: transfer.store.url), applied: appliedBefore) == .unchanged,
+           Self.resourceSnapshot(for: plan, in: transfer) != resourcesBefore {
+            print("config.json did not change, so a running CmdIME keeps its loaded themes, fonts and "
+                + "activation recipes until it is relaunched.")
+        }
+    }
+
+    /// The bytes of each theme, font and recipes file the import writes, keyed by path.
+    private static func resourceSnapshot(for plan: SettingsImportPlan, in transfer: SettingsTransfer) -> [String: Data] {
+        let urls = plan.themeFileNames.map { transfer.store.themesDirectoryURL.appendingPathComponent($0) }
+            + plan.fontFileNames.map { transfer.store.fontsDirectoryURL.appendingPathComponent($0) }
+            + (plan.includesActivationRecipes ? [transfer.recipesURL] : [])
+        var snapshot: [String: Data] = [:]
+        for url in urls {
+            snapshot[url.path] = try? Data(contentsOf: url)
+        }
+        return snapshot
     }
 
     private static func contentsLine(_ plan: SettingsImportPlan) -> String {
