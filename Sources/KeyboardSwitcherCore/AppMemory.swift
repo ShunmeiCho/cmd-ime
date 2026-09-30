@@ -207,7 +207,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
             return
         }
         // Only the first forced change in this app knows what the user had; repeats keep it.
-        if forced?.appID != appID {
+        if settings.leavesSourceAlone(in: appID) {
+            beforeForced = nil
+        } else if forced?.appID != appID {
             beforeForced = previousSourceID.flatMap { previous in
                 previous == sourceID ? nil : ForcedSource(appID: appID, sourceID: previous)
             }

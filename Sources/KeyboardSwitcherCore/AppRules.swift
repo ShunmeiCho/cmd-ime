@@ -128,6 +128,11 @@ public struct AppActivationSettings: Equatable, Sendable {
         remembersPerApp || !rules.isEmpty || defaultSlot != nil || restoresAfterPasswordField
     }
 
+    /// "Keep as is" means CmdIME never changes the input source in that app, Password Put-back included.
+    public func leavesSourceAlone(in appID: String) -> Bool {
+        rules[appID]?.target == .keepAsIs
+    }
+
     /// Whether the source used in `appID` is recorded. A rule decides for its own app: "keep as is"
     /// never, a slot rule only with "remember instead" (even while App Memory is off globally).
     public func usesMemory(for appID: String) -> Bool {

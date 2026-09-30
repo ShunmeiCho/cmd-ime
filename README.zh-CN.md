@@ -126,6 +126,16 @@ swift test
 
 <p align="center"><sub>三个槽位，三种你自己选的颜色。</sub></p>
 
+- **按应用设定输入源。** 在 Apps 页面，可以给某个应用指定一个槽位，每次切到它时都用这个
+  槽位，也可以让它保持不变；可以让 CmdIME 记住你在每个应用里最后用的输入源（默认关闭，
+  只保存在内存里）；可以给其余所有应用指定一个槽位；还能在离开密码框后切回原来的输入源，
+  否则 macOS 会一直停在 ABC。你按下的触发键始终优先。
+- **不止 CmdIME 自己的切换，任何切换都有提示。** 用 Control+Space、地球仪键或菜单栏
+  切换时也会显示气泡，切换应用后也可以显示。可以在指定应用里隐藏气泡，也可以设置它停留
+  多久。**Peek** 触发键在不切换的情况下显示当前输入源，Caps Lock 气泡打开一个开关即可使用。
+- **可以带走的设置。** 把槽位、触发键、主题、字体和激活配方导出到一个文件夹，在另一台 Mac
+  上导入。`keyboardctl` 对配置的修改在 CmdIME 运行时即时生效。About 页的
+  **Copy Diagnostics** 会整理好报告问题需要的信息。
 - **应用内更新。** 默认每六小时检查一次，在 **Update Now** 旁边附上改动摘要，
   原地安装并保留你的权限。
 - **跟随浅色和深色的设置窗口，** 也可以固定为你选的那一种。
@@ -191,6 +201,10 @@ CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键
 `Command+Tab` 以及多修饰键组合就不会被当成一次 Command 单击。单击会立即切换；
 只有当同一个修饰键还绑定了双击时，CmdIME 才会短暂等待。
 
+修饰键按住超过 0.8 秒不算单击；按住期间点击鼠标或滚动也会取消这次单击，所以按住 Command
+点击或滚动不会触发切换。只绑了双击的键，最多等 0.35 秒来接第二下；同时绑了单击的键只等
+0.22 秒，单击依然很快。
+
 设置窗口会拒绝 `control+space` 和 `control+option+space` 这类 macOS 输入源快捷键，
 以免 CmdIME 意外抢占系统的输入源选择器。
 
@@ -215,6 +229,67 @@ CmdIME 通过编程方式切换输入源，因此不会调出 macOS 私有的输
 
 切换指示气泡出现在其他应用之上，所以它的主题跟随 macOS 的外观，而不是设置窗口的外观，
 除非主题自己把色调固定了。
+
+Indicator 页的 **When it shows**（何时显示）：
+
+- **Other switches**（其他切换，默认开启）：输入源不经 CmdIME 改变时也显示气泡，
+  比如 Control+Space、地球仪键、菜单栏或其他应用。
+- **App switch**（切换应用，默认关闭）：切换应用后，等新应用稳定下来，如果输入源和切换前
+  不同，且还没有别的气泡显示过这次变化，就显示气泡。
+- **Hidden in**（隐藏于）：在这些应用里气泡从不显示，CmdIME 自己的切换也不例外。
+- **Stays**（停留）：气泡停留多久，0.3 到 10 秒，或选 **Automatic**（自动），按主题自己的
+  时长。
+
+这两种新增的气泡只在键盘控制运行时出现，而且只针对属于某个槽位的输入源。
+
+**More bubbles**（更多气泡）：
+
+- **Peek**：用某个修饰键的单击或双击，在不切换的情况下显示当前输入源的气泡，即使切换
+  气泡已关闭也会显示。想用 Option+P 这样的快捷键，请运行
+  `keyboardctl bind option+p peek`。不属于任何槽位的输入源不显示气泡。
+- **Caps Lock**（默认关闭）：Caps Lock 打开或关闭时显示 "A" 或 "a" 的气泡，使用你的主题。
+
+</details>
+
+<details>
+<summary><strong>按应用设定输入源</strong></summary>
+
+Apps 页面决定某个应用切到前台时发生什么。它做的每次切换都和触发键走同一条路径，所以
+切换应用后马上按下的触发键始终优先。
+
+- **App Rules**（应用规则）：从正在运行的应用中选，或用 **Choose App…** 选一个应用，
+  再选一个槽位或 **Keep as is**（保持不变）。槽位规则会在应用每次切到前台时选中该槽位。
+  **Keep as is** 从不切换，并把这个应用排除在 App Memory 之外，适合远程桌面、虚拟机和
+  游戏。**Remember**（记住）会恢复你在该应用里最后用的输入源，规则的槽位只在第一次使用，
+  即使 App Memory 关闭也是如此。规则指向的槽位被删除后，这条规则仍然列出，显示
+  "Slot deleted"，但不起作用。
+- **App Memory**（按应用记忆，默认关闭）：回到某个应用时，选中你上次在那里用的输入源，
+  不管当时是怎么选的：触发键、Control+Space、菜单栏或地球仪键。它只保存在内存里，
+  CmdIME 退出后就清空。页面会列出它记住的应用，可以用 **Forget** 忘掉一个，或用
+  **Forget All** 全部忘掉。macOS 在密码框里强制切成的输入源不会被记住，CmdIME 自己的
+  设置窗口也不会。
+- **Other apps**（其他应用）：给既没有规则、也没有记忆的应用指定一个槽位，或选
+  **Keep as is**（默认）。App Memory 开启时，这个槽位只在应用第一次切到前台时使用。
+- **Password fields**（密码框，默认关闭）：在密码框里 macOS 会切换到 ABC 这类 ASCII
+  输入源，之后一直停在那里。密码框结束、且前台仍是同一个应用时，CmdIME 会切回你原来的
+  输入源。如果先切换了应用，就不再切回。设了 **Keep as is** 规则的应用也不会切回。
+
+优先顺序：规则优先于 App Memory，除非规则选了 **Remember**；Other apps 的槽位只覆盖两者
+都没有的应用。键盘控制暂停时什么都不会发生。
+
+如果 macOS 自带的「自动切换到文稿的输入法」（键盘 > 输入法）处于开启状态，App Memory
+会给出提醒：macOS 会在每次切换窗口时选中它记住的输入源，与按应用切换互相冲突。
+Spotlight、Raycast、Alfred 这类启动器不会被识别为应用，在其中做的切换会算在下面那个应用上。
+
+命令行：
+
+```sh
+keyboardctl app-rule list
+keyboardctl app-rule set com.microsoft.VSCode english
+keyboardctl app-rule set --frontmost keep
+keyboardctl app-rule set com.tinyspeck.slackmacgap chinese --remember
+keyboardctl app-rule remove com.microsoft.VSCode
+```
 
 </details>
 
@@ -328,7 +403,12 @@ swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
 swift run keyboardctl bind double-left-command english
+swift run keyboardctl bind double-right-option peek
 swift run keyboardctl remap right-control escape
+swift run keyboardctl app-rule list
+swift run keyboardctl app-rule set --frontmost english
+swift run keyboardctl export ~/Desktop/CmdIME-settings
+swift run keyboardctl import ~/Desktop/CmdIME-settings
 swift run keyboardctl quit
 swift run keyboardctl listen
 ```
@@ -342,8 +422,14 @@ swift run keyboardctl listen
 - `keyboardctl diagnose [--json]`：输出每个槽位配置的偏好
   （`preferredIDs`、`languagePrefixes`、`nameContains`）、匹配到的输入源，
   以及匹配原因（`preferredID`、`fallbackLanguage`、`languagePrefix`、`nameContains` 或
-  `none`）。传入 `--json` 可得到结构化的 JSON 输出：`slots` 条目保留 `slot` ID，
-  并包含 `name` 和 `duplicateSlots`（没有重复时为空数组）。
+  `none`），前面先列出按应用设定的摘要。传入 `--json` 可得到结构化的 JSON 输出：`slots`
+  条目保留 `slot` ID，并包含 `name` 和 `duplicateSlots`（没有重复时为空数组）。
+- `keyboardctl bind <trigger> peek`：把这个触发键设为 Peek，在不切换的情况下显示当前
+  输入源的气泡。`peek` 优先于名为 "peek" 的槽位。
+- `keyboardctl app-rule list|set|remove`：即 Apps 页面上的 App Rules。`set` 接受一个
+  bundle id 或 `--frontmost`（运行时处于前台的应用），然后是一个槽位或 `keep`；加上
+  `--remember` 表示规则改为恢复上次的输入源。详见上文的**按应用设定输入源**。
+- `keyboardctl export <new-folder>` / `keyboardctl import <folder>`：见下文的迁移设置。
 - `keyboardctl slots`：按顺序列出槽位 ID、名称、触发键和匹配结果，
   并标出回退匹配。
 - `keyboardctl slot add [<number|source-id>] [--name N]`：不带输入源时，
@@ -367,8 +453,11 @@ swift run keyboardctl listen
 <details>
 <summary><strong>配置文件、重置、升级与降级</strong></summary>
 
-配置文件位于 `~/.config/cmd-ime/config.json`。用 CLI 编辑它之前请先退出 GUI，之后再重新
-打开：运行中的 GUI 不会监视该文件，可能会覆盖 CLI 所做的更改。
+配置文件位于 `~/.config/cmd-ime/config.json`。运行中的 CmdIME 会监视这个文件：
+`keyboardctl` 或编辑器做的修改会立即生效，状态栏会显示 "Applied the changes made to
+config.json"。文件暂时无法读取时（编辑器保存到一半，或有拼写错误），CmdIME 会保留当前
+设置并给出提示；如果在文件修好之前需要保存，它会先把文件复制为旁边的
+`config.json.unreadable.<uuid>.bak`。
 
 在设置中，**Reset to Detected**（重置为检测结果）会先请求确认，然后才用检测到的默认值
 替换所有槽位和触发键。无关的设置会被保留，包括通用的指示气泡偏好。保存之前，
@@ -389,6 +478,31 @@ GUI 会把原文件备份为配置文件旁边的 `config.json.before-reset.bak`
 槽位 ID，可能会把该配置移到 `.corrupt.<uuid>` 并将其重置。即使只有旧版 ID，
 旧版二进制也会在保存时丢弃 `slots`，导致名称和色调丢失，并可能在下次升级时恢复
 已被移除的旧版槽位。
+
+</details>
+
+<details>
+<summary><strong>迁移设置，以及 Copy Diagnostics</strong></summary>
+
+**General > Settings file**（设置文件）里有 **Export Settings…**、**Import Settings…** 和
+**Show Backups**。导出的结果是一个新文件夹，包含 `config.json`、你的 `themes/`、导入的
+`fonts/` 和 `activation-recipes.json`；CmdIME 不会写入已经存在的文件夹。
+
+导入前会先把当前设置复制到 `~/.config/cmd-ime/backups/before-import-<时间>/`，导入这个
+文件夹就能撤销。没有可读 `config.json` 的文件夹，以及来自更新版本 CmdIME 的配置，都会被
+拒绝。导入的文件会替换本地同名文件；导出里没有的本地主题和字体会保留。新设置无需重启即可
+生效，导入也不会让设置向导重新出现。被同名文件替换的字体，在 CmdIME 重启之前仍显示旧的样子。
+
+命令行也可以做同样的事，比如用脚本配置第二台 Mac：
+
+```sh
+keyboardctl export ~/Desktop/CmdIME-settings
+keyboardctl import ~/Desktop/CmdIME-settings
+```
+
+**About > Copy Diagnostics** 会复制 CmdIME 和 macOS 的版本、键盘控制是否在运行、两项权限，
+以及 `keyboardctl diagnose` 的报告。其中只有设置和输入源的名称，不包含你输入的任何内容。
+把它粘贴到 issue 里即可。
 
 </details>
 

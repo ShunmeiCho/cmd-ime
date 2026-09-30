@@ -138,6 +138,19 @@ swift test
 
 <p align="center"><sub>3 つのスロットに、自分で選んだ 3 つの色。</sub></p>
 
+- **アプリごとの入力ソース。** Apps ページでは、アプリが前面に来るたびに使うスロットを
+  決めたり、そのままにしておいたりできます。各アプリで最後に使った入力ソースを CmdIME に
+  覚えさせることもできます(初期状態はオフ、メモリ上だけに保持)。それ以外のアプリ全体に
+  スロットを 1 つ割り当てることも、パスワード欄のあとに元の入力ソースへ戻すこともできます
+  (macOS はパスワード欄のあと ABC のままにします)。押したトリガーは常に優先されます。
+- **CmdIME 以外の切り替えにもインジケーター。** Control+Space、地球儀キー、メニューバーで
+  切り替えたときもバブルが出ます。アプリの切り替え後に出すこともできます。特定のアプリでは
+  隠せますし、表示時間も選べます。**Peek** トリガーは切り替えずに今の入力ソースを表示し、
+  Caps Lock のバブルもスイッチ 1 つで使えます。
+- **持ち運べる設定。** スロット、トリガー、テーマ、フォント、アクティベーションレシピを
+  フォルダーに書き出し、別の Mac で読み込めます。`keyboardctl` による設定の変更は、
+  CmdIME の実行中にそのまま反映されます。About の **Copy Diagnostics** で、不具合報告に
+  必要な情報をまとめてコピーできます。
 - **アプリ内からのアップデート。** 既定では 6 時間ごとに確認し、**Update Now** の横に
   変更点の概要を表示し、権限を保ったままその場でインストールします。
 - **ライトとダークに追従する設定ウィンドウ。** どちらかに固定することもできます。
@@ -215,6 +228,11 @@ CmdIME は、特定のキーボードレイアウトを固定で組み込むの�
 切り替わります。CmdIME がわずかに待機するのは、同じ修飾キーにダブルタップの
 バインディングもある場合だけです。
 
+修飾キーを 0.8 秒より長く押し続けた場合はタップになりません。押している間にクリックや
+スクロールをした場合も取り消されるため、Command を押しながらクリックやスクロールをしても
+切り替わりません。ダブルタップだけが割り当てられたキーは 2 回目を最大 0.35 秒待ちます。
+シングルタップも割り当てられたキーは 0.22 秒なので、シングルタップの速さは変わりません。
+
 設定ウィンドウは、`control+space` や `control+option+space` といった macOS の入力ソース用
 ショートカットを受け付けません。これは、CmdIME がシステムの入力ソース選択機能を誤って
 奪ってしまわないようにするためです。
@@ -244,6 +262,78 @@ CmdIME 専用に登録され、システム全体には何もインストール�
 
 インジケーターはほかのアプリの上に表示されるため、テーマ側でトーンを固定していない限り、
 テーマは設定ウィンドウではなく macOS の外観に従います。
+
+Indicator ページの **When it shows**(表示するとき):
+
+- **Other switches**(ほかの切り替え、初期状態はオン): Control+Space、地球儀キー、
+  メニューバー、ほかのアプリなど、CmdIME を通さずに入力ソースが変わったときもバブルを
+  出します。
+- **App switch**(アプリの切り替え、初期状態はオフ): アプリを切り替えたあと、新しいアプリが
+  落ち着いた時点で入力ソースが切り替え前と違い、まだほかのバブルがその変化を示していなければ
+  出します。
+- **Hidden in**(非表示にするアプリ): ここにあるアプリでは、CmdIME 自身の切り替えも含めて
+  バブルを出しません。
+- **Stays**(表示時間): 0.3〜10 秒、または **Automatic**(テーマ自身の時間)。
+
+追加されたこの 2 種類のバブルは、キーボード操作が有効なときに、いずれかのスロットに属する
+入力ソースに対してだけ出ます。
+
+**More bubbles**(そのほかのバブル):
+
+- **Peek**: 修飾キーのシングルタップまたはダブルタップで、切り替えずに今の入力ソースの
+  バブルを出します。切り替えバブルをオフにしていても出ます。Option+P のような
+  ショートカットにするには `keyboardctl bind option+p peek` を実行します。どのスロットにも
+  属さない入力ソースではバブルは出ません。
+- **Caps Lock**(初期状態はオフ): Caps Lock のオン・オフで "A" または "a" のバブルを、
+  使っているテーマで出します。
+
+</details>
+
+<details>
+<summary><strong>アプリごとの入力ソース</strong></summary>
+
+Apps ページは、アプリが前面に来たときに何をするかを決めます。ここでの切り替えはすべて
+トリガーと同じ経路を通るため、アプリを切り替えた直後に押したトリガーは常に優先されます。
+
+- **App Rules**(アプリのルール): 実行中のアプリから選ぶか **Choose App…** でアプリを選び、
+  スロットか **Keep as is**(そのまま)を指定します。スロットのルールは、アプリが前面に
+  来るたびにそのスロットを選びます。**Keep as is** は切り替えず、そのアプリを App Memory の
+  対象から外します。リモートデスクトップ、仮想マシン、ゲームに向いています。
+  **Remember**(記憶)は、そのアプリで最後に使った入力ソースを戻し、ルールのスロットは
+  最初の 1 回だけ使います。App Memory がオフでも同じです。スロットを削除したルールは
+  "Slot deleted" と表示されたまま残り、何もしません。
+- **App Memory**(アプリごとの記憶、初期状態はオフ): アプリに戻ると、そこで最後に使った
+  入力ソースを選びます。トリガー、Control+Space、メニューバー、地球儀キーのどれで選んだ
+  ものでも対象です。メモリ上だけに保持され、CmdIME を終了すると消えます。覚えているアプリは
+  一覧に表示され、**Forget** で 1 つずつ、**Forget All** ですべて忘れさせられます。
+  パスワード欄で macOS が強制的に切り替えた入力ソースと、CmdIME 自身の設定ウィンドウは
+  記憶しません。
+- **Other apps**(ほかのアプリ): ルールも記憶もないアプリに使うスロット、または
+  **Keep as is**(初期値)。App Memory がオンのときは、アプリが初めて前面に来たときだけ
+  使います。
+- **Password fields**(パスワード欄、初期状態はオフ): パスワード欄では macOS が ABC などの
+  ASCII 入力ソースに切り替え、そのあともそのままにします。パスワード欄が終わり、同じアプリが
+  前面にあれば、CmdIME が元の入力ソースに戻します。先にアプリを切り替えた場合は戻しません。**Keep as is** のルールがあるアプリでも戻しません。
+
+優先順位: ルールは App Memory より優先されます(ルールで **Remember** を選んだ場合を除く)。
+Other apps のスロットは、どちらもないアプリにだけ使われます。キーボード操作を一時停止して
+いる間は何も起きません。
+
+macOS の「書類ごとに入力ソースを自動的に切り替える」(キーボード > 入力ソース)がオンの
+場合、App Memory が警告を出します。macOS がウインドウを切り替えるたびに自分の覚えた入力
+ソースを選ぶため、アプリごとの切り替えと競合するからです。Spotlight、Raycast、Alfred
+などのランチャーはアプリとして認識されないため、そこで行った切り替えは背後のアプリの
+ものとして扱われます。
+
+コマンドラインでは:
+
+```sh
+keyboardctl app-rule list
+keyboardctl app-rule set com.microsoft.VSCode english
+keyboardctl app-rule set --frontmost keep
+keyboardctl app-rule set com.tinyspeck.slackmacgap chinese --remember
+keyboardctl app-rule remove com.microsoft.VSCode
+```
 
 </details>
 
@@ -377,7 +467,12 @@ swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
 swift run keyboardctl bind double-left-command english
+swift run keyboardctl bind double-right-option peek
 swift run keyboardctl remap right-control escape
+swift run keyboardctl app-rule list
+swift run keyboardctl app-rule set --frontmost english
+swift run keyboardctl export ~/Desktop/CmdIME-settings
+swift run keyboardctl import ~/Desktop/CmdIME-settings
 swift run keyboardctl quit
 swift run keyboardctl listen
 ```
@@ -392,9 +487,18 @@ swift run keyboardctl listen
   メッセージを出力し、0 以外の終了コードで終了します。
 - `keyboardctl diagnose [--json]`: 各スロットに設定された優先条件(`preferredIDs`、
   `languagePrefixes`、`nameContains`)、一致した入力ソース、一致の理由(`preferredID`、
-  `fallbackLanguage`、`languagePrefix`、`nameContains`、または `none`)を出力します。
+  `fallbackLanguage`、`languagePrefix`、`nameContains`、または `none`)を、アプリごとの
+  設定の要約に続けて出力します。
   `--json` を指定すると、構造化された JSON で出力されます。`slots` の各項目は `slot` の
   ID を保持し、`name` と `duplicateSlots`(該当がない場合は空の配列)を含みます。
+- `keyboardctl bind <trigger> peek`: そのトリガーを Peek にします。切り替えずに今の
+  入力ソースのバブルを出します。`peek` は "peek" という名前のスロットより優先されます。
+- `keyboardctl app-rule list|set|remove`: Apps ページの App Rules と同じものです。`set` には
+  bundle id か `--frontmost`(実行時に前面にあるアプリ)、続けてスロットか `keep` を
+  指定します。`--remember` を付けると、前回の入力ソースを戻すルールになります。上の
+  **アプリごとの入力ソース**を参照してください。
+- `keyboardctl export <new-folder>` / `keyboardctl import <folder>`: 下の「設定の移行」を
+  参照してください。
 - `keyboardctl slots`: スロットの ID、名前、トリガー、一致結果を順番どおりに一覧表示し、
   フォールバックによる一致には印を付けます。
 - `keyboardctl slot add [<number|source-id>] [--name N]`: 入力ソースを指定しない場合は、
@@ -425,9 +529,12 @@ swift run keyboardctl listen
 <details>
 <summary><strong>設定ファイル、リセット、アップグレードとダウングレード</strong></summary>
 
-設定ファイルは `~/.config/cmd-ime/config.json` にあります。CLI で編集する前に GUI を
-終了し、編集後に開き直してください。実行中の GUI はファイルを監視していないため、CLI に
-よる変更を上書きしてしまう可能性があります。
+設定ファイルは `~/.config/cmd-ime/config.json` にあります。実行中の CmdIME はこの
+ファイルを監視しており、`keyboardctl` やエディターによる変更はすぐに反映され、
+ステータス行に "Applied the changes made to config.json" と表示されます。ファイルを
+読めない間(エディターが保存の途中、書き間違いなど)は、CmdIME は今の設定を保ったまま
+その旨を表示します。ファイルが直る前に保存が必要になった場合は、先にファイルを同じ場所の
+`config.json.unreadable.<uuid>.bak` にコピーします。
 
 設定画面の **Reset to Detected**(検出結果にリセット)は、すべてのスロットとトリガーを
 検出されたデフォルトに置き換える前に、確認を求めます。インジケーターの一般設定など、
@@ -456,6 +563,34 @@ stderr に通知が出力されます。これは、古いバイナリによっ�
 `.corrupt.<uuid>` に移動してリセットすることがあります。従来の ID しかない場合でも、
 古いバイナリは保存時に `slots` を削除するため、名前や色合いが失われ、次回のアップグレード
 時に削除済みの従来のスロットが復活する可能性があります。
+
+</details>
+
+<details>
+<summary><strong>設定の移行と Copy Diagnostics</strong></summary>
+
+**General > Settings file**(設定ファイル)には **Export Settings…**、**Import Settings…**、
+**Show Backups** があります。書き出されるのは新しいフォルダーで、`config.json`、`themes/`、
+読み込んだ `fonts/`、`activation-recipes.json` が入ります。すでにあるフォルダーには
+書き込みません。
+
+読み込みの前に、今の設定を `~/.config/cmd-ime/backups/before-import-<日時>/` にコピー
+します。このフォルダーを読み込めば元に戻せます。読める `config.json` がないフォルダーと、
+新しいバージョンの CmdIME の設定は受け付けません。読み込んだファイルは同じ名前のローカル
+ファイルを置き換え、書き出しに含まれないローカルのテーマやフォントは残ります。新しい設定は
+再起動なしで反映され、読み込みによってセットアップガイドが再び表示されることはありません。
+同じ名前のファイルで置き換えたフォントは、CmdIME を再起動するまで古い見た目のままです。
+
+同じことをコマンドラインでもできます。たとえば 2 台目の Mac をスクリプトで設定するとき:
+
+```sh
+keyboardctl export ~/Desktop/CmdIME-settings
+keyboardctl import ~/Desktop/CmdIME-settings
+```
+
+**About > Copy Diagnostics** は、CmdIME と macOS のバージョン、キーボード操作が有効か
+どうか、2 つの権限、`keyboardctl diagnose` のレポートをコピーします。含まれるのは設定と
+入力ソースの名前だけで、入力した内容は含まれません。issue に貼り付けてください。
 
 </details>
 

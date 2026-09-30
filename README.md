@@ -134,6 +134,20 @@ A local build needs the same two permissions before global keyboard listening wo
 
 <p align="center"><sub>Three slots, three colors of your choosing.</sub></p>
 
+- **Input sources per app.** On the Apps page, give an app a slot it gets every time it
+  comes to the front, or keep it as is; let CmdIME remember the input source you last
+  used in each app (off by default, kept in memory only); pick a slot for every other
+  app; and switch back after a password field, where macOS leaves ABC selected. A
+  trigger you press still wins.
+- **An indicator for every switch, not only CmdIME's.** It also shows when the input
+  source changes through Control+Space, the Globe key or the menu bar, and optionally
+  after an app switch. Hide it in chosen apps and set how long it stays. A **Peek**
+  trigger shows the current input source without switching, and a Caps Lock bubble is
+  one switch away.
+- **Settings you can move.** Export your slots, triggers, themes, fonts and activation
+  recipes to a folder and import them on another Mac. Edits that `keyboardctl` makes to
+  the config apply while CmdIME runs. **Copy Diagnostics** on About gathers what a bug
+  report needs.
 - **Updates from inside the app.** A check every six hours by default, a summary of
   what changed beside **Update Now**, and an in-place install that keeps your
   permissions.
@@ -207,6 +221,11 @@ Single-key modifier bindings and keyboard shortcuts are intentionally separate, 
 one-shot Command taps. A single tap switches immediately; CmdIME waits briefly only
 when the same modifier also has a double-tap binding.
 
+A modifier held down for more than 0.8 s is not a tap, and clicking or scrolling while
+it is down cancels the tap, so holding Command to click or scroll does not switch. A key
+bound only to a double tap waits up to 0.35 s for the second tap; a key that also has a
+single tap waits 0.22 s, so its single tap stays quick.
+
 The settings window rejects macOS input-source shortcuts such as `control+space` and
 `control+option+space`, so CmdIME does not take over the system input-source chooser
 by accident.
@@ -235,6 +254,74 @@ theme in Settings moves its file to the Trash.
 
 The indicator appears over other apps, so its themes follow the macOS appearance, not
 the settings window's, unless a theme's tone is fixed.
+
+**When it shows**, on the Indicator page:
+
+- **Other switches** (on by default): the bubble also shows when the input source changes
+  without CmdIME, through Control+Space, the Globe key, the menu bar or another app.
+- **App switch** (off by default): after you switch apps, once the new app has settled,
+  if the input source differs from before and nothing else showed the change.
+- **Hidden in**: apps where the bubble never shows, CmdIME's own switches included.
+- **Stays**: how long the bubble stays, from 0.3 to 10 seconds, or **Automatic** for the
+  theme's own timing.
+
+These two extra bubbles appear only while keyboard control is running, and only for an
+input source that belongs to a slot.
+
+**More bubbles**:
+
+- **Peek**: a single or double tap of a modifier key that shows the bubble for the current
+  input source without switching, even with the switch indicator turned off. For a
+  shortcut such as Option+P, run `keyboardctl bind option+p peek`. An input source that is
+  in no slot shows no bubble.
+- **Caps Lock** (off by default): a bubble with "A" or "a" when Caps Lock turns on or off,
+  drawn in your theme.
+
+</details>
+
+<details>
+<summary><strong>Per-app input sources</strong></summary>
+
+The Apps page decides what happens when an app comes to the front. Each switch it makes
+goes through the same path as a trigger, so a trigger you press right after switching
+apps always wins.
+
+- **App Rules**: pick an app from the running ones or with **Choose App…**, then a slot
+  or **Keep as is**. A slot rule selects that slot every time the app comes to the front.
+  **Keep as is** never switches and keeps the app out of App Memory, which suits remote
+  desktops, virtual machines and games. **Remember** restores the input source you last
+  used in that app and uses the rule's slot only the first time, even with App Memory
+  off. A rule whose slot you removed stays listed as "Slot deleted" and does nothing.
+- **App Memory** (off by default): coming back to an app selects the input source you last
+  used there, however you chose it: a trigger, Control+Space, the menu bar or the Globe
+  key. It is kept in memory only and is empty after CmdIME quits. The page lists the apps
+  it remembers, with **Forget** for one and **Forget All**. A source macOS forces in a
+  password field is never remembered, and neither is CmdIME's own settings window.
+- **Other apps**: a slot for apps with no rule and nothing remembered, or **Keep as is**
+  (the default). With App Memory on, the slot is used only on an app's first visit.
+- **Password fields** (off by default): in a password field macOS switches to an ASCII
+  input source such as ABC and leaves it there afterwards. When the field is done and the
+  same app is still in front, CmdIME puts back the input source you had. Switching apps
+  first cancels it. An app with a **Keep as is** rule is left alone here too.
+
+Order: a rule wins over App Memory unless the rule says **Remember**; the Other apps slot
+covers only apps with neither. Nothing happens while keyboard control is paused.
+
+If macOS's own "Automatically switch to a document's input source" (Keyboard > Input
+Sources) is on, App Memory warns about it: macOS then selects its remembered source on
+every window change, which fights the per-app switching. Launchers such as Spotlight,
+Raycast and Alfred are not seen as apps, so a switch made in one counts for the app
+underneath.
+
+From the command line:
+
+```sh
+keyboardctl app-rule list
+keyboardctl app-rule set com.microsoft.VSCode english
+keyboardctl app-rule set --frontmost keep
+keyboardctl app-rule set com.tinyspeck.slackmacgap chinese --remember
+keyboardctl app-rule remove com.microsoft.VSCode
+```
 
 </details>
 
@@ -365,7 +452,12 @@ swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
 swift run keyboardctl bind double-left-command english
+swift run keyboardctl bind double-right-option peek
 swift run keyboardctl remap right-control escape
+swift run keyboardctl app-rule list
+swift run keyboardctl app-rule set --frontmost english
+swift run keyboardctl export ~/Desktop/CmdIME-settings
+swift run keyboardctl import ~/Desktop/CmdIME-settings
 swift run keyboardctl quit
 swift run keyboardctl listen
 ```
@@ -392,8 +484,17 @@ swift run keyboardctl listen
 - `keyboardctl diagnose [--json]`: prints each slot's configured preferences
   (`preferredIDs`, `languagePrefixes`, `nameContains`), the matched input source, and the
   match reason (`preferredID`, `fallbackLanguage`, `languagePrefix`, `nameContains`, or
-  `none`). Pass `--json` for structured JSON output: `slots` entries retain `slot` IDs,
-  and include `name` and `duplicateSlots` (an empty array when there are none).
+  `none`), after a summary of the per-app settings. Pass `--json` for structured JSON
+  output: `slots` entries retain `slot` IDs, and include `name` and `duplicateSlots` (an
+  empty array when there are none).
+- `keyboardctl bind <trigger> peek`: makes the trigger a Peek, which shows the bubble for
+  the current input source without switching. `peek` wins over a slot named "peek".
+- `keyboardctl app-rule list|set|remove`: the App Rules from the Apps page. `set` takes a
+  bundle id or `--frontmost` (the app in front when you run it), then a slot or `keep`,
+  and `--remember` for a rule that restores the last input source instead. See
+  **Per-app input sources** above.
+- `keyboardctl export <new-folder>` / `keyboardctl import <folder>`: see Moving settings
+  below.
 - `keyboardctl slots`: lists ordered slot IDs, names, triggers and matches, marking
   fallback matches.
 - `keyboardctl slot add [<number|source-id>] [--name N]`: without a source, lists
@@ -421,9 +522,12 @@ slots or triggers.
 <details>
 <summary><strong>Configuration file, reset, upgrade and downgrade</strong></summary>
 
-Config lives at `~/.config/cmd-ime/config.json`. Quit the GUI before editing it with the
-CLI, then reopen it: the running GUI does not watch the file and could overwrite CLI
-changes.
+Config lives at `~/.config/cmd-ime/config.json`. A running CmdIME watches the file: a
+change made by `keyboardctl` or an editor applies right away, and the status line says
+"Applied the changes made to config.json". While the file cannot be read (an editor
+halfway through a save, a typo), CmdIME keeps its current settings and says so; if it
+has to save before the file is fixed, it first copies the file to
+`config.json.unreadable.<uuid>.bak` beside it.
 
 In Settings, **Reset to Detected** asks for confirmation before replacing all slots and
 triggers with detected defaults. Unrelated settings, including general indicator
@@ -449,6 +553,34 @@ holds the first migration's settings. Old binaries cannot decode custom slot IDs
 move that config to `.corrupt.<uuid>` and reset it. Even with only legacy IDs, an old
 binary drops `slots` on save, losing names and tints and potentially restoring removed
 legacy slots on the next upgrade.
+
+</details>
+
+<details>
+<summary><strong>Moving settings, and Copy Diagnostics</strong></summary>
+
+**General > Settings file** has **Export Settings…**, **Import Settings…** and **Show
+Backups**. An export is a new folder with `config.json`, your `themes/`, imported `fonts/`
+and `activation-recipes.json`; CmdIME will not write into a folder that already exists.
+
+An import first copies your current settings to
+`~/.config/cmd-ime/backups/before-import-<time>/`, so importing that folder undoes it. It
+refuses a folder without a readable `config.json` and a config from a newer CmdIME.
+Imported files replace local files of the same name; local themes and fonts that are not
+in the export stay. The new settings apply without a relaunch, and an import never
+brings back the setup guide. A font replaced by a file of the same name keeps its old
+look until CmdIME relaunches.
+
+The same from the command line, for example to set up a second Mac from a script:
+
+```sh
+keyboardctl export ~/Desktop/CmdIME-settings
+keyboardctl import ~/Desktop/CmdIME-settings
+```
+
+**About > Copy Diagnostics** copies the CmdIME and macOS versions, whether keyboard
+control is running, both permissions, and the `keyboardctl diagnose` report. It names
+settings and input sources only; nothing you typed is in it. Paste it into an issue.
 
 </details>
 
