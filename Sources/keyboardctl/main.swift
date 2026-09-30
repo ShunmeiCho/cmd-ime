@@ -144,6 +144,8 @@ struct CLI {
             try remap()
         case "quit":
             try quitApp()
+        case "app-rule":
+            try manageAppRule()
         default:
             guard SourceCommandPolicy.looksLikeInputSourceID(command, knownCommands: Self.knownCommands) else {
                 throw CLIError.unknownCommand(command)
@@ -266,6 +268,7 @@ struct CLI {
         print("Current input source: \(current.map { "\($0.localizedName) (\($0.id))" } ?? "unknown")")
         // App Memory itself lives in the running app's memory; only the setting is in the config.
         print("Remember input source per app: \(config.rememberInputSourcePerApp ? "on" : "off")")
+        print("App rules: \(config.appRules.count); apps without a rule: \(config.appDefaultSlot.map { config.displayName(for: $0) } ?? "keep as is"); switch back after password fields: \(config.restoreAfterPasswordField ? "on" : "off")")
         if perDocumentSwitching {
             print("macOS \"Automatically switch to a document's input source\": on (it fights per-app memory)")
         }
@@ -336,14 +339,14 @@ struct CLI {
         print("Remapped \(trigger.displayName) to \(output.displayName)")
     }
 
-    private func requireSlot(_ query: String, in config: SwitcherConfig) throws -> SwitchSlot {
+    func requireSlot(_ query: String, in config: SwitcherConfig) throws -> SwitchSlot {
         guard let slot = config.slot(matching: query) else {
             throw CLIError.unknownSlot(query, available: config.slots.map { $0.id.rawValue })
         }
         return slot
     }
 
-    private func save(_ config: SwitcherConfig, to store: ConfigStore) throws {
+    func save(_ config: SwitcherConfig, to store: ConfigStore) throws {
         if let backupURL = try store.save(config) {
             fputs("note: config upgraded to version \(config.version) (customizable slots); backup: \(backupURL.path); slot ids english/chinese/japanese unchanged. Run \"keyboardctl slots\".\n", stderr)
         }
@@ -518,7 +521,7 @@ struct CLI {
     /// like an input source id is read as one, so `keyboardctl <id>` works like `im-select <id>`.
     private static let knownCommands: Set<String> = [
         "help", "--help", "-h", "path", "scan", "init", "show", "switch", "source",
-        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit",
+        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "app-rule",
     ]
 
     /// Reads or sets the input source by id. Editor plugins call this on every mode change,
@@ -672,7 +675,7 @@ struct CLI {
     }
     #endif
 
-    private func argument(at index: Int, name: String) throws -> String {
+    func argument(at index: Int, name: String) throws -> String {
         guard args.indices.contains(index) else {
             throw CLIError.missingArgument(name)
         }
@@ -683,7 +686,7 @@ struct CLI {
         try loadConfig(from: ConfigStore(url: configURL))
     }
 
-    private func loadConfig(from store: ConfigStore) throws -> SwitcherConfig {
+    func loadConfig(from store: ConfigStore) throws -> SwitcherConfig {
         let result = try store.loadOrRecover()
         if let backupURL = result.recoveredBackupURL {
             fputs(
@@ -720,6 +723,9 @@ struct CLI {
               keyboardctl listen
               keyboardctl bind <trigger> <slot>
               keyboardctl remap <trigger> <output>
+              keyboardctl app-rule list
+              keyboardctl app-rule set <bundle-id|--frontmost> <slot|keep> [--remember]
+              keyboardctl app-rule remove <bundle-id>
               keyboardctl quit
               keyboardctl path
 
