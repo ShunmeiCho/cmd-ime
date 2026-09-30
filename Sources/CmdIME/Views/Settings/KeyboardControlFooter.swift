@@ -26,11 +26,18 @@ struct KeyboardControlFooter: View {
                     listenerFailedActions
                 }
             } else {
+                // Full width, so its edges line up with the pill and the Pause button above it.
                 Button {
                     showsPermissionDetails.toggle()
                 } label: {
-                    Label("Keyboard access ready", systemImage: "checkmark.circle.fill")
-                        .font(DesignTokens.Typography.auxiliary)
+                    HStack(spacing: DesignTokens.Layout.rowGap) {
+                        Label("Keyboard access ready", systemImage: "checkmark.circle.fill")
+                        Spacer(minLength: 0)
+                        Image(systemName: showsPermissionDetails ? "chevron.up" : "chevron.down")
+                            .accessibilityHidden(true)
+                    }
+                    .font(DesignTokens.Typography.auxiliary)
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(ConsoleButtonStyle())
                 .help("Show or hide keyboard permission details")
