@@ -34,6 +34,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var notificationPermission = NotificationPermission.unknown
     /// macOS's own "Automatically switch to a document's input source", which fights App Memory.
     @Published private(set) var isSystemPerDocumentSwitchingOn = false
+    /// What App Memory holds right now, app id to source id; empty while it is not running.
+    @Published private(set) var rememberedSources: [String: String] = [:]
     /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
     @Published var appearance = AppearancePreference.stored {
         didSet {
@@ -71,7 +73,8 @@ final class AppModel: ObservableObject {
         slotForSourceID: { [weak self] id in
             guard let self else { return nil }
             return InputSourceMatcher.slotID(forSelectedSourceID: id, sources: self.sources, config: self.config)
-        }
+        },
+        sourceForSlot: { [weak self] slot in self?.matchedSource(for: slot) }
     )
     private(set) lazy var indicatorOccasions = IndicatorOccasionController(
         inputSources: inputSources,
@@ -377,13 +380,50 @@ final class AppModel: ObservableObject {
     func setRememberInputSourcePerApp(_ enabled: Bool) {
         config.rememberInputSourcePerApp = enabled
         save()
-        refreshAppMemory()
         statusText = enabled ? "Remembering the input source per app" : "No longer remembering input sources per app"
     }
 
-    /// App Memory follows apps only while it is on and the listener runs.
+    func setAppRule(_ rule: AppRule) {
+        if commit(config.setting(rule)) {
+            statusText = "Rule saved for \(rule.name ?? rule.appID)"
+        }
+    }
+
+    func removeAppRule(for appID: String) {
+        if commit(config.removingAppRule(for: appID)) {
+            statusText = "Rule removed"
+        }
+    }
+
+    func setAppDefaultSlot(_ slot: InputRole?) {
+        var next = config
+        next.appDefaultSlot = slot
+        if commit(next) {
+            statusText = slot.map { "Apps without a rule start in \(config.displayName(for: $0))" }
+                ?? "Apps without a rule keep their input source"
+        }
+    }
+
+    func setRestoreAfterPasswordField(_ enabled: Bool) {
+        var next = config
+        next.restoreAfterPasswordField = enabled
+        if commit(next) {
+            statusText = enabled ? "Switching back after password fields" : "No longer switching back after password fields"
+        }
+    }
+
+    func forgetRememberedSource(for appID: String) {
+        appMemory.forget(appID: appID)
+    }
+
+    func forgetAllRememberedSources() {
+        appMemory.forgetAll()
+    }
+
+    /// Per-app switching follows apps only while one of its settings is on and the listener runs.
     private func refreshAppMemory() {
-        appMemory.update(isEnabled: config.rememberInputSourcePerApp && monitor != nil)
+        appMemory.onMemoryChange = { [weak self] memory in self?.rememberedSources = memory }
+        appMemory.update(settings: AppActivationSettings(config: config), isListening: monitor != nil)
     }
 
     func setSwitchIndicatorSizeFactor(_ factor: Double) {
@@ -721,6 +761,7 @@ final class AppModel: ObservableObject {
             reconcileNewSources()
             monitor?.updateConfig(next)
             refreshCurrentRole()
+            refreshAppMemory()
             return true
         } catch {
             if let failureSlot {
@@ -778,6 +819,7 @@ final class AppModel: ObservableObject {
             try configStore.save(config)
             monitor?.updateConfig(config)
             refreshCurrentRole()
+            refreshAppMemory()
             statusText = "Saved \(configStore.url.path)"
             return true
         } catch {

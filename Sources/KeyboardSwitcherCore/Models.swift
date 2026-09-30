@@ -289,6 +289,13 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     /// App Memory (CONTEXT.md): restore the input source last used in an app when it comes
     /// back to the front. Off unless the user turns it on, since it switches without a trigger.
     public var rememberInputSourcePerApp: Bool
+    /// App Rules (CONTEXT.md), in the order the user added them. One per app id.
+    public var appRules: [AppRule]
+    /// The slot an app with no rule and nothing remembered gets when it comes to the front;
+    /// nil leaves the input source unchanged.
+    public var appDefaultSlot: InputRole?
+    /// After a password field, put back the source macOS replaced with an ASCII one.
+    public var restoreAfterPasswordField: Bool
     public var bindings: [KeyBinding]
     /// How many bindings in the file this build could not read, so the app can say so instead of
     /// letting them disappear quietly. Not persisted: it describes one load, not the config.
@@ -309,6 +316,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         switchIndicatorThemeID: String? = nil,
         switchIndicatorBehavior: SwitchIndicatorBehavior = SwitchIndicatorBehavior(),
         rememberInputSourcePerApp: Bool = false,
+        appRules: [AppRule] = [],
+        appDefaultSlot: InputRole? = nil,
+        restoreAfterPasswordField: Bool = true,
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
@@ -325,6 +335,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.switchIndicatorThemeID = switchIndicatorThemeID
         self.switchIndicatorBehavior = switchIndicatorBehavior
         self.rememberInputSourcePerApp = rememberInputSourcePerApp
+        self.appRules = appRules
+        self.appDefaultSlot = appDefaultSlot
+        self.restoreAfterPasswordField = restoreAfterPasswordField
         self.bindings = bindings
         self.inputSources = inputSources
     }
@@ -483,6 +496,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case switchIndicatorThemeID
         case switchIndicatorBehavior
         case rememberInputSourcePerApp
+        case appRules
+        case appDefaultSlot
+        case restoreAfterPasswordField
         case bindings
         case inputSources
     }
@@ -532,6 +548,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             forKey: .switchIndicatorBehavior
         ) ?? SwitchIndicatorBehavior()
         rememberInputSourcePerApp = try container.decodeIfPresent(Bool.self, forKey: .rememberInputSourcePerApp) ?? false
+        appRules = (try container.decodeIfPresent([LenientAppRule].self, forKey: .appRules) ?? []).compactMap(\.rule)
+        appDefaultSlot = try container.decodeIfPresent(InputRole.self, forKey: .appDefaultSlot)
+        restoreAfterPasswordField = try container.decodeIfPresent(Bool.self, forKey: .restoreAfterPasswordField) ?? true
         let decodedBindings = try container.decode([LenientKeyBinding].self, forKey: .bindings)
         bindings = decodedBindings.compactMap(\.binding)
         unreadableBindingCount = decodedBindings.count - bindings.count
@@ -561,6 +580,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encodeIfPresent(switchIndicatorThemeID, forKey: .switchIndicatorThemeID)
         try container.encode(switchIndicatorBehavior, forKey: .switchIndicatorBehavior)
         try container.encode(rememberInputSourcePerApp, forKey: .rememberInputSourcePerApp)
+        try container.encode(appRules, forKey: .appRules)
+        try container.encodeIfPresent(appDefaultSlot, forKey: .appDefaultSlot)
+        try container.encode(restoreAfterPasswordField, forKey: .restoreAfterPasswordField)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }
