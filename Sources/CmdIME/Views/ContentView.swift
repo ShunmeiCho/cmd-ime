@@ -100,6 +100,7 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
                 IndicatorSettingsSection(model: model)
                 IndicatorOccasionsSection(model: model)
+                PeekAndCapsLockSection(model: model)
             }
             .frame(maxWidth: .infinity)
         case .general:

@@ -217,7 +217,13 @@ struct CLI {
         let trigger = try ShortcutParser.parse(argument(at: 1, name: "trigger"))
         let store = ConfigStore(url: configURL)
         var config = try loadConfig(from: store)
-        let role = try requireSlot(argument(at: 2, name: "slot"), in: config).id
+        let target = try argument(at: 2, name: "slot")
+        // The keyword wins over a slot that happens to be called "peek".
+        if target.lowercased() == Self.peekKeyword {
+            try bindPeek(trigger, config: &config, store: store)
+            return
+        }
+        let role = try requireSlot(target, in: config).id
         let displaced = config.bindings.compactMap { binding -> InputRole? in
             guard binding.trigger == trigger, binding.action.type == .switchInputSource,
                   let previous = binding.action.role, previous != role else { return nil }
@@ -231,6 +237,20 @@ struct CLI {
             fputs("note: \(trigger.displayName) was bound to \(previous.rawValue); it now has no trigger\n", stderr)
         }
         print("Bound \(trigger.displayName) to \(role.rawValue)")
+    }
+
+    private static let peekKeyword = "peek"
+
+    private func bindPeek(_ trigger: KeyTrigger, config: inout SwitcherConfig, store: ConfigStore) throws {
+        if trigger.isReservedMacInputSourceShortcut {
+            throw PeekBindingError.reservedByMacOS(trigger)
+        }
+        let displaced = config.upsertPeekBinding(trigger: trigger)
+        try save(config, to: store)
+        for binding in displaced {
+            fputs("note: \(trigger.displayName) was used by \(config.ownerDescription(of: binding)); it is now the peek trigger\n", stderr)
+        }
+        print("Bound \(trigger.displayName) to peek (show the current input source)")
     }
 
     private func remap() throws {
@@ -664,7 +684,7 @@ struct CLI {
               keyboardctl source <input-source-id> [<wait-ms>] [--quiet] [--json]
               keyboardctl diagnose [--json]
               keyboardctl listen
-              keyboardctl bind <trigger> <slot>
+              keyboardctl bind <trigger> <slot|peek>
               keyboardctl remap <trigger> <output>
               keyboardctl app-rule list
               keyboardctl app-rule set <bundle-id|--frontmost> <slot|keep> [--remember]
@@ -679,6 +699,7 @@ struct CLI {
               keyboardctl bind left-command english
               keyboardctl bind right-command chinese
               keyboardctl bind option+j japanese
+              keyboardctl bind double-right-option peek    # show the current input source
               keyboardctl remap right-control escape
               keyboardctl source                          # print the current input source id
               keyboardctl source com.apple.keylayout.ABC  # select it by id, prints nothing

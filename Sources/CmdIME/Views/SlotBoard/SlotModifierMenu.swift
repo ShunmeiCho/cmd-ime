@@ -85,8 +85,8 @@ struct SlotModifierMenu: View {
                binding.trigger.gesture == candidate.gesture {
                 return model.config.displayName(for: owner)
             }
-            // A remap or disabled key owns it: saving would be rejected, so say so up front.
-            if binding.action.role == nil { return "a key remap" }
+            // A remap, peek or disabled key owns it: saving would be rejected, so say so up front.
+            if binding.action.role == nil { return model.config.ownerDescription(of: binding) }
         } catch {}
         return nil
     }

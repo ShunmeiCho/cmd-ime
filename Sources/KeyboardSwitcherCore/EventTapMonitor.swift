@@ -12,6 +12,10 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// A confirmed switch with no slot to report (`requestSwitch(to:reportingAs: nil)`), so
     /// the app still knows the change was its own.
     public var onSilentSwitch: ((InputSourceInfo) -> Void)?
+    /// A peek binding fired. Called on the main queue, after the tap callback has returned.
+    public var onPeek: (() -> Void)?
+    /// Caps Lock turned on (true) or off. Called on the main queue, after the tap callback has returned.
+    public var onCapsLockChange: ((Bool) -> Void)?
 
     /// The event tap runs on the main run loop; recording state must change there too.
     public var isCapturingShortcut: Bool {
@@ -48,6 +52,7 @@ public final class EventTapMonitor: @unchecked Sendable {
     private var runLoopSource: CFRunLoopSource?
     private var mouseDownMonitors: [Any] = []
     private var oneShotState = OneShotModifierState()
+    private var capsLock = CapsLockTracker()
     private var consumedKeyDowns = Set<Int>()
     private var resolvedSources: [InputRole: InputSourceInfo] = [:]
     private var sourceSnapshot: [InputSourceInfo]?
@@ -185,6 +190,7 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
 
         refreshResolvedSources()
+        capsLock = CapsLockTracker(isOn: CGEventSource.flagsState(.combinedSessionState).contains(.maskAlphaShift))
 
         let observer = UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
         guard let tap = CGEvent.tapCreate(
@@ -373,6 +379,9 @@ public final class EventTapMonitor: @unchecked Sendable {
 
     private func handleFlagsChanged(_ event: CGEvent) -> Unmanaged<CGEvent>? {
         let keyCode = Int(event.getIntegerValueField(.keyboardEventKeycode))
+        if keyCode == kVK_CapsLock {
+            reportCapsLockChange(flags: event.flags)
+        }
         guard let trigger = modifierTrigger(forKeyCode: keyCode) else {
             return Unmanaged.passUnretained(event)
         }
@@ -539,6 +548,19 @@ public final class EventTapMonitor: @unchecked Sendable {
             postKey(output)
         case .disable:
             break
+        case .showIndicator:
+            Self.scheduleOnMainQueue(after: 0) { [weak self] in
+                self?.onPeek?()
+            }
+        }
+    }
+
+    /// Only the Caps Lock key's own events are read: a posted modifier event (the lab's, another
+    /// app's) can carry flags without the lock bit and would announce a toggle that never happened.
+    private func reportCapsLockChange(flags: CGEventFlags) {
+        guard let isOn = capsLock.observe(isOn: flags.contains(.maskAlphaShift)) else { return }
+        Self.scheduleOnMainQueue(after: 0) { [weak self] in
+            self?.onCapsLockChange?(isOn)
         }
     }
 

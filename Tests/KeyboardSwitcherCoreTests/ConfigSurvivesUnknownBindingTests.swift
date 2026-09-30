@@ -100,4 +100,22 @@ final class ConfigSurvivesUnknownBindingTests: XCTestCase {
         XCTAssertEqual(result.config.bindings.map(\.action.role), [InputRole(rawValue: "english")])
         XCTAssertEqual(result.config.unreadableBindingCount, 1)
     }
+
+    /// A build from before peek existed has no `showIndicator` case, so to it the action is an
+    /// unknown name. This writes the peek binding exactly as this build does, renames only the
+    /// action to one no build knows, and checks the older build's view: one binding lost, not the file.
+    func testAPeekBindingCostsAnOlderBuildOnlyThatBinding() throws {
+        let (store, url) = try makeStore()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let config = try SwitcherConfig.default.replacingPeekBinding(with: ShortcutParser.parse("option+p"))
+        let written = String(decoding: try JSONEncoder().encode(config), as: UTF8.self)
+        XCTAssertTrue(written.contains(#""type":"showIndicator""#))
+        try write(written.replacingOccurrences(of: #""type":"showIndicator""#, with: #""type":"notInThisBuild""#), to: url)
+
+        let result = try store.loadOrRecover()
+
+        XCTAssertNil(result.recoveredBackupURL)
+        XCTAssertEqual(result.config.bindings, SwitcherConfig.default.bindings)
+        XCTAssertEqual(result.config.unreadableBindingCount, 1)
+    }
 }

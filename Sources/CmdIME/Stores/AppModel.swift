@@ -502,6 +502,35 @@ final class AppModel: ObservableObject {
         statusText = visible ? "Switch indicator enabled" : "Switch indicator disabled"
     }
 
+    func setCapsLockIndicatorVisible(_ visible: Bool) {
+        config.showCapsLockIndicator = visible
+        save()
+        statusText = visible ? "Caps Lock indicator enabled" : "Caps Lock indicator disabled"
+    }
+
+    var peekTrigger: KeyTrigger? { config.peekBinding?.trigger }
+
+    /// Nil on success, else the reason the trigger was refused.
+    @discardableResult
+    func commitPeekTrigger(_ trigger: KeyTrigger?) -> String? {
+        do {
+            let next = try config.replacingPeekBinding(with: trigger)
+            if next != config {
+                guard commit(next) else { return statusText }
+            }
+            statusText = trigger.map { "\(SwitcherConfig.peekDisplayName): \($0.displayName)" }
+                ?? "Removed the \(SwitcherConfig.peekDisplayName) trigger"
+            return nil
+        } catch .conflictingBinding(let binding) {
+            let reason = "\(binding.trigger.displayName) is already used by \(config.ownerDescription(of: binding))"
+            statusText = reason
+            return reason
+        } catch {
+            statusText = error.localizedDescription
+            return error.localizedDescription
+        }
+    }
+
     func setRememberInputSourcePerApp(_ enabled: Bool) {
         config.rememberInputSourcePerApp = enabled
         save()
@@ -1054,8 +1083,7 @@ final class AppModel: ObservableObject {
             _ = try config.replacingSwitchBinding(for: role, category: category, with: trigger)
             return nil
         } catch SlotTriggerCategoryError.conflictingBinding(let binding) {
-            let owner = binding.action.role.map { config.displayName(for: $0) } ?? "another binding"
-            return "\(trigger.displayName) is already used by \(owner)"
+            return "\(trigger.displayName) is already used by \(config.ownerDescription(of: binding))"
         } catch {
             return error.localizedDescription
         }
@@ -1069,15 +1097,7 @@ final class AppModel: ObservableObject {
             return "\(readableOneShotName(trigger.keyName)) is already bound to \(config.displayName(for: conflictRole))"
         }
         if let conflict = config.conflictingBinding(for: trigger, excluding: role) {
-            let owner: String
-            if conflict.action.type == .switchInputSource, let otherRole = conflict.action.role {
-                owner = config.displayName(for: otherRole)
-            } else if conflict.action.type == .sendKey {
-                owner = "a key remap"
-            } else {
-                owner = "another binding"
-            }
-            return "\(trigger.displayName) is already used by \(owner)"
+            return "\(trigger.displayName) is already used by \(config.ownerDescription(of: conflict))"
         }
         return nil
     }
@@ -1198,6 +1218,12 @@ final class AppModel: ObservableObject {
                     self?.triggeredSwitches.send(SetupTriggeredSwitch(slotID: role, sourceID: source.id, trigger: trigger))
                 }
             }
+            nextMonitor.onPeek = { [weak self] in
+                MainActor.assumeIsolated { self?.showPeekIndicator() }
+            }
+            nextMonitor.onCapsLockChange = { [weak self] isOn in
+                MainActor.assumeIsolated { self?.showCapsLockIndicator(isOn: isOn) }
+            }
             try nextMonitor.start()
             monitor = nextMonitor
             isListening = true
@@ -1261,6 +1287,28 @@ final class AppModel: ObservableObject {
 
     /// Covers the Settings Switch button's Kana delay plus its confirmation retries.
     private static let settingsSwitchBudget: TimeInterval = 1.0
+
+    /// Peek asks for the bubble explicitly, so it shows even with the switch bubble turned off.
+    private func showPeekIndicator() {
+        guard let source = try? inputSources.currentInputSource() else {
+            statusText = "No input source is selected"
+            return
+        }
+        guard let role = InputSourceMatcher.slotID(forSelectedSourceID: source.id, sources: sources, config: config) else {
+            statusText = "\(source.localizedName) is not in a slot"
+            return
+        }
+        switchIndicator.show(slotID: role, previousSlotID: nil, source: source, config: config, sources: sources)
+    }
+
+    private func showCapsLockIndicator(isOn: Bool) {
+        guard config.showCapsLockIndicator,
+              !config.switchIndicatorBehavior.isHidden(in: NSWorkspace.shared.frontmostApplication?.bundleIdentifier) else {
+            return
+        }
+        let source = try? inputSources.currentInputSource()
+        switchIndicator.showCapsLock(isOn: isOn, slotID: activeRole, source: source, config: config, sources: sources)
+    }
 
     private func readableOneShotName(_ keyName: String) -> String {
         switch keyName {
