@@ -34,14 +34,18 @@ final class BubbleState: ObservableObject {
             }
         }
         let travel = travels ? Double(stripTravelCells()) : 0
+        // An adaptive theme growing from its Mark into the Badge row (or back): the new layout
+        // settles out of the anchor corner like an appearance, and its thumb starts on the slot
+        // the Mark was showing.
+        let morphs = !fresh && model.map { $0.archetype != next.archetype } == true
         let startIndex = !travels ? next.activeIndex
-            : fresh ? (next.previousIndex ?? next.activeIndex)
+            : fresh || morphs ? (next.previousIndex ?? next.activeIndex)
             : (presentation.thumbIndex ?? next.activeIndex)
 
         let start = BubblePresentation(
             thumbIndex: startIndex,
             stripTravel: travel,
-            contentScale: fresh && !reduceMotion ? BubbleMotion.contentSettleScale : 1,
+            contentScale: (fresh || morphs) && !reduceMotion ? BubbleMotion.contentSettleScale : 1,
             anchor: anchor,
             fixedSize: fixedSize,
             reduceMotion: reduceMotion

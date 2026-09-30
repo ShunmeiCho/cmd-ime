@@ -18,7 +18,8 @@ enum IndicatorPreviewModel {
         previous: InputRole? = nil,
         miniatureOf theme: IndicatorTheme? = nil,
         sizeFactor: Double? = nil,
-        textScale: Double? = nil
+        textScale: Double? = nil,
+        occasion: AdaptiveBubbleLayout.Occasion = .switched(whileVisible: false)
     ) -> BubbleRenderModel? {
         var config = model.config
         if let sizeFactor {
@@ -42,7 +43,8 @@ enum IndicatorPreviewModel {
             slotID: slot.id,
             previousSlotID: previous,
             source: model.matchedSource(for: slot.id),
-            context: .current()
+            context: .current(),
+            occasion: occasion
         )
     }
 }

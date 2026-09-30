@@ -52,6 +52,9 @@ final class InputIndicatorController {
     private var caretLookup: Task<Void, Never>?
     /// From the config of the latest show; only its hold is read here.
     private var behavior = SwitchIndicatorBehavior()
+    /// A show waiting for its caret lookup. A second switch in that gap is continuing the
+    /// first, so an adaptive theme expands for it as if the bubble were already up.
+    private var isPresentPending = false
 
     init(configStore: ConfigStore) {
         library = IndicatorLibrary(configStore: configStore)
@@ -71,8 +74,10 @@ final class InputIndicatorController {
         previousSlotID: InputRole?,
         source: InputSourceInfo,
         config: SwitcherConfig,
-        sources: [InputSourceInfo]
+        sources: [InputSourceInfo],
+        isPeek: Bool = false
     ) {
+        let isUp = phase != .hidden || isPresentPending
         guard let model = IndicatorBubbleResolver.model(
             config: config,
             themes: library.themes,
@@ -80,7 +85,8 @@ final class InputIndicatorController {
             slotID: slotID,
             previousSlotID: previousSlotID,
             source: source,
-            context: .current()
+            context: .current(),
+            occasion: isPeek ? .peek : .switched(whileVisible: isUp)
         ) else { return }
         behavior = config.switchIndicatorBehavior
         show(model)
@@ -112,6 +118,7 @@ final class InputIndicatorController {
         let pointer = NSEvent.mouseLocation
         caretRequest += 1
         let request = caretRequest
+        isPresentPending = true
         caretLookup?.cancel()
         // The bubble on screen keeps its opacity until present() re-times it: without this, its
         // hold could run out while the lookup is still waiting and fade it out and back in.
@@ -122,6 +129,7 @@ final class InputIndicatorController {
             let axCaret = await Self.focusedCaretAccessibilityRect()
             await MainActor.run { [weak self] in
                 guard let self, self.caretRequest == request else { return }
+                self.isPresentPending = false
                 self.present(model, size: size, pointer: pointer, accessibilityCaret: axCaret)
             }
         }
