@@ -47,6 +47,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var sourceRefreshMessage: String?
     private var selectedSourceObserver: InputSourceChangeObserver?
     private var sourceChangeObserver: InputSourceChangeObserver?
+    private var configWatcher: ConfigFileWatcher?
     private var settingsWindowSubscriptions: Set<AnyCancellable> = []
     private var hasSourceBaseline = false
     private var sourceRefreshGeneration = 0
@@ -152,11 +153,40 @@ final class AppModel: ObservableObject {
             }
         }
         observeInputSourceChanges()
+        configWatcher = ConfigFileWatcher(fileURL: configStore.url) { [weak self] in
+            self?.reloadConfigFromDisk()
+        }
         refreshRuntimeStatus()
         startListeningIfReady()
         if let recoveryMessage {
             statusText = recoveryMessage
         }
+    }
+
+    /// Picks up config.json edits made outside the app (`keyboardctl`, an editor, an import).
+    /// The app's own saves read back as unchanged and do nothing.
+    func reloadConfigFromDisk() {
+        switch ConfigReload.decide(fileData: try? Data(contentsOf: configStore.url), applied: config) {
+        case .unchanged:
+            return
+        case let .unreadable(reason):
+            // Kept as is: a later save here copies the file aside before replacing it.
+            statusText = "config.json changed but could not be read (\(reason)). Keeping the current settings."
+        case let .apply(next):
+            applyConfigFromDisk(next)
+            statusText = "Applied the changes made to config.json"
+        }
+    }
+
+    /// Makes settings that are already on disk the live ones, without saving them again.
+    private func applyConfigFromDisk(_ next: SwitcherConfig) {
+        // The removed slot a pending Undo would restore may no longer fit the new slots.
+        invalidateUndo()
+        config = next
+        reconcileNewSources()
+        monitor?.updateConfig(next)
+        refreshCurrentRole()
+        refreshAppMemory()
     }
 
     private func refreshCurrentRole() {

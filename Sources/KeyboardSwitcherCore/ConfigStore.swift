@@ -162,6 +162,15 @@ public struct ConfigStore {
             } catch {
                 throw ConfigStoreError.backupFailed(backupURL, underlying: error)
             }
+        } else if FileManager.default.fileExists(atPath: url.path), (try? load()) == nil {
+            // The running app now picks up hand edits, so it can meet a half-finished one
+            // that does not decode. Saving over it would lose the edit; copy it aside first.
+            let backupURL = url.appendingPathExtension("unreadable.\(UUID().uuidString).bak")
+            do {
+                try FileManager.default.copyItem(at: url, to: backupURL)
+            } catch {
+                throw ConfigStoreError.backupFailed(backupURL, underlying: error)
+            }
         }
         try data.write(to: url, options: .atomic)
         return createdBackupURL
