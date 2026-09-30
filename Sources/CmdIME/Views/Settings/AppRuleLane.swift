@@ -8,7 +8,7 @@ struct AppRuleLaneLook {
     func title(_ lane: AppRuleBoard.Lane) -> String {
         switch lane.target {
         case .keepAsIs: "Keep as is"
-        case .slot(let id): lane.slotExists ? config.displayName(for: id) : "Slot deleted"
+        case .slot(let id): lane.slotExists ? config.displayName(for: id) : "Slot deleted (\(id.rawValue))"
         }
     }
 
@@ -38,20 +38,7 @@ struct AppRuleLane: View {
     var body: some View {
         let tint = look.tint(lane)
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: lane.target == .keepAsIs ? "minus.circle" : "circle.fill")
-                    .font(.system(size: lane.target == .keepAsIs ? 10 : 7))
-                    .foregroundStyle(tint)
-                    .accessibilityHidden(true)
-                Text(look.title(lane))
-                    .font(DesignTokens.Typography.body.weight(.semibold))
-                Spacer(minLength: DesignTokens.Layout.rowGap)
-                if !lane.rules.isEmpty {
-                    Text("\(lane.rules.count)")
-                        .font(DesignTokens.Typography.auxiliary.monospacedDigit())
-                        .foregroundStyle(DesignTokens.Colors.textMuted)
-                }
-            }
+            header(tint: tint)
             if lane.rules.isEmpty {
                 Text(placeholder)
                     .font(DesignTokens.Typography.auxiliary)
@@ -68,21 +55,50 @@ struct AppRuleLane: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                .fill(isTargeted ? tint.opacity(0.14) : DesignTokens.Colors.surfaceInset)
+                .fill(isTargeted ? tint.opacity(Self.targetedFillOpacity) : DesignTokens.Colors.surfaceInset)
         )
         .overlay(
             RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
-                .strokeBorder(isTargeted ? tint.opacity(0.70) : DesignTokens.Colors.separator, lineWidth: 1)
+                .strokeBorder(isTargeted ? tint.opacity(Self.targetedStrokeOpacity) : DesignTokens.Colors.separator, lineWidth: 1)
         )
         .animation(DesignTokens.Motion.resolved(DesignTokens.Motion.stateChange, reduceMotion: reduceMotion), value: isTargeted)
-        .onDrop(of: AppDropReader.types, isTargeted: $isTargeted) { providers in
-            let target = lane.target
-            return AppDropReader.read(providers) { [model] id, name in
-                model.dropApp(appID: id, name: name, on: target)
-            }
-        }
+        .onDrop(of: AppDropReader.laneTypes, delegate: dropTarget)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(look.title(lane))
+    }
+
+    private static let targetedFillOpacity = 0.14
+    private static let targetedStrokeOpacity = 0.70
+
+    private func header(tint: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: lane.target == .keepAsIs ? "minus.circle" : "circle.fill")
+                .font(.system(size: lane.target == .keepAsIs ? 10 : 7))
+                .foregroundStyle(tint)
+                .accessibilityHidden(true)
+            Text(look.title(lane))
+                .font(DesignTokens.Typography.body.weight(.semibold))
+            Spacer(minLength: DesignTokens.Layout.rowGap)
+            if !lane.rules.isEmpty {
+                Text("\(lane.rules.count)")
+                    .font(DesignTokens.Typography.auxiliary.monospacedDigit())
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+            }
+        }
+    }
+
+    /// A deleted slot's lane takes only rule chips: its own come back unchanged and any other is
+    /// refused with a notice (core `AppRuleBoard.drop`). New apps and files it refuses before the drop.
+    private var dropTarget: AppDropTarget {
+        let target = lane.target
+        let slotExists = lane.slotExists
+        return AppDropTarget(
+            types: AppDropReader.laneTypes,
+            accepts: { info in slotExists ? AppDropReader.laneAccepts(info) : info.hasItemsConforming(to: [AppDropReader.ruleType]) },
+            isTargeted: $isTargeted,
+            found: { [model] id, name in model.dropApp(appID: id, name: name, on: target) },
+            notAnApp: { [model] in model.refuseNonAppDrop() }
+        )
     }
 
     private var placeholder: String {
@@ -91,8 +107,9 @@ struct AppRuleLane: View {
     }
 }
 
-/// One app with a rule. Drag it to another lane or back to the app list; its menu, the close
-/// button and the accessibility actions do the same without dragging.
+/// One app with a rule. Drag it to another lane or back to the app list. Its options button (a
+/// menu reachable with Tab), its right-click menu, the close button and the accessibility actions
+/// do the same without dragging.
 struct AppRuleChip: View {
     @ObservedObject var model: AppModel
     let rule: AppRule
@@ -101,21 +118,20 @@ struct AppRuleChip: View {
 
     var body: some View {
         let app = InstalledApp(id: rule.appID, fallbackName: rule.name)
-        let look = AppRuleLaneLook(config: model.config)
         HStack(spacing: 5) {
-            Image(nsImage: app.icon)
-                .resizable()
-                .frame(width: 16, height: 16)
-                .accessibilityHidden(true)
-            Text(app.name)
-                .lineLimit(1)
-                .foregroundStyle(app.isInstalled ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textMuted)
-            if rule.rememberInstead {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(DesignTokens.Typography.auxiliary)
+            label(app)
+            Menu {
+                actions(appName: app.name)
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
-                    .help("Remember: brings back the input source you last used here; the slot is used only the first time.")
             }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+            .fixedSize()
+            .help("Move, remember or remove")
+            .accessibilityLabel("Options for \(app.name)")
             Button {
                 model.removeAppRule(for: rule.appID)
             } label: {
@@ -125,36 +141,71 @@ struct AppRuleChip: View {
             }
             .buttonStyle(.borderless)
             .help("Remove this rule")
+            .accessibilityLabel("Remove the rule for \(app.name)")
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 3)
         .background(Capsule().fill(DesignTokens.Colors.surfaceRaised))
         .overlay(Capsule().strokeBorder(DesignTokens.Colors.separator, lineWidth: 1))
-        .help(app.isInstalled ? app.name : "\(app.name) is not installed")
-        .onDrag { AppDropReader.provider(appID: rule.appID, name: app.name) }
-        .contextMenu {
-            Menu("Move To") {
-                ForEach(lanes.filter { $0.target != rule.target }, id: \.target) { lane in
-                    Button(look.title(lane)) { model.dropApp(appID: rule.appID, name: nil, on: lane.target) }
-                }
+        .onDrag { AppDropReader.provider(appID: rule.appID, name: app.name, isRule: true) }
+        .contextMenu { actions(appName: app.name) }
+        .accessibilityElement(children: .contain)
+    }
+
+    /// Icon, name, "Not installed" and the Remember mark: one accessibility element carrying the
+    /// same actions as the menu.
+    private func label(_ app: InstalledApp) -> some View {
+        HStack(spacing: 5) {
+            Image(nsImage: app.icon)
+                .resizable()
+                .frame(width: 16, height: 16)
+                .accessibilityHidden(true)
+            Text(app.name)
+                .lineLimit(1)
+                .foregroundStyle(app.isInstalled ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textMuted)
+            if !app.isInstalled {
+                Text("Not installed")
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.warning)
             }
-            if case .slot = rule.target {
-                Toggle("Remember", isOn: rememberBinding)
+            if rule.rememberInstead {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textSecondary)
+                    .help("Remember: brings back the input source you last used here; the slot is used only the first time.")
             }
-            Divider()
-            Button("Remove Rule") { model.removeAppRule(for: rule.appID) }
         }
+        .help(app.isInstalled ? app.name : "\(app.name) is not installed")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel(app: app))
-        .accessibilityActions {
+        .accessibilityActions { accessibilityActions }
+    }
+
+    @ViewBuilder
+    private func actions(appName: String) -> some View {
+        let look = AppRuleLaneLook(config: model.config)
+        Menu("Move To") {
             ForEach(lanes.filter { $0.target != rule.target }, id: \.target) { lane in
-                Button("Move to \(look.title(lane))") { model.dropApp(appID: rule.appID, name: nil, on: lane.target) }
+                Button(look.title(lane)) { model.dropApp(appID: rule.appID, name: nil, on: lane.target) }
             }
-            if case .slot = rule.target {
-                Button(rule.rememberInstead ? "Stop remembering" : "Remember") { rememberBinding.wrappedValue.toggle() }
-            }
-            Button("Remove rule") { model.removeAppRule(for: rule.appID) }
         }
+        if case .slot = rule.target {
+            Toggle("Remember", isOn: rememberBinding)
+        }
+        Divider()
+        Button("Remove Rule") { model.removeAppRule(for: rule.appID) }
+    }
+
+    @ViewBuilder
+    private var accessibilityActions: some View {
+        let look = AppRuleLaneLook(config: model.config)
+        ForEach(lanes.filter { $0.target != rule.target }, id: \.target) { lane in
+            Button("Move to \(look.title(lane))") { model.dropApp(appID: rule.appID, name: nil, on: lane.target) }
+        }
+        if case .slot = rule.target {
+            Button(rule.rememberInstead ? "Stop remembering" : "Remember") { rememberBinding.wrappedValue.toggle() }
+        }
+        Button("Remove rule") { model.removeAppRule(for: rule.appID) }
     }
 
     private var rememberBinding: Binding<Bool> {

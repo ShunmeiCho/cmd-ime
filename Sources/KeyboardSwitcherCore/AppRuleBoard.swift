@@ -121,8 +121,9 @@ public enum AppCandidateList {
     }
 }
 
-/// The text a dragged app or rule chip carries inside the settings window. Other text dropped on
-/// the board is not an app and is ignored.
+/// What a dragged app or rule chip carries inside the settings window, as UTF-8 under the board's
+/// private drag types (never as plain text, so it cannot land in another app). Anything that does
+/// not decode is not an app and is ignored.
 public enum AppDragPayload {
     static let prefix = "cmdime-app\n"
 

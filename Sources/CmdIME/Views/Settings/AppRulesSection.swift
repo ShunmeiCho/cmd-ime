@@ -10,6 +10,7 @@ struct AppRulesSection: View {
     @State private var query = ""
     @State private var running = InstalledApp.running()
     @State private var installed: [InstalledApp] = []
+    @State private var isScanningInstalled = true
 
     var body: some View {
         let lanes = AppRuleBoard.lanes(for: model.config)
@@ -24,7 +25,8 @@ struct AppRulesSection: View {
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
             }
             HStack(alignment: .top, spacing: DesignTokens.Layout.panelGap) {
-                AppPickerColumn(model: model, query: $query, apps: visibleApps, lanes: lanes)
+                AppPickerColumn(model: model, query: $query, apps: visibleApps, lanes: lanes,
+                                isScanningInstalled: isScanningInstalled)
                     .frame(width: DesignTokens.Layout.sourcePanelWidth)
                 VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
                     ForEach(lanes, id: \.target) { lane in
@@ -33,17 +35,40 @@ struct AppRulesSection: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
+            if let notice = model.appRuleNotice {
+                AppRuleNoticeRow(notice: notice) { model.dismissAppRuleNotice() }
+            }
             addMenu
         }
+        .onAppear { AppMetadataCache.shared.removeAll() }
+        .onDisappear { model.dismissAppRuleNotice() }
         .task {
             installed = await Task.detached(priority: .utility) { InstalledApp.installed() }.value
+            isScanningInstalled = false
+        }
+        .task(id: model.appRuleNotice) {
+            guard let notice = model.appRuleNotice else { return }
+            SetupGuideNavigation.announce(notice.text)
+            // A confirmation clears itself; a refusal or a failed save stays until dismissed or replaced.
+            guard case .done = notice else { return }
+            try? await Task.sleep(for: Self.confirmationLifetime)
+            model.dismissAppRuleNotice(notice)
         }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in
-            running = InstalledApp.running()
+            refreshRunning()
         }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in
-            running = InstalledApp.running()
+            refreshRunning()
         }
+    }
+
+    private static let confirmationLifetime: Duration = .seconds(4)
+
+    /// An app that launched or quit may have been installed or removed too, so names, icons and
+    /// install states are looked up again.
+    private func refreshRunning() {
+        AppMetadataCache.shared.removeAll()
+        running = InstalledApp.running()
     }
 
     private var visibleApps: [InstalledApp] {
@@ -82,5 +107,50 @@ struct AppRulesSection: View {
     private func add(_ app: InstalledApp) {
         let target: AppRuleTarget = model.config.slots.first.map { .slot($0.id) } ?? .keepAsIs
         model.dropApp(appID: app.id, name: app.name, on: target)
+    }
+}
+
+/// The Apps page's answer to the last rule edit: what changed, why a drop was refused, or that the
+/// change could not be saved.
+private struct AppRuleNoticeRow: View {
+    let notice: AppRuleNotice
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol)
+                .foregroundStyle(tint)
+                .accessibilityHidden(true)
+            Text(notice.text)
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: DesignTokens.Layout.rowGap)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+            }
+            .buttonStyle(.borderless)
+            .help("Dismiss")
+            .accessibilityLabel("Dismiss")
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var symbol: String {
+        switch notice {
+        case .done: "checkmark.circle.fill"
+        case .refused: "hand.raised.fill"
+        case .failed: "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var tint: Color {
+        switch notice {
+        case .done: DesignTokens.Colors.success
+        case .refused: DesignTokens.Colors.textSecondary
+        case .failed: DesignTokens.Colors.danger
+        }
     }
 }

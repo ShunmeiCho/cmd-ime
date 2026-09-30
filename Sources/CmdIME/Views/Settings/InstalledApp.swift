@@ -9,28 +9,18 @@ struct InstalledApp: Identifiable, Hashable {
     let name: String
 
     /// Nil when nothing on disk answers to the id any more.
-    var url: URL? {
-        id.hasPrefix("/") ? URL(fileURLWithPath: id) : NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
-    }
+    var url: URL? { AppMetadataCache.shared.entry(for: id).url }
 
-    var isInstalled: Bool {
-        url.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
-    }
+    var isInstalled: Bool { AppMetadataCache.shared.entry(for: id).isInstalled }
 
-    var icon: NSImage {
-        guard let url else { return NSWorkspace.shared.icon(for: .application) }
-        return NSWorkspace.shared.icon(forFile: url.path)
-    }
+    var icon: NSImage { AppMetadataCache.shared.entry(for: id).icon }
 
     /// `fallbackName` is what was stored with a rule, for an app that has since been removed.
     init(id: String, fallbackName: String? = nil) {
         self.id = id
-        let url = id.hasPrefix("/") ? URL(fileURLWithPath: id) : NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
-        if let url, FileManager.default.fileExists(atPath: url.path) {
-            name = FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
-        } else {
-            name = fallbackName ?? (id.hasPrefix("/") ? URL(fileURLWithPath: id).lastPathComponent : id)
-        }
+        name = AppMetadataCache.shared.entry(for: id).displayName
+            ?? fallbackName
+            ?? (id.hasPrefix("/") ? URL(fileURLWithPath: id).lastPathComponent : id)
     }
 
     init(id: String, name: String) {
@@ -48,24 +38,21 @@ struct InstalledApp: Identifiable, Hashable {
 
     var candidate: AppCandidate { AppCandidate(id: id, name: name) }
 
-    /// The folders apps are normally installed in, for the rule board's search.
+    /// The folders apps are normally installed in, for the rule board's search. Subfolders such as
+    /// Utilities and vendor folders are searched too (`AppBundleScan`).
     private static var appFolders: [URL] {
         let home = FileManager.default.homeDirectoryForCurrentUser
-        return ["/Applications", "/Applications/Utilities", "/System/Applications", "/System/Applications/Utilities"]
-            .map { URL(fileURLWithPath: $0) } + [home.appendingPathComponent("Applications")]
+        return ["/Applications", "/System/Applications"].map { URL(fileURLWithPath: $0) }
+            + [home.appendingPathComponent("Applications")]
     }
 
-    /// Apps installed in the usual folders. It reads every bundle, so call it off the main thread.
+    /// Apps installed in the usual folders. It walks folders and reads every bundle, so call it
+    /// off the main thread.
     static func installed() -> [InstalledApp] {
-        appFolders.flatMap { folder -> [InstalledApp] in
-            let contents = (try? FileManager.default.contentsOfDirectory(
-                at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
-            )) ?? []
-            return contents.compactMap { InstalledApp(bundleURL: $0) }
-        }
+        AppBundleScan.appBundles(in: appFolders).compactMap { InstalledApp(bundleURL: $0) }
     }
 
-    private static func displayName(of url: URL) -> String {
+    fileprivate static func displayName(of url: URL) -> String {
         FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
     }
 
@@ -92,5 +79,46 @@ struct InstalledApp: Identifiable, Hashable {
         panel.prompt = "Add Rule"
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         return InstalledApp(bundleURL: url)
+    }
+}
+
+/// Name, icon and install state per app id, looked up once. The Apps page redraws on every input
+/// source change and app switch, and LaunchServices lookups, file checks and icon loads are too
+/// slow to repeat for every chip and row each time. The page clears it when it appears and when
+/// an app launches or quits, since an app may have been installed or removed meanwhile.
+final class AppMetadataCache: @unchecked Sendable {
+    struct Entry {
+        let url: URL?
+        let isInstalled: Bool
+        /// Nil when nothing on disk answers to the id.
+        let displayName: String?
+        let icon: NSImage
+    }
+
+    static let shared = AppMetadataCache()
+
+    private let lock = NSLock()
+    private var entries: [String: Entry] = [:]
+
+    func entry(for id: String) -> Entry {
+        if let cached = lock.withLock({ entries[id] }) { return cached }
+        let entry = Self.lookUp(id)
+        lock.withLock { entries[id] = entry }
+        return entry
+    }
+
+    func removeAll() {
+        lock.withLock { entries.removeAll() }
+    }
+
+    private static func lookUp(_ id: String) -> Entry {
+        let url = id.hasPrefix("/") ? URL(fileURLWithPath: id) : NSWorkspace.shared.urlForApplication(withBundleIdentifier: id)
+        let installedURL = url.flatMap { FileManager.default.fileExists(atPath: $0.path) ? $0 : nil }
+        return Entry(
+            url: url,
+            isInstalled: installedURL != nil,
+            displayName: installedURL.map(InstalledApp.displayName(of:)),
+            icon: url.map { NSWorkspace.shared.icon(forFile: $0.path) } ?? NSWorkspace.shared.icon(for: .application)
+        )
     }
 }
