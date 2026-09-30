@@ -45,8 +45,20 @@ The per-app record of the input source that was last active while that app was i
 _Avoid_: Auto-switch, per-app cache, history
 
 **App Rule**:
-A default slot the user set for one app, or "keep as is"; bringing that app to the front selects the slot, and an app with a rule is never restored from App Memory. Usage statistics may propose one, but nothing becomes a rule without the user's confirmation, so switching stays predictable.
+A default slot the user set for one app, or "keep as is"; bringing that app to the front selects the slot, and an app with a rule is never restored from App Memory. "Keep as is" also keeps the app out of App Memory. A rule marked Remember restores the app's memory and uses its slot only when nothing is remembered. Usage statistics may propose one, but nothing becomes a rule without the user's confirmation, so switching stays predictable.
 _Avoid_: Habit rule, smart switching, AI switching
+
+**Default Slot** (UI: "Apps without a rule or memory"):
+The slot selected when an app with no App Rule and nothing in App Memory comes to the front. Unset means the input source is left as it is.
+_Avoid_: Global default, fallback slot (fallback means the same-language source inside a slot)
+
+**Password Put-back** (UI: "Switch back after a password field"):
+Selecting again the input source that was active before a password field made macOS force an ASCII one, once secure input ends in the same app. The forced source is never recorded as the user's choice.
+_Avoid_: Secure input restore, auto-fix
+
+**Peek**:
+A trigger that shows the switch indicator for the current input source without switching. It is a binding action, not a slot.
+_Avoid_: Preview, show current, status
 
 ## Dynamic slots (PR1)
 

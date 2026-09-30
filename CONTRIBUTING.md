@@ -6,7 +6,7 @@ Thanks for helping improve CmdIME.
 
 Requirements:
 
-- macOS on Apple Silicon or Intel
+- macOS on Apple Silicon (releases are arm64 only)
 - Xcode command line tools
 - Swift toolchain bundled with Xcode
 
