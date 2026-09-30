@@ -162,6 +162,9 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .narrow { max-width: 62ch; margin-bottom: 24px; }
 .shot img { border-radius: var(--r-surf); margin: 0 auto; }
 .shot-narrow img { max-width: 520px; width: 100%; }
+.feature-demo { max-width: 880px; margin: 24px auto 0; }
+.feature-demo img { width: 100%; }
+.feature-demo + .feature-demo { margin-top: 40px; }
 @media (max-width: 860px) {
   .split, .split.reverse { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .feature + .feature { margin-top: 56px; }
@@ -247,6 +250,7 @@ figcaption { color: var(--muted); font-size: 0.9rem; margin-top: 12px; }
 .hero h1 .muted { color: var(--muted); }
 .lede { font-size: clamp(1rem, 0.95rem + 0.3vw, 1.15rem); color: var(--muted); margin: 0; }
 .hero-cta { margin: 20px 0 0; }
+.release-link { margin: 16px 0 0; font-size: 0.95rem; }
 @media (max-width: 760px) {
   :root { --hero-pad-top: 24px; }
 }

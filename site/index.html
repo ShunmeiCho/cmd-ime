@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="google-site-verification" content="Vv_6og7kFj0Y-GGjq-pi7b1ZU4sD2XugcNH6LBDA_Jk">
-<title>CmdIME by ShunmeiCho - macOS input source switcher, one key per input source</title>
-<meta name="description" content="CmdIME gives every input source on your Mac its own key. Tap Left Command for English, Right Command for Chinese, Right Shift for Japanese. Preview build: signed, not notarized.">
+<title>CmdIME 0.12.0 by ShunmeiCho - input sources per app on macOS</title>
+<meta name="description" content="One key per input source, App Rules, App Memory, Adaptive themes and portable settings. CmdIME 0.12.0 for Apple silicon, macOS 13+. Preview: signed, not notarized.">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#0F1014">
 <link rel="canonical" href="https://shunmeicho.github.io/cmd-ime/">
@@ -14,20 +14,20 @@
 <link rel="alternate" hreflang="ja" href="https://shunmeicho.github.io/cmd-ime/?lang=ja">
 <link rel="alternate" hreflang="x-default" href="https://shunmeicho.github.io/cmd-ime/">
 <link rel="sitemap" type="application/xml" href="sitemap.xml">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "CmdIME", "alternateName": "CmdIME by ShunmeiCho", "description": "A macOS input source switcher that gives every input source its own key: tap Left Command for English, Right Command for Chinese, Right Shift for Japanese.", "applicationCategory": "UtilitiesApplication", "operatingSystem": "macOS 13 or later", "url": "https://shunmeicho.github.io/cmd-ime/", "downloadUrl": "https://github.com/ShunmeiCho/cmd-ime/releases/latest", "softwareVersion": "0.7.1", "license": "https://opensource.org/licenses/MIT", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "author": {"@type": "Person", "name": "ShunmeiCho", "url": "https://github.com/ShunmeiCho"}, "codeRepository": "https://github.com/ShunmeiCho/cmd-ime", "inLanguage": ["en", "zh-CN", "ja"]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "CmdIME", "alternateName": "CmdIME by ShunmeiCho", "description": "A macOS input source switcher with one key per input source, App Rules, App Memory, Adaptive themes and portable settings.", "applicationCategory": "UtilitiesApplication", "operatingSystem": "macOS 13 or later on Apple silicon", "url": "https://shunmeicho.github.io/cmd-ime/", "downloadUrl": "https://github.com/ShunmeiCho/cmd-ime/releases/latest", "softwareVersion": "0.12.0", "license": "https://opensource.org/licenses/MIT", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "author": {"@type": "Person", "name": "ShunmeiCho", "url": "https://github.com/ShunmeiCho"}, "codeRepository": "https://github.com/ShunmeiCho/cmd-ime", "inLanguage": ["en", "zh-CN", "ja"]}</script>
 <link rel="icon" href="assets/icon-switch.webp" type="image/webp">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CmdIME by ShunmeiCho">
-<meta property="og:title" content="CmdIME by ShunmeiCho - one key per input source on macOS">
-<meta property="og:description" content="CmdIME gives every input source on your Mac its own key. Tap Left Command for English, Right Command for Chinese, Right Shift for Japanese.">
+<meta property="og:title" content="CmdIME 0.12.0 - one key per input source, a slot for each app">
+<meta property="og:description" content="Drag apps onto slots, restore your input source after password fields, and see a bubble for every switch. Adaptive themes and portable settings. Apple silicon only.">
 <meta property="og:url" content="https://shunmeicho.github.io/cmd-ime/">
 <meta property="og:image" content="https://shunmeicho.github.io/cmd-ime/assets/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="CmdIME: one key per input source. Left Command selects English, Right Command selects Chinese, Right Shift selects Japanese.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="CmdIME by ShunmeiCho - one key per input source on macOS">
-<meta name="twitter:description" content="CmdIME gives every input source on your Mac its own key. Tap Left Command for English, Right Command for Chinese, Right Shift for Japanese.">
+<meta name="twitter:title" content="CmdIME 0.12.0 - one key per input source, a slot for each app">
+<meta name="twitter:description" content="Drag apps onto slots, restore your input source after password fields, and see a bubble for every switch. Adaptive themes and portable settings. Apple silicon only.">
 <meta name="twitter:image" content="https://shunmeicho.github.io/cmd-ime/assets/og.png">
 <link rel="stylesheet" href="style.css">
 <script>
@@ -82,6 +82,7 @@
         <a class="btn btn-primary" href="#install"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></a>
         <button type="button" class="btn btn-quiet play-demo" id="play-demo" hidden><span class="i-en">Play demo</span><span class="i-zh" lang="zh-CN">播放演示</span><span class="i-ja" lang="ja">デモを再生</span></button>
       </p>
+      <p class="release-link"><a href="#features"><span class="i-en">Explore CmdIME 0.12.0: App Rules, Adaptive themes and settings you can move.</span><span class="i-zh" lang="zh-CN">了解 CmdIME 0.12.0：应用规则、Adaptive 主题，以及可以带走的设置。</span><span class="i-ja" lang="ja">CmdIME 0.12.0：App Rules、Adaptive テーマ、持ち運べる設定。</span></a></p>
     </div>
 
     <!-- Interactive preview: six one-shot keys, each plays a sample in its language. -->
@@ -149,7 +150,7 @@
     <div class="install-grid">
       <div class="install-main">
         <h2 id="install-title"><span class="i-en">Install</span><span class="i-zh" lang="zh-CN">安装</span><span class="i-ja" lang="ja">インストール</span></h2>
-        <p class="install-facts"><span class="i-en">Free and open source (MIT). Requires macOS 13 or later. Preview build: signed, not notarized.</span><span class="i-zh" lang="zh-CN">免费开源（MIT）。需要 macOS 13 或更高版本。预览版本：已签名，但未经公证。</span><span class="i-ja" lang="ja">無料のオープンソース（MIT）です。macOS 13 以降が必要です。プレビュービルド：署名済みですが、公証（notarize）はされていません。</span></p>
+        <p class="install-facts"><span class="i-en">Free and open source (MIT). Requires macOS 13 or later on Apple silicon (Intel Macs are not supported). Preview build: signed, not notarized.</span><span class="i-zh" lang="zh-CN">免费开源（MIT）。需要搭载 Apple 芯片的 Mac，运行 macOS 13 或更高版本（不支持 Intel Mac）。预览版本：已签名，但未经公证。</span><span class="i-ja" lang="ja">無料のオープンソース（MIT）です。macOS 13 以降の Apple シリコン搭載 Mac が必要です（Intel Mac には未対応）。プレビュービルド：署名済みですが、公証（notarize）はされていません。</span></p>
         <p class="code-label"><span class="i-en">Paste into Terminal</span><span class="i-zh" lang="zh-CN">粘贴到“终端”中运行</span><span class="i-ja" lang="ja">ターミナルに貼り付けて実行</span></p>
         <div class="code code-hero">
           <pre><code id="cmd-install">curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | bash</code></pre>
@@ -251,7 +252,57 @@
 
   <!-- Features -->
   <section id="features" class="panel section" aria-labelledby="features-title">
-    <h2 id="features-title"><span class="i-en">What you get</span><span class="i-zh" lang="zh-CN">功能一览</span><span class="i-ja" lang="ja">できること</span></h2>
+    <h2 id="features-title"><span class="i-en">Inside CmdIME 0.12.0</span><span class="i-zh" lang="zh-CN">CmdIME 0.12.0 功能一览</span><span class="i-ja" lang="ja">CmdIME 0.12.0 でできること</span></h2>
+
+    <div class="feature wide" id="app-rules">
+      <div class="feature-text narrow">
+        <h3><span class="i-en">App Rules: a slot for each app</span><span class="i-zh" lang="zh-CN">应用规则：按应用设定输入源</span><span class="i-ja" lang="ja">App Rules：アプリごとの入力ソース</span></h3>
+        <p class="i-en">On the Apps page, drag an app from the list, Finder or the Dock onto a slot and it gets that slot every time it comes to the front. Drag it onto <strong>Keep as is</strong> and CmdIME leaves it alone. A trigger you press still wins.</p>
+        <p class="i-zh" lang="zh-CN">在 Apps 页面，把一个应用从列表、访达或 Dock 拖到某个槽位上，它每次切到前台时都会用这个槽位；拖到 <strong>Keep as is</strong>（保持不变）上，CmdIME 就不去动它。你按下的触发键始终优先。</p>
+        <p class="i-ja" lang="ja">Apps ページで、一覧、Finder、Dock からアプリをスロットにドラッグすると、そのアプリは前面に来るたびにそのスロットになります。<strong>Keep as is</strong>（そのまま）にドラッグすれば、CmdIME はそのアプリでは何もしません。押したトリガーは常に優先されます。</p>
+      </div>
+      <figure class="shot feature-demo">
+        <img class="i-en" src="assets/apps-drag.gif" width="720" height="375" loading="lazy" alt="Dragging WeChat onto the Chinese slot and Chat onto the Japanese slot on the App Rules board.">
+        <img class="i-zh" src="assets/apps-drag.gif" width="720" height="375" loading="lazy" alt="应用规则面板：把 WeChat 拖到中文槽位，再把 Chat 拖到日文槽位。">
+        <img class="i-ja" src="assets/apps-drag.gif" width="720" height="375" loading="lazy" alt="App Rules ボードで WeChat を中国語のスロットへ、Chat を日本語のスロットへドラッグ。">
+        <figcaption><span class="i-en">Drag an app onto a slot to give it that slot.</span><span class="i-zh" lang="zh-CN">把应用拖到某个槽位上，它就用这个槽位。</span><span class="i-ja" lang="ja">アプリをスロットにドラッグすると、そのスロットが割り当てられます。</span></figcaption>
+      </figure>
+      <figure class="shot feature-demo">
+        <img class="i-en" src="assets/per-app.gif" width="880" height="288" loading="lazy" alt="Clicking between Code and Chat selects English and Chinese respectively, with an input-source bubble for each switch.">
+        <img class="i-zh" src="assets/per-app.gif" width="880" height="288" loading="lazy" alt="在 Code 和 Chat 之间点击，分别切到英文和中文，并显示输入源气泡。">
+        <img class="i-ja" src="assets/per-app.gif" width="880" height="288" loading="lazy" alt="Code と Chat をクリックして移ると英語と中国語に切り替わり、バブルが表示されます。">
+        <figcaption><span class="i-en">App Rules: Code gets English, Chat gets Chinese. Clicking between them is all it takes.</span><span class="i-zh" lang="zh-CN">应用规则：Code 用英文，Chat 用中文，点一下就切过去。</span><span class="i-ja" lang="ja">App Rules：Code は英語、Chat は中国語。クリックするだけで切り替わります。</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="feature split">
+      <div class="feature-text">
+        <div class="i-en"><h3>App Memory</h3><p>Let CmdIME remember the input source you last used in each app. Off by default, kept in memory only.</p><h3>A default slot for other apps</h3><p>Pick a slot for every other app.</p></div>
+        <div class="i-zh" lang="zh-CN"><h3>App Memory：记住每个应用的输入源</h3><p>可以让 CmdIME 记住你在每个应用里最后用的输入源。默认关闭，只保存在内存里。</p><h3>其余应用的默认槽位</h3><p>可以给其余所有应用指定一个槽位。</p></div>
+        <div class="i-ja" lang="ja"><h3>App Memory：アプリごとに記憶</h3><p>各アプリで最後に使った入力ソースを CmdIME に覚えさせることもできます。初期状態はオフ、メモリ上だけに保持します。</p><h3>それ以外のアプリのスロット</h3><p>それ以外のアプリ全体にスロットを 1 つ割り当てることもできます。</p></div>
+      </div>
+      <figure class="shot">
+        <img class="i-en" src="assets/apps.webp" width="1560" height="1350" loading="lazy" alt="The Apps settings page with App Rules and app-switching preferences.">
+        <img class="i-zh" src="assets/apps.webp" width="1560" height="1350" loading="lazy" alt="Apps 设置页中的应用规则和应用切换选项。">
+        <img class="i-ja" src="assets/apps.webp" width="1560" height="1350" loading="lazy" alt="Apps 設定ページの App Rules とアプリ切り替えの設定。">
+        <figcaption><span class="i-en">Apps: rules and input-source preferences in one place.</span><span class="i-zh" lang="zh-CN">Apps：集中设置应用规则和输入源偏好。</span><span class="i-ja" lang="ja">Apps：App Rules と入力ソースの設定をひとつの場所で。</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="feature wide">
+      <div class="feature-text narrow">
+        <h3><span class="i-en">Your input source returns after a password field</span><span class="i-zh" lang="zh-CN">离开密码框，切回原来的输入源</span><span class="i-ja" lang="ja">パスワード欄のあと、元の入力ソースへ</span></h3>
+        <p class="i-en">macOS leaves ABC selected after a password field. CmdIME switches back to the input source you had before. On by default.</p>
+        <p class="i-zh" lang="zh-CN">离开密码框后切回原来的输入源，否则 macOS 会一直停在 ABC。默认开启。</p>
+        <p class="i-ja" lang="ja">macOS はパスワード欄のあと ABC のままにします。CmdIME は元の入力ソースへ戻します。初期状態はオンです。</p>
+      </div>
+      <figure class="shot feature-demo">
+        <img class="i-en" src="assets/password.gif" width="720" height="343" loading="lazy" alt="Chinese in Name, ABC in Password, then Chinese returns in Note.">
+        <img class="i-zh" src="assets/password.gif" width="720" height="343" loading="lazy" alt="Name 栏输入中文，Password 栏切到 ABC，Note 栏恢复中文。">
+        <img class="i-ja" src="assets/password.gif" width="720" height="343" loading="lazy" alt="Name 欄で中国語、Password 欄で ABC、Note 欄で中国語に戻ります。">
+        <figcaption><span class="i-en">After a password field, the input source you had comes back.</span><span class="i-zh" lang="zh-CN">离开密码框后，原来的输入源自动回来。</span><span class="i-ja" lang="ja">パスワード欄のあと、元の入力ソースが戻ります。</span></figcaption>
+      </figure>
+    </div>
 
     <div class="feature split">
       <div class="feature-text">
@@ -275,10 +326,12 @@
         </div>
       </div>
       <figure class="shot">
-        <img src="assets/slot-board-web.png" width="692" height="738" loading="lazy" alt="The CmdIME settings window in the dark appearance: installed input sources on the left, three slots with their single-tap, double-tap and shortcut triggers on the right, and Live keys below.">
+        <img class="i-en" src="assets/slot-board.webp" width="1560" height="1110" loading="lazy" alt="The Slots page: input sources on the left, slots and triggers on the right, Live keys below.">
+        <img class="i-zh" src="assets/slot-board.webp" width="1560" height="1110" loading="lazy" alt="Slots 页面：左侧是输入源，右侧是槽位和触发键，下方是 Live keys。">
+        <img class="i-ja" src="assets/slot-board.webp" width="1560" height="1110" loading="lazy" alt="Slots ページ：左に入力ソース、右にスロットとトリガー、下に Live keys。">
         <figcaption>
           <span class="i-en">The slot board in the dark appearance. Three slots here; add one for every input source you use.</span>
-          <span class="i-zh" lang="zh-CN">深色外观下的槽位面板。这里是三个槽位，你用几个输入法就可以加几个。</span>
+          <span class="i-zh" lang="zh-CN">深色外观下的槽位面板。这里是三个槽位，你用几个输入源就可以加几个。</span>
           <span class="i-ja" lang="ja">ダーク外観のスロットボード。ここでは 3 つですが、使う入力ソースの数だけ追加できます。</span>
         </figcaption>
       </figure>
@@ -287,12 +340,14 @@
     <div class="feature wide">
       <div class="feature-text narrow">
         <h3><span class="i-en">A switch indicator near the caret</span><span class="i-zh" lang="zh-CN">光标附近的切换指示气泡</span><span class="i-ja" lang="ja">キャレットの近くに表示される切り替えインジケーター</span></h3>
-        <p class="i-en">Eighteen built-in themes, including Glass, Liquid Glass on macOS 26 and later, paper styles, a switcher that shows every slot, a badge that shrinks it to the glyphs, a mark that keeps only the source you switched to, and an adaptive mark that widens into the badge while you keep switching, plus your own themes and fonts. Every slot takes any color you pick, and the indicator can fill with it.</p>
-        <p class="i-zh" lang="zh-CN">十八种内置主题，包括 Glass、macOS 26 及以上的 Liquid Glass、纸张风格、显示所有槽位的切换器、只保留字形的小徽标，只显示切换到的输入法的标记，以及连续切换时从标记展开成徽章的自适应主题，另外还支持你自己的主题和字体。每个槽位的颜色都能任意自选，气泡可以直接用这个颜色显示。</p>
-        <p class="i-ja" lang="ja">Glass、macOS 26 以降の Liquid Glass、paper 系のスタイル、すべてのスロットを表示する switcher、それを字形だけに縮めた badge、切り替え先だけを示す mark、続けて切り替えると mark から badge に広がる adaptive など 18 の組み込みテーマに加え、独自のテーマやフォントも使えます。スロットごとに好きな色を選べ、インジケーターをその色で表示できます。</p>
+        <p class="i-en">Eighteen built-in themes, including Glass, Liquid Glass on macOS 26 and later, paper styles, a switcher that shows every slot, a badge that shrinks it to the glyphs, a mark that keeps only the source you switched to, and two Adaptive themes, plus your own themes and fonts. Every slot takes any color you pick, and the indicator can fill with it.</p>
+        <p class="i-zh" lang="zh-CN">十八种内置主题，包括 Glass、macOS 26 及以上的 Liquid Glass、纸张风格、显示所有槽位的切换器、把切换器缩到只剩图标的徽章、只保留刚切到的那一个输入源的标记，以及两个 Adaptive（自适应）主题。另外还支持你自己的主题和字体。每个槽位的颜色都能任意自选，气泡可以直接用这个颜色显示。</p>
+        <p class="i-ja" lang="ja">Glass、macOS 26 以降の Liquid Glass、paper 系のスタイル、すべてのスロットを表示する switcher、それをグリフだけに縮めた badge、切り替えた入力ソースだけを残す mark、そして 2 つの Adaptive テーマなど 18 の組み込みテーマに加え、独自のテーマやフォントも使えます。スロットごとに好きな色を選べ、インジケーターをその色で表示できます。</p>
       </div>
       <figure class="shot">
-        <img src="assets/themes-web.png" width="1286" height="781" loading="lazy" alt="All eighteen built-in indicator themes in Settings: three Switchers, two Badges, two Marks, two Adaptive, Glass, Liquid Glass, Classic, three paper styles, Typographic, Tile and Line.">
+        <img class="i-en" src="assets/themes.webp" width="1371" height="833" loading="lazy" alt="All eighteen built-in indicator themes in Settings, including two Adaptive themes.">
+        <img class="i-zh" src="assets/themes.webp" width="1371" height="833" loading="lazy" alt="设置里的全部十八种内置指示气泡主题，包含两种 Adaptive 主题。">
+        <img class="i-ja" src="assets/themes.webp" width="1371" height="833" loading="lazy" alt="設定画面に並ぶ全 18 種類の組み込みインジケーターテーマ。Adaptive は 2 種類。">
         <figcaption>
           <span class="i-en">All eighteen built-in themes, as they appear in Settings.</span>
           <span class="i-zh" lang="zh-CN">设置里的全部 18 个内置主题。</span>
@@ -301,7 +356,56 @@
       </figure>
     </div>
 
-    <div class="feature split reverse">
+    <div class="feature wide">
+      <div class="feature-text narrow">
+        <h3><span class="i-en">Adaptive: from a mark to the whole row</span><span class="i-zh" lang="zh-CN">Adaptive：从一个标记展开成一排</span><span class="i-ja" lang="ja">Adaptive：マークから一列へ</span></h3>
+        <p class="i-en">The two Adaptive themes show the mark for a single switch and widen into the badge row when you switch again while it is up or when you Peek.</p>
+        <p class="i-zh" lang="zh-CN">两个 Adaptive（自适应）主题：单次切换时显示标记，气泡还在时再切一次或者用 Peek，就展开成徽章那样的一整排。</p>
+        <p class="i-ja" lang="ja">2 つの Adaptive テーマは、1 回の切り替えでは mark を表示し、表示中にもう一度切り替えたときや Peek したときは badge の列に広がります。</p>
+      </div>
+      <figure class="shot feature-demo">
+        <img class="i-en" src="assets/adaptive.gif" width="720" height="243" loading="lazy" alt="Switching to Chinese shows a single mark; switching again to Japanese expands the A 中 あ row.">
+        <img class="i-zh" src="assets/adaptive.gif" width="720" height="243" loading="lazy" alt="切到中文时只显示「中」标记，再切到日文时展开成 A 中 あ 一排。">
+        <img class="i-ja" src="assets/adaptive.gif" width="720" height="243" loading="lazy" alt="中国語に切り替えると「中」のマーク、続けて日本語に切り替えると A 中 あ の一列に広がります。">
+        <figcaption><span class="i-en">One switch shows the mark; switch again while it is up and it widens into the row.</span><span class="i-zh" lang="zh-CN">单次切换显示标记，气泡仍在时再次切换就展开。</span><span class="i-ja" lang="ja">1 回の切り替えではマークだけ、表示中にもう一度切り替えると一列に広がります。</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="feature wide">
+      <div class="feature-text narrow">
+        <h3><span class="i-en">An indicator for every switch</span><span class="i-zh" lang="zh-CN">任何切换都有气泡提示</span><span class="i-ja" lang="ja">CmdIME 以外の切り替えにもインジケーター</span></h3>
+        <p class="i-en">The bubble also shows when the input source changes through Control+Space, the Globe key or the menu bar, and optionally after an app switch. Hide it in chosen apps and set how long it stays.</p>
+        <p class="i-zh" lang="zh-CN">用 Control+Space、地球仪键或菜单栏切换时也会显示气泡，切换应用后也可以显示。可以在指定应用里隐藏气泡，也可以设置它停留多久。</p>
+        <p class="i-ja" lang="ja">Control+Space、地球儀キー、メニューバーで切り替えたときもバブルが出ます。アプリの切り替え後に出すこともできます。特定のアプリでは隠せますし、表示時間も選べます。</p>
+        <h3>Peek / Caps Lock</h3>
+        <p class="i-en">A Peek trigger shows the current input source without switching. An optional Caps Lock bubble shows when Caps Lock turns on or off.</p>
+        <p class="i-zh" lang="zh-CN">Peek 触发键在不切换的情况下显示当前输入源。还有一个可选的 Caps Lock 气泡，在 Caps Lock 打开或关闭时显示。</p>
+        <p class="i-ja" lang="ja">Peek トリガーは切り替えずに今の入力ソースを表示し、オンにすれば Caps Lock のオン・オフでもバブルが出ます。</p>
+      </div>
+      <figure class="shot feature-demo">
+        <img class="i-en" src="assets/outside-switch.gif" width="720" height="243" loading="lazy" alt="Control+Space switches between Chinese and English in TextEdit, with a bubble each time.">
+        <img class="i-zh" src="assets/outside-switch.gif" width="720" height="243" loading="lazy" alt="在文本编辑里用 Control+Space 切换中英文，每次都出现气泡。">
+        <img class="i-ja" src="assets/outside-switch.gif" width="720" height="243" loading="lazy" alt="テキストエディットで Control+Space による中国語と英語の切り替えでもバブルが表示されます。">
+        <figcaption><span class="i-en">Control+Space is not CmdIME, and the bubble still shows.</span><span class="i-zh" lang="zh-CN">Control+Space 不是 CmdIME 的触发键，气泡照样出现。</span><span class="i-ja" lang="ja">Control+Space は CmdIME のトリガーではありませんが、バブルは出ます。</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="feature wide" id="portable-settings">
+      <div class="feature-text narrow">
+        <h3><span class="i-en">Settings you can move</span><span class="i-zh" lang="zh-CN">可以带走的设置</span><span class="i-ja" lang="ja">持ち運べる設定</span></h3>
+        <p class="i-en">Export your slots, triggers, App Rules, themes, fonts and activation recipes to a folder and import them on another Mac. Edits that <code>keyboardctl</code> or an editor makes to the config apply while CmdIME runs. <strong>Copy Diagnostics</strong> on About gathers what a bug report needs.</p>
+        <p class="i-zh" lang="zh-CN">把槽位、触发键、应用规则、主题、字体和激活配方导出到一个文件夹，在另一台 Mac 上导入。<code>keyboardctl</code> 或编辑器对配置的修改，在 CmdIME 运行时直接生效。About 页的 <strong>Copy Diagnostics</strong> 会整理好报告问题需要的信息。</p>
+        <p class="i-ja" lang="ja">スロット、トリガー、App Rules、テーマ、フォント、アクティベーションレシピをフォルダーに書き出し、別の Mac で読み込めます。<code>keyboardctl</code> やエディターによる設定の変更は、CmdIME の実行中にそのまま反映されます。About の <strong>Copy Diagnostics</strong> で、不具合報告に必要な情報をまとめられます。</p>
+      </div>
+      <figure class="shot feature-demo">
+        <img class="i-en" src="assets/general.webp" width="1560" height="1185" loading="lazy" alt="General in the dark appearance, including Export Settings and Import Settings.">
+        <img class="i-zh" src="assets/general.webp" width="1560" height="1185" loading="lazy" alt="深色外观下的 General 页，包含导出设置和导入设置。">
+        <img class="i-ja" src="assets/general.webp" width="1560" height="1185" loading="lazy" alt="ダーク外観の General ページ。設定の書き出しと読み込みを含みます。">
+        <figcaption><span class="i-en">General: appearance, updates, and exporting or importing your settings.</span><span class="i-zh" lang="zh-CN">General：外观、更新，以及设置的导出和导入。</span><span class="i-ja" lang="ja">General：外観、アップデート、設定の書き出しと読み込み。</span></figcaption>
+      </figure>
+    </div>
+
+    <div class="feature wide">
       <div class="feature-text">
         <div class="i-en">
           <h3>Updates from inside the app</h3>
@@ -309,7 +413,7 @@
           <h3>A settings window that follows light and dark</h3>
           <p>Or stays on the one you pick.</p>
           <h3><code>keyboardctl</code></h3>
-          <p>A command-line tool for scanning, binding, switching and diagnosing.</p>
+          <p>A command-line tool for scanning, binding, switching, App Rules, moving settings and diagnosing, plus the on-device reliability lab.</p>
         </div>
         <div class="i-zh" lang="zh-CN">
           <h3>应用内更新</h3>
@@ -317,7 +421,7 @@
           <h3>跟随浅色和深色的设置窗口</h3>
           <p>也可以固定为你选的那一种。</p>
           <h3><code>keyboardctl</code></h3>
-          <p>一个用于扫描、绑定、切换和诊断的命令行工具。</p>
+          <p>一个命令行工具，用于扫描、绑定、切换、应用规则、迁移设置和诊断，另外还有在本机上实测的可靠性检查（Reliability Lab）。</p>
         </div>
         <div class="i-ja" lang="ja">
           <h3>アプリ内からのアップデート</h3>
@@ -325,17 +429,9 @@
           <h3>ライトとダークに追従する設定ウィンドウ</h3>
           <p>どちらかに固定することもできます。</p>
           <h3><code>keyboardctl</code></h3>
-          <p>スキャン、バインド、切り替え、診断のためのコマンドラインツールです。</p>
+          <p>スキャン、バインド、切り替え、App Rules、設定の移行、診断に使えるコマンドラインツールで、実機で検証する Reliability Lab もあります。</p>
         </div>
       </div>
-      <figure class="shot shot-narrow">
-        <img src="assets/general-web.png" width="600" height="450" loading="lazy" alt="The General panel in the light appearance: Launch at login, Appearance, update check, how often to check, and update notifications.">
-        <figcaption>
-          <span class="i-en">General in the light appearance: appearance, update checks and notifications.</span>
-          <span class="i-zh" lang="zh-CN">浅色外观下的 General：外观、检查更新和通知。</span>
-          <span class="i-ja" lang="ja">ライト外観の General：外観、アップデートの確認と通知。</span>
-        </figcaption>
-      </figure>
     </div>
   </section>
 
