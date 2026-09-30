@@ -249,6 +249,29 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The `keyboardctl diagnose` text with the app's versions, listener state and
+    /// permissions on top, put on the clipboard for an issue report. Nothing typed is in it.
+    func copyDiagnostics() {
+        refreshRuntimeStatus()
+        let summary = DiagnosisReport.appSummary(
+            appVersion: Self.currentVersion,
+            build: Bundle.main.infoDictionary?["CFBundleVersion"] as? String,
+            macOSVersion: ProcessInfo.processInfo.operatingSystemVersion,
+            keyboardControl: keyboardControlStatus,
+            accessibilityGranted: permissions.accessibilityGranted,
+            inputMonitoringGranted: permissions.inputMonitoringGranted
+        )
+        let report = DiagnosisReport(
+            current: try? inputSources.currentInputSource(),
+            config: config,
+            sources: sources,
+            systemPerDocumentSwitching: isSystemPerDocumentSwitchingOn
+        )
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(summary + "\n\n" + report.text, forType: .string)
+        statusText = "Copied diagnostics to the clipboard"
+    }
+
     func revealSettingsBackups() {
         let backups = configStore.url.deletingLastPathComponent()
             .appendingPathComponent(SettingsTransfer.backupsFolderName, isDirectory: true)

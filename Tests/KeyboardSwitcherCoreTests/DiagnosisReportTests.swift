@@ -42,6 +42,23 @@ struct DiagnosisReportTests {
         #expect(!report.text.contains("Automatically switch"))
     }
 
+    @Test("Copy Diagnostics starts with the versions, the listener state and both permissions")
+    func appSummary() {
+        let summary = DiagnosisReport.appSummary(
+            appVersion: "0.12.0", build: "42",
+            macOSVersion: OperatingSystemVersion(majorVersion: 27, minorVersion: 2, patchVersion: 0),
+            keyboardControl: "Active", accessibilityGranted: true, inputMonitoringGranted: false
+        )
+
+        #expect(summary.components(separatedBy: "\n") == [
+            "CmdIME 0.12.0 (42)",
+            "macOS 27.2",
+            "Keyboard control: Active",
+            "Accessibility: granted",
+            "Input Monitoring: not granted",
+        ])
+    }
+
     @Test("the JSON keeps the keys keyboardctl diagnose --json has always printed")
     func jsonKeys() throws {
         let report = DiagnosisReport(

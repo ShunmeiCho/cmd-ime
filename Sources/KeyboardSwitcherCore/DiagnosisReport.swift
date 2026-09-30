@@ -64,6 +64,24 @@ public struct DiagnosisReport: Encodable, Equatable, Sendable {
         return String(decoding: data, as: UTF8.self)
     }
 
+    /// The lines Copy Diagnostics puts above `text`: what only the running app knows.
+    public static func appSummary(
+        appVersion: String,
+        build: String?,
+        macOSVersion: OperatingSystemVersion,
+        keyboardControl: String,
+        accessibilityGranted: Bool,
+        inputMonitoringGranted: Bool
+    ) -> String {
+        [
+            "CmdIME \(appVersion)\(build.map { " (\($0))" } ?? "")",
+            IssueReport.macOSName(macOSVersion),
+            "Keyboard control: \(keyboardControl)",
+            "Accessibility: \(accessibilityGranted ? "granted" : "not granted")",
+            "Input Monitoring: \(inputMonitoringGranted ? "granted" : "not granted")",
+        ].joined(separator: "\n")
+    }
+
     public var text: String {
         var lines: [String] = []
         let current = currentInputSourceID.map { id in "\(currentInputSourceName ?? id) (\(id))" } ?? "unknown"
