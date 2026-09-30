@@ -68,6 +68,7 @@ struct SlotCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(-1)
                 Button("Switch") { perform(onTest) }
+                    .lineLimit(1)
                     .help("Switch to this input source now. This does not test the trigger.")
                     .accessibilityLabel("Switch to this input source now. This does not test the trigger.")
                     .buttonStyle(ConsoleButtonStyle())
