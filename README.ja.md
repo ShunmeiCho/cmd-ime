@@ -119,14 +119,15 @@ swift test
 
 - **キャレットの近くに表示される切り替えインジケーター。** Glass、macOS 26 以降の
   Liquid Glass、paper 系のスタイル、すべてのスロットを表示する switcher、それを
-  グリフだけに縮めた badge、切り替えた入力ソースだけを残す mark など 16 の組み込み
+  グリフだけに縮めた badge、切り替えた入力ソースだけを残す mark、続けて切り替えると mark から
+  badge に広がる adaptive など 18 の組み込み
   テーマに加え、独自のテーマやフォントも使えます。
 
 <p align="center">
   <img src="Assets/readme/themes.png" width="100%" alt="設定画面にある組み込みインジケーターテーマ全 16 種類：3 種類の Switcher、2 種類の Badge、2 種類の Mark、Glass、Liquid Glass、Classic、3 種類の paper 系、Typographic、Tile、Line。">
 </p>
 
-<p align="center"><sub>設定画面に並ぶ組み込みテーマ全 16 種類。</sub></p>
+<p align="center"><sub>設定画面に並ぶ組み込みテーマ(Adaptive 2 種類の追加前)。</sub></p>
 
 - **スロットごとの色は自由に決められます。** プリセットから選ぶことも、システムの
   カラーピッカーで好きな色を選ぶこともできます。インジケーターの Color を Slot にすると
