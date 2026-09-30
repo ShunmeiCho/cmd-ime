@@ -14,6 +14,19 @@ struct BubblePresentation: Equatable {
     /// glass mask behind it and the edges drawn here coincide.
     var fixedSize: CGSize?
     var reduceMotion = false
+    /// Set for an adaptive bubble for its whole life, nil for every other bubble. The
+    /// pill is then drawn at `fixedSize` from its leading edge and clips what it holds,
+    /// so the row can grow out of the Mark inside a panel that never changes size.
+    var expansion: BubbleExpansion?
+}
+
+/// The adaptive bubble's growth, one frame of it. At rest (and for the Mark) every
+/// value is its default.
+struct BubbleExpansion: Equatable {
+    /// How far the Badge row is shifted toward where the Mark drew its glyph.
+    var rowOffset: CGFloat = 0
+    /// How far each slot's glyph has arrived, by slot index; a missing slot is fully there.
+    var reveal: [Int: Double] = [:]
 }
 
 /// The single drawing of the switch indicator. The live panel, the settings
@@ -36,10 +49,18 @@ struct SwitchBubbleView: View {
     var presentation = BubblePresentation()
 
     var body: some View {
+        if let expansion = presentation.expansion {
+            adaptiveBody(expansion)
+        } else {
+            standardBody
+        }
+    }
+
+    private var standardBody: some View {
         let metrics = model.metrics
         let shape = BubbleChrome.shape(metrics.bubbleRadius)
 
-        content
+        return content(reveal: [:])
             .scaleEffect(presentation.contentScale, anchor: presentation.anchor)
             .frame(minWidth: model.archetype == .tileOnly ? nil : metrics.baseHeight.points)
             .frame(maxWidth: metrics.maxBubbleWidth.points)
@@ -56,8 +77,33 @@ struct SwitchBubbleView: View {
             .accessibilityLabel("\(model.title), \(model.detail)")
     }
 
+    /// The pill at its current size, content pinned to its leading edge and clipped by
+    /// it: while it grows, the row is wider than the pill and slides out from under it.
+    private func adaptiveBody(_ expansion: BubbleExpansion) -> some View {
+        let shape = BubbleChrome.shape(model.metrics.bubbleRadius)
+
+        return content(reveal: expansion.reveal)
+            .fixedSize()
+            .scaleEffect(presentation.contentScale, anchor: presentation.anchor)
+            // The same floor the measurement saw, so the Mark stays centred in its pill.
+            .frame(minWidth: model.metrics.baseHeight.points)
+            .offset(x: expansion.rowOffset)
+            .frame(width: presentation.fixedSize?.width, height: presentation.fixedSize?.height, alignment: .leading)
+            .clipShape(shape)
+            .background {
+                BubbleSubstrateFill(substrate: model.substrate, isLive: mode == .live).clipShape(shape)
+            }
+            .overlay {
+                if model.substrate != .none { BubbleEdges(model: model) }
+            }
+            .background { if drawsOutsideShadow { BubbleOutsideShadow(model: model) } }
+            .fixedSize()
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(model.title), \(model.detail)")
+    }
+
     @ViewBuilder
-    private var content: some View {
+    private func content(reveal: [Int: Double]) -> some View {
         switch model.archetype {
         case .tileTwoLine:
             TileTwoLineBubble(model: model).environment(\.layoutDirection, direction)
@@ -74,7 +120,8 @@ struct SwitchBubbleView: View {
                 model: model,
                 thumbIndex: presentation.thumbIndex ?? model.activeIndex,
                 stripTravel: presentation.stripTravel,
-                reduceMotion: presentation.reduceMotion
+                reduceMotion: presentation.reduceMotion,
+                reveal: reveal
             )
         case .switcher:
             SwitcherStripView(

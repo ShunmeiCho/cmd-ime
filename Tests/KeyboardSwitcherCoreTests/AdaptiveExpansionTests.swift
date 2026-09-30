@@ -6,6 +6,15 @@ struct AdaptiveExpansionTests {
     private let compact = AdaptiveExpansion.Size(width: 28, height: 28)
     private let expanded = AdaptiveExpansion.Size(width: 102, height: 24)
 
+    @Test("only a selected adaptive theme counts as adaptive; an unknown id falls back like the resolver")
+    func adaptiveThemeLookup() {
+        let themes = BuiltInIndicatorThemes.all
+        #expect(AdaptiveBubbleLayout.isAdaptive(themeID: "builtin.adaptive", in: themes))
+        #expect(AdaptiveBubbleLayout.isAdaptive(themeID: "builtin.adaptive-tint", in: themes))
+        #expect(!AdaptiveBubbleLayout.isAdaptive(themeID: "builtin.mark", in: themes))
+        #expect(!AdaptiveBubbleLayout.isAdaptive(themeID: "no.such.theme", in: themes))
+    }
+
     @Test("the spring starts at rest, rises without overshoot and settles near one")
     func springIsCriticallyDamped() {
         #expect(AdaptiveExpansion.progress(at: 0) == 0)

@@ -55,6 +55,38 @@ final class InputIndicatorController {
     /// A show waiting for its caret lookup. A second switch in that gap is continuing the
     /// first, so an adaptive theme expands for it as if the bubble were already up.
     private var isPresentPending = false
+    /// Whether the pending show, and the bubble on screen, came from a switch or Peek. A
+    /// Caps Lock bubble is not switching, so a switch right after one starts from the Mark.
+    private var isPendingSwitch = false
+    private var isShowingSwitch = false
+    /// The adaptive bubble on screen: its two layouts, how far its pill has grown from the
+    /// Mark (0) to the row (1), and the clock driving that growth. Nil for other themes.
+    private var adaptive: AdaptiveLayouts?
+    private var pillProgress = 0.0
+    private var growth: (clock: BubbleGrowthClock, originIndex: Int?)?
+    /// Seconds into the running growth at its latest frame; nil when nothing grows.
+    private var growthTime: Double?
+
+    /// An adaptive switch's two layouts, resolved and measured when the switch arrives;
+    /// which one is drawn is decided when the bubble is placed.
+    private struct AdaptiveLayouts {
+        let compact: BubbleRenderModel
+        let expanded: BubbleRenderModel
+        let compactSize: CGSize
+        let expandedSize: CGSize
+        /// Always expanded: Peek, or a switch in the gap before an earlier one was placed.
+        let isExpandedAlready: Bool
+
+        var reserved: CGSize {
+            let size = AdaptiveExpansion.reservedSize(compact: .init(compactSize), expanded: .init(expandedSize))
+            return CGSize(width: size.width, height: size.height)
+        }
+    }
+
+    private enum Content {
+        case fixed(BubbleRenderModel, CGSize)
+        case adaptive(AdaptiveLayouts)
+    }
 
     init(configStore: ConfigStore) {
         library = IndicatorLibrary(configStore: configStore)
@@ -77,19 +109,28 @@ final class InputIndicatorController {
         sources: [InputSourceInfo],
         isPeek: Bool = false
     ) {
-        let isUp = phase != .hidden || isPresentPending
-        guard let model = IndicatorBubbleResolver.model(
-            config: config,
-            themes: library.themes,
-            sources: sources,
-            slotID: slotID,
-            previousSlotID: previousSlotID,
-            source: source,
-            context: .current(),
-            occasion: isPeek ? .peek : .switched(whileVisible: isUp)
-        ) else { return }
+        let context = IndicatorRenderContext.current()
+        func resolve(_ occasion: AdaptiveBubbleLayout.Occasion) -> BubbleRenderModel? {
+            IndicatorBubbleResolver.model(
+                config: config, themes: library.themes, sources: sources, slotID: slotID,
+                previousSlotID: previousSlotID, source: source, context: context, occasion: occasion
+            )
+        }
         behavior = config.switchIndicatorBehavior
-        show(model)
+        guard AdaptiveBubbleLayout.isAdaptive(themeID: config.switchIndicatorThemeID, in: library.themes) else {
+            guard let model = resolve(isPeek ? .peek : .switched(whileVisible: false)) else { return }
+            show(.fixed(model, measure(model)), isSwitch: true)
+            return
+        }
+        guard let compact = resolve(.switched(whileVisible: false)), let expanded = resolve(.peek) else { return }
+        let layouts = AdaptiveLayouts(
+            compact: compact,
+            expanded: expanded,
+            compactSize: measure(compact),
+            expandedSize: measure(expanded),
+            isExpandedAlready: isPeek || (isPresentPending && isPendingSwitch)
+        )
+        show(.adaptive(layouts), isSwitch: true)
     }
 
     /// Caps Lock turned on or off: the bubble in the colours of `slotID`, or of the first slot.
@@ -110,15 +151,15 @@ final class InputIndicatorController {
             context: .current()
         ) else { return }
         behavior = config.switchIndicatorBehavior
-        show(model)
+        show(.fixed(model, measure(model)), isSwitch: false)
     }
 
-    private func show(_ model: BubbleRenderModel) {
-        let size = measure(model)
+    private func show(_ content: Content, isSwitch: Bool) {
         let pointer = NSEvent.mouseLocation
         caretRequest += 1
         let request = caretRequest
         isPresentPending = true
+        isPendingSwitch = isSwitch
         caretLookup?.cancel()
         // The bubble on screen keeps its opacity until present() re-times it: without this, its
         // hold could run out while the lookup is still waiting and fade it out and back in.
@@ -130,13 +171,41 @@ final class InputIndicatorController {
             await MainActor.run { [weak self] in
                 guard let self, self.caretRequest == request else { return }
                 self.isPresentPending = false
-                self.present(model, size: size, pointer: pointer, accessibilityCaret: axCaret)
+                self.present(content, isSwitch: isSwitch, pointer: pointer, accessibilityCaret: axCaret)
             }
         }
     }
 
-    /// Places and animates the bubble once the caret lookup has answered (or given up).
-    private func present(_ model: BubbleRenderModel, size: CGSize, pointer: NSPoint, accessibilityCaret: CGRect?) {
+    /// Chooses the adaptive layout from what is on screen now, not when the switch arrived:
+    /// the caret lookup may have outlasted the bubble that was up then.
+    private func present(_ content: Content, isSwitch: Bool, pointer: NSPoint, accessibilityCaret: CGRect?) {
+        switch content {
+        case let .fixed(model, size):
+            present(model, size: size, layouts: nil, isSwitch: isSwitch, pointer: pointer, accessibilityCaret: accessibilityCaret)
+        case let .adaptive(layouts):
+            let isUp = layouts.isExpandedAlready || (phase != .hidden && isShowingSwitch)
+            present(
+                isUp ? layouts.expanded : layouts.compact,
+                size: isUp ? layouts.expandedSize : layouts.compactSize,
+                layouts: layouts,
+                isSwitch: isSwitch,
+                pointer: pointer,
+                accessibilityCaret: accessibilityCaret
+            )
+        }
+    }
+
+    /// Places and animates the bubble once the caret lookup has answered (or given up). An
+    /// adaptive bubble is placed at the size of its row, whichever layout it draws now.
+    private func present(
+        _ model: BubbleRenderModel,
+        size drawnSize: CGSize,
+        layouts: AdaptiveLayouts?,
+        isSwitch: Bool,
+        pointer: NSPoint,
+        accessibilityCaret: CGRect?
+    ) {
+        let size = layouts?.reserved ?? drawnSize
         // An app that reports a caret outside every display (some launchers do) gets the pointer instead.
         let caret = accessibilityCaret.map(convertAccessibilityRect).flatMap { rect in
             NSScreen.screens.contains { $0.frame.contains(CGPoint(x: rect.midX, y: rect.midY)) } ? rect : nil
@@ -164,14 +233,23 @@ final class InputIndicatorController {
         }
         bubbleFrame = frame
 
-        configurePanel(for: model, bubbleSize: size)
+        let grows = updatePill(for: model, layouts: layouts)
+        isShowingSwitch = isSwitch
+        let pill = pillRect(for: model, drawnSize: drawnSize)
+        configurePanel(for: model, bubbleRect: pill, isAdaptive: layouts != nil)
         state.present(
             model,
             fresh: phase == .hidden,
             anchor: anchor == .bottomLeading ? .bottomLeading : .topLeading,
-            fixedSize: size,
-            reduceMotion: reduceMotion
+            fixedSize: pill.size,
+            reduceMotion: reduceMotion,
+            expansion: layouts == nil ? nil : expansion(
+                for: model,
+                time: growthTime ?? (grows ? 0 : nil),
+                originIndex: growth?.originIndex ?? model.previousIndex
+            )
         )
+        if grows { startGrowth(for: model) }
 
         switch phase {
         case .hidden:
@@ -270,6 +348,10 @@ final class InputIndicatorController {
                 self.panel.orderOut(nil)
                 self.state.clear()
                 self.phase = .hidden
+                self.stopGrowth()
+                self.adaptive = nil
+                self.pillProgress = 0
+                self.isShowingSwitch = false
             }
         }
     }
@@ -285,9 +367,15 @@ final class InputIndicatorController {
         return CGSize(width: fitted.width.rounded(.up), height: fitted.height.rounded(.up))
     }
 
-    private func configurePanel(for model: BubbleRenderModel, bubbleSize: CGSize) {
+    /// `bubbleRect` is the bubble in the panel's content coordinates: for every theme but an
+    /// adaptive one, the whole panel less its shadow margin.
+    private func configurePanel(for model: BubbleRenderModel, bubbleRect: CGRect, isAdaptive: Bool) {
         if panel.contentView !== container { panel.contentView = container }
-        let margin = model.metrics.shadowMargin.points
+        container.setPill(isAdaptive ? bubbleRect : nil, shadowMargin: model.metrics.shadowMargin.points)
+        configureGlass(for: model, frame: bubbleRect)
+    }
+
+    private func configureGlass(for model: BubbleRenderModel, frame: CGRect) {
         let glass: (isDark: Bool, isLiquid: Bool)? = switch model.substrate {
         case let .glass(isDark, _): (isDark, false)
         case let .liquidGlass(isDark): (isDark, true)
@@ -297,12 +385,97 @@ final class InputIndicatorController {
             container.setGlass(.init(
                 isDark: glass.isDark,
                 isLiquid: glass.isLiquid,
-                frame: CGRect(origin: CGPoint(x: margin, y: margin), size: bubbleSize),
+                frame: frame,
                 cornerRadius: model.metrics.bubbleRadius.points
             ))
         } else {
             container.setGlass(nil)
         }
+    }
+
+    // MARK: - Adaptive growth
+
+    /// Records the adaptive layouts now on screen and settles how far the pill has grown.
+    /// True when the pill should grow from the Mark it is showing into the row.
+    private func updatePill(for model: BubbleRenderModel, layouts: AdaptiveLayouts?) -> Bool {
+        let previous = adaptive
+        adaptive = layouts
+        guard let layouts else {
+            stopGrowth()
+            pillProgress = 0
+            return false
+        }
+        let wantsRow = model.archetype == layouts.expanded.archetype
+        // Already growing toward the row: a further switch retargets the thumb, not the pill.
+        if wantsRow, growth != nil { return false }
+        let growsFromMark = wantsRow && !reduceMotion && phase != .hidden && pillProgress == 0
+            && previous.map { $0.reserved == layouts.reserved } == true
+        stopGrowth()
+        pillProgress = wantsRow && !growsFromMark ? 1 : 0
+        return growsFromMark
+    }
+
+    /// The pill in the panel's content coordinates. An adaptive pill keeps the leading edge
+    /// and the edge nearest the caret of the area kept for the row, on whole device pixels
+    /// so the glass under it and the edges over it land on the same ones.
+    private func pillRect(for model: BubbleRenderModel, drawnSize: CGSize) -> CGRect {
+        let margin = model.metrics.shadowMargin.points
+        guard let adaptive else { return CGRect(origin: CGPoint(x: margin, y: margin), size: drawnSize) }
+        let pill = AdaptiveExpansion.pillSize(
+            compact: .init(adaptive.compactSize), expanded: .init(adaptive.expandedSize), progress: pillProgress
+        )
+        let origin = AdaptiveExpansion.pillOrigin(pill: pill, reserved: .init(adaptive.reserved), anchor: anchor)
+        let scale = max(panel.backingScaleFactor, 1)
+        func snapped(_ value: Double) -> CGFloat { CGFloat((value * scale).rounded() / scale) }
+        return CGRect(x: margin + snapped(origin.x), y: margin + snapped(origin.y),
+                      width: snapped(pill.width), height: snapped(pill.height))
+    }
+
+    /// The row's frame of the growth `time` seconds in; at rest (nil) or for the Mark, nothing moves.
+    private func expansion(for model: BubbleRenderModel, time: Double?, originIndex: Int?) -> BubbleExpansion {
+        guard let time, let adaptive, let originIndex, model.archetype == adaptive.expanded.archetype else {
+            return BubbleExpansion()
+        }
+        let progress = AdaptiveExpansion.progress(at: time)
+        let offset = AdaptiveExpansion.badgeCellCenter(BadgeMetrics(model: model), slotIndex: originIndex).map {
+            AdaptiveExpansion.rowOffset(progress: progress, markGlyphCenter: adaptive.compactSize.width / 2, cellCenter: $0)
+        } ?? 0
+        let reveal = Dictionary(uniqueKeysWithValues: model.cells.indices.map { index in
+            (index, AdaptiveExpansion.reveal(at: time, distance: abs(index - originIndex)))
+        })
+        return BubbleExpansion(rowOffset: CGFloat(offset), reveal: reveal)
+    }
+
+    private func startGrowth(for model: BubbleRenderModel) {
+        let origin = model.previousIndex
+        let maxDistance = origin.map { origin in model.cells.indices.map { abs($0 - origin) }.max() ?? 0 } ?? 0
+        let clock = BubbleGrowthClock(view: container) { [weak self] time in
+            self?.advanceGrowth(to: time, maxDistance: maxDistance)
+        }
+        growth = (clock, origin)
+        growthTime = 0
+    }
+
+    /// One display frame: the pill, the glass under it and the row inside it, together.
+    private func advanceGrowth(to time: Double, maxDistance: Int) {
+        guard let running = growth, let model = state.model else { return }
+        let origin = running.originIndex
+        let finished = AdaptiveExpansion.isFinished(at: time, maxDistance: maxDistance)
+        pillProgress = finished ? 1 : AdaptiveExpansion.progress(at: time)
+        if finished { stopGrowth() } else { growthTime = time }
+        let rect = pillRect(for: model, drawnSize: .zero)
+        container.setPill(rect, shadowMargin: model.metrics.shadowMargin.points)
+        configureGlass(for: model, frame: rect)
+        state.updateGrowth(
+            fixedSize: rect.size,
+            expansion: expansion(for: model, time: finished ? nil : time, originIndex: origin)
+        )
+    }
+
+    private func stopGrowth() {
+        growth?.clock.stop()
+        growth = nil
+        growthTime = nil
     }
 
     /// The panel is the bubble plus a transparent, click-through margin for the shadow.
@@ -418,5 +591,11 @@ final class InputIndicatorController {
             primaryDisplayHeight: primaryHeight
         )
         return CGRect(x: flipped.x, y: flipped.y, width: flipped.width, height: flipped.height)
+    }
+}
+
+private extension AdaptiveExpansion.Size {
+    init(_ size: CGSize) {
+        self.init(width: Double(size.width), height: Double(size.height))
     }
 }
