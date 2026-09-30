@@ -910,6 +910,51 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(service.selectedIDs, ["com.apple.keylayout.ABC"], "the trigger pressed after a restore wins; the restore never selects")
     }
 
+    func testPeekChordIsConsumedAndReportedWithoutSwitching() throws {
+        let config = try SwitcherConfig.default.replacingPeekBinding(with: ShortcutParser.parse("option+p"))
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        var peeks = 0
+        monitor.onPeek = { peeks += 1 }
+
+        let keyDown = makeKeyboardEvent(keyCode: 35, flags: [.maskAlternate])
+        XCTAssertNil(monitor.handleKeyDownForTesting(keyDown), "a peek chord is consumed like any bound chord")
+        XCTAssertEqual(peeks, 0, "reported after the tap callback returns, never inside it")
+        drainMainQueue()
+
+        XCTAssertEqual(peeks, 1)
+        XCTAssertEqual(service.selectedIDs, [])
+    }
+
+    func testPeekOnAOneShotModifierFiresOnTheTap() throws {
+        let config = try SwitcherConfig.default.replacingPeekBinding(with: ShortcutParser.parse("right-option"))
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var peeks = 0
+        monitor.onPeek = { peeks += 1 }
+
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 61, flags: [.maskAlternate]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 61))
+        drainMainQueue()
+
+        XCTAssertEqual(peeks, 1)
+    }
+
+    func testCapsLockKeyReportsOnlyRealToggles() {
+        let monitor = EventTapMonitor(config: .default, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        var reports: [Bool] = []
+        monitor.onCapsLockChange = { reports.append($0) }
+
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 57, flags: [.maskAlphaShift]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 57))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 57))
+        // Another key's event without the lock bit (a posted one, say) says nothing about the lock.
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 57, flags: [.maskAlphaShift]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 56, flags: [.maskShift]))
+        drainMainQueue()
+
+        XCTAssertEqual(reports, [false, true], "the first reading only seeds; an unchanged lock reports nothing")
+    }
+
     private func drainMainQueue() {
         let drained = expectation(description: "main queue drained")
         DispatchQueue.main.async {
