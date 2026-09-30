@@ -1303,7 +1303,7 @@ final class AppModel: ObservableObject {
 
     private func showCapsLockIndicator(isOn: Bool) {
         guard config.showCapsLockIndicator,
-              !config.switchIndicatorBehavior.isHidden(in: NSWorkspace.shared.frontmostApplication?.bundleIdentifier) else {
+              !config.switchIndicatorBehavior.isHidden(in: NSWorkspace.shared.frontmostApplication?.cmdIMEAppID) else {
             return
         }
         let source = try? inputSources.currentInputSource()

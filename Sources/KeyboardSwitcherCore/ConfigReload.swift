@@ -24,6 +24,10 @@ public enum ConfigReload {
         } catch {
             return .unreadable(error.localizedDescription)
         }
-        return onDisk == applied ? .unchanged : .apply(onDisk)
+        // The unreadable-binding count describes one load and is never written, so the
+        // app's own save of a config that lost a binding must still read as unchanged.
+        var comparable = onDisk
+        comparable.unreadableBindingCount = applied.unreadableBindingCount
+        return comparable == applied ? .unchanged : .apply(onDisk)
     }
 }

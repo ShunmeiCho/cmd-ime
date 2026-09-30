@@ -21,6 +21,14 @@ struct ConfigReloadTests {
         }
     }
 
+    @Test("the app's own save still reads as unchanged after a binding could not be read at launch")
+    func ownWriteAfterUnreadableBindingIsUnchanged() throws {
+        var applied = SwitcherConfig.default
+        applied.unreadableBindingCount = 1
+
+        #expect(ConfigReload.decide(fileData: try encoded(applied), applied: applied) == .unchanged)
+    }
+
     @Test("a change made by someone else is applied")
     func externalEditApplies() throws {
         let applied = SwitcherConfig.default
