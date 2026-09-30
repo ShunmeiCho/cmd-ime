@@ -126,14 +126,14 @@ struct SwitchIndicatorBehaviorTests {
     func externalChangeSettings() {
         var off = IndicatorOccasionTracker(currentSourceID: abc)
         var masterOff = IndicatorOccasionTracker(currentSourceID: abc)
-        var hiddenConfig = config { $0.showsExternalChanges = true }
-        hiddenConfig.showSwitchIndicator = false
+        var masterOffConfig = config { $0.showsExternalChanges = true }
+        masterOffConfig.showSwitchIndicator = false
 
         let shown9 = off.sourceChanged(to: pinyin, isOwnSwitchPending: false, frontmostAppID: "a",
                                    config: config { $0.showsExternalChanges = false })
 
         #expect(!shown9)
-        let shown10 = masterOff.sourceChanged(to: pinyin, isOwnSwitchPending: false, frontmostAppID: "a", config: hiddenConfig)
+        let shown10 = masterOff.sourceChanged(to: pinyin, isOwnSwitchPending: false, frontmostAppID: "a", config: masterOffConfig)
         #expect(!shown10)
         #expect(off.lastKnownSourceID == pinyin)
     }
