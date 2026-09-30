@@ -77,9 +77,9 @@ struct IndicatorThemeEditor: View {
 
             // Only a Mark can grow into the Badge row; see AdaptiveBubbleLayout.
             if theme.archetype == .mark {
-                CompactSettingRow("Switching on") {
+                CompactSettingRow("Expand while switching") {
                     Toggle(
-                        "Expand to every slot",
+                        "Expand while switching",
                         isOn: Binding(
                             get: { theme.expandsWhileSwitching },
                             set: { expands in edit { $0.expandsWhileSwitching = expands } }

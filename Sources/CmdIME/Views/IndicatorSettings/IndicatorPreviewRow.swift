@@ -30,6 +30,10 @@ struct IndicatorPreviewRow: View {
     @State private var page = Page.dark
     @State private var slotStep = 0
     @State private var previousSlot: InputRole?
+    /// Set by Next slot for the one presentation it causes: that is a switch while the
+    /// bubble is up, so an adaptive theme shows the row. Replays and setting changes
+    /// start from hidden again and show the Mark.
+    @State private var isNextSlotPending = false
     @State private var isShown = true
     @State private var bubbleWidth: CGFloat = 0
     @State private var stageWidth: CGFloat = 0
@@ -60,7 +64,9 @@ struct IndicatorPreviewRow: View {
         .onAppear { if let current { present(current, replay: false) } }
         .onChange(of: current) { next in
             guard let next else { return }
-            present(next, replay: !isAdjusting)
+            let switching = isNextSlotPending
+            isNextSlotPending = false
+            present(switching ? bubbleModel(occasion: .switched(whileVisible: true)) ?? next : next, replay: !isAdjusting)
         }
         .onChange(of: isAdjusting) { adjusting in
             if !adjusting, let current { present(current, replay: true) }
@@ -142,7 +148,13 @@ struct IndicatorPreviewRow: View {
         return slots[(base + slotStep) % slots.count]
     }
 
+    /// The bubble as it appears from hidden. Its occasion is fixed, so clearing
+    /// `isNextSlotPending` never changes it and never replays the preview a second time.
     private var currentModel: BubbleRenderModel? {
+        bubbleModel(occasion: .switched(whileVisible: false))
+    }
+
+    private func bubbleModel(occasion: AdaptiveBubbleLayout.Occasion) -> BubbleRenderModel? {
         previewedSlot.flatMap {
             IndicatorPreviewModel.make(
                 model: model,
@@ -150,8 +162,7 @@ struct IndicatorPreviewRow: View {
                 previous: previousSlot,
                 sizeFactor: sizeDraft,
                 textScale: textScaleDraft,
-                // Next slot is switching on while the bubble is up: an adaptive theme expands.
-                occasion: .switched(whileVisible: previousSlot != nil)
+                occasion: occasion
             )
         }
     }
@@ -159,6 +170,7 @@ struct IndicatorPreviewRow: View {
     /// For the switcher this also plays the thumb slide from the slot shown before.
     private func showNextSlot() {
         previousSlot = previewedSlot?.id
+        isNextSlotPending = true
         slotStep += 1
     }
 
