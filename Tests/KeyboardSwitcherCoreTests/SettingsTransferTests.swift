@@ -126,6 +126,39 @@ struct SettingsTransferTests {
         }
     }
 
+    @Test("with no config.json, the recipes, theme and font an import writes over are still backed up")
+    func importBacksUpLeftoverFilesWithoutConfig() throws {
+        let source = try makeTransfer(named: "source")
+        let folder = root.appendingPathComponent("export")
+        _ = try source.export(to: folder)
+        let target = try makeTransfer(named: "target")
+        try FileManager.default.removeItem(at: target.store.url)
+
+        let result = try target.importSettings(from: folder)
+
+        let backup = try #require(result.backupURL)
+        #expect(try String(contentsOf: backup.appendingPathComponent("activation-recipes.json"), encoding: .utf8) == "{\"recipes\": []}")
+        #expect(try String(contentsOf: backup.appendingPathComponent("themes/Mine.json"), encoding: .utf8) == "{\"theme\": \"target\"}")
+        #expect(try String(contentsOf: backup.appendingPathComponent("fonts/Face.otf"), encoding: .utf8) == "font-target")
+    }
+
+    @Test("settings that cannot be listed stop the import before anything is written")
+    func importFailsClosedOnUnreadableSettings() throws {
+        let source = try makeTransfer(named: "source")
+        let folder = root.appendingPathComponent("export")
+        _ = try source.export(to: folder)
+        let target = try makeTransfer(named: "target")
+        let configBefore = try Data(contentsOf: target.store.url)
+        let themes = target.store.themesDirectoryURL
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: themes.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: themes.path) }
+
+        #expect(throws: (any Error).self) { try target.importSettings(from: folder) }
+        #expect(try Data(contentsOf: target.store.url) == configBefore)
+        let backups = target.store.url.deletingLastPathComponent().appendingPathComponent("backups")
+        #expect(!FileManager.default.fileExists(atPath: backups.path))
+    }
+
     @Test("an import into a fresh Mac needs no backup and does not bring back the setup guide")
     func importIntoEmptySettings() throws {
         var exported = SwitcherConfig.default
