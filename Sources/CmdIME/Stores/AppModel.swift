@@ -73,6 +73,15 @@ final class AppModel: ObservableObject {
             return InputSourceMatcher.slotID(forSelectedSourceID: id, sources: self.sources, config: self.config)
         }
     )
+    private(set) lazy var indicatorOccasions = IndicatorOccasionController(
+        inputSources: inputSources,
+        config: { [weak self] in self?.config ?? .default },
+        isOwnSwitchPending: { [weak self] in self?.isOwnSwitchPending ?? false },
+        present: { [weak self] source in self?.showExternalChangeIndicator(source: source) }
+    )
+    /// Set while the Settings Switch button's selection is in flight, like the monitor's own
+    /// pending flag: source changes seen meanwhile are its steps, not someone else's.
+    private var settingsSwitchDeadline: Date?
     /// The user's recipes from `ActivationRecipeStore`, also used by the Switch button.
     private var activationRecipes: [ActivationRecipe] = []
     private var recordingRole: InputRole?
@@ -166,10 +175,13 @@ final class AppModel: ObservableObject {
 
     private func observeInputSourceChanges() {
         selectedSourceObserver = InputSourceChangeObserver(change: .selectedSourceChanged) { [weak self] in
+            // Before the role refresh, so the bubble's switcher slides from the slot it left.
+            self?.indicatorOccasions.sourceDidChange()
             self?.refreshCurrentRole()
             self?.appMemory.sourceDidChange()
         }
         refreshCurrentRole()
+        indicatorOccasions.update()
         sourceChangeObserver = InputSourceChangeObserver { [weak self] in
             Task { await self?.refreshSources() }
         }
@@ -358,6 +370,7 @@ final class AppModel: ObservableObject {
     func setSwitchIndicatorVisible(_ visible: Bool) {
         config.showSwitchIndicator = visible
         save()
+        indicatorOccasions.update()
         statusText = visible ? "Switch indicator enabled" : "Switch indicator disabled"
     }
 
@@ -783,6 +796,7 @@ final class AppModel: ObservableObject {
             reportSlotFailure("No input source matched this slot", for: role)
             return
         }
+        settingsSwitchDeadline = Date(timeIntervalSinceNow: Self.settingsSwitchBudget)
         // Same Kana prelude as the event tap; the select is scheduled, never waited for here.
         SwitchActivationPolicy.selectWithKanaPrelude(
             target: source,
@@ -795,6 +809,7 @@ final class AppModel: ObservableObject {
     }
 
     private func selectSwitchedSource(_ source: InputSourceInfo, for role: InputRole) {
+        defer { settingsSwitchDeadline = nil }
         do {
             let current = try inputSources.selectInputSourceAndConfirm(id: source.id)
             guard current?.id == source.id else {
@@ -1006,6 +1021,11 @@ final class AppModel: ObservableObject {
                     self?.showSwitchIndicator(for: role, source: source)
                 }
             }
+            nextMonitor.onSilentSwitch = { [weak self] source in
+                MainActor.assumeIsolated {
+                    _ = self?.indicatorOccasions.ownSwitchConfirmed(sourceID: source.id, reported: false)
+                }
+            }
             nextMonitor.onTriggeredSwitch = { [weak self] role, source, trigger in
                 MainActor.assumeIsolated {
                     self?.triggeredSwitches.send(SetupTriggeredSwitch(slotID: role, sourceID: source.id, trigger: trigger))
@@ -1049,11 +1069,31 @@ final class AppModel: ObservableObject {
     private func showSwitchIndicator(for role: InputRole, source: InputSourceInfo) {
         let previous = activeRole
         activeRole = role
-        guard config.showSwitchIndicator else {
+        guard indicatorOccasions.ownSwitchConfirmed(sourceID: source.id, reported: true) else {
             return
         }
         switchIndicator.show(slotID: role, previousSlotID: previous, source: source, config: config, sources: sources)
     }
+
+    /// A change CmdIME did not make, or an app switch that left another source. Only while
+    /// keyboard control runs, and only for a source that belongs to a slot: the bubble draws a slot.
+    private func showExternalChangeIndicator(source: InputSourceInfo) {
+        guard monitor != nil,
+              let role = InputSourceMatcher.slotID(forSelectedSourceID: source.id, sources: sources, config: config) else {
+            return
+        }
+        let previous = activeRole
+        activeRole = role
+        switchIndicator.show(slotID: role, previousSlotID: previous, source: source, config: config, sources: sources)
+    }
+
+    private var isOwnSwitchPending: Bool {
+        if monitor?.isSwitchPending == true { return true }
+        return (settingsSwitchDeadline?.timeIntervalSinceNow ?? 0) > 0
+    }
+
+    /// Covers the Settings Switch button's Kana delay plus its confirmation retries.
+    private static let settingsSwitchBudget: TimeInterval = 1.0
 
     private func readableOneShotName(_ keyName: String) -> String {
         switch keyName {

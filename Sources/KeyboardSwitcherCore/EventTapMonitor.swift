@@ -9,6 +9,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     public var onSwitch: ((InputRole, InputSourceInfo) -> Void)?
     /// A confirmed event-tap switch, including the binding that actually fired.
     public var onTriggeredSwitch: ((InputRole, InputSourceInfo, KeyTrigger) -> Void)?
+    /// A confirmed switch with no slot to report (`requestSwitch(to:reportingAs: nil)`), so
+    /// the app still knows the change was its own.
+    public var onSilentSwitch: ((InputSourceInfo) -> Void)?
 
     /// The event tap runs on the main run loop; recording state must change there too.
     public var isCapturingShortcut: Bool {
@@ -720,6 +723,8 @@ public final class EventTapMonitor: @unchecked Sendable {
             if !isCapturingShortcut, let trigger, let evidenceEpoch, evidenceEpoch == triggerEvidenceEpoch {
                 onTriggeredSwitch?(role, source, trigger)
             }
+        } else {
+            onSilentSwitch?(source)
         }
         if let prefix {
             onMessage?("\(prefix). Selected refreshed input method \(source.localizedName).")

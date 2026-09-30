@@ -284,6 +284,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var switchIndicatorCustomRoleColorHexes: [String: String]
     /// Nil selects the default built-in theme. An unknown id is kept as stored.
     public var switchIndicatorThemeID: String?
+    /// When the indicator appears beyond CmdIME's own switches, and how long it stays.
+    public var switchIndicatorBehavior: SwitchIndicatorBehavior
     /// App Memory (CONTEXT.md): restore the input source last used in an app when it comes
     /// back to the front. Off unless the user turns it on, since it switches without a trigger.
     public var rememberInputSourcePerApp: Bool
@@ -305,6 +307,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         switchIndicatorCustomColorHex: String = "#2F7CF6",
         switchIndicatorCustomRoleColorHexes: [String: String] = [:],
         switchIndicatorThemeID: String? = nil,
+        switchIndicatorBehavior: SwitchIndicatorBehavior = SwitchIndicatorBehavior(),
         rememberInputSourcePerApp: Bool = false,
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
@@ -320,6 +323,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.switchIndicatorCustomColorHex = switchIndicatorCustomColorHex
         self.switchIndicatorCustomRoleColorHexes = switchIndicatorCustomRoleColorHexes
         self.switchIndicatorThemeID = switchIndicatorThemeID
+        self.switchIndicatorBehavior = switchIndicatorBehavior
         self.rememberInputSourcePerApp = rememberInputSourcePerApp
         self.bindings = bindings
         self.inputSources = inputSources
@@ -477,6 +481,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case switchIndicatorCustomColorHex
         case switchIndicatorCustomRoleColorHexes
         case switchIndicatorThemeID
+        case switchIndicatorBehavior
         case rememberInputSourcePerApp
         case bindings
         case inputSources
@@ -522,6 +527,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             forKey: .switchIndicatorCustomRoleColorHexes
         ) ?? [:]
         switchIndicatorThemeID = try container.decodeIfPresent(String.self, forKey: .switchIndicatorThemeID)
+        switchIndicatorBehavior = try container.decodeIfPresent(
+            SwitchIndicatorBehavior.self,
+            forKey: .switchIndicatorBehavior
+        ) ?? SwitchIndicatorBehavior()
         rememberInputSourcePerApp = try container.decodeIfPresent(Bool.self, forKey: .rememberInputSourcePerApp) ?? false
         let decodedBindings = try container.decode([LenientKeyBinding].self, forKey: .bindings)
         bindings = decodedBindings.compactMap(\.binding)
@@ -550,6 +559,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(switchIndicatorCustomColorHex, forKey: .switchIndicatorCustomColorHex)
         try container.encode(switchIndicatorCustomRoleColorHexes, forKey: .switchIndicatorCustomRoleColorHexes)
         try container.encodeIfPresent(switchIndicatorThemeID, forKey: .switchIndicatorThemeID)
+        try container.encode(switchIndicatorBehavior, forKey: .switchIndicatorBehavior)
         try container.encode(rememberInputSourcePerApp, forKey: .rememberInputSourcePerApp)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)

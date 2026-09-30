@@ -928,13 +928,16 @@ final class EventTapMonitorTests: XCTestCase {
         let service = StubInputSourceService(sources: makeSwitchSources() + [other])
         let monitor = EventTapMonitor(config: .default, inputSources: service)
         var reports = 0
+        var silent: [String] = []
         monitor.onSwitch = { _, _ in reports += 1 }
+        monitor.onSilentSwitch = { silent.append($0.id) }
 
         monitor.requestSwitch(to: other, reportingAs: nil)
         drainMainQueue()
 
         XCTAssertEqual(service.selectedIDs, [other.id])
         XCTAssertEqual(reports, 0)
+        XCTAssertEqual(silent, [other.id], "the app still learns the change was its own")
     }
 
     func testSwitchStaysPendingUntilItIsConfirmed() {
