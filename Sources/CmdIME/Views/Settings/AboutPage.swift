@@ -4,6 +4,7 @@ import SwiftUI
 
 /// Version and build, release notes, the privacy statement, feedback and support links.
 struct AboutPage: View {
+    @ObservedObject var model: AppModel
     private static let releasesURL = "https://github.com/\(UpdatePackage.repository)/releases"
     private static let repositoryURL = "https://github.com/\(UpdatePackage.repository)"
     private static let websiteURL = "https://shunmeicho.github.io/cmd-ime/"
@@ -39,9 +40,21 @@ struct AboutPage: View {
                         .accessibilityElement(children: .combine)
                     }
                     HStack(spacing: DesignTokens.Layout.rowGap) {
+                        // Where a Mac user looks for it; General keeps the automatic-check settings.
+                        Button(model.updateStatus.isChecking ? "Checking…" : "Check for Updates") {
+                            model.checkForUpdates()
+                        }
+                        .disabled(model.updateStatus.isChecking)
                         Button("Release Notes…") { Self.open(Self.releasesURL) }
                         Button("Website…") { Self.open(Self.websiteURL) }
                     }
+                    if case .idle = model.updateStatus {} else {
+                        Text(model.updateStatus.message)
+                            .font(DesignTokens.Typography.auxiliary)
+                            .foregroundStyle(DesignTokens.Colors.textMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if case .available = model.updateStatus { UpdateActions(model: model) }
                 }
             }
             CompactSection(title: "Privacy") {

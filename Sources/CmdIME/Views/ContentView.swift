@@ -102,7 +102,7 @@ struct ContentView: View {
         case .general:
             GeneralPage(model: model, onShowSetupGuide: showSetupGuide)
         case .about:
-            AboutPage()
+            AboutPage(model: model)
         }
     }
 
