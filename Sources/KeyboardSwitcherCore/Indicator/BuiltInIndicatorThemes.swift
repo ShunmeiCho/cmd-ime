@@ -12,7 +12,7 @@ public enum BuiltInIndicatorThemes {
     public static let legacyDefaultID = "builtin.glass"
 
     public static let all: [IndicatorTheme] = [
-        switcher, switcherTint, switcherLiquid, badge, badgeTint, mark, markTint,
+        switcher, switcherTint, switcherLiquid, badge, badgeTint, mark, markTint, adaptive, adaptiveTint,
         glass, liquidGlass, classic, paperOneInk, paperTwoInks, paperSlotInks, typographic, tile, line,
     ]
 
@@ -64,6 +64,25 @@ public enum BuiltInIndicatorThemes {
         shadowStrength: 0.30,
         typography: IndicatorTypography(displayWeight: .regular)
     )
+
+    /// The Mark for a single switch, the Badge row once switching goes on or on Peek: the
+    /// system's small caret badge for a quick change, its held Control+Space list for a search.
+    static let adaptive: IndicatorTheme = {
+        var theme = mark
+        theme.id = "builtin.adaptive"
+        theme.name = "Adaptive"
+        theme.expandsWhileSwitching = true
+        return theme
+    }()
+
+    /// The adaptive theme carrying the Color setting, from the slot-coloured Mark.
+    static let adaptiveTint: IndicatorTheme = {
+        var theme = markTint
+        theme.id = "builtin.adaptive-tint"
+        theme.name = "Adaptive, Slot Color"
+        theme.expandsWhileSwitching = true
+        return theme
+    }()
 
     /// The same badge carrying the Color setting. A slot-tinted thumb cannot also be
     /// translucent and still hold the text contrast minimum, so this one is opaque.

@@ -12,6 +12,9 @@ struct IndicatorThemePicker: View {
     private static let stageRadius: CGFloat = 8
     private static let textSlack = 4.0
     private static let dotsAllowance: CGFloat = 8
+    /// Between the Mark and the Badge row in an adaptive theme's miniature.
+    private static let adaptiveGap: CGFloat = 5
+    private static let adaptiveArrowSize: CGFloat = 9
     /// The stage behind each theme thumbnail: recessed in both appearances, never a black slab on a light window.
     private static var stageColor: Color { DesignTokens.Colors.surfaceInset }
 
@@ -133,7 +136,9 @@ struct IndicatorThemePicker: View {
     /// cell; nothing is cropped, so the miniature still shows the whole bubble.
     @ViewBuilder
     private func miniature(for theme: IndicatorTheme, fitting size: CGSize) -> some View {
-        if let slot = model.config.slots.first,
+        if theme.isAdaptive {
+            adaptiveMiniature(for: theme, fitting: size)
+        } else if let slot = model.config.slots.first,
            let bubble = IndicatorPreviewModel.make(model: model, slot: slot, miniatureOf: theme) {
             let natural = naturalSize(of: bubble)
             let available = CGSize(width: size.width - 2 * Self.stagePadding, height: size.height - 2 * Self.stagePadding)
@@ -142,6 +147,37 @@ struct IndicatorThemePicker: View {
                 .scaleEffect(scale)
                 .frame(width: natural.width * scale, height: natural.height * scale)
                 .accessibilityHidden(true)
+        }
+    }
+
+    /// Both of an adaptive theme's layouts, the Mark and the Badge row it grows into, so
+    /// the cell does not read as a second copy of Mark.
+    @ViewBuilder
+    private func adaptiveMiniature(for theme: IndicatorTheme, fitting size: CGSize) -> some View {
+        if let slot = model.config.slots.first,
+           let compact = IndicatorPreviewModel.make(model: model, slot: slot, miniatureOf: theme),
+           let expanded = IndicatorPreviewModel.make(
+               model: model, slot: slot, miniatureOf: theme, occasion: .switched(whileVisible: true)
+           ) {
+            let compactSize = naturalSize(of: compact)
+            let expandedSize = naturalSize(of: expanded)
+            let natural = CGSize(
+                width: compactSize.width + expandedSize.width + Self.adaptiveArrowSize + 2 * Self.adaptiveGap,
+                height: max(compactSize.height, expandedSize.height)
+            )
+            let available = CGSize(width: size.width - 2 * Self.stagePadding, height: size.height - 2 * Self.stagePadding)
+            let scale = min(1, available.width / max(natural.width, 1), available.height / max(natural.height, 1))
+            HStack(spacing: Self.adaptiveGap) {
+                SwitchBubbleView(model: compact, mode: .preview)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: Self.adaptiveArrowSize, weight: .semibold))
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+                SwitchBubbleView(model: expanded, mode: .preview)
+            }
+            .frame(width: natural.width, height: natural.height)
+            .scaleEffect(scale)
+            .frame(width: natural.width * scale, height: natural.height * scale)
+            .accessibilityHidden(true)
         }
     }
 

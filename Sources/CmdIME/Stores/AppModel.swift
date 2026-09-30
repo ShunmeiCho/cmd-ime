@@ -1298,7 +1298,7 @@ final class AppModel: ObservableObject {
             statusText = "\(source.localizedName) is not in a slot"
             return
         }
-        switchIndicator.show(slotID: role, previousSlotID: nil, source: source, config: config, sources: sources)
+        switchIndicator.show(slotID: role, previousSlotID: nil, source: source, config: config, sources: sources, isPeek: true)
     }
 
     private func showCapsLockIndicator(isOn: Bool) {

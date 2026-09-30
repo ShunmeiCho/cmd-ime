@@ -74,7 +74,7 @@ public enum IndicatorBubbleResolver {
 
     /// Nil when `slotID` names no slot. A missing or unknown theme id resolves to the
     /// default built-in, so a config written before themes existed renders Glass with
-    /// its stored Display, Size, Scale and Color.
+    /// its stored Display, Size, Scale and Color. `occasion` only matters to an adaptive theme.
     public static func model(
         config: SwitcherConfig,
         themes: [IndicatorTheme],
@@ -82,10 +82,13 @@ public enum IndicatorBubbleResolver {
         slotID: InputRole,
         previousSlotID: InputRole?,
         source: InputSourceInfo?,
-        context: IndicatorRenderContext
+        context: IndicatorRenderContext,
+        occasion: AdaptiveBubbleLayout.Occasion = .switched(whileVisible: false)
     ) -> BubbleRenderModel? {
         guard let slot = config.slot(slotID), let activeIndex = config.slots.firstIndex(of: slot) else { return nil }
-        let (theme, fellBackFrom) = resolvedTheme(id: config.switchIndicatorThemeID, in: themes)
+        var (theme, fellBackFrom) = resolvedTheme(id: config.switchIndicatorThemeID, in: themes)
+        // Everything below reads the layout this occasion draws, never the adaptive one.
+        theme.archetype = AdaptiveBubbleLayout.archetype(for: theme, occasion: occasion)
 
         var slotSources = Dictionary(
             config.slots.compactMap { candidate in

@@ -90,8 +90,14 @@ public struct IndicatorTheme: Codable, Equatable, Identifiable, Sendable {
     public var highlightStrength: Double
     public var shadowStrength: Double
     public var typography: IndicatorTypography
+    /// A Mark that expands to the Badge row while switching goes on (see `AdaptiveBubbleLayout`).
+    /// Ignored with any other archetype, so changing the archetype never leaves a file unreadable.
+    public var expandsWhileSwitching: Bool
 
     public var isBuiltIn: Bool { id.hasPrefix(Self.builtInPrefix) }
+
+    /// The theme switches between the Mark and the Badge row by occasion.
+    public var isAdaptive: Bool { expandsWhileSwitching && archetype == .mark }
 
     /// Numbers are clamped and non-finite ones take their default. Colours are
     /// stored as given; files are validated by `decoding(_:fileName:)`.
@@ -112,7 +118,8 @@ public struct IndicatorTheme: Codable, Equatable, Identifiable, Sendable {
         washOpacity: Double = Limits.washOpacity.fallback,
         highlightStrength: Double = Limits.highlightStrength.fallback,
         shadowStrength: Double = Limits.shadowStrength.fallback,
-        typography: IndicatorTypography = IndicatorTypography()
+        typography: IndicatorTypography = IndicatorTypography(),
+        expandsWhileSwitching: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -133,6 +140,7 @@ public struct IndicatorTheme: Codable, Equatable, Identifiable, Sendable {
         self.highlightStrength = Self.clamped(highlightStrength, Limits.highlightStrength)
         self.shadowStrength = Self.clamped(shadowStrength, Limits.shadowStrength)
         self.typography = typography
+        self.expandsWhileSwitching = expandsWhileSwitching
     }
 
     private static func clamped(_ value: Double, _ limit: (range: ClosedRange<Double>, fallback: Double)) -> Double {
@@ -159,7 +167,7 @@ extension IndicatorTheme {
         case schemaVersion, id, name, archetype, surface, appearance, colorSource
         case substrateHex, textInkHex, tileInkHex
         case cornerRadius, tileCornerRadius, inset, strokeOpacity, washOpacity, highlightStrength, shadowStrength
-        case typography
+        case typography, expandsWhileSwitching
     }
 
     /// Validates one theme file. Unknown keys are ignored; an unknown enum value, a
@@ -233,7 +241,8 @@ extension IndicatorTheme {
             highlightStrength: try number(.highlightStrength) ?? Limits.highlightStrength.fallback,
             shadowStrength: try number(.shadowStrength) ?? Limits.shadowStrength.fallback,
             typography: try container.decodeIfPresent(IndicatorTypography.self, forKey: .typography)
-                ?? IndicatorTypography()
+                ?? IndicatorTypography(),
+            expandsWhileSwitching: try container.decodeIfPresent(Bool.self, forKey: .expandsWhileSwitching) ?? false
         )
     }
 
@@ -257,6 +266,8 @@ extension IndicatorTheme {
         try container.encode(highlightStrength, forKey: .highlightStrength)
         try container.encode(shadowStrength, forKey: .shadowStrength)
         try container.encode(typography, forKey: .typography)
+        // Older builds ignore the key and draw the plain Mark.
+        if isAdaptive { try container.encode(true, forKey: .expandsWhileSwitching) }
     }
 }
 

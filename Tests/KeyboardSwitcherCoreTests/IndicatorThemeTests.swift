@@ -85,14 +85,15 @@ final class IndicatorThemeTests: XCTestCase {
 
     func testBuiltInsAreUniqueLegibleThemes() {
         let themes = BuiltInIndicatorThemes.all
-        XCTAssertEqual(themes.count, 16)
-        XCTAssertEqual(Set(themes.map(\.id)).count, 16)
+        XCTAssertEqual(themes.count, 18)
+        XCTAssertEqual(Set(themes.map(\.id)).count, 18)
         XCTAssertEqual(themes.first?.id, BuiltInIndicatorThemes.defaultID)
         for theme in themes {
             XCTAssertTrue(theme.isBuiltIn, theme.id)
             XCTAssertTrue(IndicatorThemeLegibility.issues(theme).isEmpty, theme.id)
             XCTAssertTrue(theme.surface != .none || theme.archetype == .tileOnly, theme.id)
         }
+        XCTAssertEqual(themes.filter(\.isAdaptive).map(\.id), ["builtin.adaptive", "builtin.adaptive-tint"])
         XCTAssertEqual(themes.filter { $0.surface == .paper }.map(\.substrateHex), ["#FAFAF7", "#FAFAF7", "#E9E9E5", "#F5F1E8"])
         XCTAssertEqual(themes.first { $0.id == "builtin.paper-two-inks" }?.tileInkHex, "#C65F38")
         XCTAssertEqual(themes.first { $0.id == "builtin.typographic" }?.typography, TypographyPreset.literary.typography)

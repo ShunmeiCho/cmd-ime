@@ -75,6 +75,25 @@ struct IndicatorThemeEditor: View {
                 ) { hex, theme in theme.tileInkHex = hex }
             }
 
+            // Only a Mark can grow into the Badge row; see AdaptiveBubbleLayout.
+            if theme.archetype == .mark {
+                CompactSettingRow("Switching on") {
+                    Toggle(
+                        "Expand to every slot",
+                        isOn: Binding(
+                            get: { theme.expandsWhileSwitching },
+                            set: { expands in edit { $0.expandsWhileSwitching = expands } }
+                        )
+                    )
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .tint(DesignTokens.Colors.success)
+                    .controlSize(.small)
+                    .help("A switch while the bubble is still up, and Peek, show every slot.")
+                    Spacer()
+                }
+            }
+
             slider("Corners", value: theme.cornerRadius, range: IndicatorTheme.Limits.cornerRadius.range, step: 1,
                    display: "\(Int(theme.cornerRadius.rounded())) pt") { value, theme in theme.cornerRadius = value }
             slider("Stroke", value: theme.strokeOpacity, range: IndicatorTheme.Limits.strokeOpacity.range, step: 0.02,

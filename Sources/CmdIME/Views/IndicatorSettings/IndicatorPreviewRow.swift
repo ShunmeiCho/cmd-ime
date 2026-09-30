@@ -149,7 +149,9 @@ struct IndicatorPreviewRow: View {
                 slot: $0,
                 previous: previousSlot,
                 sizeFactor: sizeDraft,
-                textScale: textScaleDraft
+                textScale: textScaleDraft,
+                // Next slot is switching on while the bubble is up: an adaptive theme expands.
+                occasion: .switched(whileVisible: previousSlot != nil)
             )
         }
     }
