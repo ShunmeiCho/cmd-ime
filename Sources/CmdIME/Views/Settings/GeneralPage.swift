@@ -1,3 +1,4 @@
+import AppKit
 import KeyboardSwitcherCore
 import SwiftUI
 
@@ -12,6 +13,7 @@ struct GeneralPage: View {
             CompactSection(title: "General") { startupRows }
             CompactSection(title: "Updates") { updateRows }
             CompactSection(title: "Setup guide") { setupGuideRow }
+            CompactSection(title: "Settings file") { settingsFileRows }
             CompactSection(title: "Running in the background") { quitRows }
         }
         .buttonStyle(ConsoleButtonStyle())
@@ -145,6 +147,65 @@ struct GeneralPage: View {
             Button("Show Setup Guide", action: onShowSetupGuide)
                 .fixedSize()
         }
+    }
+
+    private var settingsFileRows: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+            Text("Move your slots, triggers, indicator themes, imported fonts and activation recipes to another Mac, or keep a copy. An import copies your current settings to a backup folder first.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: DesignTokens.Layout.rowGap) {
+                Button("Export Settings…", action: exportSettings)
+                Button("Import Settings…", action: importSettings)
+                Button("Show Backups") { model.revealSettingsBackups() }
+            }
+            switch model.settingsTransferMessage {
+            case let .done(message):
+                Text(message)
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            case let .failed(message):
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+            case nil:
+                EmptyView()
+            }
+        }
+    }
+
+    private func exportSettings() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = model.suggestedExportName
+        panel.message = "CmdIME saves your settings in a new folder with this name."
+        panel.prompt = "Export"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        model.exportSettings(to: url)
+    }
+
+    private func importSettings() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a folder made by Export Settings."
+        panel.prompt = "Import"
+        guard panel.runModal() == .OK, let folder = panel.url,
+              let plan = model.inspectSettingsImport(folder) else { return }
+
+        let alert = NSAlert()
+        alert.messageText = "Replace your settings with the ones in \"\(folder.lastPathComponent)\"?"
+        let recipes = plan.includesActivationRecipes ? ", activation recipes" : ""
+        alert.informativeText = "It has \(plan.config.slots.count) slot(s), \(plan.themeFileNames.count) theme(s), "
+            + "\(plan.fontFileNames.count) font(s)\(recipes). Your current settings are copied to a backup folder first "
+            + "and take effect again if you import that folder."
+        alert.addButton(withTitle: "Import")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        model.importSettings(from: folder)
     }
 
     private var quitRows: some View {

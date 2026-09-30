@@ -87,6 +87,10 @@ struct CLI {
             try remap()
         case "quit":
             try quitApp()
+        case "export":
+            try exportSettings()
+        case "import":
+            try importSettings()
         default:
             guard SourceCommandPolicy.looksLikeInputSourceID(command, knownCommands: Self.knownCommands) else {
                 throw CLIError.unknownCommand(command)
@@ -235,6 +239,45 @@ struct CLI {
         config.upsertRemapBinding(trigger: trigger, output: output)
         try save(config, to: store)
         print("Remapped \(trigger.displayName) to \(output.displayName)")
+    }
+
+    // MARK: - export / import
+
+    /// Recipes travel with the config folder here, so `--config <scratch>` never reads or
+    /// writes the live activation-recipes.json. For the default config it is the same file.
+    private var settingsTransfer: SettingsTransfer {
+        SettingsTransfer(
+            store: ConfigStore(url: configURL),
+            recipesURL: configURL.deletingLastPathComponent().appendingPathComponent(SettingsTransfer.recipesFileName)
+        )
+    }
+
+    private func exportSettings() throws {
+        let destination = URL(fileURLWithPath: try argument(at: 1, name: "new-folder"))
+        let plan = try settingsTransfer.export(to: destination)
+        print("Exported settings to \(destination.path)")
+        print(Self.contentsLine(plan))
+    }
+
+    private func importSettings() throws {
+        let folder = URL(fileURLWithPath: try argument(at: 1, name: "folder"))
+        let result = try settingsTransfer.importSettings(from: folder)
+        print("Imported settings from \(folder.path)")
+        print(Self.contentsLine(result.plan))
+        if let backup = result.backupURL {
+            print("Previous settings: \(backup.path)")
+        }
+        if result.plan.config.unreadableBindingCount > 0 {
+            fputs("warning: \(result.plan.config.unreadableBindingCount) binding(s) use an action this version "
+                + "does not have and were left out.\n", stderr)
+        }
+        // A running CmdIME picks up the new config.json by itself and then reads themes,
+        // fonts and recipes again. With an identical config.json it sees no change.
+    }
+
+    private static func contentsLine(_ plan: SettingsImportPlan) -> String {
+        let recipes = plan.includesActivationRecipes ? ", activation recipes" : ""
+        return "  config.json, \(plan.themeFileNames.count) theme(s), \(plan.fontFileNames.count) font(s)\(recipes)"
     }
 
     private func requireSlot(_ query: String, in config: SwitcherConfig) throws -> SwitchSlot {
@@ -419,7 +462,7 @@ struct CLI {
     /// like an input source id is read as one, so `keyboardctl <id>` works like `im-select <id>`.
     private static let knownCommands: Set<String> = [
         "help", "--help", "-h", "path", "scan", "init", "show", "switch", "source",
-        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit",
+        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "export", "import",
     ]
 
     /// Reads or sets the input source by id. Editor plugins call this on every mode change,
@@ -623,6 +666,8 @@ struct CLI {
               keyboardctl remap <trigger> <output>
               keyboardctl quit
               keyboardctl path
+              keyboardctl export <new-folder>
+              keyboardctl import <folder>
 
             Examples (slot IDs depend on detected sources; run keyboardctl slots):
               keyboardctl init

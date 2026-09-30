@@ -11,6 +11,12 @@ enum BoardNotice: Equatable {
     case found(sourceID: String, name: String)
 }
 
+/// The outcome of the last Export or Import on the General page, shown under its buttons.
+enum SettingsTransferMessage: Equatable {
+    case done(String)
+    case failed(String)
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var config: SwitcherConfig
@@ -34,6 +40,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var notificationPermission = NotificationPermission.unknown
     /// macOS's own "Automatically switch to a document's input source", which fights App Memory.
     @Published private(set) var isSystemPerDocumentSwitchingOn = false
+    @Published private(set) var settingsTransferMessage: SettingsTransferMessage?
     /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
     @Published var appearance = AppearancePreference.stored {
         didSet {
@@ -179,6 +186,8 @@ final class AppModel: ObservableObject {
     }
 
     /// Makes settings that are already on disk the live ones, without saving them again.
+    /// Themes, fonts and recipes are read again too: `keyboardctl import` writes them
+    /// together with the config.
     private func applyConfigFromDisk(_ next: SwitcherConfig) {
         // The removed slot a pending Undo would restore may no longer fit the new slots.
         invalidateUndo()
@@ -187,6 +196,68 @@ final class AppModel: ObservableObject {
         monitor?.updateConfig(next)
         refreshCurrentRole()
         refreshAppMemory()
+        indicatorLibrary.reloadThemes()
+        indicatorLibrary.reloadFonts()
+        loadActivationRecipes()
+    }
+
+    /// Where Export Settings suggests saving: a folder name that does not exist yet.
+    var suggestedExportName: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "CmdIME Settings \(formatter.string(from: Date()))"
+    }
+
+    func exportSettings(to destination: URL) {
+        do {
+            let plan = try SettingsTransfer(store: configStore).export(to: destination)
+            statusText = "Exported settings with \(plan.themeFileNames.count) theme(s) and "
+                + "\(plan.fontFileNames.count) font(s) to \(destination.lastPathComponent)"
+            settingsTransferMessage = .done(statusText)
+        } catch {
+            reportSettingsTransferFailure(error)
+        }
+    }
+
+    /// What the folder would import, for the confirmation; nil (with the reason shown) when it is refused.
+    func inspectSettingsImport(_ folder: URL) -> SettingsImportPlan? {
+        do {
+            return try SettingsTransfer(store: configStore).inspect(folder)
+        } catch {
+            reportSettingsTransferFailure(error)
+            return nil
+        }
+    }
+
+    /// Checks the folder first; nothing changes when it is refused.
+    func importSettings(from folder: URL) {
+        do {
+            let result = try SettingsTransfer(store: configStore).importSettings(from: folder)
+            applyConfigFromDisk(result.config)
+            var message = "Imported settings from \(folder.lastPathComponent)."
+            if let backup = result.backupURL {
+                message += " The previous ones are in \(backup.deletingLastPathComponent().lastPathComponent)/\(backup.lastPathComponent)."
+            }
+            if result.plan.config.unreadableBindingCount > 0 {
+                message += " \(result.plan.config.unreadableBindingCount) trigger(s) use an action this version does not have and were left out."
+            }
+            statusText = message
+            settingsTransferMessage = .done(message)
+        } catch {
+            reportSettingsTransferFailure(error)
+        }
+    }
+
+    func revealSettingsBackups() {
+        let backups = configStore.url.deletingLastPathComponent()
+            .appendingPathComponent(SettingsTransfer.backupsFolderName, isDirectory: true)
+        indicatorLibrary.revealInFinder(backups)
+    }
+
+    private func reportSettingsTransferFailure(_ error: any Error) {
+        statusText = error.localizedDescription
+        settingsTransferMessage = .failed(error.localizedDescription)
     }
 
     private func refreshCurrentRole() {
