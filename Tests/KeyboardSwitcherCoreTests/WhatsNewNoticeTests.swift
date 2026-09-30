@@ -28,6 +28,16 @@ final class WhatsNewNoticeTests: XCTestCase {
         XCTAssertNil(object["lastSeenWhatsNewVersion"])
     }
 
+    func testReleaseWithoutItsOwnLineHasNoMessage() {
+        XCTAssertNil(WhatsNewNotice.message(for: "0.11.0"))
+        XCTAssertNil(WhatsNewNotice.message(for: "0.13.0"))
+    }
+
+    func testMessageIsKeyedByMajorMinor() {
+        XCTAssertEqual(WhatsNewNotice.message(for: "0.12.0"), WhatsNewNotice.message(for: "0.12.3"))
+        XCTAssertNotNil(WhatsNewNotice.message(for: "0.12.0"))
+    }
+
     func testExistingCompletedConfigWithoutSeenVersionShows() {
         XCTAssertTrue(shows(nil))
     }
