@@ -956,7 +956,8 @@ final class AppModel: ObservableObject {
             // Once per version: the notification when macOS allows it, otherwise the card, which
             // shows the same as the settings window's update bar without taking focus.
             if !(await UpdateNotification.post(version: result.latestVersion, headline: result.notes.headline,
-                                               releaseURL: result.releaseURL)) {
+                                               releaseURL: result.releaseURL,
+                                               isStillWanted: { [weak self] in self?.reminderState.notifies ?? false })) {
                 // The permission prompt can sit for a while; the user may have turned this off meanwhile.
                 guard reminderState.notifies else { return }
                 updateCard.show()

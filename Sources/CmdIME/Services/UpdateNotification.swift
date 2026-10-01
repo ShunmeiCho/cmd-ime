@@ -58,10 +58,14 @@ enum UpdateNotification {
     /// Returns whether the notification was handed to the system, so a version is only marked
     /// as announced once it actually was.
     /// The body is the release's opening sentence when there is one.
-    static func post(version: String, headline: String?, releaseURL: URL) async -> Bool {
+    /// `isStillWanted` is asked after the permission prompt, which can sit for a while: the user may
+    /// have turned update notifications off meanwhile.
+    static func post(version: String, headline: String?, releaseURL: URL,
+                     isStillWanted: @MainActor () -> Bool) async -> Bool {
         let center = UNUserNotificationCenter.current()
-        // Denied: the caller shows the update card instead.
-        guard (try? await center.requestAuthorization(options: [.alert])) == true else { return false }
+        // Denied: the caller shows the update card instead, if it is still wanted.
+        guard (try? await center.requestAuthorization(options: [.alert])) == true,
+              await isStillWanted() else { return false }
         let content = UNMutableNotificationContent()
         content.title = String(localized: "CmdIME \(version) is available")
         content.body = headline ?? String(localized: "Click to open CmdIME and update.")
