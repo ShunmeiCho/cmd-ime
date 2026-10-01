@@ -504,7 +504,8 @@ If the CLI is not linked yet, use `pkill -x CmdIME`.
 CmdIME has no window most of the time, so it looks for new releases itself: by default
 every six hours it asks GitHub for the newest release (nothing else is sent), and when
 there is one it posts a single system notification for that version, with the release's
-opening sentence and **Update Now** and **Release Notes** buttons. If macOS does not let
+opening sentence, a **Release Notes** button and, where CmdIME can update itself in place,
+**Update Now**. If macOS does not let
 CmdIME post notifications, it shows the same update as a card in the top-right corner of the
 screen instead; the card does not take keyboard focus, and **Later** closes it. The settings
 window shows the same update at the top, together with the release's opening sentence

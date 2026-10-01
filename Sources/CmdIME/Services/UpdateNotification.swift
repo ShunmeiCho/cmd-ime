@@ -17,6 +17,9 @@ enum UpdateNotification {
     static let categoryIdentifier = "cmd-ime.update"
     static let updateNowAction = "cmd-ime.update-now"
     static let releaseNotesAction = "cmd-ime.release-notes"
+    /// userInfo key: the release page travels with the notification, since CmdIME may have
+    /// relaunched (and forgotten the check) by the time someone clicks it.
+    static let releaseURLKey = "releaseURL"
 
     /// The buttons on the notification. Update Now only where an in-place update can work.
     static func registerActions() {
@@ -55,7 +58,7 @@ enum UpdateNotification {
     /// Returns whether the notification was handed to the system, so a version is only marked
     /// as announced once it actually was.
     /// The body is the release's opening sentence when there is one.
-    static func post(version: String, headline: String?) async -> Bool {
+    static func post(version: String, headline: String?, releaseURL: URL) async -> Bool {
         let center = UNUserNotificationCenter.current()
         // Denied: the caller shows the update card instead.
         guard (try? await center.requestAuthorization(options: [.alert])) == true else { return false }
@@ -63,20 +66,23 @@ enum UpdateNotification {
         content.title = String(localized: "CmdIME \(version) is available")
         content.body = headline ?? String(localized: "Click to open CmdIME and update.")
         content.categoryIdentifier = categoryIdentifier
+        content.userInfo = [releaseURLKey: releaseURL.absoluteString]
         return (try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))) != nil
     }
 }
 
 /// Hands the clicked button (or the default action, a click on the notification) to the app.
 final class UpdateNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    let onResponse: @MainActor (String) -> Void
+    let onResponse: @MainActor (_ action: String, _ releaseURL: URL?) -> Void
 
-    init(onResponse: @escaping @MainActor (String) -> Void) {
+    init(onResponse: @escaping @MainActor (_ action: String, _ releaseURL: URL?) -> Void) {
         self.onResponse = onResponse
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        await onResponse(response.actionIdentifier)
+        let url = (response.notification.request.content.userInfo[UpdateNotification.releaseURLKey] as? String)
+            .flatMap(URL.init(string:))
+        await onResponse(response.actionIdentifier, url)
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,

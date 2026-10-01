@@ -22,10 +22,10 @@ enum CmdIMEMain {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = AppModel()
-    private lazy var updateNotifications = UpdateNotificationDelegate { [model] action in
+    private lazy var updateNotifications = UpdateNotificationDelegate { [model] action, releaseURL in
         switch action {
         case UpdateNotification.releaseNotesAction:
-            model.openLatestRelease()
+            if let releaseURL { NSWorkspace.shared.open(releaseURL) } else { model.openLatestRelease() }
         case UpdateNotification.updateNowAction:
             AppWindowCoordinator.shared.showSettings()
             model.updateFromNotification()

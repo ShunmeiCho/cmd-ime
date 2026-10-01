@@ -922,7 +922,10 @@ final class AppModel: ObservableObject {
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: ReminderKey.notifies)
             // Turning it on is the user asking for notifications, so this is the moment to let macOS ask.
-            guard newValue else { return }
+            guard newValue else {
+                updateCard.close()
+                return
+            }
             Task { notificationPermission = await UpdateNotification.requestPermission() }
         }
     }
@@ -952,7 +955,10 @@ final class AppModel: ObservableObject {
                                                     state: reminderState) else { return }
             // Once per version: the notification when macOS allows it, otherwise the card, which
             // shows the same as the settings window's update bar without taking focus.
-            if !(await UpdateNotification.post(version: result.latestVersion, headline: result.notes.headline)) {
+            if !(await UpdateNotification.post(version: result.latestVersion, headline: result.notes.headline,
+                                               releaseURL: result.releaseURL)) {
+                // The permission prompt can sit for a while; the user may have turned this off meanwhile.
+                guard reminderState.notifies else { return }
                 updateCard.show()
             }
             UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
