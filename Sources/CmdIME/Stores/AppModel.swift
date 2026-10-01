@@ -974,14 +974,18 @@ final class AppModel: ObservableObject {
 
     /// One-click update: download, verify, replace this bundle, reopen.
     #if DEBUG
-    /// Device check of the update card (`--args -CmdIMEPreviewUpdateCard YES`): a real check that
-    /// treats this build as 0.0.1, so the latest release shows as available. It waits 5 s so the
-    /// check can put another app in front first and see that the card does not take focus.
+    /// Device check of the update card (`--args -CmdIMEPreviewUpdateCard YES`): a made-up release,
+    /// so the check works offline and under GitHub's rate limit. It waits 5 s so the check can put
+    /// another app in front first and see that the card does not take focus. Do not press Update Now.
     func previewUpdateCard() {
         Task {
             try? await Task.sleep(for: .seconds(5))
-            guard let result = try? await updates.check(currentVersion: "0.0.1"), result.isUpdateAvailable else { return }
-            updateStatus = .available(result)
+            guard let url = URL(string: "https://github.com/ShunmeiCho/cmd-ime/releases") else { return }
+            updateStatus = .available(UpdateCheckResult(
+                currentVersion: Self.currentVersion, latestVersion: "9.9.9", releaseURL: url, isUpdateAvailable: true,
+                notes: ReleaseNotesSummary(headline: "A preview of the update card with a made-up release.",
+                                           items: ["Settings in Chinese and Japanese", "One bubble per switch"])
+            ))
             updateCard.show()
         }
     }
