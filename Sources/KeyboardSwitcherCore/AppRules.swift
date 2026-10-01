@@ -97,9 +97,13 @@ public struct AppActivationSettings: Equatable, Sendable {
     public var restoresAfterPasswordField: Bool
     /// Slots that exist: a rule or default naming a deleted slot does nothing.
     public var slotIDs: Set<InputRole>
-    /// Website rules by domain. On the page in front of a browser a matching one beats the
+    /// Website rules, one per domain. On the page in front of a browser a matching one beats the
     /// browser's own slot rule, its memory and the default slot.
-    public var websiteTargets: [String: AppRuleTarget]
+    public var websiteRules: [WebsiteRule]
+    /// The same rules by domain.
+    public var websiteTargets: [String: AppRuleTarget] {
+        Dictionary(websiteRules.map { ($0.domain, $0.target) }, uniquingKeysWith: { _, later in later })
+    }
 
     public init(
         remembersPerApp: Bool = false,
@@ -107,7 +111,7 @@ public struct AppActivationSettings: Equatable, Sendable {
         defaultSlot: InputRole? = nil,
         restoresAfterPasswordField: Bool = false,
         slotIDs: Set<InputRole> = [],
-        websiteTargets: [String: AppRuleTarget] = [:]
+        websiteRules: [WebsiteRule] = []
     ) {
         self.remembersPerApp = remembersPerApp
         // A later duplicate wins, the same as `setting(_:)` replacing in place.
@@ -115,7 +119,7 @@ public struct AppActivationSettings: Equatable, Sendable {
         self.defaultSlot = defaultSlot
         self.restoresAfterPasswordField = restoresAfterPasswordField
         self.slotIDs = slotIDs
-        self.websiteTargets = websiteTargets
+        self.websiteRules = websiteRules
     }
 
     public init(config: SwitcherConfig) {
@@ -125,8 +129,7 @@ public struct AppActivationSettings: Equatable, Sendable {
             defaultSlot: config.appDefaultSlot,
             restoresAfterPasswordField: config.restoreAfterPasswordField,
             slotIDs: Set(config.slots.map(\.id)),
-            // A later duplicate wins, as for app rules.
-            websiteTargets: Dictionary(config.websiteRules.map { ($0.domain, $0.target) }, uniquingKeysWith: { _, later in later })
+            websiteRules: config.websiteRules
         )
     }
 

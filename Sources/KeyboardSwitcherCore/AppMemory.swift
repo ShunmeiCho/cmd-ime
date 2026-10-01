@@ -133,7 +133,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// New settings from the config. Memory of an app that no longer uses it is dropped, so what
     /// the Apps page lists is what can be restored.
     public mutating func update(settings: AppActivationSettings) {
-        if settings.websiteTargets != self.settings.websiteTargets {
+        if settings.websiteRules != self.settings.websiteRules {
             // The page is read again against the new rules.
             websiteContext = nil
         }

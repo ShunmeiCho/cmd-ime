@@ -295,7 +295,7 @@ struct AppMemoryTrackerWebsiteTests {
             rules: chromeRule.map { [$0] } ?? [],
             restoresAfterPasswordField: true,
             slotIDs: slots,
-            websiteTargets: [jaSite: .slot(.japanese), quietSite: .keepAsIs]
+            websiteRules: [WebsiteRule(domain: jaSite, target: .slot(.japanese)), WebsiteRule(domain: quietSite, target: .keepAsIs)]
         ))
     }
 
