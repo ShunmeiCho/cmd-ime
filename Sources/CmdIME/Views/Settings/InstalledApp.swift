@@ -61,7 +61,7 @@ struct InstalledApp: Identifiable, Hashable {
         let own = Bundle.main.bundleIdentifier
         let apps = NSWorkspace.shared.runningApplications.compactMap { app -> InstalledApp? in
             guard app.activationPolicy == .regular,
-                  let id = app.bundleIdentifier ?? app.executableURL?.path,
+                  let id = app.cmdIMEAppID,
                   id != own else { return nil }
             return InstalledApp(id: id, name: app.localizedName ?? InstalledApp(id: id).name)
         }

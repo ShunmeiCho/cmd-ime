@@ -262,7 +262,7 @@ final class AppMemoryController {
     }
 
     private static func appID(of app: NSRunningApplication?) -> String? {
-        app?.bundleIdentifier ?? app?.executableURL?.path
+        app?.cmdIMEAppID
     }
 
     /// The app in front when following starts, if it is one the tracker follows (see
