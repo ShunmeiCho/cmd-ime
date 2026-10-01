@@ -81,8 +81,13 @@ public enum AppRuleBoard {
         on target: AppRuleTarget,
         in config: SwitcherConfig
     ) -> DropResult {
-        guard !domain.isEmpty else { return .refused(CoreLocalization.text("That is not a website.")) }
         let existing = config.websiteRule(for: domain)
+        // A drag payload can come from any app: a new rule takes only a domain already in the form
+        // rules store, never a page address with a path, a query or credentials.
+        let normalized = WebsiteHost.normalized(userInput: domain)
+        guard existing != nil || normalized?.domain == domain else {
+            return .refused(CoreLocalization.text("That is not a website."))
+        }
         guard existing?.target != target else { return .unchanged }
         if case .slot(let id) = target, config.slot(id) == nil {
             return .refused(CoreLocalization.text("That slot was deleted. Drop the website on another slot."))
@@ -90,7 +95,7 @@ public enum AppRuleBoard {
         let rule = WebsiteRule(
             match: existing?.match ?? .domain,
             domain: domain,
-            includesSubdomains: existing?.includesSubdomains ?? includesSubdomains ?? true,
+            includesSubdomains: existing?.includesSubdomains ?? (normalized?.includesSubdomains == false ? false : includesSubdomains ?? true),
             target: target
         )
         return .changed(config.setting(rule))

@@ -240,3 +240,21 @@ struct WebsiteRuleMatcherTests {
         #expect(WebsiteRuleMatcher.match(host: "fe80::1", in: rules) == nil)
     }
 }
+
+struct WebsiteHostIPv6Tests {
+    @Test("an IPv6 address has one spelling, typed or read from a page")
+    func canonicalSpelling() throws {
+        let typed = WebsiteHost.normalized(userInput: "[2001:0db8:0:0:0:0:0:1]")
+        let page = try #require(URL(string: "http://[2001:DB8::1]:8080/x"))
+
+        #expect(typed?.domain == "2001:db8::1")
+        #expect(typed?.includesSubdomains == false)
+        #expect(WebsiteHost.host(of: page) == "2001:db8::1")
+    }
+
+    @Test("something that only looks like an IPv6 address is refused")
+    func invalidAddress() {
+        #expect(WebsiteHost.normalized(userInput: ":::") == nil)
+        #expect(WebsiteHost.normalized(userInput: "[1:2:3]") == nil)
+    }
+}

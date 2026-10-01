@@ -14,7 +14,18 @@ public enum WebsiteHost {
         guard let scheme = url.scheme?.lowercased(), webSchemes.contains(scheme) else { return nil }
         guard var host = url.host?.lowercased() else { return nil }
         if host.hasSuffix(".") { host.removeLast() }
+        // One spelling per IPv6 address, so a rule and a page that write it differently still match.
+        if host.contains(":"), let canonical = canonicalIPv6(host) { host = canonical }
         return host.isEmpty ? nil : host
+    }
+
+    /// The shortest standard spelling of an IPv6 address (`2001:db8::1`), nil when it is not one.
+    static func canonicalIPv6(_ host: String) -> String? {
+        var address = in6_addr()
+        guard inet_pton(AF_INET6, host, &address) == 1 else { return nil }
+        var text = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+        guard inet_ntop(AF_INET6, &address, &text, socklen_t(text.count)) != nil else { return nil }
+        return String(cString: text)
     }
 
     /// What a rule stores for a domain the user typed: `example.com`, `*.example.com` or a pasted
@@ -59,7 +70,7 @@ public enum WebsiteHost {
 
     private static func isAddress(_ host: String) -> Bool {
         if host.contains(":") {
-            return host.allSatisfy { ($0.isASCII && $0.isHexDigit) || $0 == ":" || $0 == "." }
+            return canonicalIPv6(host) != nil
         }
         let parts = host.split(separator: ".", omittingEmptySubsequences: false)
         return parts.count == 4 && parts.allSatisfy { part in

@@ -199,6 +199,7 @@ final class AppMemoryController {
         let restore = tracker.websiteHoldExpired(
             generation: generation,
             actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
+            actualBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
             currentSourceID: currentSourceID(),
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             slotOfSource: slotForSourceID

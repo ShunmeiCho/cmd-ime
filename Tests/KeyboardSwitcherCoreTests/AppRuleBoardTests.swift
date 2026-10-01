@@ -123,6 +123,23 @@ struct AppRuleBoardWebsiteTests {
         return config
     }
 
+    @Test("a new website rule takes only a domain in stored form, never a page address")
+    func dropRefusesAnAddress() {
+        let empty = config(websites: [])
+
+        for payload in ["https://user:secret@example.com/private?q=token", "Example.com", "example.com/path", "not a site"] {
+            guard case .refused = AppRuleBoard.drop(websiteDomain: payload, on: .keepAsIs, in: empty) else {
+                Issue.record("\(payload) was not refused")
+                continue
+            }
+        }
+        guard case .changed(let changed) = AppRuleBoard.drop(websiteDomain: "127.0.0.1", on: .keepAsIs, in: empty) else {
+            Issue.record("an address in stored form was refused")
+            return
+        }
+        #expect(changed.websiteRules.first?.includesSubdomains == false)
+    }
+
     @Test("each lane lists its website chips beside its apps, one chip per domain")
     func lanesListWebsiteChips() {
         let board = AppRuleBoard.lanes(for: config(

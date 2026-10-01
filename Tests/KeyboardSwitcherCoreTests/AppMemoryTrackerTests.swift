@@ -622,7 +622,7 @@ struct AppMemoryTrackerWebsiteTests {
         #expect(tracker.activationGeneration == 8)
     }
 
-    @Test("another process of the same browser starts its reads over, and the first one's results are dropped")
+    @Test("another process of the same browser is an activation of its own: a new wait, old results dropped")
     func sameBrowserOtherProcess() {
         var tracker = makeTracker()
         _ = activateChrome(&tracker)
@@ -632,7 +632,41 @@ struct AppMemoryTrackerWebsiteTests {
         #expect(tracker.appActivated(chrome, currentSourceID: abc, context: quiet, browserPID: otherPID, slotOfSource: slotOf) == .none)
 
         #expect(tracker.websiteWatch?.pid == otherPID)
+        #expect(tracker.isWebsiteHoldWaiting)
         #expect(tracker.websiteRead(first, currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+    }
+
+    @Test("a website switch on its way is put back when another process of the browser comes forward")
+    func pendingSwitchIsRetiredForAnotherProcess() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+
+        #expect(tracker.appActivated(chrome, currentSourceID: kotoeri, context: restorePending, browserPID: 777, slotOfSource: slotOf)
+            == .putBack(sourceID: abc))
+    }
+
+    @Test("a trigger confirmed in another process of the browser registers it, and the late notice changes nothing")
+    func triggerInAnotherProcess() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .noRule), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+
+        tracker.triggerConfirmed(sourceID: abc, actualFrontmostAppID: chrome, context: ownPending, browserPID: 777)
+        #expect(tracker.appActivated(chrome, currentSourceID: abc, context: quiet, browserPID: 777, slotOfSource: slotOf) == .none)
+
+        #expect(!tracker.isWebsiteHoldWaiting)
+        #expect(tracker.websiteRead(WebsiteReading(pid: 777, generation: tracker.activationGeneration, sequence: 2, context: .rule(jaSite)),
+                                    currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+    }
+
+    @Test("a wait that expires after another process of the browser came forward selects nothing")
+    func expiryForAnotherProcess() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+
+        #expect(tracker.websiteHoldExpired(generation: tracker.activationGeneration, actualFrontmostAppID: chrome, actualBrowserPID: 777,
+                                           currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
     }
 
     @Test("a read for a browser process that is not the one in front is dropped")

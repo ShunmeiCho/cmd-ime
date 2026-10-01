@@ -205,7 +205,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
         context: AppMemoryContext,
         browserPID: Int32? = nil
     ) {
-        if let actual = actualFrontmostAppID, actual != frontmostAppID, isRegularApp || actual == ownAppID {
+        if let actual = actualFrontmostAppID, !isInFront(actual, browserPID: browserPID),
+           isRegularApp || actual == ownAppID {
             frontmostChanged(to: actual, browserPID: browserPID)
             forced = nil
             beforeForced = nil
@@ -263,14 +264,10 @@ public struct AppMemoryTracker: Equatable, Sendable {
     ) -> Restore {
         let appID = actualFrontmostAppID ?? noticedAppID
         guard isRegularApp || appID == ownAppID else { return .none }
-        guard appID != frontmostAppID else {
-            // The same browser under another process (a second profile's instance): its pages
-            // are another process's, so reads start over; nothing is selected for the same app.
-            if let browserPID, browserPID != frontBrowserPID {
-                frontmostChanged(to: appID, browserPID: browserPID)
-            }
-            return .none
-        }
+        // A browser is who it is by app id and process: a second instance of the same browser (another
+        // profile) coming forward is an activation like any other, with its own pages, its own wait
+        // and the same retiring of a switch still on its way.
+        guard !isInFront(appID, browserPID: browserPID) else { return .none }
         if !context.isRestorePending {
             sourceBeforeRestore = nil
         }
@@ -376,6 +373,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
     public mutating func websiteHoldExpired(
         generation: Int,
         actualFrontmostAppID: String? = nil,
+        actualBrowserPID: Int32? = nil,
         currentSourceID: String?,
         context: AppMemoryContext,
         slotOfSource: (String) -> InputRole? = { _ in nil }
@@ -384,7 +382,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
             return .none
         }
         websiteHold = nil
-        guard actualFrontmostAppID == nil || actualFrontmostAppID == appID else { return .none }
+        guard actualFrontmostAppID == nil || actualFrontmostAppID == appID,
+              actualBrowserPID == nil || actualBrowserPID == frontBrowserPID else { return .none }
         guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
         return websiteRestore(page: .unknown, appID: appID, arrivalSourceID: hold.arrivalSourceID,
                               currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
@@ -421,6 +420,12 @@ public struct AppMemoryTracker: Equatable, Sendable {
     private func isForced(_ sourceID: String, in appID: String?) -> Bool {
         guard let forced, let appID else { return false }
         return forced == ForcedSource(appID: appID, sourceID: sourceID)
+    }
+
+    /// Whether `appID` is the app already in front. For a browser the process counts too; a caller
+    /// that passes no pid (not a browser) is compared by app id alone.
+    private func isInFront(_ appID: String, browserPID: Int32?) -> Bool {
+        appID == frontmostAppID && (browserPID == nil || browserPID == frontBrowserPID)
     }
 
     private mutating func frontmostChanged(to appID: String, browserPID: Int32?) {
