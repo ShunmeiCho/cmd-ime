@@ -14,6 +14,22 @@ enum NotificationPermission: Equatable {
 
 enum UpdateNotification {
     static let identifier = "cmd-ime.update-available"
+    static let categoryIdentifier = "cmd-ime.update"
+    static let updateNowAction = "cmd-ime.update-now"
+    static let releaseNotesAction = "cmd-ime.release-notes"
+
+    /// The buttons on the notification. Update Now only where an in-place update can work.
+    static func registerActions() {
+        var actions = [UNNotificationAction(identifier: releaseNotesAction,
+                                            title: String(localized: "Release Notes"), options: [])]
+        if SelfUpdater.canUpdateInPlace {
+            actions.insert(UNNotificationAction(identifier: updateNowAction,
+                                                title: String(localized: "Update Now"), options: [.foreground]), at: 0)
+        }
+        UNUserNotificationCenter.current().setNotificationCategories([
+            UNNotificationCategory(identifier: categoryIdentifier, actions: actions, intentIdentifiers: [], options: []),
+        ])
+    }
 
     static func permission() async -> NotificationPermission {
         switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
@@ -38,27 +54,29 @@ enum UpdateNotification {
 
     /// Returns whether the notification was handed to the system, so a version is only marked
     /// as announced once it actually was.
-    static func post(version: String) async -> Bool {
+    /// The body is the release's opening sentence when there is one.
+    static func post(version: String, headline: String?) async -> Bool {
         let center = UNUserNotificationCenter.current()
-        // Denied: the settings window still shows the update the next time it opens.
+        // Denied: the caller shows the update card instead.
         guard (try? await center.requestAuthorization(options: [.alert])) == true else { return false }
         let content = UNMutableNotificationContent()
         content.title = String(localized: "CmdIME \(version) is available")
-        content.body = String(localized: "Click to open CmdIME and update.")
+        content.body = headline ?? String(localized: "Click to open CmdIME and update.")
+        content.categoryIdentifier = categoryIdentifier
         return (try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))) != nil
     }
 }
 
-/// Clicking the notification opens the settings window, where the update button is.
+/// Hands the clicked button (or the default action, a click on the notification) to the app.
 final class UpdateNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    let onOpen: @MainActor () -> Void
+    let onResponse: @MainActor (String) -> Void
 
-    init(onOpen: @escaping @MainActor () -> Void) {
-        self.onOpen = onOpen
+    init(onResponse: @escaping @MainActor (String) -> Void) {
+        self.onResponse = onResponse
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        await onOpen()
+        await onResponse(response.actionIdentifier)
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,

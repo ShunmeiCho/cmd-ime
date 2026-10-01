@@ -637,6 +637,8 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private lazy var updateCard = UpdateCardController(model: self)
+
     private static let systemBadgeHiddenByCmdIMEKey = "systemInputBadgeHiddenByCmdIME"
     /// Set by Quit CmdIME on the General page; applied once the quit really goes through.
     private var restoresSystemBadgeOnExit = false
@@ -948,11 +950,12 @@ final class AppModel: ObservableObject {
             updateStatus = .available(result)
             guard UpdateReminderPolicy.shouldNotify(latest: result.latestVersion, current: currentVersion,
                                                     state: reminderState) else { return }
-            // Marked only once posted: a version announced while notifications were off would
-            // otherwise never be announced after they are turned on.
-            if await UpdateNotification.post(version: result.latestVersion) {
-                UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
+            // Once per version: the notification when macOS allows it, otherwise the card, which
+            // shows the same as the settings window's update bar without taking focus.
+            if !(await UpdateNotification.post(version: result.latestVersion, headline: result.notes.headline)) {
+                updateCard.show()
             }
+            UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
         }
     }
 
@@ -963,6 +966,24 @@ final class AppModel: ObservableObject {
     }
 
     /// One-click update: download, verify, replace this bundle, reopen.
+    #if DEBUG
+    /// Device check of the update card (`--args -CmdIMEPreviewUpdateCard YES`): a real check that
+    /// treats this build as 0.0.1, so the latest release shows as available.
+    func previewUpdateCard() {
+        Task {
+            guard let result = try? await updates.check(currentVersion: "0.0.1"), result.isUpdateAvailable else { return }
+            updateStatus = .available(result)
+            updateCard.show()
+        }
+    }
+    #endif
+
+    /// The notification's Update Now. After a relaunch the found update is gone from memory, so
+    /// look again; the settings window then shows the result with its own Update Now.
+    func updateFromNotification() {
+        if case .available = updateStatus { installAvailableUpdate() } else { checkForUpdates() }
+    }
+
     func installAvailableUpdate() {
         guard case let .available(result) = updateStatus, updateInstallStage == nil else { return }
         updateInstallError = nil

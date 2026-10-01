@@ -22,8 +22,16 @@ enum CmdIMEMain {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = AppModel()
-    private let updateNotifications = UpdateNotificationDelegate {
-        AppWindowCoordinator.shared.showSettings()
+    private lazy var updateNotifications = UpdateNotificationDelegate { [model] action in
+        switch action {
+        case UpdateNotification.releaseNotesAction:
+            model.openLatestRelease()
+        case UpdateNotification.updateNowAction:
+            AppWindowCoordinator.shared.showSettings()
+            model.updateFromNotification()
+        default:
+            AppWindowCoordinator.shared.showSettings()
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -36,6 +44,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AppWindowCoordinator.shared.showSettings()
         }
         UNUserNotificationCenter.current().delegate = updateNotifications
+        UpdateNotification.registerActions()
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "CmdIMEPreviewUpdateCard") { model.previewUpdateCard() }
+        #endif
         model.startUpdateReminder()
     }
 
