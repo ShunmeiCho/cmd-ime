@@ -124,7 +124,9 @@ public struct AppActivationSettings: Equatable, Sendable {
             rules: config.appRules,
             defaultSlot: config.appDefaultSlot,
             restoresAfterPasswordField: config.restoreAfterPasswordField,
-            slotIDs: Set(config.slots.map(\.id))
+            slotIDs: Set(config.slots.map(\.id)),
+            // A later duplicate wins, as for app rules.
+            websiteTargets: Dictionary(config.websiteRules.map { ($0.domain, $0.target) }, uniquingKeysWith: { _, later in later })
         )
     }
 
