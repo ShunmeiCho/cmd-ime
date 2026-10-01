@@ -732,6 +732,32 @@ struct AppMemoryTrackerWebsiteTests {
         var settings = tracker.settings
         settings.rules[chrome] = AppRule(appID: chrome, target: .keepAsIs)
 
-        #expect(tracker.update(settings: settings) == .putBack(sourceID: abc))
+        #expect(tracker.update(settings: settings, context: restorePending) == .putBack(sourceID: abc))
+    }
+
+    @Test("a settings change does not put back over a trigger that replaced the website switch")
+    func settingsChangeLeavesATriggerAlone() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+
+        var settings = tracker.settings
+        settings.rules[chrome] = AppRule(appID: chrome, target: .keepAsIs)
+
+        #expect(tracker.update(settings: settings, context: ownPending) == .none)
+    }
+
+    @Test("a rules change before the first read after a trigger keeps the trigger's choice")
+    func rulesChangeKeepsTheChoiceBarrier() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        tracker.triggerConfirmed(sourceID: pinyin, actualFrontmostAppID: chrome, context: ownPending, browserPID: chromePID)
+
+        var settings = tracker.settings
+        settings.websiteRules.append(WebsiteRule(domain: "unrelated.example", target: .keepAsIs))
+        _ = tracker.update(settings: settings)
+
+        #expect(tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: pinyin, context: quiet, slotOfSource: slotOf)
+            == .none)
     }
 }

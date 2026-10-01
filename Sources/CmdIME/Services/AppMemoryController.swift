@@ -61,7 +61,10 @@ final class AppMemoryController {
         let shouldRun = isListening && settings.isAnythingOn
         if shouldRun, isActive {
             // New settings can retire a website switch still on its way.
-            let restore = tracker.update(settings: settings)
+            let restore = tracker.update(
+                settings: settings,
+                context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
+            )
             publishMemory()
             syncWebsiteWatch()
             perform(restore)

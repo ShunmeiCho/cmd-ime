@@ -144,14 +144,20 @@ public struct AppMemoryTracker: Equatable, Sendable {
 
     /// New settings from the config. Memory of an app that no longer uses it is dropped, so what
     /// the Apps page lists is what can be restored.
+    /// `context` says what the monitor is doing right now: only a restore still pending there can
+    /// be put back, never a trigger that has since replaced it.
     @discardableResult
-    public mutating func update(settings: AppActivationSettings) -> Restore {
+    public mutating func update(settings: AppActivationSettings, context: AppMemoryContext = AppMemoryContext()) -> Restore {
         let pageTargetBefore = currentPageRuleTarget
         if settings.websiteRules != self.settings.websiteRules {
             // The page is read again against the new rules; a read matched against the old ones is
             // stale. What the page was stays known until then, so its source is still kept out of
             // the browser's memory.
             isWebsiteContextStale = true
+            // The user's choice still waits for its first read: it waits in the new generation.
+            if contextOnlyGeneration == activationGeneration {
+                contextOnlyGeneration = activationGeneration + 1
+            }
             activationGeneration += 1
         }
         self.settings = settings
@@ -165,6 +171,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
             return .none
         }
         isWebsiteSwitchInFlight = false
+        // The monitor decides what is really pending: with a trigger there instead, the website
+        // switch is already retired and nothing is put back over the user's choice.
+        guard context.isRestorePending else { return .none }
         defer { sourceBeforeRestore = nil }
         return sourceBeforeRestore.map { .putBack(sourceID: $0) } ?? .none
     }
