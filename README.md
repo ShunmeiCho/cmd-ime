@@ -503,14 +503,18 @@ If the CLI is not linked yet, use `pkill -x CmdIME`.
 
 CmdIME has no window most of the time, so it looks for new releases itself: by default
 every six hours it asks GitHub for the newest release (nothing else is sent), and when
-there is one it posts a single system notification for that version. The settings
+there is one it posts a single system notification for that version, with the release's
+opening sentence, a **Release Notes** button and, where CmdIME can update itself in place,
+**Update Now**. If macOS does not let
+CmdIME post notifications, it shows the same update as a card in the top-right corner of the
+screen instead; the card does not take keyboard focus, and **Later** closes it. The settings
 window shows the same update at the top, together with the release's opening sentence
 and the title of each change.
 
 **General > Updates** has **Check** for a manual check (About has the same button as
 **Check for Updates**), a **Check automatically** switch and, while it is on, an
 **Every 6 hours / Daily / Weekly** choice and **Notify me about updates**, which turns
-the notification off while the update still shows in the window. Notification
+the notification and the card off while the update still shows in the window. Notification
 permission is requested when there is an update to announce or when you turn that
 switch on, never at first launch. macOS does not let an app change its own notification
 permission: if notifications are blocked, General says so and offers

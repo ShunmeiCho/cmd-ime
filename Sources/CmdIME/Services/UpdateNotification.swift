@@ -14,6 +14,25 @@ enum NotificationPermission: Equatable {
 
 enum UpdateNotification {
     static let identifier = "cmd-ime.update-available"
+    static let categoryIdentifier = "cmd-ime.update"
+    static let updateNowAction = "cmd-ime.update-now"
+    static let releaseNotesAction = "cmd-ime.release-notes"
+    /// userInfo key: the release page travels with the notification, since CmdIME may have
+    /// relaunched (and forgotten the check) by the time someone clicks it.
+    static let releaseURLKey = "releaseURL"
+
+    /// The buttons on the notification. Update Now only where an in-place update can work.
+    static func registerActions() {
+        var actions = [UNNotificationAction(identifier: releaseNotesAction,
+                                            title: String(localized: "Release Notes"), options: [])]
+        if SelfUpdater.canUpdateInPlace {
+            actions.insert(UNNotificationAction(identifier: updateNowAction,
+                                                title: String(localized: "Update Now"), options: [.foreground]), at: 0)
+        }
+        UNUserNotificationCenter.current().setNotificationCategories([
+            UNNotificationCategory(identifier: categoryIdentifier, actions: actions, intentIdentifiers: [], options: []),
+        ])
+    }
 
     static func permission() async -> NotificationPermission {
         switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
@@ -38,27 +57,36 @@ enum UpdateNotification {
 
     /// Returns whether the notification was handed to the system, so a version is only marked
     /// as announced once it actually was.
-    static func post(version: String) async -> Bool {
+    /// The body is the release's opening sentence when there is one.
+    /// `isStillWanted` is asked after the permission prompt, which can sit for a while: the user may
+    /// have turned update notifications off meanwhile.
+    static func post(version: String, headline: String?, releaseURL: URL,
+                     isStillWanted: @MainActor () -> Bool) async -> Bool {
         let center = UNUserNotificationCenter.current()
-        // Denied: the settings window still shows the update the next time it opens.
-        guard (try? await center.requestAuthorization(options: [.alert])) == true else { return false }
+        // Denied: the caller shows the update card instead, if it is still wanted.
+        guard (try? await center.requestAuthorization(options: [.alert])) == true,
+              await isStillWanted() else { return false }
         let content = UNMutableNotificationContent()
         content.title = String(localized: "CmdIME \(version) is available")
-        content.body = String(localized: "Click to open CmdIME and update.")
+        content.body = headline ?? String(localized: "Click to open CmdIME and update.")
+        content.categoryIdentifier = categoryIdentifier
+        content.userInfo = [releaseURLKey: releaseURL.absoluteString]
         return (try? await center.add(UNNotificationRequest(identifier: identifier, content: content, trigger: nil))) != nil
     }
 }
 
-/// Clicking the notification opens the settings window, where the update button is.
+/// Hands the clicked button (or the default action, a click on the notification) to the app.
 final class UpdateNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
-    let onOpen: @MainActor () -> Void
+    let onResponse: @MainActor (_ action: String, _ releaseURL: URL?) -> Void
 
-    init(onOpen: @escaping @MainActor () -> Void) {
-        self.onOpen = onOpen
+    init(onResponse: @escaping @MainActor (_ action: String, _ releaseURL: URL?) -> Void) {
+        self.onResponse = onResponse
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        await onOpen()
+        let url = (response.notification.request.content.userInfo[UpdateNotification.releaseURLKey] as? String)
+            .flatMap(URL.init(string:))
+        await onResponse(response.actionIdentifier, url)
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter,

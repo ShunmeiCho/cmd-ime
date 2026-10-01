@@ -197,7 +197,7 @@ private struct ReleaseNotesSummaryView: View {
     }
 }
 
-private struct UpdateAvailableBar: View {
+struct UpdateAvailableBar: View {
     @ObservedObject var model: AppModel
     let version: String
 

@@ -637,6 +637,8 @@ final class AppModel: ObservableObject {
         }
     }
 
+    private lazy var updateCard = UpdateCardController(model: self)
+
     private static let systemBadgeHiddenByCmdIMEKey = "systemInputBadgeHiddenByCmdIME"
     /// Set by Quit CmdIME on the General page; applied once the quit really goes through.
     private var restoresSystemBadgeOnExit = false
@@ -920,7 +922,10 @@ final class AppModel: ObservableObject {
             objectWillChange.send()
             UserDefaults.standard.set(newValue, forKey: ReminderKey.notifies)
             // Turning it on is the user asking for notifications, so this is the moment to let macOS ask.
-            guard newValue else { return }
+            guard newValue else {
+                updateCard.close()
+                return
+            }
             Task { notificationPermission = await UpdateNotification.requestPermission() }
         }
     }
@@ -948,11 +953,16 @@ final class AppModel: ObservableObject {
             updateStatus = .available(result)
             guard UpdateReminderPolicy.shouldNotify(latest: result.latestVersion, current: currentVersion,
                                                     state: reminderState) else { return }
-            // Marked only once posted: a version announced while notifications were off would
-            // otherwise never be announced after they are turned on.
-            if await UpdateNotification.post(version: result.latestVersion) {
-                UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
+            // Once per version: the notification when macOS allows it, otherwise the card, which
+            // shows the same as the settings window's update bar without taking focus.
+            if !(await UpdateNotification.post(version: result.latestVersion, headline: result.notes.headline,
+                                               releaseURL: result.releaseURL,
+                                               isStillWanted: { [weak self] in self?.reminderState.notifies ?? false })) {
+                // The permission prompt can sit for a while; the user may have turned this off meanwhile.
+                guard reminderState.notifies else { return }
+                updateCard.show()
             }
+            UserDefaults.standard.set(result.latestVersion, forKey: ReminderKey.lastNotified)
         }
     }
 
@@ -963,6 +973,26 @@ final class AppModel: ObservableObject {
     }
 
     /// One-click update: download, verify, replace this bundle, reopen.
+    #if DEBUG
+    /// Device check of the update card (`--args -CmdIMEPreviewUpdateCard YES`): a real check that
+    /// treats this build as 0.0.1, so the latest release shows as available. It waits 5 s so the
+    /// check can put another app in front first and see that the card does not take focus.
+    func previewUpdateCard() {
+        Task {
+            try? await Task.sleep(for: .seconds(5))
+            guard let result = try? await updates.check(currentVersion: "0.0.1"), result.isUpdateAvailable else { return }
+            updateStatus = .available(result)
+            updateCard.show()
+        }
+    }
+    #endif
+
+    /// The notification's Update Now. After a relaunch the found update is gone from memory, so
+    /// look again; the settings window then shows the result with its own Update Now.
+    func updateFromNotification() {
+        if case .available = updateStatus { installAvailableUpdate() } else { checkForUpdates() }
+    }
+
     func installAvailableUpdate() {
         guard case let .available(result) = updateStatus, updateInstallStage == nil else { return }
         updateInstallError = nil
