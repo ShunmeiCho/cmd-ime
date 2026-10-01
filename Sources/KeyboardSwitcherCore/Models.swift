@@ -40,18 +40,25 @@ public enum Modifier: String, Codable, CaseIterable, Comparable, Sendable {
     public static let latching: Set<Modifier> = [.capsLock, .fn]
 }
 
+public enum ModifierSide: String, Codable, Sendable {
+    case left
+    case right
+}
+
 public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
     public var kind: TriggerKind
     public var gesture: TriggerGesture
     public var keyCode: Int
     public var keyName: String
     public var modifiers: [Modifier]
+    public var modifierSides: [Modifier: ModifierSide]
 
     public init(
         kind: TriggerKind,
         keyCode: Int,
         keyName: String,
         modifiers: [Modifier] = [],
+        modifierSides: [Modifier: ModifierSide] = [:],
         gesture: TriggerGesture = .tap
     ) {
         self.kind = kind
@@ -59,6 +66,13 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         self.keyCode = keyCode
         self.keyName = keyName
         self.modifiers = modifiers.sorted()
+        self.modifierSides = Self.validModifierSides(modifierSides, kind: kind, modifiers: modifiers)
+    }
+
+    private static func validModifierSides(
+        _ sides: [Modifier: ModifierSide], kind: TriggerKind, modifiers: [Modifier]
+    ) -> [Modifier: ModifierSide] {
+        sides.filter { kind == .keyPress && modifiers.contains($0.key) && !Modifier.latching.contains($0.key) }
     }
 
     public var displayName: String {
@@ -66,7 +80,9 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
             return gesture == .doubleTap ? "double-\(keyName)" : keyName
         }
 
-        let prefix = modifiers.map(\.rawValue).joined(separator: "+")
+        let prefix = modifiers.map { modifier in
+            modifierSides[modifier].map { "\($0.rawValue)-\(modifier.rawValue)" } ?? modifier.rawValue
+        }.joined(separator: "+")
         return prefix.isEmpty ? keyName : "\(prefix)+\(keyName)"
     }
 
@@ -85,6 +101,15 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         case keyCode
         case keyName
         case modifiers
+        case modifierSides
+    }
+
+    private struct LenientModifierSide: Decodable {
+        let value: ModifierSide?
+
+        init(from decoder: Decoder) throws {
+            value = try? decoder.singleValueContainer().decode(ModifierSide.self)
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -94,6 +119,14 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         keyCode = try container.decode(Int.self, forKey: .keyCode)
         keyName = try container.decode(String.self, forKey: .keyName)
         modifiers = try container.decode([Modifier].self, forKey: .modifiers)
+        let decodedSides = (try? container.decodeIfPresent([String: LenientModifierSide].self, forKey: .modifierSides)) ?? [:]
+        var sides: [Modifier: ModifierSide] = [:]
+        for (key, side) in decodedSides {
+            if let modifier = Modifier(rawValue: key), let value = side.value {
+                sides[modifier] = value
+            }
+        }
+        modifierSides = Self.validModifierSides(sides, kind: kind, modifiers: modifiers)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -103,6 +136,10 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         try container.encode(keyCode, forKey: .keyCode)
         try container.encode(keyName, forKey: .keyName)
         try container.encode(modifiers, forKey: .modifiers)
+        if !modifierSides.isEmpty {
+            let sides = Dictionary(uniqueKeysWithValues: modifierSides.map { ($0.key.rawValue, $0.value) })
+            try container.encode(sides, forKey: .modifierSides)
+        }
     }
 }
 

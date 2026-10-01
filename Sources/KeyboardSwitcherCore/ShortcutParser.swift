@@ -53,15 +53,28 @@ public enum ShortcutParser {
         }
 
         var modifiers: [Modifier] = []
+        var modifierSides: [Modifier: ModifierSide] = [:]
         var seenModifiers = Set<Modifier>()
         for token in parts.dropLast() {
-            guard let modifier = modifierAliases[token] else {
+            var alias = token
+            let side: ModifierSide?
+            if token.hasPrefix("left-") {
+                side = .left
+                alias = String(token.dropFirst("left-".count))
+            } else if token.hasPrefix("right-") {
+                side = .right
+                alias = String(token.dropFirst("right-".count))
+            } else {
+                side = nil
+            }
+            guard let modifier = modifierAliases[alias], side == nil || !Modifier.latching.contains(modifier) else {
                 throw ShortcutParserError.unknownKey(token)
             }
             guard seenModifiers.insert(modifier).inserted else {
                 throw ShortcutParserError.duplicateModifier(token)
             }
             modifiers.append(modifier)
+            modifierSides[modifier] = side
         }
 
         guard let keyToken = parts.last else {
@@ -71,7 +84,7 @@ public enum ShortcutParser {
             throw ShortcutParserError.unknownKey(keyToken)
         }
 
-        return KeyTrigger(kind: .keyPress, keyCode: key.code, keyName: key.name, modifiers: modifiers)
+        return KeyTrigger(kind: .keyPress, keyCode: key.code, keyName: key.name, modifiers: modifiers, modifierSides: modifierSides)
     }
 
     private static func normalizeAlias(_ value: String) -> String {

@@ -494,12 +494,16 @@ public final class EventTapMonitor: @unchecked Sendable {
     }
 
     private func keyPressBinding(forKeyCode keyCode: Int, flags: CGEventFlags) -> KeyBinding? {
-        config.bindings.first { binding in
-            binding.enabled
-                && binding.trigger.kind == .keyPress
-                && binding.trigger.keyCode == keyCode
-                && eventFlags(flags, contain: binding.trigger.modifiers)
+        var bestMatch: KeyBinding?
+        for binding in config.bindings where binding.enabled && binding.trigger.kind == .keyPress && binding.trigger.keyCode == keyCode {
+            guard eventFlags(flags, contain: binding.trigger.modifiers, modifierSides: binding.trigger.modifierSides) else {
+                continue
+            }
+            if binding.trigger.modifierSides.count > (bestMatch?.trigger.modifierSides.count ?? -1) {
+                bestMatch = binding
+            }
         }
+        return bestMatch
     }
 
     private func binding(for trigger: KeyTrigger) -> KeyBinding? {
@@ -819,11 +823,36 @@ public final class EventTapMonitor: @unchecked Sendable {
         return true
     }
 
-    func eventFlags(_ flags: CGEventFlags, contain modifiers: [Modifier]) -> Bool {
+    // Device-dependent NX_DEVICE*KEYMASK values from IOLLEvent.h.
+    private enum DeviceModifierMasks {
+        static let leftControl: UInt64 = 0x1
+        static let leftShift: UInt64 = 0x2
+        static let rightShift: UInt64 = 0x4
+        static let leftCommand: UInt64 = 0x8
+        static let rightCommand: UInt64 = 0x10
+        static let leftOption: UInt64 = 0x20
+        static let rightOption: UInt64 = 0x40
+        static let rightControl: UInt64 = 0x2000
+
+        static let pairs: [Modifier: (left: UInt64, right: UInt64)] = [
+            .command: (leftCommand, rightCommand),
+            .option: (leftOption, rightOption),
+            .control: (leftControl, rightControl),
+            .shift: (leftShift, rightShift),
+        ]
+    }
+
+    func eventFlags(_ flags: CGEventFlags, contain modifiers: [Modifier], modifierSides: [Modifier: ModifierSide] = [:]) -> Bool {
         let expected = Set(modifiers)
         let actual = Set(Modifier.allCases.filter { flags.contains(cgFlag(for: $0)) })
             .subtracting(Modifier.latching.subtracting(expected))
-        return actual == expected
+        guard actual == expected else { return false }
+        return modifierSides.allSatisfy { modifier, side in
+            guard let masks = DeviceModifierMasks.pairs[modifier] else { return false }
+            let pressed = flags.rawValue & (masks.left | masks.right)
+            // Synthesized events may omit both device bits; keep aggregate matching then.
+            return pressed == 0 || pressed == (side == .left ? masks.left : masks.right)
+        }
     }
 
     private func cgFlags(from modifiers: [Modifier]) -> CGEventFlags {

@@ -8,6 +8,76 @@ import XCTest
 /// only ever held in memory, the config file was gone from disk. The user was told nothing. This
 /// is the path a downgrade takes, so it has to cost one binding, not the file.
 final class ConfigSurvivesUnknownBindingTests: XCTestCase {
+    func testConfigWithoutModifierSidesDecodesAsEitherSide() throws {
+        let json = """
+        {"version":2,"bindings":[
+          {"trigger":{"kind":"keyPress","keyCode":38,"keyName":"j","modifiers":["option"],"gesture":"tap"},
+           "action":{"type":"switchInputSource","role":"japanese"},"enabled":true}
+        ],"inputSources":{}}
+        """
+        let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
+        XCTAssertEqual(config.bindings.count, 1)
+        XCTAssertEqual(config.bindings.first?.trigger, try ShortcutParser.parse("option+j"))
+        XCTAssertEqual(config.unreadableBindingCount, 0)
+    }
+
+    func testEmptyModifierSidesAreOmittedWithoutChangingLegacyTriggerBytes() throws {
+        let json = #"{"gesture":"tap","keyCode":38,"keyName":"j","kind":"keyPress","modifiers":["shift","option"]}"#
+        let trigger = try JSONDecoder().decode(KeyTrigger.self, from: Data(json.utf8))
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        XCTAssertEqual(try encoder.encode(trigger), Data(json.utf8))
+    }
+
+    func testModifierSidesEncodeAsRawValueKeyedObject() throws {
+        let json = #"{"kind":"keyPress","keyCode":38,"keyName":"j","modifiers":["option"],"modifierSides":{"option":"left"}}"#
+        let trigger = try JSONDecoder().decode(KeyTrigger.self, from: Data(json.utf8))
+        let encoded = try JSONEncoder().encode(trigger)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        XCTAssertEqual(object["modifierSides"] as? [String: String], ["option": "left"])
+        XCTAssertEqual(try JSONDecoder().decode(KeyTrigger.self, from: encoded), trigger)
+    }
+
+    func testUnreadableSideValuesKeepBindingAndOtherValidSides() throws {
+        for invalid in [#""future-side""#, "42", "null", "[]", "{}"] {
+            let json = """
+            {"version":2,"bindings":[
+              {"trigger":{"kind":"keyPress","keyCode":38,"keyName":"j","modifiers":["option","shift"],
+                          "modifierSides":{"option":\(invalid),"shift":"right"}},
+               "action":{"type":"switchInputSource","role":"japanese"},"enabled":true}
+            ],"inputSources":{}}
+            """
+            let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
+            XCTAssertEqual(config.bindings.count, 1)
+            XCTAssertEqual(config.unreadableBindingCount, 0)
+            XCTAssertEqual(config.bindings.first?.trigger.displayName, "option+right-shift+j")
+        }
+    }
+
+    func testDecodingDropsUnknownAndInapplicableModifierSides() throws {
+        let json = #"{"kind":"keyPress","keyCode":38,"keyName":"j","modifiers":["option","fn","capsLock"],"modifierSides":{"option":"right","control":"left","fn":"left","capsLock":"right","future":"left"}}"#
+        let trigger = try JSONDecoder().decode(KeyTrigger.self, from: Data(json.utf8))
+        XCTAssertEqual(trigger.modifierSides, [.option: .right])
+        let oneShotJSON = #"{"kind":"oneShotModifier","keyCode":55,"keyName":"left-command","modifiers":["command"],"modifierSides":{"command":"left"}}"#
+        let oneShot = try JSONDecoder().decode(KeyTrigger.self, from: Data(oneShotJSON.utf8))
+        XCTAssertTrue(oneShot.modifierSides.isEmpty)
+    }
+
+    func testUnreadableModifierSidesContainerKeepsBinding() throws {
+        for invalid in ["42", "null", "[]", #""invalid""#] {
+            let json = """
+            {"version":2,"bindings":[
+              {"trigger":{"kind":"keyPress","keyCode":38,"keyName":"j","modifiers":["option"],"modifierSides":\(invalid)},
+               "action":{"type":"switchInputSource","role":"japanese"},"enabled":true}
+            ],"inputSources":{}}
+            """
+            let config = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
+            XCTAssertEqual(config.bindings.count, 1)
+            XCTAssertEqual(config.unreadableBindingCount, 0)
+            XCTAssertEqual(config.bindings.first?.trigger, try ShortcutParser.parse("option+j"))
+        }
+    }
+
     private func makeStore() throws -> (ConfigStore, URL) {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
