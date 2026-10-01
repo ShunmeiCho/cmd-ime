@@ -9,6 +9,8 @@ public enum AppRuleBoard {
         public let slotExists: Bool
         /// In the order the user added them.
         public let rules: [AppRule]
+        /// The website chips of this lane, one per domain, in the order the user added them.
+        public let websiteRules: [WebsiteRule]
     }
 
     public enum DropResult: Equatable, Sendable {
@@ -22,20 +24,24 @@ public enum AppRuleBoard {
     /// hidden, so such a rule stays visible), then "Keep as is".
     public static func lanes(for config: SwitcherConfig) -> [Lane] {
         let slotIDs = config.slots.map(\.id)
-        var lanes = slotIDs.map { id in
-            Lane(target: .slot(id), slotExists: true, rules: config.appRules.filter { $0.target == .slot(id) })
+        let websiteRules = config.websiteRules.uniquedByDomain()
+        func lane(_ target: AppRuleTarget, slotExists: Bool) -> Lane {
+            Lane(
+                target: target,
+                slotExists: slotExists,
+                rules: config.appRules.filter { $0.target == target },
+                websiteRules: websiteRules.filter { $0.target == target }
+            )
         }
         var deleted: [InputRole] = []
-        for rule in config.appRules {
-            if case .slot(let id) = rule.target, !slotIDs.contains(id), !deleted.contains(id) {
+        for target in config.appRules.map(\.target) + websiteRules.map(\.target) {
+            if case .slot(let id) = target, !slotIDs.contains(id), !deleted.contains(id) {
                 deleted.append(id)
             }
         }
-        lanes += deleted.map { id in
-            Lane(target: .slot(id), slotExists: false, rules: config.appRules.filter { $0.target == .slot(id) })
-        }
-        lanes.append(Lane(target: .keepAsIs, slotExists: true, rules: config.appRules.filter { $0.target == .keepAsIs }))
-        return lanes
+        return slotIDs.map { lane(.slot($0), slotExists: true) }
+            + deleted.map { lane(.slot($0), slotExists: false) }
+            + [lane(.keepAsIs, slotExists: true)]
     }
 
     /// Dropping an app on a lane creates its rule or moves the existing one where it stands in the
@@ -61,6 +67,31 @@ public enum AppRuleBoard {
             name: name ?? existing?.name,
             target: target,
             rememberInstead: target == .keepAsIs ? false : existing?.rememberInstead ?? false
+        )
+        return .changed(config.setting(rule))
+    }
+
+    /// Dropping a website chip on a lane moves its rule where it stands in the list and keeps its
+    /// subdomain setting; a domain with no rule yet gets one, with `includesSubdomains` (on when
+    /// not given). A lane for a deleted slot takes no new websites (a chip dropped back on it
+    /// changes nothing).
+    public static func drop(
+        websiteDomain domain: String,
+        includesSubdomains: Bool? = nil,
+        on target: AppRuleTarget,
+        in config: SwitcherConfig
+    ) -> DropResult {
+        guard !domain.isEmpty else { return .refused(CoreLocalization.text("That is not a website.")) }
+        let existing = config.websiteRule(for: domain)
+        guard existing?.target != target else { return .unchanged }
+        if case .slot(let id) = target, config.slot(id) == nil {
+            return .refused(CoreLocalization.text("That slot was deleted. Drop the website on another slot."))
+        }
+        let rule = WebsiteRule(
+            match: existing?.match ?? .domain,
+            domain: domain,
+            includesSubdomains: existing?.includesSubdomains ?? includesSubdomains ?? true,
+            target: target
         )
         return .changed(config.setting(rule))
     }
