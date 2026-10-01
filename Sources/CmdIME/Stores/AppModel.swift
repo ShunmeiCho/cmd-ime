@@ -110,6 +110,12 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    /// The settings window language. Bundle lookups are fixed per process, so a change shows only
+    /// after a relaunch; `launchedInterfaceLanguage` is what this process still shows.
+    @Published var interfaceLanguage = InterfaceLanguage.stored {
+        didSet { interfaceLanguage.store() }
+    }
+    let launchedInterfaceLanguage = InterfaceLanguage.stored
     private var updateReminderTimer: Timer?
     @Published private(set) var sourceRefreshMessage: String?
     private var selectedSourceObserver: InputSourceChangeObserver?

@@ -7,6 +7,7 @@ import SwiftUI
 struct GeneralPage: View {
     @ObservedObject var model: AppModel
     let onShowSetupGuide: () -> Void
+    @State private var relaunchFailed = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
@@ -59,6 +60,40 @@ struct GeneralPage: View {
                 )
                 .fixedSize()
                 .accessibilityLabel("Appearance")
+            }
+            if InterfaceLanguage.isChoosable { languageRows }
+        }
+    }
+
+    private var languageRows: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
+            HStack {
+                Text("Language")
+                Spacer(minLength: DesignTokens.Layout.rowGap)
+                Picker("Language", selection: $model.interfaceLanguage) {
+                    ForEach(InterfaceLanguage.allCases, id: \.self) { language in
+                        Text(verbatim: language.nativeName ?? String(localized: "System")).tag(language)
+                    }
+                }
+                .labelsHidden()
+                .fixedSize()
+            }
+            if model.interfaceLanguage != model.launchedInterfaceLanguage {
+                HStack(alignment: .firstTextBaseline, spacing: DesignTokens.Layout.rowGap) {
+                    Text("The new language takes effect when CmdIME relaunches.")
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: DesignTokens.Layout.rowGap)
+                    RelaunchButton(model: model, failed: $relaunchFailed)
+                        .fixedSize()
+                }
+                if relaunchFailed || !AppRelauncher.canRelaunch {
+                    Text("After quitting, open CmdIME again from Spotlight or the Applications folder.")
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }
