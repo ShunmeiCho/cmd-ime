@@ -97,13 +97,17 @@ public struct AppActivationSettings: Equatable, Sendable {
     public var restoresAfterPasswordField: Bool
     /// Slots that exist: a rule or default naming a deleted slot does nothing.
     public var slotIDs: Set<InputRole>
+    /// Website rules by domain. On the page in front of a browser a matching one beats the
+    /// browser's own slot rule, its memory and the default slot.
+    public var websiteTargets: [String: AppRuleTarget]
 
     public init(
         remembersPerApp: Bool = false,
         rules: [AppRule] = [],
         defaultSlot: InputRole? = nil,
         restoresAfterPasswordField: Bool = false,
-        slotIDs: Set<InputRole> = []
+        slotIDs: Set<InputRole> = [],
+        websiteTargets: [String: AppRuleTarget] = [:]
     ) {
         self.remembersPerApp = remembersPerApp
         // A later duplicate wins, the same as `setting(_:)` replacing in place.
@@ -111,6 +115,7 @@ public struct AppActivationSettings: Equatable, Sendable {
         self.defaultSlot = defaultSlot
         self.restoresAfterPasswordField = restoresAfterPasswordField
         self.slotIDs = slotIDs
+        self.websiteTargets = websiteTargets
     }
 
     public init(config: SwitcherConfig) {
@@ -126,6 +131,21 @@ public struct AppActivationSettings: Equatable, Sendable {
     /// Whether anything needs to follow app activations at all.
     public var isAnythingOn: Bool {
         remembersPerApp || !rules.isEmpty || defaultSlot != nil || restoresAfterPasswordField
+            || !websiteTargets.isEmpty
+    }
+
+    /// Whether the pages of browser `appID` are read: only with a website rule to apply, and never
+    /// for a "Keep as is" browser, where CmdIME changes nothing.
+    public func watchesWebsites(in appID: String) -> Bool {
+        !websiteTargets.isEmpty && !leavesSourceAlone(in: appID)
+    }
+
+    /// What the website rule for `domain` selects: nothing for a "Keep as is" site or a deleted
+    /// slot. Nil when there is no such rule.
+    public func websiteTarget(forRule domain: String) -> AppActivationTarget? {
+        guard let target = websiteTargets[domain] else { return nil }
+        guard case .slot(let slot) = target, slotIDs.contains(slot) else { return AppActivationTarget.none }
+        return .slot(slot)
     }
 
     /// "Keep as is" means CmdIME never changes the input source in that app, Password Put-back included.

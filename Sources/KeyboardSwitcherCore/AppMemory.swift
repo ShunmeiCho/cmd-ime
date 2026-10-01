@@ -69,6 +69,27 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// The source that was current before the pending restore, kept while that restore is pending.
     private var sourceBeforeRestore: String?
 
+    /// Counts every change of `frontmostAppID`. A website read carries the value it was made
+    /// under, so a result for a browser already left, or left and come back to, is told apart.
+    public private(set) var activationGeneration = 0
+    /// The pid of the app in front when it is a browser the caller can read pages of.
+    private var frontBrowserPID: Int32?
+    /// The page in front of that browser, once read; `.unknown` never replaces a known one.
+    private var websiteContext: WebsiteContext?
+    /// The browser came to the front and its own target waits for the first read of the page.
+    private var websiteHold: WebsiteHold?
+    private var lastReadSequence = Int.min
+    /// The user chose a source (a trigger, or by hand) before the page was read: the next read
+    /// only records the page and switches nothing.
+    private var nextReadSetsContextOnly = false
+    /// The switch on its way was asked for by a website rule and must not become the browser's memory.
+    private var isWebsiteSwitchInFlight = false
+
+    private struct WebsiteHold: Equatable, Sendable {
+        /// What the user arrived with, to compare the decided target against.
+        let arrivalSourceID: String?
+    }
+
     public init(
         ownAppID: String?,
         frontmostAppID: String? = nil,
@@ -94,11 +115,33 @@ public struct AppMemoryTracker: Equatable, Sendable {
         settings.restoresAfterPasswordField && beforeForced != nil
     }
 
+    /// The browser whose page in front should be read now, with the generation to stamp reads
+    /// with. Nil when the app in front is not a browser, there is no website rule, or the browser
+    /// is "Keep as is".
+    public var websiteWatch: (pid: Int32, generation: Int)? {
+        guard let pid = frontBrowserPID, let appID = frontmostAppID, appID != ownAppID,
+              settings.watchesWebsites(in: appID) else { return nil }
+        return (pid, activationGeneration)
+    }
+
+    /// The browser's own target is waiting for the first read of its page; the caller ends the
+    /// wait with `websiteHoldExpired` when no read arrives in time.
+    public var isWebsiteHoldWaiting: Bool {
+        websiteHold != nil
+    }
+
     /// New settings from the config. Memory of an app that no longer uses it is dropped, so what
     /// the Apps page lists is what can be restored.
     public mutating func update(settings: AppActivationSettings) {
+        if settings.websiteTargets != self.settings.websiteTargets {
+            // The page is read again against the new rules.
+            websiteContext = nil
+        }
         self.settings = settings
         remembered = remembered.filter { settings.usesMemory(for: $0.key) }
+        if websiteWatch == nil {
+            websiteHold = nil
+        }
     }
 
     /// The selected input source changed while `frontmostAppID` was in front.
@@ -116,6 +159,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
         guard !isForced(sourceID, in: frontmostAppID) else { return }
         forced = nil
         beforeForced = nil
+        // The user chose by hand before the page was read: that choice stands.
+        cancelWebsiteHold()
+        guard !isOnRuledPage else { return }
         remember(sourceID, for: frontmostAppID)
     }
 
@@ -124,9 +170,13 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// secure input, where nothing is remembered.
     public mutating func switchConfirmed(sourceID: String, context: AppMemoryContext) {
         lastSourceID = sourceID
+        let wasAskedByWebsiteRule = isWebsiteSwitchInFlight
+        isWebsiteSwitchInFlight = false
         guard !context.isSecureInputInFrontmostApp else { return }
         forced = nil
         beforeForced = nil
+        // A browser's memory holds what was used on pages without a rule only.
+        guard !wasAskedByWebsiteRule, !isOnRuledPage else { return }
         remember(sourceID, for: frontmostAppID)
     }
 
@@ -140,14 +190,19 @@ public struct AppMemoryTracker: Equatable, Sendable {
         sourceID: String,
         actualFrontmostAppID: String?,
         isRegularApp: Bool = true,
-        context: AppMemoryContext
+        context: AppMemoryContext,
+        browserPID: Int32? = nil
     ) {
         if let actual = actualFrontmostAppID, actual != frontmostAppID, isRegularApp || actual == ownAppID {
-            frontmostAppID = actual
+            frontmostChanged(to: actual, browserPID: browserPID)
             forced = nil
             beforeForced = nil
             sourceBeforeRestore = nil
+            nextReadSetsContextOnly = true
         }
+        // The trigger is the user's choice: it ends a wait for the page and replaces a website switch.
+        cancelWebsiteHold()
+        isWebsiteSwitchInFlight = false
         switchConfirmed(sourceID: sourceID, context: context)
     }
 
@@ -186,6 +241,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         currentSourceID: String?,
         context: AppMemoryContext,
         actualFrontmostAppID: String? = nil,
+        browserPID: Int32? = nil,
         slotOfSource: (String) -> InputRole? = { _ in nil }
     ) -> Restore {
         let appID = actualFrontmostAppID ?? noticedAppID
@@ -194,11 +250,12 @@ public struct AppMemoryTracker: Equatable, Sendable {
         if !context.isRestorePending {
             sourceBeforeRestore = nil
         }
-        if !context.isOwnSwitchPending, !context.isSecureInputInFrontmostApp,
+        // Leaving a browser from a page under a website rule records nothing for the browser.
+        if !context.isOwnSwitchPending, !context.isSecureInputInFrontmostApp, !isOnRuledPage,
            let currentSourceID, !isForced(currentSourceID, in: frontmostAppID) {
             remember(currentSourceID, for: frontmostAppID)
         }
-        frontmostAppID = appID
+        frontmostChanged(to: appID, browserPID: browserPID)
         lastSourceID = currentSourceID ?? lastSourceID
         beforeForced = nil
         // An app that holds secure input as it comes to the front may have had its source forced
@@ -211,7 +268,17 @@ public struct AppMemoryTracker: Equatable, Sendable {
         // a Kana key brought in), not what the user arrived with.
         let arrivalSourceID = pendingBefore ?? currentSourceID
         let canRestore = appID != ownAppID && !context.isSecureInputInFrontmostApp && !context.isTriggerPending
-        let target = canRestore
+        // A browser with website rules waits for its page to be read before anything is selected:
+        // the page's rule, or else the browser's own target, is decided once by `websiteRead` or
+        // `websiteHoldExpired`. A trigger in flight is the user's choice, so the first read after
+        // it only records the page.
+        let holdsForWebsite = canRestore && websiteWatch != nil
+        if holdsForWebsite {
+            websiteHold = WebsiteHold(arrivalSourceID: arrivalSourceID)
+        } else if context.isTriggerPending, websiteWatch != nil {
+            nextReadSetsContextOnly = true
+        }
+        let target = canRestore && !holdsForWebsite
             ? settings.target(for: appID, rememberedSourceID: remembered[appID])
             : .none
         switch target {
@@ -232,6 +299,65 @@ public struct AppMemoryTracker: Equatable, Sendable {
         return .none
     }
 
+    /// A read of the page in front of the browser came back. A result for another pid, an older
+    /// generation, an older read or a browser no longer in front is dropped. The first read after
+    /// the browser came to the front decides what it waited for; later ones switch only when the
+    /// page moves to another rule, to no rule or from no rule to one.
+    public mutating func websiteRead(
+        _ reading: WebsiteReading,
+        actualFrontmostAppID: String? = nil,
+        currentSourceID: String?,
+        context: AppMemoryContext,
+        slotOfSource: (String) -> InputRole? = { _ in nil }
+    ) -> Restore {
+        guard let watch = websiteWatch, let appID = frontmostAppID,
+              reading.pid == watch.pid, reading.generation == watch.generation,
+              reading.sequence > lastReadSequence,
+              actualFrontmostAppID == nil || actualFrontmostAppID == appID else {
+            return .none
+        }
+        lastReadSequence = reading.sequence
+        var page = reading.context
+        if case .rule(let domain) = page, settings.websiteTargets[domain] == nil {
+            page = .noRule
+        }
+        let previous = websiteContext
+        let hold = websiteHold
+        websiteHold = nil
+        if page != .unknown {
+            websiteContext = page
+        }
+        if nextReadSetsContextOnly, hold == nil {
+            if page != .unknown { nextReadSetsContextOnly = false }
+            return .none
+        }
+        guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
+        if let hold {
+            return websiteRestore(page: page, appID: appID, arrivalSourceID: hold.arrivalSourceID,
+                                  currentSourceID: currentSourceID, slotOfSource: slotOfSource)
+        }
+        // An unread page that turns out to have no rule changes nothing: the hold already chose.
+        guard page != .unknown, page != previous, !(previous == nil && page == .noRule) else { return .none }
+        return websiteRestore(page: page, appID: appID, arrivalSourceID: currentSourceID,
+                              currentSourceID: currentSourceID, slotOfSource: slotOfSource)
+    }
+
+    /// No read arrived in time after the browser came to the front: its own target applies.
+    public mutating func websiteHoldExpired(
+        generation: Int,
+        currentSourceID: String?,
+        context: AppMemoryContext,
+        slotOfSource: (String) -> InputRole? = { _ in nil }
+    ) -> Restore {
+        guard generation == activationGeneration, let hold = websiteHold, let appID = frontmostAppID else {
+            return .none
+        }
+        websiteHold = nil
+        guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
+        return websiteRestore(page: .unknown, appID: appID, arrivalSourceID: hold.arrivalSourceID,
+                              currentSourceID: currentSourceID, slotOfSource: slotOfSource)
+    }
+
     public mutating func forget(_ appID: String) {
         remembered[appID] = nil
     }
@@ -249,7 +375,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
             return
         }
         // Only the first forced change in this app knows what the user had; repeats keep it.
-        if settings.leavesSourceAlone(in: appID) {
+        if settings.leavesSourceAlone(in: appID) || isOnKeepAsIsSite {
             beforeForced = nil
         } else if forced?.appID != appID {
             beforeForced = previousSourceID.flatMap { previous in
@@ -262,6 +388,60 @@ public struct AppMemoryTracker: Equatable, Sendable {
     private func isForced(_ sourceID: String, in appID: String?) -> Bool {
         guard let forced, let appID else { return false }
         return forced == ForcedSource(appID: appID, sourceID: sourceID)
+    }
+
+    private mutating func frontmostChanged(to appID: String, browserPID: Int32?) {
+        frontmostAppID = appID
+        activationGeneration += 1
+        frontBrowserPID = browserPID
+        websiteContext = nil
+        websiteHold = nil
+        nextReadSetsContextOnly = false
+    }
+
+    /// The user chose a source while the browser's target still waited for its page.
+    private mutating func cancelWebsiteHold() {
+        guard websiteHold != nil else { return }
+        websiteHold = nil
+        nextReadSetsContextOnly = true
+    }
+
+    /// The page in front is under a website rule that still exists.
+    private var isOnRuledPage: Bool {
+        guard websiteWatch != nil, case .rule(let domain) = websiteContext else { return false }
+        return settings.websiteTargets[domain] != nil
+    }
+
+    private var isOnKeepAsIsSite: Bool {
+        guard websiteWatch != nil, case .rule(let domain) = websiteContext else { return false }
+        return settings.websiteTargets[domain] == .keepAsIs
+    }
+
+    /// The page's rule when it has one, else the browser's own target, against what is selected.
+    private mutating func websiteRestore(
+        page: WebsiteContext,
+        appID: String,
+        arrivalSourceID: String?,
+        currentSourceID: String?,
+        slotOfSource: (String) -> InputRole?
+    ) -> Restore {
+        let ruleTarget: AppActivationTarget? = {
+            guard case .rule(let domain) = page else { return nil }
+            return settings.websiteTarget(forRule: domain)
+        }()
+        let target = ruleTarget ?? settings.target(for: appID, rememberedSourceID: remembered[appID])
+        switch target {
+        case .source(let sourceID) where sourceID != arrivalSourceID:
+            sourceBeforeRestore = sourceBeforeRestore ?? currentSourceID
+            isWebsiteSwitchInFlight = ruleTarget != nil
+            return .select(sourceID: sourceID)
+        case .slot(let slot) where arrivalSourceID.flatMap(slotOfSource) != slot:
+            sourceBeforeRestore = sourceBeforeRestore ?? currentSourceID
+            isWebsiteSwitchInFlight = ruleTarget != nil
+            return .selectSlot(slot)
+        default:
+            return .none
+        }
     }
 
     private mutating func remember(_ sourceID: String, for appID: String?) {
