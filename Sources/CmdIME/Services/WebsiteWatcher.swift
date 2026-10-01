@@ -158,6 +158,8 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
         var roles: [String] = []
         var reachedTop = false
         while roles.count < WebAreaPath.maxSteps {
+            // The budget is for the whole read, not per call.
+            guard ProcessInfo.processInfo.systemUptime - started < readBudget else { return .unknown }
             let role = value(element, kAXRoleAttribute) as? String ?? ""
             chain.append(element)
             roles.append(role)
@@ -165,8 +167,7 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
                 reachedTop = true
                 break
             }
-            guard ProcessInfo.processInfo.systemUptime - started < readBudget,
-                  let parent = value(element, kAXParentAttribute) else { break }
+            guard let parent = value(element, kAXParentAttribute) else { break }
             element = parent as! AXUIElement
         }
         guard let index = WebAreaPath.outermostWebArea(rolesFromFocus: roles, reachedTop: reachedTop),

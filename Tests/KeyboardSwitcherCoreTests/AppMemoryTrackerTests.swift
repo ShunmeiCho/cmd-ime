@@ -512,4 +512,52 @@ struct AppMemoryTrackerWebsiteTests {
         #expect(activateChrome(&tracker) == .selectSlot(.chinese))
         #expect(tracker.websiteWatch == nil)
     }
+
+    @Test("macOS repeating the current source while waiting for the page is not a choice")
+    func repeatedSourceDoesNotCancelTheHold() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+
+        tracker.sourceChanged(to: abc, context: quiet)
+
+        #expect(tracker.isWebsiteHoldWaiting)
+        #expect(tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+            == .selectSlot(.japanese))
+    }
+
+    @Test("a wait that expires after the user moved on selects nothing in the other app")
+    func expiryForAnAppAlreadyLeft() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+
+        #expect(tracker.websiteHoldExpired(generation: tracker.activationGeneration, actualFrontmostAppID: terminal,
+                                           currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+        #expect(!tracker.isWebsiteHoldWaiting)
+    }
+
+    @Test("the source put back after a second website switch is the one in place before that switch")
+    func putBackUsesTheLatestSource() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+        tracker.switchConfirmed(sourceID: kotoeri, context: quiet)
+        _ = tracker.websiteRead(reading(tracker, 2, .noRule), currentSourceID: kotoeri, context: quiet, slotOfSource: slotOf)
+        tracker.switchConfirmed(sourceID: pinyin, context: quiet)
+
+        _ = tracker.websiteRead(reading(tracker, 3, .rule(jaSite)), currentSourceID: pinyin, context: quiet, slotOfSource: slotOf)
+
+        #expect(tracker.appActivated(terminal, currentSourceID: kotoeri, context: restorePending) == .putBack(sourceID: pinyin))
+    }
+
+    @Test("a browser already in front when following starts is read, without a wait")
+    func browserInFrontAtStart() {
+        var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: chrome, frontBrowserPID: chromePID, settings: AppActivationSettings(
+            slotIDs: slots, websiteRules: [WebsiteRule(domain: jaSite, target: .slot(.japanese))]
+        ))
+
+        #expect(tracker.websiteWatch?.pid == chromePID)
+        #expect(!tracker.isWebsiteHoldWaiting)
+        #expect(tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+            == .selectSlot(.japanese))
+    }
 }

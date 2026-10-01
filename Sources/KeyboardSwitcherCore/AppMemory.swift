@@ -90,13 +90,17 @@ public struct AppMemoryTracker: Equatable, Sendable {
         let arrivalSourceID: String?
     }
 
+    /// `frontBrowserPID` when the app in front as following starts is a browser: its page is read
+    /// from then on, but nothing waits or is selected for an app that was already in front.
     public init(
         ownAppID: String?,
         frontmostAppID: String? = nil,
+        frontBrowserPID: Int32? = nil,
         settings: AppActivationSettings = AppActivationSettings(remembersPerApp: true)
     ) {
         self.ownAppID = ownAppID
         self.frontmostAppID = frontmostAppID
+        self.frontBrowserPID = frontmostAppID == nil ? nil : frontBrowserPID
         self.settings = settings
     }
 
@@ -159,8 +163,11 @@ public struct AppMemoryTracker: Equatable, Sendable {
         guard !isForced(sourceID, in: frontmostAppID) else { return }
         forced = nil
         beforeForced = nil
-        // The user chose by hand before the page was read: that choice stands.
-        cancelWebsiteHold()
+        // The user chose by hand before the page was read: that choice stands. macOS repeating
+        // the current source on a focus change is not a choice.
+        if sourceID != previousSourceID {
+            cancelWebsiteHold()
+        }
         guard !isOnRuledPage else { return }
         remember(sourceID, for: frontmostAppID)
     }
@@ -334,17 +341,22 @@ public struct AppMemoryTracker: Equatable, Sendable {
         guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
         if let hold {
             return websiteRestore(page: page, appID: appID, arrivalSourceID: hold.arrivalSourceID,
-                                  currentSourceID: currentSourceID, slotOfSource: slotOfSource)
+                                  currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
+                                  slotOfSource: slotOfSource)
         }
         // An unread page that turns out to have no rule changes nothing: the hold already chose.
         guard page != .unknown, page != previous, !(previous == nil && page == .noRule) else { return .none }
         return websiteRestore(page: page, appID: appID, arrivalSourceID: currentSourceID,
-                              currentSourceID: currentSourceID, slotOfSource: slotOfSource)
+                              currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
+                              slotOfSource: slotOfSource)
     }
 
     /// No read arrived in time after the browser came to the front: its own target applies.
+    /// Like a read, the expiry is only a prompt to look: when another app is in front by now (its
+    /// activation notice still on its way), the wait is dropped and nothing is selected there.
     public mutating func websiteHoldExpired(
         generation: Int,
+        actualFrontmostAppID: String? = nil,
         currentSourceID: String?,
         context: AppMemoryContext,
         slotOfSource: (String) -> InputRole? = { _ in nil }
@@ -353,9 +365,11 @@ public struct AppMemoryTracker: Equatable, Sendable {
             return .none
         }
         websiteHold = nil
+        guard actualFrontmostAppID == nil || actualFrontmostAppID == appID else { return .none }
         guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
         return websiteRestore(page: .unknown, appID: appID, arrivalSourceID: hold.arrivalSourceID,
-                              currentSourceID: currentSourceID, slotOfSource: slotOfSource)
+                              currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
+                              slotOfSource: slotOfSource)
     }
 
     public mutating func forget(_ appID: String) {
@@ -423,8 +437,14 @@ public struct AppMemoryTracker: Equatable, Sendable {
         appID: String,
         arrivalSourceID: String?,
         currentSourceID: String?,
+        isRestorePending: Bool,
         slotOfSource: (String) -> InputRole?
     ) -> Restore {
+        // The source to put back belongs to the restore still on its way; one kept from an earlier,
+        // finished restore in this browser is stale.
+        if !isRestorePending {
+            sourceBeforeRestore = nil
+        }
         let ruleTarget: AppActivationTarget? = {
             guard case .rule(let domain) = page else { return nil }
             return settings.websiteTarget(forRule: domain)

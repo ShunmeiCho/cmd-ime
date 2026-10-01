@@ -112,6 +112,7 @@ final class AppMemoryController {
         tracker = AppMemoryTracker(
             ownAppID: Self.ownAppID,
             frontmostAppID: Self.trackedAppID(of: Self.actualFrontmostApp()),
+            frontBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
             settings: settings
         )
         // Only activations are observed, never terminations: an app that quits and comes back
@@ -139,7 +140,12 @@ final class AppMemoryController {
     }
 
     private func appDidActivate(_ app: NSRunningApplication?) {
-        guard isActive, isPermitted, let app, let noticedID = Self.appID(of: app) else { return }
+        guard isActive, let app, let noticedID = Self.appID(of: app) else { return }
+        guard isPermitted else {
+            // Nothing is read once permission is gone, a browser's pages included.
+            syncWebsiteWatch()
+            return
+        }
         // Reconcile to what is in front now; the notice may be stale (see AppMemoryTracker.appActivated).
         let actual = Self.actualFrontmostApp() ?? app
         let restore = tracker.appActivated(
@@ -159,7 +165,10 @@ final class AppMemoryController {
     /// A read of the page in front came back from the watcher thread. Like an activation notice it
     /// is a prompt to look: the tracker drops it unless it is for the browser in front now.
     private func websiteDidRead(_ reading: WebsiteReading) {
-        guard isActive, isPermitted else { return }
+        guard isActive, isPermitted else {
+            syncWebsiteWatch()
+            return
+        }
         let restore = tracker.websiteRead(
             reading,
             actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
@@ -176,6 +185,7 @@ final class AppMemoryController {
         guard isActive, isPermitted else { return }
         let restore = tracker.websiteHoldExpired(
             generation: generation,
+            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
             currentSourceID: currentSourceID(),
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             slotOfSource: slotForSourceID
@@ -186,7 +196,8 @@ final class AppMemoryController {
 
     /// Points the watcher at the browser the tracker wants read, and bounds the wait for its page.
     private func syncWebsiteWatch() {
-        let watch = isActive ? tracker.websiteWatch : nil
+        // Pages are read only while following runs and CmdIME is still permitted to.
+        let watch = isActive && isPermitted ? tracker.websiteWatch : nil
         let target = watch.map { WebsiteTarget(pid: $0.pid, generation: $0.generation, rules: settings.websiteRules) }
         if target != websiteTarget {
             websiteTarget = target
