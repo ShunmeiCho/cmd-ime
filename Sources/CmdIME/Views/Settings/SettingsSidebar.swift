@@ -16,7 +16,12 @@ struct SettingsSidebar: View {
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
+            // The sidebar never changes width, and the footer has to be measured at that width: asked
+            // for its size at a narrower one (a split view does, to find its minimum height), the
+            // permission text wraps into a column taller than the window, and the whole split view
+            // is then laid out past the window's top and bottom edges.
             KeyboardControlFooter(model: model)
+                .frame(width: DesignTokens.Layout.sidebarWidth)
         }
     }
 
