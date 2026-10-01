@@ -285,6 +285,17 @@ CmdIME はプログラムから入力ソースを切り替えるため、macOS �
 パネルは呼び出しません。切り替えインジケーターをオンにすると(**Indicator > Switch
 indicator > Enabled**)、切り替え後に CmdIME 独自の軽量な確認用バブルが表示されます。
 
+macOS 14 以降では、入力ソースが変わるたびに、システム自身の小さなバッジもテキストカーソルの
+下に表示されます。CmdIME による切り替えも例外ではないため、2 つが同時に見えることがあります。
+CmdIME が切り替えのときにこのバッジだけを出さないようにすることはできません。Mac 全体で
+非表示にするには、**Indicator > macOS indicator > Hide the input source badge macOS shows
+under the cursor** をオンにするか、
+`defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false` を
+実行します。各 app は開き直すと反映され、ログアウトして再ログインするとすべてに反映されます。
+非表示にすると、Control+Space では画面中央に以前の形式の一覧が表示されます。元に戻すには
+チェックを外すか、`defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled`
+を実行します。
+
 Indicator ページでは、インジケーターを無効にする、18 の組み込みテーマのいずれか(すべての
 スロットを表示する switcher、それをグリフだけに縮めた badge、切り替えたスロットだけを
 表示する mark、2 つの adaptive、glass、macOS 26 以降の Liquid Glass、classic、1 色・
