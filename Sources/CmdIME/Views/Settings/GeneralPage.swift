@@ -156,23 +156,36 @@ struct GeneralPage: View {
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: DesignTokens.Layout.rowGap) {
-                Button("Export Settings…", action: exportSettings)
-                Button("Import Settings…", action: importSettings)
+                Group {
+                    Button("Export Settings…", action: exportSettings)
+                    Button("Import Settings…", action: importSettings)
+                }
+                .disabled(model.settingsTransferActivity != nil)
                 Button("Show Backups") { model.revealSettingsBackups() }
             }
-            switch model.settingsTransferMessage {
-            case let .done(message):
-                Text(message)
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.textMuted)
-                    .fixedSize(horizontal: false, vertical: true)
-            case let .failed(message):
-                Label(message, systemImage: "exclamationmark.triangle.fill")
-                    .font(DesignTokens.Typography.auxiliary)
-                    .foregroundStyle(DesignTokens.Colors.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-            case nil:
-                EmptyView()
+            if let activity = model.settingsTransferActivity {
+                HStack(spacing: DesignTokens.Layout.rowGap) {
+                    ProgressView().controlSize(.small)
+                    Text(activity.text)
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                }
+                .accessibilityElement(children: .combine)
+            } else {
+                switch model.settingsTransferMessage {
+                case let .done(message):
+                    Text(message)
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                case let .failed(message):
+                    Label(message, systemImage: "exclamationmark.triangle.fill")
+                        .font(DesignTokens.Typography.auxiliary)
+                        .foregroundStyle(DesignTokens.Colors.warning)
+                        .fixedSize(horizontal: false, vertical: true)
+                case nil:
+                    EmptyView()
+                }
             }
         }
     }
@@ -183,7 +196,7 @@ struct GeneralPage: View {
         panel.message = String(localized: "CmdIME saves your settings in a new folder with this name.")
         panel.prompt = String(localized: "Export")
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        model.exportSettings(to: url)
+        Task { await model.exportSettings(to: url) }
     }
 
     private func importSettings() {
@@ -193,17 +206,27 @@ struct GeneralPage: View {
         panel.allowsMultipleSelection = false
         panel.message = String(localized: "Choose a folder made by Export Settings.")
         panel.prompt = String(localized: "Import")
-        guard panel.runModal() == .OK, let folder = panel.url,
-              let plan = model.inspectSettingsImport(folder) else { return }
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        Task {
+            guard let plan = await model.inspectSettingsImport(folder),
+                  await confirmImport(plan, from: folder) else { return }
+            await model.importSettings(from: folder)
+        }
+    }
 
+    /// A sheet, not runModal: a modal loop started inside a Task holds the main queue, and with it
+    /// every switch the event tap queues, until the alert closes.
+    private func confirmImport(_ plan: SettingsImportPlan, from folder: URL) async -> Bool {
+        guard let window = NSApp.windows.first(where: { $0.title == "CmdIME" && $0.isVisible }) else {
+            return false
+        }
         let alert = NSAlert()
         alert.messageText = String(localized: "Replace your settings with the ones in \"\(folder.lastPathComponent)\"?")
         let recipes = plan.includesActivationRecipes ? String(localized: ", activation recipes") : ""
         alert.informativeText = String(localized: "It has \(plan.config.slots.count) slot(s), \(plan.themeFileNames.count) theme(s), \(plan.fontFileNames.count) font(s)\(recipes). Your current settings are copied to a backup folder first and take effect again if you import that folder.")
         alert.addButton(withTitle: String(localized: "Import"))
         alert.addButton(withTitle: String(localized: "Cancel"))
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        model.importSettings(from: folder)
+        return await alert.beginSheetModal(for: window) == .alertFirstButtonReturn
     }
 
     private var quitRows: some View {

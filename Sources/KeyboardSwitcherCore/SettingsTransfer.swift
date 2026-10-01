@@ -55,7 +55,7 @@ public struct SettingsImportResult: Equatable, Sendable {
 /// activation-recipes.json. An export never writes over anything. An import refuses
 /// settings from a newer CmdIME and copies the current ones aside before it changes
 /// anything; files in the export replace same-named ones, and other local files stay.
-public struct SettingsTransfer {
+public struct SettingsTransfer: Sendable {
     public static let configFileName = "config.json"
     public static let themesFolderName = "themes"
     public static let fontsFolderName = "fonts"
