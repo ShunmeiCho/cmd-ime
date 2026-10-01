@@ -188,7 +188,9 @@ same two permissions before global keyboard listening works.
 - **Updates from inside the app.** A check every six hours by default, a summary of
   what changed beside **Update Now**, and an in-place install that keeps your
   permissions.
-- **A settings window that follows light and dark,** or stays on the one you pick.
+- **A settings window that follows light and dark,** or stays on the one you pick. It is in
+  English, Simplified Chinese and Japanese and follows the macOS language; to give CmdIME a
+  language of its own, use System Settings > General > Language & Region > Applications.
 
 <p align="center">
   <img src="Assets/readme/general.png" width="640" alt="The General page in the dark appearance: Launch at login, Appearance, updates, Setup Guide, the settings file and Quit CmdIME.">
