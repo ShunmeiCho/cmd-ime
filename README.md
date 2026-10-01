@@ -276,6 +276,15 @@ CmdIME switches input sources programmatically, so it does not invoke the privat
 input-source chooser. With the switch indicator on (**Indicator > Switch indicator >
 Enabled**), it shows its own lightweight confirmation bubble after a switch.
 
+macOS 14 and later also draw their own small badge under the text cursor on every input source
+change, CmdIME's switches included, so you may see both. CmdIME cannot leave it out of a switch.
+To hide it in every app for your user account, check **Indicator > macOS indicator > Hide the input source badge
+macOS shows under the cursor**, or run
+`defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false`. Apps pick
+it up as they relaunch, and logging out applies it everywhere. With it hidden, Control+Space shows
+the older list in the middle of the screen. Uncheck it, or run
+`defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled`, to go back.
+
 On the Indicator page the indicator can be turned off, given one of the eighteen built-in
 themes (a switcher that shows every slot, a badge that shrinks the switcher to its glyphs,
 a mark that shows only the slot you switched to, two adaptive themes, glass, Liquid Glass
