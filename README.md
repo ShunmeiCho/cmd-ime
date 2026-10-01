@@ -507,7 +507,7 @@ answers only 60 such requests an hour per network without an account, so on a sh
 school network CmdIME falls back to the release page, which gives the version without the summary
 of changes. When
 there is one it posts a single system notification for that version, with the release's
-opening sentence, a **Release Notes** button and, where CmdIME can update itself in place,
+opening sentence when there is one, a **Release Notes** button and, where CmdIME can update itself in place,
 **Update Now**. If macOS does not let
 CmdIME post notifications, it shows the same update as a card in the top-right corner of the
 screen instead; the card does not take keyboard focus, and **Later** closes it. The settings
