@@ -19320,6 +19320,54 @@
           }
         }
       }
+    },
+    "GitHub is limiting requests from this network right now. CmdIME will check again later.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub is limiting requests from this network right now. CmdIME will check again later."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub 暂时限制了这个网络的访问，CmdIME 稍后会再检查。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub がこのネットワークからのアクセスを一時的に制限しています。CmdIME はあとでもう一度確認します。"
+          }
+        }
+      }
+    },
+    "GitHub is limiting requests from this network until %@. CmdIME will check again later.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub is limiting requests from this network until %@. CmdIME will check again later."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub 限制了这个网络的访问，到 %@ 恢复，CmdIME 稍后会再检查。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub がこのネットワークからのアクセスを %@ まで制限しています。CmdIME はあとでもう一度確認します。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
