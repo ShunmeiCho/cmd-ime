@@ -7,7 +7,8 @@ import SwiftUI
 /// it closes on Later, on Skip, or once the update is no longer available.
 @MainActor
 final class UpdateCardController {
-    static let width: CGFloat = 460
+    // Wide enough for the title on one line beside three Japanese buttons (460 wrapped it to three).
+    static let width: CGFloat = 580
     private static let screenMargin: CGFloat = 16
 
     private weak var model: AppModel?
