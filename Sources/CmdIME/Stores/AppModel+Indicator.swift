@@ -6,8 +6,9 @@ extension AppModel {
 
     /// Nil selects the default built-in theme.
     func setSwitchIndicatorThemeID(_ id: String?) {
-        config.switchIndicatorThemeID = id
-        save()
+        var next = config
+        next.switchIndicatorThemeID = id
+        guard commitShowingWindowFailure(next) else { return }
         statusText = String(localized: "Switch indicator theme set to \(indicatorLibrary.theme(id: id).localizedDisplayName)")
     }
 
@@ -24,8 +25,8 @@ extension AppModel {
     /// show beside the field when the symbol is not acceptable.
     func setSlotSymbol(_ symbol: String?, for id: InputRole) -> String? {
         do {
-            config = try config.settingSlotSymbol(symbol, for: id)
-            save()
+            // A failed save shows in the window failure bar and leaves the symbol as it was.
+            guard commitShowingWindowFailure(try config.settingSlotSymbol(symbol, for: id)) else { return nil }
             statusText = String(localized: "Updated symbol for \(config.displayName(for: id))")
             return nil
         } catch {

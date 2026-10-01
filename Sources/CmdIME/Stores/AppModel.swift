@@ -625,8 +625,9 @@ final class AppModel: ObservableObject {
     }
 
     func setSwitchIndicatorVisible(_ visible: Bool) {
-        config.showSwitchIndicator = visible
-        save()
+        var next = config
+        next.showSwitchIndicator = visible
+        guard commitShowingWindowFailure(next) else { return }
         indicatorOccasions.update()
         statusText = visible ? String(localized: "Switch indicator enabled") : String(localized: "Switch indicator disabled")
     }
@@ -662,8 +663,9 @@ final class AppModel: ObservableObject {
     }
 
     func setRememberInputSourcePerApp(_ enabled: Bool) {
-        config.rememberInputSourcePerApp = enabled
-        save()
+        var next = config
+        next.rememberInputSourcePerApp = enabled
+        guard commitShowingWindowFailure(next) else { return }
         statusText = enabled ? String(localized: "Remembering the input source per app") : String(localized: "No longer remembering input sources per app")
     }
 
@@ -757,20 +759,23 @@ final class AppModel: ObservableObject {
 
     func setSwitchIndicatorSizeFactor(_ factor: Double) {
         let clamped = SwitcherConfig.clampedSwitchIndicatorSizeFactor(factor)
-        config.switchIndicatorSizeFactor = clamped
-        save()
+        var next = config
+        next.switchIndicatorSizeFactor = clamped
+        guard commitShowingWindowFailure(next) else { return }
         statusText = String(localized: "Switch indicator size set to \(Int((clamped * 100).rounded()))%")
     }
 
     func setSwitchIndicatorColorStyle(_ style: SwitchIndicatorColorStyle) {
-        config.switchIndicatorColorStyle = style
-        save()
+        var next = config
+        next.switchIndicatorColorStyle = style
+        guard commitShowingWindowFailure(next) else { return }
         statusText = String(localized: "Switch indicator color set to \(style.displayName)")
     }
 
     func setSwitchIndicatorContentStyle(_ style: SwitchIndicatorContentStyle) {
-        config.switchIndicatorContentStyle = style
-        save()
+        var next = config
+        next.switchIndicatorContentStyle = style
+        guard commitShowingWindowFailure(next) else { return }
         statusText = String(localized: "Switch indicator display set to \(style.displayName)")
     }
 
@@ -1130,9 +1135,7 @@ final class AppModel: ObservableObject {
         do {
             let next = try config.selectingInputSource(source, for: role, sources: sources)
             if next != config { invalidateUndo() }
-            config = next
-            if save() {
-                reconcileNewSources()
+            if commitShowingWindowFailure(next) {
                 clearSlotNotice(for: role)
                 statusText = String(localized: "Switch slot set to \(source.localizedName)")
             }
