@@ -560,4 +560,65 @@ struct AppMemoryTrackerWebsiteTests {
         #expect(tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
             == .selectSlot(.japanese))
     }
+
+    @Test("a trigger confirmed after the wait ended, with the page still unread, still wins")
+    func triggerConfirmedAfterTheWaitEnded() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        #expect(tracker.websiteHoldExpired(generation: tracker.activationGeneration, currentSourceID: abc,
+                                           context: ownPending, slotOfSource: slotOf) == .none)
+
+        tracker.triggerConfirmed(sourceID: pinyin, actualFrontmostAppID: chrome, context: ownPending, browserPID: chromePID)
+
+        #expect(tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: pinyin, context: quiet, slotOfSource: slotOf)
+            == .none)
+    }
+
+    @Test("a website switch still on its way is put back when the next page needs nothing")
+    func pendingWebsiteSwitchIsRetiredByTheNextPage() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+
+        #expect(tracker.websiteRead(reading(tracker, 2, .rule(quietSite)), currentSourceID: kotoeri,
+                                    context: restorePending, slotOfSource: slotOf) == .putBack(sourceID: abc))
+    }
+
+    @Test("a read matched against rules since replaced is dropped")
+    func readFromOldRulesIsDropped() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        let old = reading(tracker, 1, .rule(jaSite))
+
+        var settings = tracker.settings
+        settings.websiteRules.append(WebsiteRule(domain: "sub.example.jp", target: .keepAsIs))
+        tracker.update(settings: settings)
+
+        #expect(tracker.websiteRead(old, currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+        #expect(tracker.websiteRead(reading(tracker, 2, .rule("sub.example.jp")), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+            == .none)
+    }
+
+    @Test("a source a password field replaced is not put back once the page is a Keep as is site")
+    func noPutBackAfterMovingToAKeepAsIsSite() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .noRule), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+        tracker.switchConfirmed(sourceID: pinyin, context: quiet)
+        tracker.sourceChanged(to: abc, context: secure)
+        #expect(tracker.isAwaitingSecureInputEnd)
+
+        _ = tracker.websiteRead(reading(tracker, 2, .rule(quietSite)), currentSourceID: abc, context: secure, slotOfSource: slotOf)
+
+        #expect(tracker.secureInputEnded(currentSourceID: abc, context: quiet) == .none)
+    }
+
+    @Test("a new tracker counts on from the generation it is given")
+    func generationBase() {
+        var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: terminal, activationGeneration: 7)
+
+        _ = tracker.appActivated(chrome, currentSourceID: abc, context: quiet)
+
+        #expect(tracker.activationGeneration == 8)
+    }
 }

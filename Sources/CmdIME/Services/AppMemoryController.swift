@@ -27,6 +27,8 @@ final class AppMemoryController {
     private var websiteTarget: WebsiteTarget?
     /// The generation whose wait for the page already has its expiry scheduled.
     private var heldGeneration: Int?
+    /// Where a tracker built by the next `start()` begins counting.
+    private var nextGenerationBase = 0
 
     private struct WebsiteTarget: Equatable {
         let pid: pid_t
@@ -113,6 +115,8 @@ final class AppMemoryController {
             ownAppID: Self.ownAppID,
             frontmostAppID: Self.trackedAppID(of: Self.actualFrontmostApp()),
             frontBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
+            // Never a number an earlier run used: a read or an expiry left over from it stays stale.
+            activationGeneration: nextGenerationBase,
             settings: settings
         )
         // Only activations are observed, never terminations: an app that quits and comes back
@@ -134,6 +138,8 @@ final class AppMemoryController {
             NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
         }
         activationObserver = nil
+        nextGenerationBase = tracker.activationGeneration + 1
+        heldGeneration = nil
         tracker.forgetAll()
         isActive = false
         afterTrackerChange()

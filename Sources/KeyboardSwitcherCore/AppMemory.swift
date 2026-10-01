@@ -69,9 +69,11 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// The source that was current before the pending restore, kept while that restore is pending.
     private var sourceBeforeRestore: String?
 
-    /// Counts every change of `frontmostAppID`. A website read carries the value it was made
-    /// under, so a result for a browser already left, or left and come back to, is told apart.
-    public private(set) var activationGeneration = 0
+    /// Counts every change of `frontmostAppID` and of the website rules. A website read carries the
+    /// value it was made under, so a result for a browser already left, left and come back to, or
+    /// matched against rules since replaced is told apart. A caller that builds a new tracker
+    /// passes a value above the old one's, so numbers are never reused.
+    public private(set) var activationGeneration: Int
     /// The pid of the app in front when it is a browser the caller can read pages of.
     private var frontBrowserPID: Int32?
     /// The page in front of that browser, once read; `.unknown` never replaces a known one.
@@ -96,8 +98,10 @@ public struct AppMemoryTracker: Equatable, Sendable {
         ownAppID: String?,
         frontmostAppID: String? = nil,
         frontBrowserPID: Int32? = nil,
+        activationGeneration: Int = 0,
         settings: AppActivationSettings = AppActivationSettings(remembersPerApp: true)
     ) {
+        self.activationGeneration = activationGeneration
         self.ownAppID = ownAppID
         self.frontmostAppID = frontmostAppID
         self.frontBrowserPID = frontmostAppID == nil ? nil : frontBrowserPID
@@ -138,8 +142,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// the Apps page lists is what can be restored.
     public mutating func update(settings: AppActivationSettings) {
         if settings.websiteRules != self.settings.websiteRules {
-            // The page is read again against the new rules.
+            // The page is read again against the new rules; a read matched against the old ones is stale.
             websiteContext = nil
+            activationGeneration += 1
         }
         self.settings = settings
         remembered = remembered.filter { settings.usesMemory(for: $0.key) }
@@ -208,7 +213,12 @@ public struct AppMemoryTracker: Equatable, Sendable {
             nextReadSetsContextOnly = true
         }
         // The trigger is the user's choice: it ends a wait for the page and replaces a website switch.
-        cancelWebsiteHold()
+        // With the page still unread (the wait may have ended meanwhile, while the trigger was in
+        // flight), the first read after it only records the page.
+        websiteHold = nil
+        if websiteContext == nil {
+            nextReadSetsContextOnly = true
+        }
         isWebsiteSwitchInFlight = false
         switchConfirmed(sourceID: sourceID, context: context)
     }
@@ -218,7 +228,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
     public mutating func secureInputEnded(currentSourceID: String?, context: AppMemoryContext) -> Restore {
         guard let before = beforeForced, let forced else { return .none }
         beforeForced = nil
-        guard settings.restoresAfterPasswordField,
+        guard settings.restoresAfterPasswordField, !isOnKeepAsIsSite,
               !context.isSecureInputInFrontmostApp, !context.isOwnSwitchPending,
               before.appID == frontmostAppID, forced.appID == frontmostAppID,
               let currentSourceID, currentSourceID == forced.sourceID,
@@ -441,10 +451,13 @@ public struct AppMemoryTracker: Equatable, Sendable {
         slotOfSource: (String) -> InputRole?
     ) -> Restore {
         // The source to put back belongs to the restore still on its way; one kept from an earlier,
-        // finished restore in this browser is stale.
+        // finished restore in this browser is stale. While one is on its way, the current source
+        // is its intermediate step, so what was there before it is what the new page arrives with.
         if !isRestorePending {
             sourceBeforeRestore = nil
         }
+        let pendingBefore = sourceBeforeRestore
+        let arrivalSourceID = pendingBefore ?? arrivalSourceID
         let ruleTarget: AppActivationTarget? = {
             guard case .rule(let domain) = page else { return nil }
             return settings.websiteTarget(forRule: domain)
@@ -460,7 +473,11 @@ public struct AppMemoryTracker: Equatable, Sendable {
             isWebsiteSwitchInFlight = ruleTarget != nil
             return .selectSlot(slot)
         default:
-            return .none
+            // Nothing to select here, but a switch asked for the page just left must not land on
+            // this one: put back what was there before it, as leaving an app does.
+            guard let pendingBefore else { return .none }
+            isWebsiteSwitchInFlight = false
+            return .putBack(sourceID: pendingBefore)
         }
     }
 

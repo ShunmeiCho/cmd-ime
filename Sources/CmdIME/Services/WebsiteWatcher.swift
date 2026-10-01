@@ -151,27 +151,25 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
     /// address. Focus outside a page (the address bar), no address or a spent budget is `.unknown`.
     private static func readContext(app: AXUIElement, rules: [WebsiteRule]) -> WebsiteContext {
         dispatchPrecondition(condition: .notOnQueue(.main))
-        let started = ProcessInfo.processInfo.systemUptime
-        guard let focused = value(app, kAXFocusedUIElementAttribute) else { return .unknown }
+        let deadline = ProcessInfo.processInfo.systemUptime + readBudget
+        guard let focused = value(app, kAXFocusedUIElementAttribute, deadline: deadline) else { return .unknown }
         var element = focused as! AXUIElement
         var chain: [AXUIElement] = []
         var roles: [String] = []
         var reachedTop = false
         while roles.count < WebAreaPath.maxSteps {
-            // The budget is for the whole read, not per call.
-            guard ProcessInfo.processInfo.systemUptime - started < readBudget else { return .unknown }
-            let role = value(element, kAXRoleAttribute) as? String ?? ""
+            let role = value(element, kAXRoleAttribute, deadline: deadline) as? String ?? ""
             chain.append(element)
             roles.append(role)
             if role == kAXWindowRole || role == kAXApplicationRole {
                 reachedTop = true
                 break
             }
-            guard let parent = value(element, kAXParentAttribute) else { break }
+            guard let parent = value(element, kAXParentAttribute, deadline: deadline) else { break }
             element = parent as! AXUIElement
         }
         guard let index = WebAreaPath.outermostWebArea(rolesFromFocus: roles, reachedTop: reachedTop),
-              let url = value(chain[index], "AXURL") as? URL else {
+              let url = value(chain[index], "AXURL", deadline: deadline) as? URL else {
             return .unknown
         }
         // A page that is not a website (a new tab page, a local file) has no rule.
@@ -179,8 +177,11 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
         return WebsiteRuleMatcher.match(host: host, in: rules).map { .rule($0.domain) } ?? .noRule
     }
 
-    private static func value(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {
-        AXUIElementSetMessagingTimeout(element, Float(readBudget))
+    /// One AX read that may take only what is left of the read's budget.
+    private static func value(_ element: AXUIElement, _ attribute: String, deadline: TimeInterval) -> CFTypeRef? {
+        let remaining = deadline - ProcessInfo.processInfo.systemUptime
+        guard remaining > 0 else { return nil }
+        AXUIElementSetMessagingTimeout(element, Float(remaining))
         var value: CFTypeRef?
         return AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success ? value : nil
     }
