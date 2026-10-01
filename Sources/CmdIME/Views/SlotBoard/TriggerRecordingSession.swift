@@ -18,6 +18,10 @@ final class TriggerRecordingSession: ObservableObject {
     @Published private(set) var warning: String?
     @Published private(set) var captureRevision = 0
     @Published private(set) var rejectionRevision = 0
+    /// Whether the chord answers only to the left or right modifier key that was pressed.
+    @Published private(set) var matchesSide = false
+    /// The sides of the modifier keys as pressed (or as the existing trigger has them).
+    @Published private(set) var pressedSides: [Modifier: ModifierSide] = [:]
     private(set) var sessionID = UUID()
     var controlHasFocus = false
     private var navigationKeys: Set<Int> = []
@@ -83,7 +87,9 @@ final class TriggerRecordingSession: ObservableObject {
         recognizer = TriggerRecognizer(existingTrigger: existingTrigger,
                                        heldModifierKeyCodes: heldModifiers,
                                        heldKeyCodes: initialOrdinaryKeys)
-        draft = recognizer.draft
+        pressedSides = existingTrigger?.modifierSides ?? [:]
+        matchesSide = !pressedSides.isEmpty
+        draft = existingTrigger
         updateHeldKeys()
         liveKeyNames = draft.map(Self.components) ?? heldKeys.map(\.keyName)
         warning = nil
@@ -138,6 +144,8 @@ final class TriggerRecordingSession: ObservableObject {
         navigationKeys = []
         controlHasFocus = false
         draft = nil
+        matchesSide = false
+        pressedSides = [:]
         heldKeys = []
         liveKeyNames = []
         warning = nil
@@ -182,7 +190,7 @@ final class TriggerRecordingSession: ObservableObject {
         let heldModifiers = Set(TriggerRecognizer.modifierTriggers.keys.filter {
             CGEventSource.keyState(.combinedSessionState, key: CGKeyCode($0))
         })
-        recognizer = TriggerRecognizer(existingTrigger: draft, heldModifierKeyCodes: heldModifiers,
+        recognizer = TriggerRecognizer(existingTrigger: draft?.requiringSides([:]), heldModifierKeyCodes: heldModifiers,
                                        heldKeyCodes: initialOrdinaryKeys)
         updateHeldKeys()
         liveKeyNames = draft.map(Self.components) ?? []
@@ -271,11 +279,13 @@ final class TriggerRecordingSession: ObservableObject {
             reject(String(localized: "This key is not supported. Try another trigger."))
             return
         }
+        pressedSides = TriggerRecognizer.heldSides(recognizer.pressedModifierKeyCodes)
+        let trigger = trigger.requiringSides(matchesSide ? pressedSides : [:])
         draft = trigger
         if trigger.kind == .oneShotModifier {
             liveKeyNames = [trigger.keyName]
         } else {
-            liveKeyNames = (heldKeys.isEmpty ? trigger.modifiers.map(\.rawValue) : heldKeys.map(\.keyName))
+            liveKeyNames = (heldKeys.isEmpty ? trigger.modifierKeyNames : heldKeys.map(\.keyName))
                 + [trigger.keyName]
         }
         eligibility.capture()
@@ -288,8 +298,23 @@ final class TriggerRecordingSession: ObservableObject {
         }
     }
 
+    /// Left/right or either side, for the chord in the draft. The conflict check runs again:
+    /// `left-option+j` and `option+j` are different triggers.
+    func setMatchesSide(_ matches: Bool) {
+        guard isRecording, matches != matchesSide else { return }
+        matchesSide = matches
+        guard let current = draft, current.kind == .keyPress else { return }
+        let trigger = current.requiringSides(matches ? pressedSides : [:])
+        draft = trigger
+        if heldKeys.isEmpty { liveKeyNames = Self.components(trigger) }
+        eligibility.capture()
+        warning = nil
+        captureRevision += 1
+        if let error = onValidate?(trigger) { reject(error) }
+    }
+
     private static func components(_ trigger: KeyTrigger) -> [String] {
-        trigger.kind == .oneShotModifier ? [trigger.keyName] : trigger.modifiers.map(\.rawValue) + [trigger.keyName]
+        trigger.kind == .oneShotModifier ? [trigger.keyName] : trigger.modifierKeyNames + [trigger.keyName]
     }
 
     private func updateHeldKeys() {
