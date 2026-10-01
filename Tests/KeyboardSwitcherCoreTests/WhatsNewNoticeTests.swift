@@ -30,7 +30,7 @@ final class WhatsNewNoticeTests: XCTestCase {
 
     func testReleaseWithoutItsOwnLineHasNoMessage() {
         XCTAssertNil(WhatsNewNotice.message(for: "0.11.0"))
-        XCTAssertNil(WhatsNewNotice.message(for: "0.13.0"))
+        XCTAssertNil(WhatsNewNotice.message(for: "0.99.0"))
     }
 
     func testMessageIsKeyedByMajorMinor() {

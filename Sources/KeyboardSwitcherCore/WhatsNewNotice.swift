@@ -17,6 +17,7 @@ public enum WhatsNewNotice {
     /// so a line written for an older release never comes back after a later upgrade.
     static let messages: [String: String] = [
         "0.12": "New in 0.12: App Rules on the Apps page, a bubble for every switch, Peek, and settings export and import.",
+        "0.13": "New in 0.13: settings in Chinese and Japanese, and an option to hide the macOS input source badge.",
     ]
 
     public static func message(for version: String) -> String? {

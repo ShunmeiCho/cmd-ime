@@ -19392,6 +19392,30 @@
           }
         }
       }
+    },
+    "New in 0.13: settings in Chinese and Japanese, and an option to hide the macOS input source badge.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.13: settings in Chinese and Japanese, and an option to hide the macOS input source badge."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.13 新增：设置界面支持中文和日文，并可隐藏 macOS 自带的输入源图标。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.13 の新機能：設定画面が日本語と中国語に対応し、macOS の入力ソースのバッジを隠せるようになりました。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
