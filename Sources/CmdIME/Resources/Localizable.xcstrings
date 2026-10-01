@@ -19464,6 +19464,30 @@
           }
         }
       }
+    },
+    "While it is on, CmdIME hides the macOS badge under the cursor. Turn it off to get the badge back.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While it is on, CmdIME hides the macOS badge under the cursor. Turn it off to get the badge back."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启时，CmdIME 会隐藏 macOS 在光标下方显示的图标；关闭后恢复。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンの間、CmdIME は macOS がカーソルの下に表示するバッジを隠します。オフにすると元に戻ります。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

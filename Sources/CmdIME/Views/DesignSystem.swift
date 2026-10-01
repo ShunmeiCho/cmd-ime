@@ -190,15 +190,21 @@ enum SettingsDetail: String, CaseIterable {
 
 private struct Explanation: ViewModifier {
     @AppStorage(SettingsDetail.defaultsKey) private var detail = SettingsDetail.brief
+    let showsIn: SettingsDetail
 
     func body(content: Content) -> some View {
-        if detail == .detailed { content }
+        if detail == showsIn { content }
     }
 }
 
 extension View {
     /// Marks a paragraph that explains a setting: hidden while the window is Brief.
-    func explanation() -> some View { modifier(Explanation()) }
+    func explanation() -> some View { modifier(Explanation(showsIn: .detailed)) }
+
+    /// The one-line form of an explanation that says something the user must not miss (a change
+    /// outside CmdIME, how to undo it): shown while the window is Brief, replaced by the
+    /// explanation in Detailed.
+    func briefNote() -> some View { modifier(Explanation(showsIn: .brief)) }
 }
 
 struct SlotLook {

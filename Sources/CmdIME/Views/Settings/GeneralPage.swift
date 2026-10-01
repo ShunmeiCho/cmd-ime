@@ -169,7 +169,6 @@ struct GeneralPage: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
-                .explanation()
         case .allowed, .unknown:
             EmptyView()
         }

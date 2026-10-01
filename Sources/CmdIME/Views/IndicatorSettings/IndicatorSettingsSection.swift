@@ -92,6 +92,11 @@ struct IndicatorSettingsSection: View {
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .explanation()
                 if #available(macOS 14, *) {
+                    Text("While it is on, CmdIME hides the macOS badge under the cursor. Turn it off to get the badge back.")
+                        .font(.caption)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .briefNote()
                     Text("While it is on, CmdIME hides the badge macOS draws under the cursor, so a switch shows one bubble. Apps pick that up as they relaunch; log out for all of them. Control+Space then shows its older list in the middle of the screen. Turn the indicator off, or quit CmdIME from General, to get the macOS badge back.")
                         .font(.caption)
                         .foregroundStyle(DesignTokens.Colors.textMuted)

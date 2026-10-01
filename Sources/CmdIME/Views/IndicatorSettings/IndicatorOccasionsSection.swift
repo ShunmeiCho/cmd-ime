@@ -35,6 +35,7 @@ struct IndicatorOccasionsSection: View {
                     }
                 ))
                 caption(String(localized: "Control+Space, the Globe key, the menu bar or another app."))
+                    .explanation()
             }
         }
     }
@@ -51,6 +52,7 @@ struct IndicatorOccasionsSection: View {
                     }
                 ))
                 caption(String(localized: "Once the new app has settled, and only if nothing else showed the change."))
+                    .explanation()
             }
         }
     }
@@ -139,7 +141,6 @@ struct IndicatorOccasionsSection: View {
             .font(.caption)
             .foregroundStyle(DesignTokens.Colors.textMuted)
             .fixedSize(horizontal: false, vertical: true)
-            .explanation()
     }
 
     /// The offered choices, plus a stored value that is not one of them (a hand-edited file),
