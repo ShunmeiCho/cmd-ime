@@ -29,7 +29,6 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
     private var scheduler = WebsiteReadScheduler()
     private var timer: Timer?
     private var sequence = 0
-    private var lastSent: WebsiteContext?
 
     init(onReading: @escaping @Sendable (WebsiteReading) -> Void) {
         self.onReading = onReading
@@ -49,6 +48,17 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
         guard let thread else { return }
         perform(#selector(apply(_:)), on: thread, with: Target(pid: pid, generation: generation, rules: rules),
                 waitUntilDone: false)
+    }
+
+    /// Reads the page again though nothing was notified. Called on main; returns at once.
+    func refresh() {
+        guard let thread else { return }
+        perform(#selector(readAgain), on: thread, with: nil, waitUntilDone: false)
+    }
+
+    @objc private func readAgain() {
+        guard pid != nil else { return }
+        notified()
     }
 
     private final class Target: NSObject {
@@ -81,7 +91,6 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
         pid = target.pid
         generation = target.generation
         rules = target.rules
-        lastSent = nil
         guard let pid = target.pid else {
             app = nil
             scheduler.stopped()
@@ -138,12 +147,11 @@ final class WebsiteWatcher: NSObject, @unchecked Sendable {
         let context = Self.readContext(app: app, rules: rules)
         scheduler.readFinished(at: now, outcome: context == .unknown ? .unknown : .answered)
         sequence += 1
-        if context != lastSent {
-            lastSent = context
-            let reading = WebsiteReading(pid: pid, generation: generation, sequence: sequence, context: context)
-            let send = onReading
-            DispatchQueue.main.async { send(reading) }
-        }
+        // Every read is sent: main may drop one (another app was in front for a moment), so a
+        // repeat is how the same page gets through later. The tracker ignores a repeat it has.
+        let reading = WebsiteReading(pid: pid, generation: generation, sequence: sequence, context: context)
+        let send = onReading
+        DispatchQueue.main.async { send(reading) }
         scheduleNextRead()
     }
 

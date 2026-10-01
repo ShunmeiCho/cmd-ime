@@ -621,4 +621,27 @@ struct AppMemoryTrackerWebsiteTests {
 
         #expect(tracker.activationGeneration == 8)
     }
+
+    @Test("another process of the same browser starts its reads over, and the first one's results are dropped")
+    func sameBrowserOtherProcess() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        let first = reading(tracker, 1, .rule(jaSite))
+        let otherPID: Int32 = 777
+
+        #expect(tracker.appActivated(chrome, currentSourceID: abc, context: quiet, browserPID: otherPID, slotOfSource: slotOf) == .none)
+
+        #expect(tracker.websiteWatch?.pid == otherPID)
+        #expect(tracker.websiteRead(first, currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+    }
+
+    @Test("a read for a browser process that is not the one in front is dropped")
+    func readForAnotherProcessInFront() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+
+        #expect(tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), actualFrontmostAppID: chrome, actualBrowserPID: 777,
+                                    currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+        #expect(tracker.isWebsiteHoldWaiting)
+    }
 }

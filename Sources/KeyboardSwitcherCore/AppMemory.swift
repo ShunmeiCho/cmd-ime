@@ -263,7 +263,14 @@ public struct AppMemoryTracker: Equatable, Sendable {
     ) -> Restore {
         let appID = actualFrontmostAppID ?? noticedAppID
         guard isRegularApp || appID == ownAppID else { return .none }
-        guard appID != frontmostAppID else { return .none }
+        guard appID != frontmostAppID else {
+            // The same browser under another process (a second profile's instance): its pages
+            // are another process's, so reads start over; nothing is selected for the same app.
+            if let browserPID, browserPID != frontBrowserPID {
+                frontmostChanged(to: appID, browserPID: browserPID)
+            }
+            return .none
+        }
         if !context.isRestorePending {
             sourceBeforeRestore = nil
         }
@@ -323,6 +330,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
     public mutating func websiteRead(
         _ reading: WebsiteReading,
         actualFrontmostAppID: String? = nil,
+        actualBrowserPID: Int32? = nil,
         currentSourceID: String?,
         context: AppMemoryContext,
         slotOfSource: (String) -> InputRole? = { _ in nil }
@@ -330,7 +338,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
         guard let watch = websiteWatch, let appID = frontmostAppID,
               reading.pid == watch.pid, reading.generation == watch.generation,
               reading.sequence > lastReadSequence,
-              actualFrontmostAppID == nil || actualFrontmostAppID == appID else {
+              actualFrontmostAppID == nil || actualFrontmostAppID == appID,
+              actualBrowserPID == nil || actualBrowserPID == watch.pid else {
             return .none
         }
         lastReadSequence = reading.sequence

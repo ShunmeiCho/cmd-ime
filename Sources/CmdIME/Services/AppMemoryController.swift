@@ -164,7 +164,13 @@ final class AppMemoryController {
             browserPID: Self.browserPID(of: actual),
             slotOfSource: slotForSourceID
         )
+        let targetBefore = websiteTarget
         afterTrackerChange()
+        // A read made while another app was briefly in front was dropped; with the browser back
+        // and the watcher still on it, ask for a fresh one.
+        if websiteTarget != nil, websiteTarget == targetBefore {
+            websites.refresh()
+        }
         perform(restore)
     }
 
@@ -178,6 +184,7 @@ final class AppMemoryController {
         let restore = tracker.websiteRead(
             reading,
             actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
+            actualBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
             currentSourceID: currentSourceID(),
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             slotOfSource: slotForSourceID
