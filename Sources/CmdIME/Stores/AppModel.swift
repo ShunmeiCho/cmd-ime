@@ -332,6 +332,23 @@ final class AppModel: ObservableObject {
         return true
     }
 
+    /// The import a quit waited for has ended. A relaunch starts its reopen helper only now (it waits
+    /// a bounded time for this process to exit); if the helper cannot start, CmdIME keeps running
+    /// rather than quit with nothing to reopen it.
+    private func finishQuitHeldByImport() {
+        isQuitWaitingForImport = false
+        if isReopenWaitingForImport {
+            isReopenWaitingForImport = false
+            guard AppRelauncher.scheduleReopenAfterExit() else {
+                startListening() // quit() stopped it
+                updateInstallStage = nil
+                boardNotice = .failed(String(localized: "Relaunch is not available. Quit CmdIME and open it again."))
+                return
+            }
+        }
+        NSApp.terminate(nil)
+    }
+
     func shouldDelayQuitForImport() -> Bool {
         guard settingsTransferActivity == .importing else { return false }
         isQuitWaitingForImport = true
@@ -354,15 +371,7 @@ final class AppModel: ObservableObject {
                 // edit made meanwhile by someone else, whatever is on disk now.
                 reloadConfigFromDisk()
             }
-            if isQuitWaitingForImport {
-                isQuitWaitingForImport = false
-                if isReopenWaitingForImport {
-                    isReopenWaitingForImport = false
-                    // Started only now: the helper waits a bounded time for this process to exit.
-                    _ = AppRelauncher.scheduleReopenAfterExit()
-                }
-                NSApp.terminate(nil)
-            }
+            if isQuitWaitingForImport { finishQuitHeldByImport() }
         }
         let transfer = SettingsTransfer(store: configStore)
         do {
