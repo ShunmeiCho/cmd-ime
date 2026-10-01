@@ -968,9 +968,11 @@ final class AppModel: ObservableObject {
     /// One-click update: download, verify, replace this bundle, reopen.
     #if DEBUG
     /// Device check of the update card (`--args -CmdIMEPreviewUpdateCard YES`): a real check that
-    /// treats this build as 0.0.1, so the latest release shows as available.
+    /// treats this build as 0.0.1, so the latest release shows as available. It waits 5 s so the
+    /// check can put another app in front first and see that the card does not take focus.
     func previewUpdateCard() {
         Task {
+            try? await Task.sleep(for: .seconds(5))
             guard let result = try? await updates.check(currentVersion: "0.0.1"), result.isUpdateAvailable else { return }
             updateStatus = .available(result)
             updateCard.show()
