@@ -60,9 +60,11 @@ final class AppMemoryController {
         self.settings = settings
         let shouldRun = isListening && settings.isAnythingOn
         if shouldRun, isActive {
-            tracker.update(settings: settings)
+            // New settings can retire a website switch still on its way.
+            let restore = tracker.update(settings: settings)
             publishMemory()
             syncWebsiteWatch()
+            perform(restore)
         } else if shouldRun {
             start()
         } else if isActive {

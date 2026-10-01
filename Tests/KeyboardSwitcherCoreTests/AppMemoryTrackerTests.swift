@@ -678,4 +678,60 @@ struct AppMemoryTrackerWebsiteTests {
                                     currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
         #expect(tracker.isWebsiteHoldWaiting)
     }
+
+    @Test("a read that was on its way when a trigger was confirmed cannot override it")
+    func readInFlightAcrossATrigger() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .noRule), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+        let inFlight = reading(tracker, 2, .rule(jaSite))
+
+        tracker.triggerConfirmed(sourceID: pinyin, actualFrontmostAppID: chrome, context: ownPending, browserPID: chromePID)
+
+        #expect(tracker.websiteRead(inFlight, currentSourceID: pinyin, context: quiet, slotOfSource: slotOf) == .none)
+        #expect(tracker.websiteRead(reading(tracker, 3, .rule(jaSite)), currentSourceID: pinyin, context: quiet, slotOfSource: slotOf)
+            == .none)
+    }
+
+    @Test("a source chosen by hand after the wait expired, with the page still unread, stands")
+    func manualChoiceAfterTheWaitExpired() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteHoldExpired(generation: tracker.activationGeneration, currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+        tracker.switchConfirmed(sourceID: pinyin, context: quiet)
+
+        tracker.sourceChanged(to: abc, context: quiet)
+
+        #expect(tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+            == .none)
+    }
+
+    @Test("a change of website rules does not let a ruled page's source into the browser's memory")
+    func rulesChangeKeepsTheMemoryExclusion() {
+        var tracker = makeTracker(remembersPerApp: true, chromeRule: nil)
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .noRule), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+        tracker.sourceChanged(to: pinyin, context: quiet)
+        _ = tracker.websiteRead(reading(tracker, 2, .rule(jaSite)), currentSourceID: pinyin, context: quiet, slotOfSource: slotOf)
+        tracker.switchConfirmed(sourceID: kotoeri, context: quiet)
+
+        var settings = tracker.settings
+        settings.websiteRules.append(WebsiteRule(domain: "unrelated.example", target: .keepAsIs))
+        _ = tracker.update(settings: settings)
+        _ = tracker.appActivated(terminal, currentSourceID: kotoeri, context: quiet)
+
+        #expect(tracker.rememberedSourceID(for: chrome) == pinyin)
+    }
+
+    @Test("a website switch on its way is put back when a settings change stops the browser being read")
+    func settingsChangeRetiresAWebsiteSwitch() {
+        var tracker = makeTracker()
+        _ = activateChrome(&tracker)
+        _ = tracker.websiteRead(reading(tracker, 1, .rule(jaSite)), currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+
+        var settings = tracker.settings
+        settings.rules[chrome] = AppRule(appID: chrome, target: .keepAsIs)
+
+        #expect(tracker.update(settings: settings) == .putBack(sourceID: abc))
+    }
 }

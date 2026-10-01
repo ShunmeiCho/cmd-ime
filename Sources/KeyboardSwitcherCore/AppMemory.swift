@@ -81,9 +81,13 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// The browser came to the front and its own target waits for the first read of the page.
     private var websiteHold: WebsiteHold?
     private var lastReadSequence = Int.min
-    /// The user chose a source (a trigger, or by hand) before the page was read: the next read
-    /// only records the page and switches nothing.
-    private var nextReadSetsContextOnly = false
+    /// The generation that began with the user's own choice of source (a trigger, or by hand): the
+    /// first read of it only records the page and switches nothing. Reads that were on their way
+    /// when the user chose carry an older generation and are dropped, so none can straddle a choice.
+    private var contextOnlyGeneration: Int?
+    /// The website rules changed since the page was read: it is kept for what gets remembered, but
+    /// the next read decides afresh instead of counting as "the same page".
+    private var isWebsiteContextStale = false
     /// The switch on its way was asked for by a website rule and must not become the browser's memory.
     private var isWebsiteSwitchInFlight = false
 
@@ -140,10 +144,14 @@ public struct AppMemoryTracker: Equatable, Sendable {
 
     /// New settings from the config. Memory of an app that no longer uses it is dropped, so what
     /// the Apps page lists is what can be restored.
-    public mutating func update(settings: AppActivationSettings) {
+    @discardableResult
+    public mutating func update(settings: AppActivationSettings) -> Restore {
+        let pageTargetBefore = currentPageRuleTarget
         if settings.websiteRules != self.settings.websiteRules {
-            // The page is read again against the new rules; a read matched against the old ones is stale.
-            websiteContext = nil
+            // The page is read again against the new rules; a read matched against the old ones is
+            // stale. What the page was stays known until then, so its source is still kept out of
+            // the browser's memory.
+            isWebsiteContextStale = true
             activationGeneration += 1
         }
         self.settings = settings
@@ -151,6 +159,14 @@ public struct AppMemoryTracker: Equatable, Sendable {
         if websiteWatch == nil {
             websiteHold = nil
         }
+        // A website switch still on its way that the new settings no longer ask for (the browser
+        // is not read any more, or the page's rule changed or went) is put back, not left to land.
+        guard isWebsiteSwitchInFlight, websiteWatch == nil || currentPageRuleTarget != pageTargetBefore else {
+            return .none
+        }
+        isWebsiteSwitchInFlight = false
+        defer { sourceBeforeRestore = nil }
+        return sourceBeforeRestore.map { .putBack(sourceID: $0) } ?? .none
     }
 
     /// The selected input source changed while `frontmostAppID` was in front.
@@ -171,7 +187,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         // The user chose by hand before the page was read: that choice stands. macOS repeating
         // the current source on a focus change is not a choice.
         if sourceID != previousSourceID {
-            cancelWebsiteHold()
+            userChoseSource()
         }
         guard !isOnRuledPage else { return }
         remember(sourceID, for: frontmostAppID)
@@ -211,15 +227,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
             forced = nil
             beforeForced = nil
             sourceBeforeRestore = nil
-            nextReadSetsContextOnly = true
         }
         // The trigger is the user's choice: it ends a wait for the page and replaces a website switch.
-        // With the page still unread (the wait may have ended meanwhile, while the trigger was in
-        // flight), the first read after it only records the page.
-        websiteHold = nil
-        if websiteContext == nil {
-            nextReadSetsContextOnly = true
-        }
+        userChoseSource()
         isWebsiteSwitchInFlight = false
         switchConfirmed(sourceID: sourceID, context: context)
     }
@@ -297,7 +307,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         if holdsForWebsite {
             websiteHold = WebsiteHold(arrivalSourceID: arrivalSourceID)
         } else if context.isTriggerPending, websiteWatch != nil {
-            nextReadSetsContextOnly = true
+            contextOnlyGeneration = activationGeneration
         }
         let target = canRestore && !holdsForWebsite
             ? settings.target(for: appID, rememberedSourceID: remembered[appID])
@@ -344,14 +354,15 @@ public struct AppMemoryTracker: Equatable, Sendable {
         if case .rule(let domain) = page, settings.websiteTargets[domain] == nil {
             page = .noRule
         }
-        let previous = websiteContext
+        let previous = isWebsiteContextStale ? nil : websiteContext
         let hold = websiteHold
         websiteHold = nil
         if page != .unknown {
             websiteContext = page
+            isWebsiteContextStale = false
         }
-        if nextReadSetsContextOnly, hold == nil {
-            if page != .unknown { nextReadSetsContextOnly = false }
+        if reading.generation == contextOnlyGeneration {
+            if page != .unknown { contextOnlyGeneration = nil }
             return .none
         }
         guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
@@ -433,15 +444,25 @@ public struct AppMemoryTracker: Equatable, Sendable {
         activationGeneration += 1
         frontBrowserPID = browserPID
         websiteContext = nil
+        isWebsiteContextStale = false
         websiteHold = nil
-        nextReadSetsContextOnly = false
+        contextOnlyGeneration = nil
     }
 
-    /// The user chose a source while the browser's target still waited for its page.
-    private mutating func cancelWebsiteHold() {
-        guard websiteHold != nil else { return }
+    /// The user chose a source in a browser (a trigger, or by hand). That starts a new generation:
+    /// a wait for the page ends, every read on its way is stale, and the first read of the new
+    /// generation only records the page, so the choice stands until the page changes.
+    private mutating func userChoseSource() {
+        guard frontBrowserPID != nil else { return }
         websiteHold = nil
-        nextReadSetsContextOnly = true
+        activationGeneration += 1
+        contextOnlyGeneration = activationGeneration
+    }
+
+    /// What the website rule of the page in front selects, nil when the page has no rule.
+    private var currentPageRuleTarget: AppActivationTarget? {
+        guard websiteWatch != nil, case .rule(let domain) = websiteContext else { return nil }
+        return settings.websiteTarget(forRule: domain)
     }
 
     /// The page in front is under a website rule that still exists.
