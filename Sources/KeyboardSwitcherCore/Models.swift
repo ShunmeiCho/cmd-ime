@@ -296,6 +296,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var rememberInputSourcePerApp: Bool
     /// App Rules (CONTEXT.md), in the order the user added them. One per app id.
     public var appRules: [AppRule]
+    /// Website rules, in the order the user added them. One per domain.
+    public var websiteRules: [WebsiteRule]
     /// The slot an app with no rule and nothing remembered gets when it comes to the front;
     /// nil leaves the input source unchanged.
     public var appDefaultSlot: InputRole?
@@ -324,6 +326,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         switchIndicatorBehavior: SwitchIndicatorBehavior = SwitchIndicatorBehavior(),
         rememberInputSourcePerApp: Bool = false,
         appRules: [AppRule] = [],
+        websiteRules: [WebsiteRule] = [],
         appDefaultSlot: InputRole? = nil,
         restoreAfterPasswordField: Bool = true,
         showCapsLockIndicator: Bool = false,
@@ -344,6 +347,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.switchIndicatorBehavior = switchIndicatorBehavior
         self.rememberInputSourcePerApp = rememberInputSourcePerApp
         self.appRules = appRules
+        self.websiteRules = websiteRules
         self.appDefaultSlot = appDefaultSlot
         self.restoreAfterPasswordField = restoreAfterPasswordField
         self.showCapsLockIndicator = showCapsLockIndicator
@@ -506,6 +510,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case switchIndicatorBehavior
         case rememberInputSourcePerApp
         case appRules
+        case websiteRules
         case appDefaultSlot
         case restoreAfterPasswordField
         case showCapsLockIndicator
@@ -559,6 +564,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         ) ?? SwitchIndicatorBehavior()
         rememberInputSourcePerApp = try container.decodeIfPresent(Bool.self, forKey: .rememberInputSourcePerApp) ?? false
         appRules = (try container.decodeIfPresent([LenientAppRule].self, forKey: .appRules) ?? []).compactMap(\.rule)
+        websiteRules = (try container.decodeIfPresent([LenientWebsiteRule].self, forKey: .websiteRules) ?? [])
+            .compactMap(\.rule)
+            .uniquedByDomain()
         appDefaultSlot = try container.decodeIfPresent(InputRole.self, forKey: .appDefaultSlot)
         restoreAfterPasswordField = try container.decodeIfPresent(Bool.self, forKey: .restoreAfterPasswordField) ?? true
         showCapsLockIndicator = try container.decodeIfPresent(Bool.self, forKey: .showCapsLockIndicator) ?? false
@@ -592,6 +600,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(switchIndicatorBehavior, forKey: .switchIndicatorBehavior)
         try container.encode(rememberInputSourcePerApp, forKey: .rememberInputSourcePerApp)
         try container.encode(appRules, forKey: .appRules)
+        try container.encode(websiteRules, forKey: .websiteRules)
         try container.encodeIfPresent(appDefaultSlot, forKey: .appDefaultSlot)
         try container.encode(restoreAfterPasswordField, forKey: .restoreAfterPasswordField)
         try container.encode(showCapsLockIndicator, forKey: .showCapsLockIndicator)
