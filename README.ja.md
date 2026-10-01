@@ -293,7 +293,7 @@ macOS 14 以降では、入力ソースが変わるたびに、システム自�
 インジケーターをオフにするか、**一般 > CmdIME を終了**を使うとバッジが戻ります。各アプリは
 開き直すと反映され、ログアウトして再ログインするとすべてに反映されます。バッジを隠している
 間、Control+Space では画面中央に以前の形式の一覧が表示されます。CmdIME が元に戻すのは自分で
-変更した設定だけで、`defaults write` で自分で隠したバッジはそのままです。「一般」から終了せずに
+変更した設定だけで、それより前に `defaults write` で自分で隠していたバッジはそのままです。「一般」から終了せずに
 CmdIME を削除した場合は、
 `defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled` を実行するとバッジが
 戻ります。

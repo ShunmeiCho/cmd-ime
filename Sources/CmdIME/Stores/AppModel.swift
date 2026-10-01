@@ -632,6 +632,13 @@ final class AppModel: ObservableObject {
     }
 
     private static let systemBadgeHiddenByCmdIMEKey = "systemInputBadgeHiddenByCmdIME"
+    /// Set by Quit CmdIME on the General page; applied once the quit really goes through.
+    private var restoresSystemBadgeOnExit = false
+
+    /// The process is exiting (AppDelegate.applicationWillTerminate).
+    func willTerminate() {
+        if restoresSystemBadgeOnExit { syncSystemInputIndicator(bubbleOn: false) }
+    }
 
     /// The only system-wide preference CmdIME writes: macOS's own input source badge (macOS 14+)
     /// stays hidden while the switch indicator is on and comes back when it goes off. A flag in the
@@ -1506,8 +1513,9 @@ final class AppModel: ObservableObject {
 
     /// `restoringSystemBadge` for Quit CmdIME on the General page: someone who stops CmdIME gets the
     /// macOS badge back. Relaunch and Update Now keep it hidden, or every restart would flash it back.
+    /// The restore waits for `willTerminate`, so a quit an import holds back cannot hide it again.
     func quit(restoringSystemBadge: Bool = false) {
-        if restoringSystemBadge { syncSystemInputIndicator(bubbleOn: false) }
+        if restoringSystemBadge { restoresSystemBadgeOnExit = true }
         stopListening()
         NSApp.terminate(nil)
     }
