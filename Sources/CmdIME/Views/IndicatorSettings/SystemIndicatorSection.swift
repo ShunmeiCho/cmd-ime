@@ -9,7 +9,7 @@ struct SystemIndicatorSection: View {
     @State private var isHidden = SystemInputIndicator.isHidden()
 
     var body: some View {
-        CompactSection(title: String(localized: "macOS indicator")) {
+        CompactSection(title: String(localized: "System indicator")) {
             CompactSettingRow(String(localized: "Under the cursor")) {
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle("Hide the input source badge macOS shows under the cursor", isOn: Binding(

@@ -94,6 +94,8 @@ struct IndicatorThemePicker: View {
                     .font(DesignTokens.Typography.auxiliary.weight(isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textSecondary)
                     .lineLimit(1)
+                    // Longer translated names (Japanese "Switcher, Slot Color") fit at about 0.89.
+                    .minimumScaleFactor(0.85)
                     .truncationMode(.tail)
             }
             .padding(SelectionRing.ringGap + SelectionRing.ringWidth)

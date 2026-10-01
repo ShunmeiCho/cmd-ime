@@ -19033,30 +19033,6 @@
         }
       }
     },
-    "macOS indicator": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS indicator"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS 自带提示"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "macOS のインジケーター"
-          }
-        }
-      }
-    },
     "Under the cursor": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -19269,6 +19245,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "現在の設定フォルダを読み込めないため、何も読み込んでいません：%@"
+          }
+        }
+      }
+    },
+    "System indicator": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System indicator"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统自带提示"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムのインジケーター"
           }
         }
       }

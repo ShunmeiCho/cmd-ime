@@ -258,7 +258,7 @@ CmdIME 通过编程方式切换输入源，因此不会调出 macOS 私有的输
 
 macOS 14 及以上每次输入源变化时，还会在光标下方显示系统自己的小图标，CmdIME 的切换也不例外，
 所以你可能会同时看到两个。CmdIME 没法在切换时把它去掉。想在当前用户的所有 app 里隐藏它，勾选
-**指示气泡 > macOS 自带提示 > 隐藏 macOS 在光标下方显示的输入源图标**，
+**指示气泡 > 系统自带提示 > 隐藏 macOS 在光标下方显示的输入源图标**，
 或者运行 `defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false`。
 各个 app 重新打开后生效，注销再登录后全部生效。隐藏之后，Control+Space 会改为在屏幕中央显示
 旧式列表。取消勾选，或者运行

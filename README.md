@@ -280,7 +280,7 @@ Enabled**), it shows its own lightweight confirmation bubble after a switch.
 
 macOS 14 and later also draw their own small badge under the text cursor on every input source
 change, CmdIME's switches included, so you may see both. CmdIME cannot leave it out of a switch.
-To hide it in every app for your user account, check **Indicator > macOS indicator > Hide the input source badge
+To hide it in every app for your user account, check **Indicator > System indicator > Hide the input source badge
 macOS shows under the cursor**, or run
 `defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false`. Apps pick
 it up as they relaunch, and logging out applies it everywhere. With it hidden, Control+Space shows
