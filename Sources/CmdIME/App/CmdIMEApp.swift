@@ -159,7 +159,8 @@ final class AppWindowCoordinator: NSObject, NSWindowDelegate {
 
     private func makeSettingsWindow(model: AppModel) -> NSWindow {
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 820 + DesignTokens.Layout.sidebarWidth, height: 840),
+            // As wide as the sidebar plus the widest the page content gets: wider only adds empty margins.
+            contentRect: NSRect(x: 0, y: 0, width: DesignTokens.Layout.sidebarWidth + DesignTokens.Layout.contentMaxWidth, height: 760),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
