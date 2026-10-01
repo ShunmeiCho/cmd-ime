@@ -24,4 +24,18 @@ struct SystemInputIndicatorTests {
         #expect(SystemInputIndicator.isHidden(storedValue: "1") == false)
         #expect(SystemInputIndicator.isHidden(storedValue: "YES") == false)
     }
+
+    @Test("with the bubble on, a shown badge is hidden and a hidden one is left alone")
+    func bubbleOnHides() {
+        #expect(SystemInputIndicator.sync(bubbleOn: true, isHidden: false, hiddenByCmdIME: false) == .hide)
+        #expect(SystemInputIndicator.sync(bubbleOn: true, isHidden: true, hiddenByCmdIME: false) == .keep)
+        #expect(SystemInputIndicator.sync(bubbleOn: true, isHidden: true, hiddenByCmdIME: true) == .keep)
+    }
+
+    @Test("with the bubble off, only a badge CmdIME hid comes back")
+    func bubbleOffRestoresOnlyItsOwn() {
+        #expect(SystemInputIndicator.sync(bubbleOn: false, isHidden: true, hiddenByCmdIME: true) == .restore)
+        #expect(SystemInputIndicator.sync(bubbleOn: false, isHidden: true, hiddenByCmdIME: false) == .keep)
+        #expect(SystemInputIndicator.sync(bubbleOn: false, isHidden: false, hiddenByCmdIME: true) == .keep)
+    }
 }

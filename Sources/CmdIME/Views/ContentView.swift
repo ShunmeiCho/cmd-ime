@@ -101,9 +101,6 @@ struct ContentView: View {
                 IndicatorSettingsSection(model: model)
                 IndicatorOccasionsSection(model: model)
                 PeekAndCapsLockSection(model: model)
-                if #available(macOS 14, *) {
-                    SystemIndicatorSection(model: model)
-                }
             }
             .frame(maxWidth: .infinity)
         case .general:

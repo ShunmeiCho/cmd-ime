@@ -234,6 +234,7 @@ final class AppModel: ObservableObject {
         }
         refreshRuntimeStatus()
         startListeningIfReady()
+        syncSystemInputIndicator()
         if let recoveryMessage {
             statusText = recoveryMessage
         }
@@ -272,6 +273,7 @@ final class AppModel: ObservableObject {
         refreshCurrentRole()
         refreshAppMemory()
         indicatorOccasions.update()
+        syncSystemInputIndicator()
         indicatorLibrary.reloadThemes()
         indicatorLibrary.reloadFonts()
         loadActivationRecipes()
@@ -629,15 +631,34 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// The only system-wide preference CmdIME writes, and only from the Indicator page checkbox.
-    func setSystemInputIndicatorHidden(_ hidden: Bool) {
+    private static let systemBadgeHiddenByCmdIMEKey = "systemInputBadgeHiddenByCmdIME"
+
+    /// The only system-wide preference CmdIME writes: macOS's own input source badge (macOS 14+)
+    /// stays hidden while the switch indicator is on and comes back when it goes off. A flag in the
+    /// app's defaults records that CmdIME hid it, so a badge the user hid by hand is never restored.
+    func syncSystemInputIndicator(bubbleOn: Bool? = nil, reportsFailure: Bool = false) {
+        guard #available(macOS 14, *) else { return }
+        let defaults = UserDefaults.standard
+        let isHidden = SystemInputIndicator.isHidden()
+        if !isHidden { defaults.removeObject(forKey: Self.systemBadgeHiddenByCmdIMEKey) }
+        let action = SystemInputIndicator.sync(
+            bubbleOn: bubbleOn ?? config.showSwitchIndicator,
+            isHidden: isHidden,
+            hiddenByCmdIME: defaults.bool(forKey: Self.systemBadgeHiddenByCmdIMEKey)
+        )
         do {
-            try SystemInputIndicator.setHidden(hidden)
-            statusText = hidden
-                ? String(localized: "macOS badge hidden as apps relaunch; log out to hide it everywhere")
-                : String(localized: "macOS badge back as apps relaunch; log out to restore it everywhere")
+            switch action {
+            case .keep:
+                return
+            case .hide:
+                try SystemInputIndicator.setHidden(true)
+                defaults.set(true, forKey: Self.systemBadgeHiddenByCmdIMEKey)
+            case .restore:
+                try SystemInputIndicator.setHidden(false)
+                defaults.removeObject(forKey: Self.systemBadgeHiddenByCmdIMEKey)
+            }
         } catch {
-            statusText = String(localized: "macOS did not accept the change to its input source badge")
+            guard reportsFailure else { return }
             boardNotice = .failed(
                 String(localized: "macOS kept its setting for the input source badge. A configuration profile or a per-host value may be setting it.")
             )
@@ -661,6 +682,7 @@ final class AppModel: ObservableObject {
         next.showSwitchIndicator = visible
         guard commitShowingWindowFailure(next) else { return }
         indicatorOccasions.update()
+        syncSystemInputIndicator(reportsFailure: true)
         statusText = visible ? String(localized: "Switch indicator enabled") : String(localized: "Switch indicator disabled")
     }
 
@@ -1482,7 +1504,10 @@ final class AppModel: ObservableObject {
         statusText = String(localized: "Listener stopped")
     }
 
-    func quit() {
+    /// `restoringSystemBadge` for Quit CmdIME on the General page: someone who stops CmdIME gets the
+    /// macOS badge back. Relaunch and Update Now keep it hidden, or every restart would flash it back.
+    func quit(restoringSystemBadge: Bool = false) {
+        if restoringSystemBadge { syncSystemInputIndicator(bubbleOn: false) }
         stopListening()
         NSApp.terminate(nil)
     }

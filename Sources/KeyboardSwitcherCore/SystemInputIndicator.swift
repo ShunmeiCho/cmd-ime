@@ -24,6 +24,18 @@ public enum SystemInputIndicator {
         }
     }
 
+    public enum Sync: Equatable {
+        case hide, restore, keep
+    }
+
+    /// macOS's badge stays hidden while CmdIME's bubble is on, so a switch shows one bubble, and
+    /// comes back when the bubble goes off. Restoring undoes only a value CmdIME wrote: a badge the
+    /// user hid by hand stays hidden.
+    public static func sync(bubbleOn: Bool, isHidden: Bool, hiddenByCmdIME: Bool) -> Sync {
+        if bubbleOn { return isHidden ? .keep : .hide }
+        return isHidden && hiddenByCmdIME ? .restore : .keep
+    }
+
     #if os(macOS)
     public enum WriteError: Error {
         /// macOS still reports the old value after the write (a configuration profile can pin it).

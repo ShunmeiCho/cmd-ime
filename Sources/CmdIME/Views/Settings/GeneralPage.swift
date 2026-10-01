@@ -235,7 +235,7 @@ struct GeneralPage: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("Quit CmdIME", role: .destructive) { model.quit() }
+            Button("Quit CmdIME", role: .destructive) { model.quit(restoringSystemBadge: true) }
                 .help("Stop the background listener")
         }
     }
