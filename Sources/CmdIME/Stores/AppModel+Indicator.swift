@@ -13,8 +13,9 @@ extension AppModel {
 
     /// Applies a change to when the indicator appears and how long it stays.
     func editSwitchIndicatorBehavior(status: String, _ change: (inout SwitchIndicatorBehavior) -> Void) {
-        change(&config.switchIndicatorBehavior)
-        save()
+        var next = config
+        change(&next.switchIndicatorBehavior)
+        guard commitShowingWindowFailure(next) else { return }
         indicatorOccasions.update()
         statusText = status
     }

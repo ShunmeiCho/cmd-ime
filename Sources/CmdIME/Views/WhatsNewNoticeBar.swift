@@ -5,10 +5,9 @@ struct WhatsNewNoticeBar: View {
     @ObservedObject var model: AppModel
     let isSetupGuideReopened: Bool
 
-    private let message = String(localized: "New in 0.12: App Rules on the Apps page, a bubble for every switch, Peek, and settings export and import.")
-
     var body: some View {
-        if !isSetupGuideReopened && WhatsNewNotice.shouldShow(
+        if !isSetupGuideReopened, let message = WhatsNewNotice.message(for: AppModel.currentVersion),
+           WhatsNewNotice.shouldShow(
             lastSeen: model.config.lastSeenWhatsNewVersion,
             current: AppModel.currentVersion,
             hasCompletedSetup: model.config.hasCompletedSetup,

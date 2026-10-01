@@ -193,6 +193,134 @@ struct AppRuleTrackerTests {
         #expect(tracker.rememberedSources.isEmpty)
     }
 
+    @Test("an app that comes to the front while a trigger is in flight starts no automatic switch")
+    func triggerInFlightBlocksAutomaticSwitches() {
+        let trigger = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        var ruled = tracker(AppActivationSettings(
+            rules: [AppRule(appID: terminal, target: .slot(englishSlot))], slotIDs: slots
+        ))
+        var defaulted = tracker(AppActivationSettings(defaultSlot: chineseSlot, slotIDs: slots))
+        var remembering = tracker(AppActivationSettings(remembersPerApp: true, slotIDs: slots))
+        remembering.sourceChanged(to: pinyin, context: quiet)
+        _ = remembering.appActivated(terminal, currentSourceID: pinyin, context: quiet)
+        remembering.sourceChanged(to: abc, context: quiet)
+        _ = remembering.appActivated(wechat, currentSourceID: abc, context: quiet)
+
+        #expect(ruled.appActivated(terminal, currentSourceID: pinyin, context: trigger, slotOfSource: slotOf) == .none)
+        #expect(defaulted.appActivated(terminal, currentSourceID: abc, context: trigger, slotOfSource: slotOf) == .none)
+        #expect(remembering.appActivated(terminal, currentSourceID: pinyin, context: trigger) == .none)
+        #expect(ruled.frontmostAppID == terminal)
+    }
+
+    @Test("the source a trigger is switching through does not replace the memory of the app left behind")
+    func triggerInFlightIsNotRecorded() {
+        var tracker = tracker(AppActivationSettings(remembersPerApp: true, slotIDs: slots))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+
+        let trigger = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        _ = tracker.appActivated(terminal, currentSourceID: abc, context: trigger)
+
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
+    @Test("an app that comes to the front before a trigger still asks for its rule; the trigger supersedes it later")
+    func activationBeforeTriggerStillSwitches() {
+        var tracker = tracker(AppActivationSettings(
+            rules: [AppRule(appID: terminal, target: .slot(englishSlot))], slotIDs: slots
+        ))
+
+        // The monitor then retires this switch when the trigger arrives
+        // (EventTapMonitorTests.testTriggerSupersedesAPendingSourceSwitch).
+        #expect(tracker.appActivated(terminal, currentSourceID: pinyin, context: quiet, slotOfSource: slotOf) == .selectSlot(englishSlot))
+    }
+
+    /// WeChat is left with Pinyin; Terminal has a Chinese rule; the user taps English in Terminal and
+    /// the trigger is confirmed before Terminal's activation notification is handled.
+    private func trackerAfterEarlyTrigger() -> AppMemoryTracker {
+        var tracker = tracker(AppActivationSettings(
+            remembersPerApp: true,
+            rules: [AppRule(appID: terminal, target: .slot(chineseSlot))],
+            slotIDs: slots
+        ))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+        let confirming = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        tracker.triggerConfirmed(sourceID: abc, actualFrontmostAppID: terminal, context: confirming)
+        return tracker
+    }
+
+    @Test("a trigger confirmed before its app's activation arrives wins, and the app left keeps its memory")
+    func triggerConfirmedBeforeLateActivation() {
+        var tracker = trackerAfterEarlyTrigger()
+
+        #expect(tracker.appActivated(terminal, currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .none)
+        #expect(tracker.frontmostAppID == terminal)
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
+    @Test("a late notice for an app no longer in front is ignored, so it cannot undo a confirmed trigger")
+    func staleActivationOfAnotherAppIsIgnored() {
+        var tracker = tracker(AppActivationSettings(
+            remembersPerApp: true,
+            rules: [AppRule(appID: terminal, target: .slot(chineseSlot)), AppRule(appID: rdp, target: .slot(chineseSlot))],
+            slotIDs: slots
+        ))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+        // In front: wechat -> rdp -> terminal; neither notice handled yet. The trigger is confirmed in terminal.
+        let confirming = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: false)
+        tracker.triggerConfirmed(sourceID: abc, actualFrontmostAppID: terminal, context: confirming)
+
+        let staleRDP = tracker.appActivated(rdp, currentSourceID: abc, context: quiet,
+                                            actualFrontmostAppID: terminal, slotOfSource: slotOf)
+        let lateTerminal = tracker.appActivated(terminal, currentSourceID: abc, context: quiet,
+                                                actualFrontmostAppID: terminal, slotOfSource: slotOf)
+
+        #expect(staleRDP == .none)
+        #expect(lateTerminal == .none)
+        #expect(tracker.frontmostAppID == terminal)
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
+    @Test("late notices reconcile to the menu bar owner, so a change under a system alert stays with that app")
+    func lateNoticesReconcileToTheAppUnderneath() {
+        var tracker = tracker(AppActivationSettings(remembersPerApp: true, slotIDs: slots))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+        // In front: wechat -> rdp -> a system alert over rdp; both notices handled while rdp owns the menu bar.
+        _ = tracker.appActivated(rdp, currentSourceID: pinyin, context: quiet,
+                                 actualFrontmostAppID: rdp, slotOfSource: slotOf)
+        _ = tracker.appActivated("com.apple.UserNotificationCenter", currentSourceID: pinyin, context: quiet,
+                                 actualFrontmostAppID: rdp, slotOfSource: slotOf)
+        tracker.sourceChanged(to: abc, context: quiet)
+        _ = tracker.appActivated(wechat, currentSourceID: abc, context: quiet,
+                                 actualFrontmostAppID: wechat, slotOfSource: slotOf)
+
+        #expect(tracker.rememberedSourceID(for: rdp) == abc)
+        #expect(tracker.rememberedSourceID(for: wechat) == pinyin)
+    }
+
+    @Test("a round trip that ended before any of its notices was handled reads as never having left")
+    func unseenRoundTripIsNotAReturn() {
+        var tracker = tracker(AppActivationSettings(
+            rules: [AppRule(appID: wechat, target: .slot(chineseSlot))], slotIDs: slots
+        ))
+        // wechat -> rdp -> wechat, both notices handled once wechat is back in front.
+        let staleRDP = tracker.appActivated(rdp, currentSourceID: abc, context: quiet,
+                                            actualFrontmostAppID: wechat, slotOfSource: slotOf)
+        let lateWeChat = tracker.appActivated(wechat, currentSourceID: abc, context: quiet,
+                                              actualFrontmostAppID: wechat, slotOfSource: slotOf)
+
+        #expect(staleRDP == .none)
+        #expect(lateWeChat == .none)
+        #expect(tracker.frontmostAppID == wechat)
+    }
+
+    @Test("after a trigger confirmed early, the next app to come to the front is restored as usual")
+    func nextActivationAfterEarlyTriggerRestores() {
+        var tracker = trackerAfterEarlyTrigger()
+        _ = tracker.appActivated(terminal, currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+
+        #expect(tracker.appActivated(wechat, currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .select(sourceID: pinyin))
+    }
+
     @Test("a rule switch still pending when its app is left is put back")
     func pendingRuleSwitchIsPutBack() {
         var tracker = tracker(AppActivationSettings(

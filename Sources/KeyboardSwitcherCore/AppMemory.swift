@@ -13,6 +13,12 @@ public struct AppMemoryContext: Equatable, Sendable {
     /// it on is charged to that one app; that fails safe and is narrower than a system-wide gate.
     public var isSecureInputInFrontmostApp: Bool
 
+    /// A switch the user asked for with a trigger is still in flight. An app coming to the front
+    /// meanwhile must not start an automatic switch: it would supersede the trigger.
+    public var isTriggerPending: Bool {
+        isOwnSwitchPending && !isRestorePending
+    }
+
     public init(
         isOwnSwitchPending: Bool = false,
         isRestorePending: Bool = false,
@@ -124,6 +130,27 @@ public struct AppMemoryTracker: Equatable, Sendable {
         remember(sourceID, for: frontmostAppID)
     }
 
+    /// A switch the user asked for with a trigger was confirmed while `actualFrontmostAppID` is in
+    /// front. The activation notification for that app can still be on its way: without this, it
+    /// would arrive after the user's choice, restore over it and file the chosen source as the
+    /// previous app's memory. So the activation is taken here first, with trigger semantics (no
+    /// automatic switch, nothing remembered for the app left, whose memory already holds its last
+    /// source), and the late notification then finds the app already in front and does nothing.
+    public mutating func triggerConfirmed(
+        sourceID: String,
+        actualFrontmostAppID: String?,
+        isRegularApp: Bool = true,
+        context: AppMemoryContext
+    ) {
+        if let actual = actualFrontmostAppID, actual != frontmostAppID, isRegularApp || actual == ownAppID {
+            frontmostAppID = actual
+            forced = nil
+            beforeForced = nil
+            sourceBeforeRestore = nil
+        }
+        switchConfirmed(sourceID: sourceID, context: context)
+    }
+
     /// Secure input ended while `frontmostAppID` stayed in front. If the source is still the one
     /// macOS forced, says to select the one it replaced.
     public mutating func secureInputEnded(currentSourceID: String?, context: AppMemoryContext) -> Restore {
@@ -146,13 +173,22 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// UserNotificationCenter) is not somewhere the user types: its activation is ignored, so
     /// nothing is remembered for it and a change made meanwhile stays with the app underneath.
     /// CmdIME itself always counts, whatever its activation policy at that moment.
+    ///
+    /// An activation notice is a prompt to look, not a record of what is in front: notices can
+    /// queue up behind other main-thread work. With `actualFrontmostAppID` (the app that owns the
+    /// menu bar when the notice is handled) the tracker reconciles to that app instead of the one
+    /// named in the notice; `isRegularApp` then describes that app. A late notice for an app
+    /// already left becomes a no-op, so it cannot undo a trigger confirmed since; a round trip
+    /// that completed before any of its notices was handled reads as never having left.
     public mutating func appActivated(
-        _ appID: String,
+        _ noticedAppID: String,
         isRegularApp: Bool = true,
         currentSourceID: String?,
         context: AppMemoryContext,
+        actualFrontmostAppID: String? = nil,
         slotOfSource: (String) -> InputRole? = { _ in nil }
     ) -> Restore {
+        let appID = actualFrontmostAppID ?? noticedAppID
         guard isRegularApp || appID == ownAppID else { return .none }
         guard appID != frontmostAppID else { return .none }
         if !context.isRestorePending {
@@ -174,7 +210,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         // While a restore is pending, the current source is its intermediate step (the source
         // a Kana key brought in), not what the user arrived with.
         let arrivalSourceID = pendingBefore ?? currentSourceID
-        let canRestore = appID != ownAppID && !context.isSecureInputInFrontmostApp
+        let canRestore = appID != ownAppID && !context.isSecureInputInFrontmostApp && !context.isTriggerPending
         let target = canRestore
             ? settings.target(for: appID, rememberedSourceID: remembered[appID])
             : .none
@@ -188,8 +224,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
         default:
             break
         }
-        // Never restore into CmdIME or a password field, but still retire a restore meant for
-        // the app just left.
+        // Never restore into CmdIME, a password field or over a trigger in flight, but still
+        // retire a restore meant for the app just left.
         if let pendingBefore {
             return .putBack(sourceID: pendingBefore)
         }

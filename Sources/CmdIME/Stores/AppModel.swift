@@ -513,6 +513,21 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The only system-wide preference CmdIME writes, and only from the Indicator page checkbox.
+    func setSystemInputIndicatorHidden(_ hidden: Bool) {
+        do {
+            try SystemInputIndicator.setHidden(hidden)
+            statusText = hidden
+                ? "macOS badge hidden as apps relaunch; log out to hide it everywhere"
+                : "macOS badge back as apps relaunch; log out to restore it everywhere"
+        } catch {
+            statusText = "macOS did not accept the change to its input source badge"
+            boardNotice = .failed(
+                "macOS kept its setting for the input source badge. A configuration profile or a per-host value may be setting it."
+            )
+        }
+    }
+
     /// macOS 13 asks the user to approve a login item in System Settings; the switch
     /// stays off until they do.
     var loginItemNeedsApproval: Bool {
@@ -533,8 +548,9 @@ final class AppModel: ObservableObject {
     }
 
     func setCapsLockIndicatorVisible(_ visible: Bool) {
-        config.showCapsLockIndicator = visible
-        save()
+        var next = config
+        next.showCapsLockIndicator = visible
+        guard commitShowingWindowFailure(next) else { return }
         statusText = visible ? String(localized: "Caps Lock indicator enabled") : String(localized: "Caps Lock indicator disabled")
     }
 
@@ -546,7 +562,7 @@ final class AppModel: ObservableObject {
         do {
             let next = try config.replacingPeekBinding(with: trigger)
             if next != config {
-                guard commit(next) else { return statusText }
+                guard commitShowingWindowFailure(next) else { return statusText }
             }
             statusText = trigger.map { String(localized: "\(SwitcherConfig.peekDisplayName): \($0.localizedDisplayName)") }
                 ?? String(localized: "Removed the \(SwitcherConfig.peekDisplayName) trigger")
@@ -990,6 +1006,15 @@ final class AppModel: ObservableObject {
             } else {
                 reportBoardFailure(message)
             }
+        }
+    }
+
+    /// `commit` for controls outside the slot board: a failed save shows the window-wide notice,
+    /// as `save()` does, since the board's own notice only appears on the Slots page.
+    func commitShowingWindowFailure(_ next: SwitcherConfig) -> Bool {
+        commit(next) { [self] message in
+            statusText = message
+            boardNotice = .failed("Could not save settings. \(message)")
         }
     }
 

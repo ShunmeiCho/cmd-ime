@@ -61,11 +61,24 @@ final class AppMemoryController {
         afterTrackerChange()
     }
 
-    /// The monitor confirmed a switch it made (a trigger or a restore).
+    /// The monitor confirmed a switch it made (a trigger or a restore). It reports before it ends
+    /// the switch, so a trigger still reads as pending here; for one, the app really in front is
+    /// read now rather than waiting for its activation notification, which may come later.
     func switchDidConfirm(sourceID: String) {
         guard isActive else { return }
-        let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        tracker.switchConfirmed(sourceID: sourceID, context: context(frontmostPID: frontmost))
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        let context = context(frontmostPID: frontmost?.processIdentifier)
+        if context.isTriggerPending {
+            let actual = Self.actualFrontmostApp()
+            tracker.triggerConfirmed(
+                sourceID: sourceID,
+                actualFrontmostAppID: Self.appID(of: actual),
+                isRegularApp: actual?.activationPolicy == .regular,
+                context: context
+            )
+        } else {
+            tracker.switchConfirmed(sourceID: sourceID, context: context)
+        }
         afterTrackerChange()
     }
 
@@ -82,7 +95,7 @@ final class AppMemoryController {
     private func start() {
         tracker = AppMemoryTracker(
             ownAppID: Self.ownAppID,
-            frontmostAppID: Self.trackedAppID(of: NSWorkspace.shared.frontmostApplication),
+            frontmostAppID: Self.trackedAppID(of: Self.actualFrontmostApp()),
             settings: settings
         )
         // Only activations are observed, never terminations: an app that quits and comes back
@@ -110,12 +123,16 @@ final class AppMemoryController {
     }
 
     private func appDidActivate(_ app: NSRunningApplication?) {
-        guard isActive, isPermitted, let app, let appID = Self.appID(of: app) else { return }
+        guard isActive, isPermitted, let app, let noticedID = Self.appID(of: app) else { return }
+        // Reconcile to what is in front now; the notice may be stale (see AppMemoryTracker.appActivated).
+        let actual = Self.actualFrontmostApp() ?? app
         let restore = tracker.appActivated(
-            appID,
-            isRegularApp: app.activationPolicy == .regular,
+            noticedID,
+            isRegularApp: actual.activationPolicy == .regular,
             currentSourceID: currentSourceID(),
-            context: context(frontmostPID: app.processIdentifier),
+            // Secure input belongs to the process in front, which a system alert can be; identity comes from `actual`.
+            context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
+            actualFrontmostAppID: Self.appID(of: actual),
             slotOfSource: slotForSourceID
         )
         afterTrackerChange()
@@ -173,7 +190,7 @@ final class AppMemoryController {
         guard !Self.isSecureInputHeld(byPID: frontmost?.processIdentifier) else { return }
         secureInputEndPoll?.invalidate()
         secureInputEndPoll = nil
-        guard isActive, isPermitted, Self.appID(of: frontmost) == tracker.frontmostAppID else {
+        guard isActive, isPermitted, Self.appID(of: Self.actualFrontmostApp()) == tracker.frontmostAppID else {
             _ = tracker.secureInputEnded(currentSourceID: nil, context: AppMemoryContext())
             return
         }
@@ -237,6 +254,13 @@ final class AppMemoryController {
     private static let ownAppID = appID(of: .current)
 
     /// Bundle id, or the executable path for an app without one.
+    /// The app the user is in: the menu bar owner, which a system alert or menu bar agent in
+    /// front does not take over, so it is the last regular app underneath. Falls back to the
+    /// frontmost app when nothing owns the menu bar.
+    private static func actualFrontmostApp() -> NSRunningApplication? {
+        NSWorkspace.shared.menuBarOwningApplication ?? NSWorkspace.shared.frontmostApplication
+    }
+
     private static func appID(of app: NSRunningApplication?) -> String? {
         app?.bundleIdentifier ?? app?.executableURL?.path
     }

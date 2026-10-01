@@ -13,6 +13,17 @@ public enum WhatsNewNotice {
         return seenVersion < currentVersion
     }
 
+    /// One line per release, keyed by major.minor. A release without an entry shows no notice,
+    /// so a line written for an older release never comes back after a later upgrade.
+    static let messages: [String: String] = [
+        "0.12": "New in 0.12: App Rules on the Apps page, a bubble for every switch, Peek, and settings export and import.",
+    ]
+
+    public static func message(for version: String) -> String? {
+        guard let (major, minor) = majorMinor(version) else { return nil }
+        return messages["\(major).\(minor)"].map { CoreLocalization.text($0) }
+    }
+
     /// Accept major.minor or major.minor.patch, with ASCII numeric components only.
     /// Validate the patch too, but never use it to decide whether to show again.
     private static func majorMinor(_ version: String) -> (Int, Int)? {

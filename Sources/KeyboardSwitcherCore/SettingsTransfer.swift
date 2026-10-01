@@ -8,6 +8,7 @@ public enum SettingsTransferError: Error, Equatable, LocalizedError {
     case newerVersion(found: Int, supported: Int)
     case unreadableConfig(String)
     case importFailed(backup: String?, reason: String)
+    case unreadableCurrentSettings(String)
 
     public var errorDescription: String? {
         switch self {
@@ -27,6 +28,8 @@ public enum SettingsTransferError: Error, Equatable, LocalizedError {
         case let .importFailed(backup, reason):
             CoreLocalization.text("Import stopped partway: %@", String(describing: reason))
                 + (backup.map { CoreLocalization.text(" Your previous settings are in %@.", String(describing: $0)) } ?? "")
+        case let .unreadableCurrentSettings(reason):
+            CoreLocalization.text("The current settings folder cannot be read, so nothing was imported: %@", String(describing: reason))
         }
     }
 }
@@ -42,7 +45,7 @@ public struct SettingsImportPlan: Equatable, Sendable {
 public struct SettingsImportResult: Equatable, Sendable {
     /// The settings now on disk, which the running app should make live.
     public let config: SwitcherConfig
-    /// Where the settings from before the import were copied; nil when there were none.
+    /// Where the settings from before the import were copied; nil when the import wrote over nothing.
     public let backupURL: URL?
     public let plan: SettingsImportPlan
 }
@@ -81,21 +84,20 @@ public struct SettingsTransfer {
         } catch {
             throw SettingsTransferError.unreadableCurrentConfig(error.localizedDescription)
         }
-        try copyCurrentSettings(to: destination)
+        try copyCurrentSettings(to: destination, themes: Self.themeFiles(in: store.themesDirectoryURL),
+                                fonts: Self.fontFiles(in: store.fontsDirectoryURL))
         return try inspect(destination)
     }
 
-    /// Copies whatever is there, readable or not: also used for the backup before an import.
-    private func copyCurrentSettings(to destination: URL) throws {
+    /// Copies whatever is there, readable or not: the export and the backup before an import.
+    private func copyCurrentSettings(to destination: URL, themes: [URL], fonts: [URL]) throws {
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
         if fileManager.fileExists(atPath: store.url.path) {
             try fileManager.copyItem(at: store.url, to: destination.appendingPathComponent(Self.configFileName))
         }
-        try copyFiles(Self.themeFiles(in: store.themesDirectoryURL),
-                      into: destination.appendingPathComponent(Self.themesFolderName))
-        try copyFiles(Self.fontFiles(in: store.fontsDirectoryURL),
-                      into: destination.appendingPathComponent(Self.fontsFolderName))
+        try copyFiles(themes, into: destination.appendingPathComponent(Self.themesFolderName))
+        try copyFiles(fonts, into: destination.appendingPathComponent(Self.fontsFolderName))
         if Self.isRegularFile(recipesURL) {
             try fileManager.copyItem(at: recipesURL, to: destination.appendingPathComponent(Self.recipesFileName))
         }
@@ -135,10 +137,11 @@ public struct SettingsTransfer {
     }
 
     /// Checks the folder, copies the current settings into a new folder under
-    /// `backups/` beside config.json, then writes the imported ones.
+    /// `backups/` beside config.json when the import writes over any existing file, then
+    /// writes the imported ones.
     public func importSettings(from folder: URL, now: Date = Date()) throws -> SettingsImportResult {
         let plan = try inspect(folder)
-        let backupURL = try backUpCurrentSettings(now: now)
+        let backupURL = try backUpBeforeImport(plan, now: now)
         do {
             // The same in-memory migration a launch applies, and never the setup guide again.
             let config = plan.config.migrated().completingSetup()
@@ -157,9 +160,56 @@ public struct SettingsTransfer {
         }
     }
 
-    /// Nil when there is nothing to back up (no config.json yet).
-    private func backUpCurrentSettings(now: Date) throws -> URL? {
-        guard FileManager.default.fileExists(atPath: store.url.path) else { return nil }
+    /// Nil when the import writes over no existing file. Settings that cannot be listed stop the
+    /// import here: a folder that cannot be read never counts as holding nothing worth keeping.
+    private func backUpBeforeImport(_ plan: SettingsImportPlan, now: Date) throws -> URL? {
+        let targets: [(url: URL, backupPath: String)]
+        do {
+            targets = try overwriteTargets(for: plan)
+        } catch {
+            throw SettingsTransferError.unreadableCurrentSettings(error.localizedDescription)
+        }
+        guard !targets.isEmpty else { return nil }
+        let destination = newBackupURL(now: now)
+        do {
+            // Everything, for an import back; strict listings, and fonts of any size.
+            let fileManager = FileManager.default
+            try copyCurrentSettings(
+                to: destination,
+                themes: try fileManager.indicatorStoreFiles(in: store.themesDirectoryURL,
+                                                            extensions: [IndicatorThemeStore.fileExtension]),
+                fonts: try fileManager.indicatorStoreFiles(in: store.fontsDirectoryURL,
+                                                           extensions: FontStore.allowedExtensions)
+            )
+            // A file written over that the listings skip (a link, another extension) is kept too.
+            for target in targets {
+                let copy = destination.appendingPathComponent(target.backupPath)
+                guard !fileManager.fileExists(atPath: copy.path) else { continue }
+                try fileManager.createDirectory(at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try fileManager.copyItem(at: target.url, to: copy)
+            }
+        } catch {
+            throw ConfigStoreError.backupFailed(destination, underlying: error)
+        }
+        return destination
+    }
+
+    /// The existing files the import writes over, with their place in the backup.
+    private func overwriteTargets(for plan: SettingsImportPlan) throws -> [(url: URL, backupPath: String)] {
+        var candidates: [(url: URL, backupPath: String)] = [(store.url, Self.configFileName)]
+        if plan.includesActivationRecipes {
+            candidates.append((recipesURL, Self.recipesFileName))
+        }
+        candidates += plan.themeFileNames.map {
+            (store.themesDirectoryURL.appendingPathComponent($0), "\(Self.themesFolderName)/\($0)")
+        }
+        candidates += plan.fontFileNames.map {
+            (store.fontsDirectoryURL.appendingPathComponent($0), "\(Self.fontsFolderName)/\($0)")
+        }
+        return try candidates.filter { try Self.itemExists(at: $0.url) }
+    }
+
+    private func newBackupURL(now: Date) -> URL {
         let backups = store.url.deletingLastPathComponent().appendingPathComponent(Self.backupsFolderName)
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -167,11 +217,6 @@ public struct SettingsTransfer {
         var destination = backups.appendingPathComponent("before-import-\(formatter.string(from: now))")
         while FileManager.default.fileExists(atPath: destination.path) {
             destination = backups.appendingPathComponent("before-import-\(formatter.string(from: now))-\(UUID().uuidString)")
-        }
-        do {
-            try copyCurrentSettings(to: destination)
-        } catch {
-            throw ConfigStoreError.backupFailed(destination, underlying: error)
         }
         return destination
     }
@@ -203,6 +248,17 @@ public struct SettingsTransfer {
     private static func fontFiles(in directory: URL) -> [URL] {
         let files = (try? FileManager.default.indicatorStoreFiles(in: directory, extensions: FontStore.allowedExtensions)) ?? []
         return files.filter { (FileManager.default.indicatorFileSize(at: $0) ?? 0) <= FontStore.maxFileBytes }
+    }
+
+    /// Whether anything is at `url`, a link included. Throws when that cannot be told, for example
+    /// inside a folder that cannot be read.
+    private static func itemExists(at url: URL) throws -> Bool {
+        do {
+            _ = try FileManager.default.attributesOfItem(atPath: url.path)
+            return true
+        } catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile {
+            return false
+        }
     }
 
     /// A symbolic link is not followed, so an import never reads from outside the folder.
