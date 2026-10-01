@@ -209,12 +209,17 @@ struct GeneralPage: View {
         guard panel.runModal() == .OK, let folder = panel.url else { return }
         Task {
             guard let plan = await model.inspectSettingsImport(folder),
-                  confirmImport(plan, from: folder) else { return }
+                  await confirmImport(plan, from: folder) else { return }
             await model.importSettings(from: folder)
         }
     }
 
-    private func confirmImport(_ plan: SettingsImportPlan, from folder: URL) -> Bool {
+    /// A sheet, not runModal: a modal loop started inside a Task holds the main queue, and with it
+    /// every switch the event tap queues, until the alert closes.
+    private func confirmImport(_ plan: SettingsImportPlan, from folder: URL) async -> Bool {
+        guard let window = NSApp.windows.first(where: { $0.title == "CmdIME" && $0.isVisible }) else {
+            return false
+        }
         let alert = NSAlert()
         alert.messageText = "Replace your settings with the ones in \"\(folder.lastPathComponent)\"?"
         let recipes = plan.includesActivationRecipes ? ", activation recipes" : ""
@@ -223,7 +228,7 @@ struct GeneralPage: View {
             + "and take effect again if you import that folder."
         alert.addButton(withTitle: "Import")
         alert.addButton(withTitle: "Cancel")
-        return alert.runModal() == .alertFirstButtonReturn
+        return await alert.beginSheetModal(for: window) == .alertFirstButtonReturn
     }
 
     private var quitRows: some View {

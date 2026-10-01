@@ -83,6 +83,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var settingsTransferActivity: SettingsTransferActivity?
     /// config.json changed while an import was writing; read it again once the import ends.
     private var isReloadHeldBackByImport = false
+    /// A quit arrived during an import and was cancelled; the import's end quits again.
+    private var isQuitWaitingForImport = false
     /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
     @Published var appearance = AppearancePreference.stored {
         didSet {
@@ -301,6 +303,15 @@ final class AppModel: ObservableObject {
 
     /// Checks the folder first; nothing changes when it is refused. Does nothing while another
     /// Export or Import runs. Saves and config.json reloads wait for it (see `refuseSaveDuringImport`).
+    /// Quitting mid-import would leave the settings partly imported, so every quit (Quit CmdIME,
+    /// Command-Q, the restart after Update Now) waits for the import to end.
+    func shouldDelayQuitForImport() -> Bool {
+        guard settingsTransferActivity == .importing else { return false }
+        isQuitWaitingForImport = true
+        statusText = "CmdIME quits when the import has finished"
+        return true
+    }
+
     func importSettings(from folder: URL) async {
         guard settingsTransferActivity == nil else { return }
         settingsTransferActivity = .importing
@@ -311,6 +322,10 @@ final class AppModel: ObservableObject {
                 // Unchanged after a finished import; after one that stopped partway, or an
                 // edit made meanwhile by someone else, whatever is on disk now.
                 reloadConfigFromDisk()
+            }
+            if isQuitWaitingForImport {
+                isQuitWaitingForImport = false
+                NSApp.terminate(nil)
             }
         }
         let transfer = SettingsTransfer(store: configStore)

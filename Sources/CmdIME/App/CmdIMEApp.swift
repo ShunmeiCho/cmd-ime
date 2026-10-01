@@ -46,6 +46,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.refreshNotificationPermission()
     }
 
+    /// Cancel, not .terminateLater: a quit can start inside a main-actor Task (the restart after
+    /// Update Now), where .terminateLater's modal loop would hold the main queue the import needs.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        model.shouldDelayQuitForImport() ? .terminateCancel : .terminateNow
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
