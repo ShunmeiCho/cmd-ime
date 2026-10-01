@@ -499,6 +499,21 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The only system-wide preference CmdIME writes, and only from the Indicator page checkbox.
+    func setSystemInputIndicatorHidden(_ hidden: Bool) {
+        do {
+            try SystemInputIndicator.setHidden(hidden)
+            statusText = hidden
+                ? "macOS badge hidden as apps relaunch; log out to hide it everywhere"
+                : "macOS badge back as apps relaunch; log out to restore it everywhere"
+        } catch {
+            statusText = "macOS did not accept the change to its input source badge"
+            boardNotice = .failed(
+                "macOS kept its setting for the input source badge. A configuration profile or a per-host value may be setting it."
+            )
+        }
+    }
+
     /// macOS 13 asks the user to approve a login item in System Settings; the switch
     /// stays off until they do.
     var loginItemNeedsApproval: Bool {

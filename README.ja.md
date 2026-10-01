@@ -287,8 +287,8 @@ indicator > Enabled**)、切り替え後に CmdIME 独自の軽量な確認用�
 
 macOS 14 以降では、入力ソースが変わるたびに、システム自身の小さなバッジもテキストカーソルの
 下に表示されます。CmdIME による切り替えも例外ではないため、2 つが同時に見えることがあります。
-CmdIME が切り替えのときにこのバッジだけを出さないようにすることはできません。Mac 全体で
-非表示にするには、**Indicator > macOS indicator > Hide the input source badge macOS shows
+CmdIME が切り替えのときにこのバッジだけを出さないようにすることはできません。現在の
+ユーザーのすべての app で非表示にするには、**Indicator > macOS indicator > Hide the input source badge macOS shows
 under the cursor** をオンにするか、
 `defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false` を
 実行します。各 app は開き直すと反映され、ログアウトして再ログインするとすべてに反映されます。

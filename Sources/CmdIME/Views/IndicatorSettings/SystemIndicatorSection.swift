@@ -18,7 +18,7 @@ struct SystemIndicatorSection: View {
                     ))
                     .toggleStyle(.checkbox)
                     .controlSize(.small)
-                    caption("macOS draws it on every input source change, CmdIME's included, and CmdIME cannot leave it out of a switch. This turns it off for the whole Mac.")
+                    caption("macOS draws it on every input source change, CmdIME's included, and CmdIME cannot leave it out of a switch. This turns it off in every app for your user account.")
                     caption("Apps pick it up as they relaunch; log out and back in for all of them. Control+Space then shows its older list in the middle of the screen. Uncheck to put the macOS default back.")
                 }
             }
@@ -26,15 +26,9 @@ struct SystemIndicatorSection: View {
         .onAppear { isHidden = SystemInputIndicator.isHidden() }
     }
 
+    /// A refused write shows in the window's failure bar; the checkbox shows what macOS kept.
     private func setHidden(_ hidden: Bool) {
-        do {
-            try SystemInputIndicator.setHidden(hidden)
-            model.statusText = hidden
-                ? "macOS badge hidden as apps relaunch; log out to hide it everywhere"
-                : "macOS badge back as apps relaunch; log out to restore it everywhere"
-        } catch {
-            model.statusText = "macOS did not accept the change to its input source badge"
-        }
+        model.setSystemInputIndicatorHidden(hidden)
         isHidden = SystemInputIndicator.isHidden()
     }
 

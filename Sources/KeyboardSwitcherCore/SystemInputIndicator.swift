@@ -32,6 +32,9 @@ public enum SystemInputIndicator {
 
     private static var key: CFString { preferenceKey as CFString }
 
+    // The SDK header says the App functions take no kCFPreferencesAnyApplication, but HIToolbox
+    // itself reads this key that way (macOS 27.2), so reading it the same way shows what macOS sees.
+
     public static func isHidden() -> Bool {
         CFPreferencesAppSynchronize(kCFPreferencesAnyApplication)
         return isHidden(storedValue: CFPreferencesCopyAppValue(key, kCFPreferencesAnyApplication))
