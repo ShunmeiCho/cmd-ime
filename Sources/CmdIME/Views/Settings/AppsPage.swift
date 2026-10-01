@@ -35,6 +35,7 @@ struct AppsPage: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
             // macOS's own per-document switching re-selects sources on every focus change.
             if model.config.rememberInputSourcePerApp, model.isSystemPerDocumentSwitchingOn {
                 Label("Turn off \"Automatically switch to a document's input source\" in Keyboard settings; it fights this.",
@@ -113,6 +114,7 @@ struct AppsPage: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
         }
     }
 
@@ -133,6 +135,7 @@ struct AppsPage: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
         }
     }
 

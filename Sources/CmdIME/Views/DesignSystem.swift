@@ -173,6 +173,34 @@ enum DesignTokens {
 
 typealias CmdIMEDesign = DesignTokens
 
+/// How much the settings window explains. Brief, the default, shows the settings alone; Detailed
+/// adds the paragraphs that say what each one does. Status messages and warnings show in both.
+enum SettingsDetail: String, CaseIterable {
+    case brief, detailed
+
+    static let defaultsKey = "settingsDetail"
+
+    var title: String {
+        switch self {
+        case .brief: String(localized: "Brief")
+        case .detailed: String(localized: "Detailed")
+        }
+    }
+}
+
+private struct Explanation: ViewModifier {
+    @AppStorage(SettingsDetail.defaultsKey) private var detail = SettingsDetail.brief
+
+    func body(content: Content) -> some View {
+        if detail == .detailed { content }
+    }
+}
+
+extension View {
+    /// Marks a paragraph that explains a setting: hidden while the window is Brief.
+    func explanation() -> some View { modifier(Explanation()) }
+}
+
 struct SlotLook {
     var slots: [SwitchSlot] = SwitchSlot.legacyDefaults
 

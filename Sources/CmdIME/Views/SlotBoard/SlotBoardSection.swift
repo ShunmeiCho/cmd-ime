@@ -66,6 +66,7 @@ struct SlotBoardSection: View {
                         .font(DesignTokens.Typography.auxiliary)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
+                        .explanation()
                 }
                 .focusSection()
                 .accessibilityElement(children: .contain)

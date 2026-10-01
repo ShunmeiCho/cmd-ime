@@ -139,6 +139,7 @@ struct IndicatorOccasionsSection: View {
             .font(.caption)
             .foregroundStyle(DesignTokens.Colors.textMuted)
             .fixedSize(horizontal: false, vertical: true)
+            .explanation()
     }
 
     /// The offered choices, plus a stored value that is not one of them (a hand-edited file),

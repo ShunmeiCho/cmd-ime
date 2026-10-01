@@ -323,6 +323,11 @@ list allows; no frozen item changes.
   Permissions spans the column.
 - The shortcut's clear button is a 24-point target.
 
+- Brief and Detailed (issue #7, owner: "默认简略只有用户想再进一步了解时再详细的介绍"): a two-way
+  switch above Keyboard control in the sidebar, stored in the app's defaults as `settingsDetail`,
+  Brief by default. Brief hides the paragraphs that explain a setting (`.explanation()`); status
+  messages, warnings and the first-run setup guide show in both.
+
 Not changed: indicator themes and their sizes, the live keys strip, slot card structure, the
 14-point drag handle seat (slot drag geometry depends on it).
 
