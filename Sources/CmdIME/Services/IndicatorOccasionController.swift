@@ -97,6 +97,6 @@ extension NSRunningApplication {
     /// Bundle id, or the executable path for an app without one: the key App Memory and the
     /// indicator's hidden-app list use.
     var cmdIMEAppID: String? {
-        bundleIdentifier ?? executableURL?.path
+        AppRuleBoard.appID(bundleIdentifier: bundleIdentifier, executablePath: executableURL?.path)
     }
 }
