@@ -256,13 +256,12 @@ CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键
 CmdIME 通过编程方式切换输入源，因此不会调出 macOS 私有的输入源选择器。打开切换指示气泡
 （**指示气泡 > 切换指示气泡 > 启用**）后，它会在切换后显示自己的轻量确认气泡。
 
-macOS 14 及以上每次输入源变化时，还会在光标下方显示系统自己的小图标，CmdIME 的切换也不例外，
-所以你可能会同时看到两个。CmdIME 没法在切换时把它去掉。想在当前用户的所有 app 里隐藏它，勾选
-**指示气泡 > 系统自带提示 > 隐藏 macOS 在光标下方显示的输入源图标**，
-或者运行 `defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false`。
-各个 app 重新打开后生效，注销再登录后全部生效。隐藏之后，Control+Space 会改为在屏幕中央显示
-旧式列表。取消勾选，或者运行
-`defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled`，即可恢复。
+macOS 14 及以上每次输入源变化时，还会在光标下方显示系统自己的小图标，CmdIME 的切换也不例外。
+切换指示气泡开启时，CmdIME 会为当前用户隐藏这个图标，每次切换只出现一个气泡；关闭切换指示气泡，
+或者使用 **通用 > 退出 CmdIME**，图标就会恢复。各个应用重新打开后生效，注销再登录后全部生效。
+图标隐藏后，Control+Space 会改为在屏幕中央显示旧式列表。CmdIME 只撤销自己做的设置：你自己用
+`defaults write` 隐藏的图标会保持隐藏。如果没有先在“通用”里退出就删除了 CmdIME，运行
+`defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled` 即可恢复图标。
 
 在“指示气泡”页，切换指示气泡可以关闭，可以选用十八种内置主题之一（显示所有槽位的切换器、
 把切换器缩到只剩图标的徽章、只显示刚切到的槽位的标记、两个自适应主题、玻璃、
