@@ -150,7 +150,7 @@ private struct TriggerRecorderPopover: View {
                 .font(DesignTokens.Typography.body)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
             Toggle("Only the left or right key I pressed",
-                   isOn: Binding(get: { session.matchesSide }, set: session.setMatchesSide))
+                   isOn: Binding(get: { session.matchesSide && !session.pressedSides.isEmpty }, set: session.setMatchesSide))
                 .toggleStyle(.checkbox)
                 .font(DesignTokens.Typography.body)
                 .disabled(session.pressedSides.isEmpty)
