@@ -19032,6 +19032,246 @@
           }
         }
       }
+    },
+    "macOS indicator": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS indicator"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 自带提示"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS のインジケーター"
+          }
+        }
+      }
+    },
+    "Under the cursor": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Under the cursor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "光标下方"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーソルの下"
+          }
+        }
+      }
+    },
+    "Hide the input source badge macOS shows under the cursor": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide the input source badge macOS shows under the cursor"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏 macOS 在光标下方显示的输入源图标"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS がカーソルの下に表示する入力ソースのバッジを隠す"
+          }
+        }
+      }
+    },
+    "macOS draws it on every input source change, CmdIME's included, and CmdIME cannot leave it out of a switch. This turns it off in every app for your user account.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS draws it on every input source change, CmdIME's included, and CmdIME cannot leave it out of a switch. This turns it off in every app for your user account."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次输入源变化时 macOS 都会显示它，CmdIME 的切换也不例外，CmdIME 无法在切换时把它去掉。勾选后，当前用户的所有应用都不再显示。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS は入力ソースが変わるたびにこれを表示します。CmdIME による切り替えも例外ではなく、CmdIME が切り替えのときだけ出さないようにすることはできません。オンにすると、現在のユーザーのすべてのアプリで表示されなくなります。"
+          }
+        }
+      }
+    },
+    "Apps pick it up as they relaunch; log out and back in for all of them. Control+Space then shows its older list in the middle of the screen. Uncheck to put the macOS default back.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apps pick it up as they relaunch; log out and back in for all of them. Control+Space then shows its older list in the middle of the screen. Uncheck to put the macOS default back."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各个应用重新打开后生效，注销再登录后全部生效。之后 Control+Space 会改为在屏幕中央显示旧式列表。取消勾选即可恢复 macOS 的默认设置。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各アプリは開き直すと反映され、ログアウトして再ログインするとすべてに反映されます。その後、Control+Space では画面中央に以前の形式の一覧が表示されます。チェックを外すと macOS の初期設定に戻ります。"
+          }
+        }
+      }
+    },
+    "macOS badge hidden as apps relaunch; log out to hide it everywhere": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS badge hidden as apps relaunch; log out to hide it everywhere"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用重新打开后不再显示 macOS 的图标；注销后全部生效"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリを開き直すと macOS のバッジが表示されなくなります。ログアウトするとすべてに反映されます"
+          }
+        }
+      }
+    },
+    "macOS badge back as apps relaunch; log out to restore it everywhere": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS badge back as apps relaunch; log out to restore it everywhere"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用重新打开后恢复显示 macOS 的图标；注销后全部恢复"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリを開き直すと macOS のバッジが戻ります。ログアウトするとすべてに反映されます"
+          }
+        }
+      }
+    },
+    "macOS did not accept the change to its input source badge": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS did not accept the change to its input source badge"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 没有接受对输入源图标的更改"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS が入力ソースのバッジの変更を受け付けませんでした"
+          }
+        }
+      }
+    },
+    "macOS kept its setting for the input source badge. A configuration profile or a per-host value may be setting it.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS kept its setting for the input source badge. A configuration profile or a per-host value may be setting it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 保留了输入源图标原来的设置，可能是描述文件或仅限本机的设置在控制它。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS は入力ソースのバッジの設定を変更しませんでした。構成プロファイルまたはこの Mac だけの設定で指定されている可能性があります。"
+          }
+        }
+      }
+    },
+    "The current settings folder cannot be read, so nothing was imported: %@": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The current settings folder cannot be read, so nothing was imported: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取当前的设置文件夹，因此没有导入任何内容：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在の設定フォルダを読み込めないため、何も読み込んでいません：%@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

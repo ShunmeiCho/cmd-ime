@@ -9,8 +9,8 @@ struct SystemIndicatorSection: View {
     @State private var isHidden = SystemInputIndicator.isHidden()
 
     var body: some View {
-        CompactSection(title: "macOS indicator") {
-            CompactSettingRow("Under the cursor") {
+        CompactSection(title: String(localized: "macOS indicator")) {
+            CompactSettingRow(String(localized: "Under the cursor")) {
                 VStack(alignment: .leading, spacing: 2) {
                     Toggle("Hide the input source badge macOS shows under the cursor", isOn: Binding(
                         get: { isHidden },
@@ -18,8 +18,8 @@ struct SystemIndicatorSection: View {
                     ))
                     .toggleStyle(.checkbox)
                     .controlSize(.small)
-                    caption("macOS draws it on every input source change, CmdIME's included, and CmdIME cannot leave it out of a switch. This turns it off in every app for your user account.")
-                    caption("Apps pick it up as they relaunch; log out and back in for all of them. Control+Space then shows its older list in the middle of the screen. Uncheck to put the macOS default back.")
+                    caption(String(localized: "macOS draws it on every input source change, CmdIME's included, and CmdIME cannot leave it out of a switch. This turns it off in every app for your user account."))
+                    caption(String(localized: "Apps pick it up as they relaunch; log out and back in for all of them. Control+Space then shows its older list in the middle of the screen. Uncheck to put the macOS default back."))
                 }
             }
         }

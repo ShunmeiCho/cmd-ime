@@ -518,12 +518,12 @@ final class AppModel: ObservableObject {
         do {
             try SystemInputIndicator.setHidden(hidden)
             statusText = hidden
-                ? "macOS badge hidden as apps relaunch; log out to hide it everywhere"
-                : "macOS badge back as apps relaunch; log out to restore it everywhere"
+                ? String(localized: "macOS badge hidden as apps relaunch; log out to hide it everywhere")
+                : String(localized: "macOS badge back as apps relaunch; log out to restore it everywhere")
         } catch {
-            statusText = "macOS did not accept the change to its input source badge"
+            statusText = String(localized: "macOS did not accept the change to its input source badge")
             boardNotice = .failed(
-                "macOS kept its setting for the input source badge. A configuration profile or a per-host value may be setting it."
+                String(localized: "macOS kept its setting for the input source badge. A configuration profile or a per-host value may be setting it.")
             )
         }
     }
@@ -1014,7 +1014,7 @@ final class AppModel: ObservableObject {
     func commitShowingWindowFailure(_ next: SwitcherConfig) -> Bool {
         commit(next) { [self] message in
             statusText = message
-            boardNotice = .failed("Could not save settings. \(message)")
+            boardNotice = .failed(String(localized: "Could not save settings. \(message)"))
         }
     }
 
