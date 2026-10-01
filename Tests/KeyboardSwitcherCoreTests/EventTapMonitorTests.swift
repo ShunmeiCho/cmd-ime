@@ -160,6 +160,32 @@ final class EventTapMonitorTests: XCTestCase {
         }
     }
 
+    func testRepeatOfAConsumedSidedChordStaysConsumedWhenTheOtherSideIsAdded() throws {
+        let binding = KeyBinding(trigger: try sidedChord("shift", side: "left"), action: BindingAction(type: .disable))
+        let monitor = EventTapMonitor(config: SwitcherConfig(bindings: [binding], inputSources: [:]), inputSources: StubInputSourceService())
+        let leftOnly = CGEventFlags(rawValue: CGEventFlags.maskShift.rawValue | 0x2)
+        let bothSides = CGEventFlags(rawValue: CGEventFlags.maskShift.rawValue | 0x2 | 0x4)
+        let repeated = makeKeyboardEvent(keyCode: 38, flags: bothSides)
+        repeated.setIntegerValueField(.keyboardEventAutorepeat, value: 1)
+
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: leftOnly)))
+        XCTAssertNil(monitor.handleKeyDownForTesting(repeated))
+        XCTAssertNil(monitor.handleKeyUpForTesting(makeKeyboardEvent(keyCode: 38, flags: bothSides, keyDown: false)))
+        // A fresh press with both sides held is still no match.
+        let freshPress = makeKeyboardEvent(keyCode: 38, flags: bothSides)
+        XCTAssertFalse(monitor.handleKeyDownForTesting(freshPress) == nil)
+    }
+
+    func testRemapOutputCarriesTheDeviceBitOfItsSide() throws {
+        let monitor = EventTapMonitor(config: SwitcherConfig(bindings: [], inputSources: [:]), inputSources: StubInputSourceService())
+
+        let sided = monitor.outputFlags(for: try ShortcutParser.parse("right-option+k"))
+        let either = monitor.outputFlags(for: try ShortcutParser.parse("option+k"))
+
+        XCTAssertEqual(sided.rawValue, CGEventFlags.maskAlternate.rawValue | 0x40)
+        XCTAssertEqual(either, .maskAlternate)
+    }
+
     func testDisabledSidedBindingDoesNotBeatEitherSide() throws {
         let generic = KeyBinding(trigger: try ShortcutParser.parse("option+j"), action: .showIndicator)
         let specific = KeyBinding(trigger: try sidedChord("option", side: "left"), action: BindingAction(type: .disable), enabled: false)

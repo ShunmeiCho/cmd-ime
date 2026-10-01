@@ -224,6 +224,13 @@ final class TriggerRecognizerTests: XCTestCase {
         state.keyDown(keyCode: code, keyName: "raw", modifiers: [], timestamp: 0)
     }
 
+    func testHeldSidesNameOneSideAndDropAModifierHeldOnBoth() {
+        // left-option 58, right-command 54, both shifts 56 and 60.
+        XCTAssertEqual(TriggerRecognizer.heldSides([58, 54]), [.option: .left, .command: .right])
+        XCTAssertEqual(TriggerRecognizer.heldSides([56, 60, 58]), [.option: .left])
+        XCTAssertEqual(TriggerRecognizer.heldSides([]), [:])
+    }
+
     private func tap(_ state: inout TriggerRecognizer, _ trigger: KeyTrigger, at time: Double) -> TriggerRecognizer.Intent? {
         _ = state.keyDown(keyCode: trigger.keyCode, keyName: trigger.keyName, modifiers: [], timestamp: time)
         return state.keyUp(keyCode: trigger.keyCode, keyName: trigger.keyName, modifiers: [], timestamp: time + 0.01)

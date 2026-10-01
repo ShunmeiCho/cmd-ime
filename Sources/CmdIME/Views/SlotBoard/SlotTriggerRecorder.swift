@@ -89,8 +89,7 @@ struct SlotTriggerRecorder: View {
         if session.isRecording {
             Text("Recording…")
         } else if let trigger {
-            let keys = trigger.modifiers.map(\.rawValue) + [trigger.keyName]
-            Text(keys.map { TriggerKeycapText.keycap($0).label }.joined(separator: " "))
+            Text(TriggerKeycapText.summary(trigger))
         } else {
             Text("Record…")
         }
@@ -121,7 +120,7 @@ private struct TriggerRecorderPopover: View {
     @State private var rejectionGeneration = 0
     @FocusState private var focusedControl: Control?
 
-    private enum Control: Hashable { case cancel, save }
+    private enum Control: Hashable { case side, cancel, save }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -150,6 +149,12 @@ private struct TriggerRecorderPopover: View {
             Text("Press a modifier together with an ordinary key.\nReturn saves · Esc cancels · Delete clears the draft.\nTab moves to buttons; Space or Return activates the focused button.")
                 .font(DesignTokens.Typography.body)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
+            Toggle("Only the left or right key I pressed",
+                   isOn: Binding(get: { session.matchesSide }, set: session.setMatchesSide))
+                .toggleStyle(.checkbox)
+                .font(DesignTokens.Typography.body)
+                .disabled(session.pressedSides.isEmpty)
+                .focused($focusedControl, equals: .side)
             if let warning = session.warning {
                 Label(warning, systemImage: "exclamationmark.triangle.fill")
                     .font(DesignTokens.Typography.body)
@@ -229,7 +234,7 @@ enum TriggerKeycapText {
     }
 
     static func summary(_ trigger: KeyTrigger) -> String {
-        let keys = trigger.modifiers.map(\.rawValue) + [trigger.keyName]
+        let keys = trigger.modifierKeyNames + [trigger.keyName]
         let text = keys.map { key in
             let cap = keycap(key)
             return (cap.detail ?? "") + cap.label

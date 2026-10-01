@@ -19,8 +19,12 @@ public struct SetupTriggerPhrase: Equatable, Sendable {
             instructionFormat = trigger.gesture == .doubleTap ? "Double-tap %@ alone" : "Tap %@ alone"
         case .keyPress:
             verb = CoreLocalization.text("Press")
-            keys = (trigger.modifiers.map(Self.readableName) + [Self.readableName(trigger.keyName)])
-                .joined(separator: " + ")
+            // A sided modifier reads like the one-shot key of that name: "Left Option + J".
+            let modifiers = trigger.modifiers.map { modifier in
+                trigger.modifierSides[modifier].map { Self.readableName("\($0.rawValue)-\(modifier.rawValue)") }
+                    ?? Self.readableName(modifier)
+            }
+            keys = (modifiers + [Self.readableName(trigger.keyName)]).joined(separator: " + ")
             isAlone = false
             instructionFormat = "Press %@"
         }

@@ -351,6 +351,8 @@ final class SetupGuideTests: XCTestCase {
         XCTAssertEqual(SetupTriggerPhrase(trigger: doubleTap).instruction, "Double-tap Right Option alone")
         XCTAssertEqual(SetupTriggerPhrase(trigger: chord).instruction, "Press Command + Option + J")
         XCTAssertEqual(SetupTriggerPhrase(trigger: functionKey).instruction, "Press Caps Lock + F1")
+        XCTAssertEqual(SetupTriggerPhrase(trigger: chord.requiringSides([.option: .left])).instruction,
+                       "Press Command + Left Option + J")
         for (keyCode, keyName) in [(27, "-"), (24, "="), (33, "[")] {
             let punctuation = KeyTrigger(kind: .keyPress, keyCode: keyCode, keyName: keyName, modifiers: [.control])
             XCTAssertEqual(SetupTriggerPhrase(trigger: punctuation).instruction, "Press Control + \(keyName)")

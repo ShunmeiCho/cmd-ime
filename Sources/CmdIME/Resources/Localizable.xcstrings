@@ -19368,6 +19368,30 @@
           }
         }
       }
+    },
+    "Only the left or right key I pressed": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the left or right key I pressed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只认我按下的那一侧（左或右）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "押した側（左または右）のキーだけ"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

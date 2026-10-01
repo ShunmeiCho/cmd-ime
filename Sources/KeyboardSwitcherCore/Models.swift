@@ -80,10 +80,21 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
             return gesture == .doubleTap ? "double-\(keyName)" : keyName
         }
 
-        let prefix = modifiers.map { modifier in
-            modifierSides[modifier].map { "\($0.rawValue)-\(modifier.rawValue)" } ?? modifier.rawValue
-        }.joined(separator: "+")
+        let prefix = modifierKeyNames.joined(separator: "+")
         return prefix.isEmpty ? keyName : "\(prefix)+\(keyName)"
+    }
+
+    /// The chord's modifiers as key names: `left-option` where a side is required, else `option`.
+    public var modifierKeyNames: [String] {
+        modifiers.map { modifier in
+            modifierSides[modifier].map { "\($0.rawValue)-\(modifier.rawValue)" } ?? modifier.rawValue
+        }
+    }
+
+    /// The same chord requiring these sides (none for either side).
+    public func requiringSides(_ sides: [Modifier: ModifierSide]) -> KeyTrigger {
+        KeyTrigger(kind: kind, keyCode: keyCode, keyName: keyName, modifiers: modifiers,
+                   modifierSides: sides, gesture: gesture)
     }
 
     public var isReservedMacInputSourceShortcut: Bool {
