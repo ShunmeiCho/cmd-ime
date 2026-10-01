@@ -283,7 +283,7 @@ change, CmdIME's switches included. While the switch indicator is on, CmdIME hid
 your user account, so a switch shows one bubble; turning the indicator off, or **General > Quit
 CmdIME**, brings it back. Apps pick the change up as they relaunch, and logging out applies it
 everywhere. With the badge hidden, Control+Space shows the older list in the middle of the screen.
-CmdIME only undoes what it set itself: a badge you hid with `defaults write` stays hidden. If you
+CmdIME only undoes what it set itself: a badge you had already hidden with `defaults write` stays hidden. If you
 remove CmdIME without quitting it from General first, run
 `defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled` to get the badge back.
 

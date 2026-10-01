@@ -259,7 +259,7 @@ CmdIME 通过编程方式切换输入源，因此不会调出 macOS 私有的输
 macOS 14 及以上每次输入源变化时，还会在光标下方显示系统自己的小图标，CmdIME 的切换也不例外。
 切换指示气泡开启时，CmdIME 会为当前用户隐藏这个图标，每次切换只出现一个气泡；关闭切换指示气泡，
 或者使用 **通用 > 退出 CmdIME**，图标就会恢复。各个应用重新打开后生效，注销再登录后全部生效。
-图标隐藏后，Control+Space 会改为在屏幕中央显示旧式列表。CmdIME 只撤销自己做的设置：你自己用
+图标隐藏后，Control+Space 会改为在屏幕中央显示旧式列表。CmdIME 只撤销自己做的设置：在 CmdIME 接手之前你自己用
 `defaults write` 隐藏的图标会保持隐藏。如果没有先在“通用”里退出就删除了 CmdIME，运行
 `defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled` 即可恢复图标。
 

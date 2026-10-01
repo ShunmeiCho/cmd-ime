@@ -52,6 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.shouldDelayQuitForImport() ? .terminateCancel : .terminateNow
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        model.willTerminate()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
