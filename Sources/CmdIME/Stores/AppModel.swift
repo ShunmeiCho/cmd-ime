@@ -301,10 +301,9 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Checks the folder first; nothing changes when it is refused. Does nothing while another
-    /// Export or Import runs. Saves and config.json reloads wait for it (see `refuseSaveDuringImport`).
-    /// Quitting mid-import would leave the settings partly imported, so every quit (Quit CmdIME,
-    /// Command-Q, the restart after Update Now) waits for the import to end.
+    /// Quitting mid-import would leave the settings partly imported, so every quit that reaches
+    /// AppKit (Quit CmdIME, the Dock menu, the restart after Update Now or Relaunch, logout) waits for
+    /// the import to end. `keyboardctl quit` force-terminates and is not covered.
     func shouldDelayQuitForImport() -> Bool {
         guard settingsTransferActivity == .importing else { return false }
         isQuitWaitingForImport = true
@@ -312,6 +311,8 @@ final class AppModel: ObservableObject {
         return true
     }
 
+    /// Checks the folder first; nothing changes when it is refused. Does nothing while another
+    /// Export or Import runs. Saves and config.json reloads wait for it (see `refuseSaveDuringImport`).
     func importSettings(from folder: URL) async {
         guard settingsTransferActivity == nil else { return }
         settingsTransferActivity = .importing
