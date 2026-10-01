@@ -91,11 +91,12 @@ enum DesignTokens {
     }
 
     enum Typography {
-        static let title = Font.system(size: 13, weight: .semibold)
-        static let body = Font.system(size: 12)
-        static let auxiliary = Font.system(size: 11)
+        // Body is the macOS body size (13); one point under it read small across the window.
+        static let title = Font.system(size: 14, weight: .semibold)
+        static let body = Font.system(size: 13)
+        static let auxiliary = Font.system(size: 12)
         // AppKit bridge for the body role on short technical key labels.
-        @MainActor static let bodyKeyNSFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .semibold)
+        @MainActor static let bodyKeyNSFont = NSFont.monospacedSystemFont(ofSize: 13, weight: .semibold)
     }
 
     enum Radius {
@@ -152,9 +153,12 @@ enum DesignTokens {
         static let panelHeaderHeight: CGFloat = 32
         static let sourcePanelWidth: CGFloat = 196
         static let slotRowGap: CGFloat = 9
-        static let contentMaxWidth: CGFloat = 720
+        /// The page fills the window up to here; past it the page stays centered.
+        static let contentMaxWidth: CGFloat = 960
+        /// The page column of a new window.
+        static let detailDefaultWidth: CGFloat = 780
         /// The settings sidebar is a fixed column, so the window minimum is this plus `detailMinWidth`.
-        static let sidebarWidth: CGFloat = 220
+        static let sidebarWidth: CGFloat = 200
         /// The page column's minimum: the width the single-page window needed.
         static let detailMinWidth: CGFloat = 720
         static let labelColumn: CGFloat = 132
@@ -168,6 +172,40 @@ enum DesignTokens {
 }
 
 typealias CmdIMEDesign = DesignTokens
+
+/// How much the settings window explains. Brief, the default, shows the settings alone; Detailed
+/// adds the paragraphs that say what each one does. Status messages and warnings show in both.
+enum SettingsDetail: String, CaseIterable {
+    case brief, detailed
+
+    static let defaultsKey = "settingsDetail"
+
+    var title: String {
+        switch self {
+        case .brief: String(localized: "Brief")
+        case .detailed: String(localized: "Detailed")
+        }
+    }
+}
+
+private struct Explanation: ViewModifier {
+    @AppStorage(SettingsDetail.defaultsKey) private var detail = SettingsDetail.brief
+    let showsIn: SettingsDetail
+
+    func body(content: Content) -> some View {
+        if detail == showsIn { content }
+    }
+}
+
+extension View {
+    /// Marks a paragraph that explains a setting: hidden while the window is Brief.
+    func explanation() -> some View { modifier(Explanation(showsIn: .detailed)) }
+
+    /// The one-line form of an explanation that says something the user must not miss (a change
+    /// outside CmdIME, how to undo it): shown while the window is Brief, replaced by the
+    /// explanation in Detailed.
+    func briefNote() -> some View { modifier(Explanation(showsIn: .brief)) }
+}
 
 struct SlotLook {
     var slots: [SwitchSlot] = SwitchSlot.legacyDefaults

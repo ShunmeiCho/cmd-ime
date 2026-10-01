@@ -307,3 +307,29 @@ and indicator style are unchanged inside the pages.
   720-point content minimum.
 
 No menu bar item is added; that red line is unchanged.
+
+## Decision record — 2026-10-02: Density of the settings window
+
+The owner, looking at 0.13.3: the margins beside the page are empty, the sidebar is mostly empty,
+and the interactive parts read small. These are the spacing and font-size adjustments the frozen
+list allows; no frozen item changes.
+
+- Type is one point larger: title 14, body 13 (the macOS body size), auxiliary 12.
+- The page fills the window up to 960 points instead of stopping at 720, so a wider window no
+  longer shows empty margins.
+- The sidebar is 200 points instead of 220. A new window is 980 by 780.
+- In the sidebar footer a missing permission is one full-width button that opens its settings
+  pane (the title and a separate Open button no longer fit side by side), and Request
+  Permissions spans the column.
+- The shortcut's clear button is a 24-point target.
+
+- Brief and Detailed (issue #7, owner: "默认简略只有用户想再进一步了解时再详细的介绍"): a two-way
+  switch above Keyboard control in the sidebar, stored in the app's defaults as `settingsDetail`,
+  Brief by default. Brief hides the paragraphs that explain a setting (`.explanation()`); status
+  messages, warnings and the first-run setup guide show in both.
+
+Not changed: indicator themes and their sizes, the live keys strip, slot card structure, the
+14-point drag handle seat (slot drag geometry depends on it).
+
+Checked on one Mac without permissions (macOS 27.2): the five pages in English, Chinese and
+Japanese at the default size, and Slots, Indicator and General in Japanese at the smallest size.

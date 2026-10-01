@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsSidebar: View {
     @ObservedObject var model: AppModel
     @Binding var navigation: SettingsNavigation
+    @AppStorage(SettingsDetail.defaultsKey) private var detail = SettingsDetail.brief
 
     var body: some View {
         List(selection: selection) {
@@ -20,8 +21,17 @@ struct SettingsSidebar: View {
             // for its size at a narrower one (a split view does, to find its minimum height), the
             // permission text wraps into a column taller than the window, and the whole split view
             // is then laid out past the window's top and bottom edges.
-            KeyboardControlFooter(model: model)
-                .frame(width: DesignTokens.Layout.sidebarWidth)
+            VStack(spacing: 0) {
+                ConsoleSegmentedControl(
+                    options: SettingsDetail.allCases.map { ConsoleSegmentOption(value: $0, label: $0.title) },
+                    selection: $detail
+                )
+                .accessibilityLabel("Explanations")
+                .help("Brief shows the settings alone. Detailed adds what each one does.")
+                .padding(DesignTokens.Layout.panelInset)
+                KeyboardControlFooter(model: model)
+            }
+            .frame(width: DesignTokens.Layout.sidebarWidth)
         }
     }
 

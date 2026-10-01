@@ -195,8 +195,10 @@ private struct PermissionsCard: View {
             }
 
             if !model.permissions.isReady {
-                Button("Request Permissions") {
+                Button {
                     model.requestPermissions()
+                } label: {
+                    Text("Request Permissions").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(ConsoleButtonStyle(prominent: true))
             }
@@ -211,6 +213,33 @@ private struct PermissionMiniStatus: View {
     let action: () -> Void
 
     var body: some View {
+        if granted {
+            row {
+                Text("Ready")
+                    .font(DesignTokens.Typography.body.weight(.semibold))
+                    .foregroundStyle(DesignTokens.Colors.success)
+            }
+            .padding(.vertical, DesignTokens.Layout.rowGap)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(String(localized: "\(title), ready"))
+        } else {
+            // The whole row opens the settings pane: the sidebar is too narrow for a title and a
+            // separate Open button side by side.
+            Button(action: action) {
+                row {
+                    Image(systemName: "arrow.up.forward")
+                        .accessibilityHidden(true)
+                }
+            }
+            .buttonStyle(ConsoleButtonStyle())
+            .help(actionTitle)
+            .padding(.vertical, DesignTokens.Layout.rowGap / 2)
+            .accessibilityLabel(String(localized: "\(title), missing"))
+            .accessibilityHint(actionTitle)
+        }
+    }
+
+    private func row(@ViewBuilder trailing: () -> some View) -> some View {
         HStack(spacing: DesignTokens.Layout.rowGap) {
             Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                 .font(DesignTokens.Typography.body.weight(.semibold))
@@ -219,21 +248,12 @@ private struct PermissionMiniStatus: View {
             Text(title)
                 .font(DesignTokens.Typography.body.weight(.semibold))
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
+                .multilineTextAlignment(.leading)
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            if granted {
-                Text("Ready")
-                    .font(DesignTokens.Typography.body.weight(.semibold))
-                    .foregroundStyle(DesignTokens.Colors.success)
-            } else {
-                Button(actionTitle, action: action)
-                    .buttonStyle(ConsoleButtonStyle())
-            }
+            trailing()
         }
-        .padding(.vertical, DesignTokens.Layout.rowGap)
         .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(granted ? String(localized: "\(title), ready") : String(localized: "\(title), missing"))
     }
 }

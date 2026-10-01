@@ -175,10 +175,13 @@ struct GeneralPage: View {
     }
 
     private var setupGuideRow: some View {
-        HStack {
+        // Stacked like the sections below it, so the button keeps its place when Brief hides the text.
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.panelGap) {
             Text("Go through the three setup steps again: keyboard access, the detected slots and trying the triggers.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: DesignTokens.Layout.rowGap)
+                .explanation()
             Button("Show Setup Guide", action: onShowSetupGuide)
                 .fixedSize()
         }
@@ -190,6 +193,7 @@ struct GeneralPage: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
             HStack(spacing: DesignTokens.Layout.rowGap) {
                 Group {
                     Button("Export Settings…", action: exportSettings)
@@ -270,6 +274,7 @@ struct GeneralPage: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
             Button("Quit CmdIME", role: .destructive) { model.quit(restoringSystemBadge: true) }
                 .help("Stop the background listener")
         }

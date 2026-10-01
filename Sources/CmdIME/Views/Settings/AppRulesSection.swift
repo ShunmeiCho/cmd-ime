@@ -19,6 +19,7 @@ struct AppRulesSection: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
             if model.config.appRules.isEmpty {
                 Text("Drag an app from the list onto a slot, or use Add App.")
                     .font(DesignTokens.Typography.auxiliary)
