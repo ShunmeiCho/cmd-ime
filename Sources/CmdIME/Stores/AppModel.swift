@@ -32,6 +32,27 @@ enum SettingsTransferMessage: Equatable {
     case failed(String)
 }
 
+/// The Export or Import under way on the General page. Its file work runs off the main
+/// thread, where the event tap runs, and a second one waits until it ends.
+enum SettingsTransferActivity: Equatable {
+    case exporting
+    case checking
+    case importing
+
+    var text: String {
+        switch self {
+        case .exporting: "Exporting settings…"
+        case .checking: "Reading the folder…"
+        case .importing: "Importing settings…"
+        }
+    }
+}
+
+/// Why a save is refused while an import writes config.json off the main thread.
+private struct SettingsImportInProgress: LocalizedError {
+    var errorDescription: String? { "Settings are being imported. Try again when the import has finished." }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var config: SwitcherConfig
@@ -59,6 +80,9 @@ final class AppModel: ObservableObject {
     /// What App Memory holds right now, app id to source id; empty while it is not running.
     @Published private(set) var rememberedSources: [String: String] = [:]
     @Published private(set) var settingsTransferMessage: SettingsTransferMessage?
+    @Published private(set) var settingsTransferActivity: SettingsTransferActivity?
+    /// config.json changed while an import was writing; read it again once the import ends.
+    private var isReloadHeldBackByImport = false
     /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
     @Published var appearance = AppearancePreference.stored {
         didSet {
@@ -201,6 +225,12 @@ final class AppModel: ObservableObject {
     /// Picks up config.json edits made outside the app (`keyboardctl`, an editor, an import).
     /// The app's own saves read back as unchanged and do nothing.
     func reloadConfigFromDisk() {
+        // An import writes config.json before its themes, fonts and recipes and makes them
+        // live together when it ends; reading now would apply half of it.
+        guard settingsTransferActivity != .importing else {
+            isReloadHeldBackByImport = true
+            return
+        }
         switch ConfigReload.decide(fileData: try? Data(contentsOf: configStore.url), applied: config) {
         case .unchanged:
             return
@@ -238,9 +268,14 @@ final class AppModel: ObservableObject {
         return "CmdIME Settings \(formatter.string(from: Date()))"
     }
 
-    func exportSettings(to destination: URL) {
+    /// Does nothing while another Export or Import runs.
+    func exportSettings(to destination: URL) async {
+        guard settingsTransferActivity == nil else { return }
+        settingsTransferActivity = .exporting
+        defer { settingsTransferActivity = nil }
+        let transfer = SettingsTransfer(store: configStore)
         do {
-            let plan = try SettingsTransfer(store: configStore).export(to: destination)
+            let plan = try await Self.runSettingsFileWork { try transfer.export(to: destination) }
             statusText = "Exported settings with \(plan.themeFileNames.count) theme(s) and "
                 + "\(plan.fontFileNames.count) font(s) to \(destination.lastPathComponent)"
             settingsTransferMessage = .done(statusText)
@@ -249,20 +284,38 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// What the folder would import, for the confirmation; nil (with the reason shown) when it is refused.
-    func inspectSettingsImport(_ folder: URL) -> SettingsImportPlan? {
+    /// What the folder would import, for the confirmation; nil (with the reason shown) when it is
+    /// refused, and nil while another Export or Import runs.
+    func inspectSettingsImport(_ folder: URL) async -> SettingsImportPlan? {
+        guard settingsTransferActivity == nil else { return nil }
+        settingsTransferActivity = .checking
+        defer { settingsTransferActivity = nil }
+        let transfer = SettingsTransfer(store: configStore)
         do {
-            return try SettingsTransfer(store: configStore).inspect(folder)
+            return try await Self.runSettingsFileWork { try transfer.inspect(folder) }
         } catch {
             reportSettingsTransferFailure(error)
             return nil
         }
     }
 
-    /// Checks the folder first; nothing changes when it is refused.
-    func importSettings(from folder: URL) {
+    /// Checks the folder first; nothing changes when it is refused. Does nothing while another
+    /// Export or Import runs. Saves and config.json reloads wait for it (see `refuseSaveDuringImport`).
+    func importSettings(from folder: URL) async {
+        guard settingsTransferActivity == nil else { return }
+        settingsTransferActivity = .importing
+        defer {
+            settingsTransferActivity = nil
+            if isReloadHeldBackByImport {
+                isReloadHeldBackByImport = false
+                // Unchanged after a finished import; after one that stopped partway, or an
+                // edit made meanwhile by someone else, whatever is on disk now.
+                reloadConfigFromDisk()
+            }
+        }
+        let transfer = SettingsTransfer(store: configStore)
         do {
-            let result = try SettingsTransfer(store: configStore).importSettings(from: folder)
+            let result = try await Self.runSettingsFileWork { try transfer.importSettings(from: folder) }
             applyConfigFromDisk(result.config)
             var message = "Imported settings from \(folder.lastPathComponent)."
             if let backup = result.backupURL {
@@ -310,6 +363,21 @@ final class AppModel: ObservableObject {
     private func reportSettingsTransferFailure(_ error: any Error) {
         statusText = error.localizedDescription
         settingsTransferMessage = .failed(error.localizedDescription)
+    }
+
+    /// Export and import read and write whole folders (backups, themes, fonts), so they run off
+    /// the main thread: the event tap runs on the main run loop, and a slow disk or a folder full
+    /// of fonts must not hold up typing.
+    private static func runSettingsFileWork<T: Sendable>(
+        _ work: @escaping @Sendable () throws -> T
+    ) async throws -> T {
+        try await Task.detached(priority: .userInitiated) { try work() }.value
+    }
+
+    /// While an import writes config.json off the main thread, a save could land between its
+    /// writes and leave the file and the applied settings apart.
+    private func refuseSaveDuringImport() throws {
+        if settingsTransferActivity == .importing { throw SettingsImportInProgress() }
     }
 
     private func refreshCurrentRole() {
@@ -829,6 +897,7 @@ final class AppModel: ObservableObject {
         // The window keeps `sources` fresh; an in-process rescan could bring removed ones back.
         guard hasSourceBaseline || scan() else { return }
         do {
+            try refuseSaveDuringImport()
             let rebuilt = try configStore.resettingSlots(in: config, from: sources)
             invalidateUndo()
             config = rebuilt
@@ -1008,6 +1077,7 @@ final class AppModel: ObservableObject {
     /// `onFailure` gets the error text.
     private func commit(_ next: SwitcherConfig, onFailure: (String) -> Void) -> Bool {
         do {
+            try refuseSaveDuringImport()
             try configStore.save(next)
             config = next
             reconcileNewSources()
@@ -1064,6 +1134,7 @@ final class AppModel: ObservableObject {
     @discardableResult
     func save() -> Bool {
         do {
+            try refuseSaveDuringImport()
             try configStore.save(config)
             monitor?.updateConfig(config)
             refreshCurrentRole()

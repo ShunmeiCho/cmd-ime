@@ -32,7 +32,7 @@ public enum ConfigStoreError: Error, LocalizedError {
     }
 }
 
-public struct ConfigStore {
+public struct ConfigStore: Sendable {
     public var url: URL
 
     public init(url: URL = ConfigStore.defaultURL) {
