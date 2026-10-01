@@ -253,8 +253,9 @@ struct WebsiteHostIPv6Tests {
     }
 
     @Test("something that only looks like an IPv6 address is refused")
-    func invalidAddress() {
+    func invalidAddress() throws {
         #expect(WebsiteHost.normalized(userInput: ":::") == nil)
         #expect(WebsiteHost.normalized(userInput: "[1:2:3]") == nil)
+        #expect(WebsiteHost.host(of: try #require(URL(string: "http://[1:2:3]/"))) == nil)
     }
 }

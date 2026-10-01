@@ -15,7 +15,8 @@ public enum WebsiteHost {
         guard var host = url.host?.lowercased() else { return nil }
         if host.hasSuffix(".") { host.removeLast() }
         // One spelling per IPv6 address, so a rule and a page that write it differently still match.
-        if host.contains(":"), let canonical = canonicalIPv6(host) { host = canonical }
+        // A host with a colon that is not an address is no host.
+        if host.contains(":") { return canonicalIPv6(host) }
         return host.isEmpty ? nil : host
     }
 
