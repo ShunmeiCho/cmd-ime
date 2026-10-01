@@ -170,3 +170,20 @@ public enum AppDragPayload {
         return (String(id), name)
     }
 }
+
+/// What a dragged website chip carries inside the settings window, under its own private drag
+/// type: the rule's domain. Anything that does not decode is not a website chip and is ignored.
+public enum WebsiteDragPayload {
+    static let prefix = "cmdime-website\n"
+
+    public static func encode(domain: String) -> String {
+        prefix + domain
+    }
+
+    public static func decode(_ text: String) -> String? {
+        guard text.hasPrefix(prefix) else { return nil }
+        let domain = text.dropFirst(prefix.count)
+        guard !domain.isEmpty, !domain.contains("\n") else { return nil }
+        return String(domain)
+    }
+}

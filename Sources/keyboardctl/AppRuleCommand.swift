@@ -8,7 +8,7 @@ import AppKit
 /// `keyboardctl app-rule`: App Rules (CONTEXT.md) from the command line. Like every config edit
 /// here, the running app picks the change up only after a relaunch.
 extension CLI {
-    private static let keepWord = "keep"
+    static let keepWord = "keep"
     private static let appRuleUsage = "Usage: keyboardctl app-rule list | set <bundle-id|--frontmost> <slot|keep> [--remember] | remove <bundle-id>"
 
     func manageAppRule() throws {
@@ -76,7 +76,7 @@ extension CLI {
         print("Apps without a rule or memory: \(fallback)")
     }
 
-    private func targetDescription(_ target: AppRuleTarget, in config: SwitcherConfig) -> String {
+    func targetDescription(_ target: AppRuleTarget, in config: SwitcherConfig) -> String {
         switch target {
         case .keepAsIs: "keep as is"
         case .slot(let slot) where config.slot(slot) == nil: "\(slot.rawValue) (slot deleted)"

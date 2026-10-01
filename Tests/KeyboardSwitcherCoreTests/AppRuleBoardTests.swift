@@ -264,3 +264,13 @@ struct AppDragPayloadTests {
         #expect(AppDragPayload.decode("cmdime-app\n") == nil)
     }
 }
+
+struct WebsiteDragPayloadTests {
+    @Test("an encoded website chip decodes back to its domain, and other text is not one")
+    func roundTripAndOtherText() {
+        #expect(WebsiteDragPayload.decode(WebsiteDragPayload.encode(domain: "example.com")) == "example.com")
+        #expect(WebsiteDragPayload.decode("example.com") == nil)
+        #expect(WebsiteDragPayload.decode("cmdime-website\n") == nil)
+        #expect(WebsiteDragPayload.decode(AppDragPayload.encode(appID: terminal, name: "Terminal")) == nil)
+    }
+}
