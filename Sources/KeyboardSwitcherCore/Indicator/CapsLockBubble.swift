@@ -54,7 +54,7 @@ extension BubbleRenderModel {
             display: display,
             substrate: substrate,
             symbol: SlotSymbol(glyph: isOn ? IndicatorBubbleResolver.capsLockOnGlyph : IndicatorBubbleResolver.capsLockOffGlyph),
-            title: isOn ? "Caps Lock On" : "Caps Lock Off",
+            title: isOn ? CoreLocalization.text("Caps Lock On") : CoreLocalization.text("Caps Lock Off"),
             detail: detail,
             isRightToLeft: false,
             tileFillHex: tileFillHex,

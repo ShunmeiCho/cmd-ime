@@ -11,7 +11,7 @@ struct IndicatorOccasionsSection: View {
     private var behavior: SwitchIndicatorBehavior { model.config.switchIndicatorBehavior }
 
     var body: some View {
-        CompactSection(title: "When it shows") {
+        CompactSection(title: String(localized: "When it shows")) {
             VStack(alignment: .leading, spacing: 10) {
                 externalRow
                 appSwitchRow
@@ -24,44 +24,44 @@ struct IndicatorOccasionsSection: View {
     }
 
     private var externalRow: some View {
-        CompactSettingRow("Other switches") {
+        CompactSettingRow(String(localized: "Other switches")) {
             VStack(alignment: .leading, spacing: 2) {
-                toggle("Show when the input source changes without CmdIME", isOn: Binding(
+                toggle(String(localized: "Show when the input source changes without CmdIME"), isOn: Binding(
                     get: { behavior.showsExternalChanges },
                     set: { isOn in
                         model.editSwitchIndicatorBehavior(
-                            status: isOn ? "Indicator shows every input source change" : "Indicator shows CmdIME switches only"
+                            status: isOn ? String(localized: "Indicator shows every input source change") : String(localized: "Indicator shows CmdIME switches only")
                         ) { $0.showsExternalChanges = isOn }
                     }
                 ))
-                caption("Control+Space, the Globe key, the menu bar or another app.")
+                caption(String(localized: "Control+Space, the Globe key, the menu bar or another app."))
             }
         }
     }
 
     private var appSwitchRow: some View {
-        CompactSettingRow("App switch") {
+        CompactSettingRow(String(localized: "App switch")) {
             VStack(alignment: .leading, spacing: 2) {
-                toggle("Show when switching apps changes the input source", isOn: Binding(
+                toggle(String(localized: "Show when switching apps changes the input source"), isOn: Binding(
                     get: { behavior.showsOnAppSwitch },
                     set: { isOn in
                         model.editSwitchIndicatorBehavior(
-                            status: isOn ? "Indicator shows after an app switch" : "Indicator no longer shows after an app switch"
+                            status: isOn ? String(localized: "Indicator shows after an app switch") : String(localized: "Indicator no longer shows after an app switch")
                         ) { $0.showsOnAppSwitch = isOn }
                     }
                 ))
-                caption("Once the new app has settled, and only if nothing else showed the change.")
+                caption(String(localized: "Once the new app has settled, and only if nothing else showed the change."))
             }
         }
     }
 
     private var holdRow: some View {
-        CompactSettingRow("Stays") {
+        CompactSettingRow(String(localized: "Stays")) {
             Picker("How long the indicator stays", selection: Binding(
                 get: { behavior.holdSeconds },
                 set: { seconds in
                     model.editSwitchIndicatorBehavior(
-                        status: seconds.map { "Indicator stays \(Self.secondsText($0))" } ?? "Indicator stays as long as its theme sets"
+                        status: seconds.map { String(localized: "Indicator stays \(Self.secondsText($0))") } ?? String(localized: "Indicator stays as long as its theme sets")
                     ) { $0.holdSeconds = seconds.flatMap { SwitchIndicatorBehavior.clampedHold($0) } }
                 }
             )) {
@@ -78,14 +78,14 @@ struct IndicatorOccasionsSection: View {
     }
 
     private var hiddenAppsRow: some View {
-        CompactSettingRow("Hidden in") {
+        CompactSettingRow(String(localized: "Hidden in")) {
             VStack(alignment: .leading, spacing: 6) {
                 if behavior.hiddenAppIDs.isEmpty {
-                    caption("Shows in every app.")
+                    caption(String(localized: "Shows in every app."))
                 }
                 ForEach(behavior.hiddenAppIDs, id: \.self) { appID in
                     HiddenAppRow(appID: appID) {
-                        model.editSwitchIndicatorBehavior(status: "Indicator shows in \(HiddenAppRow.name(for: appID)) again") {
+                        model.editSwitchIndicatorBehavior(status: String(localized: "Indicator shows in \(HiddenAppRow.name(for: appID)) again")) {
                             $0 = $0.showing(appID)
                         }
                     }
@@ -109,7 +109,7 @@ struct IndicatorOccasionsSection: View {
     }
 
     private func hide(_ appID: String) {
-        model.editSwitchIndicatorBehavior(status: "Indicator hidden in \(HiddenAppRow.name(for: appID))") {
+        model.editSwitchIndicatorBehavior(status: String(localized: "Indicator hidden in \(HiddenAppRow.name(for: appID))")) {
             $0 = $0.hiding(appID)
         }
     }
@@ -119,10 +119,10 @@ struct IndicatorOccasionsSection: View {
         panel.allowedContentTypes = [.application]
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.allowsMultipleSelection = false
-        panel.prompt = "Hide Indicator"
+        panel.prompt = String(localized: "Hide Indicator")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         guard let appID = Bundle(url: url)?.bundleIdentifier else {
-            model.statusText = "\(url.lastPathComponent) has no bundle identifier"
+            model.statusText = String(localized: "\(url.lastPathComponent) has no bundle identifier")
             return
         }
         hide(appID)
@@ -153,7 +153,7 @@ struct IndicatorOccasionsSection: View {
     }
 
     static func secondsText(_ seconds: Double) -> String {
-        seconds.formatted(.number.precision(.fractionLength(0...1))) + " s"
+        String(localized: "\(seconds.formatted(.number.precision(.fractionLength(0...1)))) s")
     }
 
     struct RunningApp {

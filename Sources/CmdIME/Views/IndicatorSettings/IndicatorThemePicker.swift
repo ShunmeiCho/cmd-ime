@@ -29,7 +29,7 @@ struct IndicatorThemePicker: View {
     private var systemAppearanceNote: String? {
         let isSystemDark = NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
         guard (colorScheme == .dark) != isSystemDark else { return nil }
-        return "The indicator appears over other apps, so it follows the macOS appearance (\(isSystemDark ? "Dark" : "Light") now), not this window's."
+        return String(localized: "The indicator appears over other apps, so it follows the macOS appearance (\(isSystemDark ? String(localized: "Dark") : String(localized: "Light")) now), not this window's.")
     }
 
     private var selected: IndicatorTheme { library.theme(id: model.config.switchIndicatorThemeID) }
@@ -57,10 +57,10 @@ struct IndicatorThemePicker: View {
             }
 
             if let missing = missingThemeID {
-                IndicatorNotice(text: "Theme \(missing) was not found. Using \(selected.name).")
+                IndicatorNotice(text: String(localized: "Theme \(missing) was not found. Using \(selected.localizedDisplayName)."))
             }
             ForEach(library.listing.rejected, id: \.fileName) { rejection in
-                IndicatorNotice(text: "\(rejection.fileName): \(rejection.issue.message)")
+                IndicatorNotice(text: String(localized: "\(rejection.fileName): \(rejection.issue.message)"))
             }
         }
     }
@@ -90,17 +90,19 @@ struct IndicatorThemePicker: View {
                 .clipShape(RoundedRectangle(cornerRadius: Self.stageRadius, style: .continuous))
                 .selectionRing(isSelected, cornerRadius: Self.stageRadius)
 
-                Text(theme.name)
+                Text(theme.localizedDisplayName)
                     .font(DesignTokens.Typography.auxiliary.weight(isSelected ? .semibold : .regular))
                     .foregroundStyle(isSelected ? DesignTokens.Colors.textPrimary : DesignTokens.Colors.textSecondary)
                     .lineLimit(1)
+                    // Longer translated names (Japanese "Switcher, Slot Color") fit at about 0.89.
+                    .minimumScaleFactor(0.85)
                     .truncationMode(.tail)
             }
             .padding(SelectionRing.ringGap + SelectionRing.ringWidth)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(theme.name)
+        .accessibilityLabel(theme.localizedDisplayName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .overlay(alignment: .topLeading) {
             // Your own themes carry a visible remove button; built-ins cannot be removed.
@@ -112,8 +114,8 @@ struct IndicatorThemePicker: View {
                         .foregroundStyle(DesignTokens.Colors.textPrimary, DesignTokens.Colors.surfaceRaised)
                 }
                 .buttonStyle(.plain)
-                .help("Move \(theme.name) to the Trash")
-                .accessibilityLabel("Remove theme \(theme.name)")
+                .help("Move \(theme.localizedDisplayName) to the Trash")
+                .accessibilityLabel("Remove theme \(theme.localizedDisplayName)")
             }
         }
         .contextMenu {
@@ -246,7 +248,7 @@ struct IndicatorThemePicker: View {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a CmdIME indicator theme file."
+        panel.message = String(localized: "Choose a CmdIME indicator theme file.")
         guard panel.runModal() == .OK, let url = panel.url, let theme = library.importTheme(from: url) else { return }
         model.setSwitchIndicatorThemeID(theme.id)
     }

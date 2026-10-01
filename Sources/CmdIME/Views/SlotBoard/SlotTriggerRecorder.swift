@@ -52,8 +52,8 @@ struct SlotTriggerRecorder: View {
                 .accessibilityHidden(true)
                 .overlay {
                     TriggerRecorderAnchor(title: "",
-                                          accessibilityTitle: "Record shortcut for \(slotLook.name(for: role))",
-                                          accessibilityValue: trigger?.displayName ?? "No trigger",
+                                          accessibilityTitle: String(localized: "Record shortcut for \(slotLook.name(for: role))"),
+                                          accessibilityValue: trigger?.localizedDisplayName ?? String(localized: "No trigger"),
                                           tint: NSColor(slotLook.tint(for: role)), hasTrigger: trigger != nil,
                                           isGhost: isGhost, onOpen: open)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -142,7 +142,7 @@ private struct TriggerRecorderPopover: View {
             .frame(minHeight: 36)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Shortcut draft for \(name)")
-            .accessibilityValue(session.liveKeyNames.isEmpty ? "Waiting for keys" : session.liveKeyNames.joined(separator: " + "))
+            .accessibilityValue(session.liveKeyNames.isEmpty ? String(localized: "Waiting for keys") : session.liveKeyNames.joined(separator: " + "))
             .id(session.captureRevision)
             .transition(reduceMotion ? .opacity : .scale(scale: 0.96).combined(with: .opacity))
             .animation(reduceMotion ? DesignTokens.Motion.quickFade : DesignTokens.Motion.keyRelease,
@@ -219,7 +219,7 @@ enum TriggerKeycapText {
         case "down": return ("↓", nil)
         case "return": return ("↩", nil)
         case "tab": return ("⇥", nil)
-        case "space": return ("Space", nil)
+        case "space": return (String(localized: "Space"), nil)
         case "delete": return ("⌫", nil)
         case "forward-delete": return ("⌦", nil)
         default:

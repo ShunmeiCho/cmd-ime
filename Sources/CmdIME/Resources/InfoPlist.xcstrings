@@ -1,0 +1,77 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSInputMonitoringUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME listens for your configured keyboard shortcuts to switch input sources."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME 监听你配置的键盘快捷键，以切换输入源。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME は設定したキーボードショートカットを監視し、入力ソースを切り替えます。"
+          }
+        }
+      }
+    },
+    "CmdIME app reference": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME app reference"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME 应用引用"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME アプリ参照"
+          }
+        }
+      }
+    },
+    "CmdIME app rule": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME app rule"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME 应用规则"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME アプリのルール"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

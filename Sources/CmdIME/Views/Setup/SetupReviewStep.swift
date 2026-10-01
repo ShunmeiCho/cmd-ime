@@ -23,7 +23,7 @@ struct SetupReviewStep: View {
                 SetupNotice(
                     systemImage: "keyboard.badge.ellipsis",
                     tone: .warning,
-                    text: "Switching needs at least two input sources. Add one in System Settings > Keyboard > Input Sources, then press Refresh."
+                    text: String(localized: "Switching needs at least two input sources. Add one in System Settings > Keyboard > Input Sources, then press Refresh.")
                 ) {
                     Button("Open Keyboard Settings") {
                         openKeyboardSettings()
@@ -35,7 +35,7 @@ struct SetupReviewStep: View {
                 SetupNotice(
                     systemImage: "plus.circle.fill",
                     tone: .neutral,
-                    text: "A fresh detection would now create more slots than are set up here. Detect Again replaces the current slots and triggers with one slot per installed language."
+                    text: String(localized: "A fresh detection would now create more slots than are set up here. Detect Again replaces the current slots and triggers with one slot per installed language.")
                 ) {
                     Button("Detect Again") {
                         model.resetSlotsFromDetectedSources()
@@ -49,7 +49,7 @@ struct SetupReviewStep: View {
                 SetupNotice(
                     systemImage: "info.circle.fill",
                     tone: .neutral,
-                    text: "Detection makes one slot per language, so input sources that share a language share one slot. To switch between them, add a slot on the slot board with Change."
+                    text: String(localized: "Detection makes one slot per language, so input sources that share a language share one slot. To switch between them, add a slot on the slot board with Change.")
                 )
             }
 
@@ -72,7 +72,7 @@ struct SetupReviewStep: View {
                 SetupNotice(
                     systemImage: "exclamationmark.triangle.fill",
                     tone: .warning,
-                    text: "A lone Shift tap is also how many Chinese and Japanese input methods toggle their own modes. CmdIME never picks Shift by itself; keep it only if the two do not clash."
+                    text: String(localized: "A lone Shift tap is also how many Chinese and Japanese input methods toggle their own modes. CmdIME never picks Shift by itself; keep it only if the two do not clash.")
                 )
             }
 
@@ -114,16 +114,16 @@ struct SetupReviewStep: View {
 
     /// Only a pending first run shows detected slots; a replay shows the user's own.
     private var introText: String {
-        let slots = "Each line below is a slot, a switch target: fire its trigger and that input source becomes active."
+        let slots = String(localized: "Each line below is a slot, a switch target: fire its trigger and that input source becomes active.")
         return model.config.hasCompletedSetup
             ? slots
-            : "\(slots) On first launch CmdIME creates one slot per installed language."
+            : String(localized: "\(slots) On first launch CmdIME creates one slot per installed language.")
     }
 
     private static func foundMessage(count: Int) -> String {
         count == 1
-            ? "Found 1 input source you can switch to."
-            : "Found \(count) input sources you can switch to."
+            ? String(localized: "Found 1 input source you can switch to.")
+            : String(localized: "Found \(count) input sources you can switch to.")
     }
 
     private var usesOneShotShift: Bool {

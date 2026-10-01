@@ -188,7 +188,9 @@ same two permissions before global keyboard listening works.
 - **Updates from inside the app.** A check every six hours by default, a summary of
   what changed beside **Update Now**, and an in-place install that keeps your
   permissions.
-- **A settings window that follows light and dark,** or stays on the one you pick.
+- **A settings window that follows light and dark,** or stays on the one you pick. It is in
+  English, Simplified Chinese and Japanese and follows the macOS language; to give CmdIME a
+  language of its own, use System Settings > General > Language & Region > Applications.
 
 <p align="center">
   <img src="Assets/readme/general.png" width="640" alt="The General page in the dark appearance: Launch at login, Appearance, updates, Setup Guide, the settings file and Quit CmdIME.">
@@ -278,7 +280,7 @@ Enabled**), it shows its own lightweight confirmation bubble after a switch.
 
 macOS 14 and later also draw their own small badge under the text cursor on every input source
 change, CmdIME's switches included, so you may see both. CmdIME cannot leave it out of a switch.
-To hide it in every app for your user account, check **Indicator > macOS indicator > Hide the input source badge
+To hide it in every app for your user account, check **Indicator > System indicator > Hide the input source badge
 macOS shows under the cursor**, or run
 `defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false`. Apps pick
 it up as they relaunch, and logging out applies it everywhere. With it hidden, Control+Space shows

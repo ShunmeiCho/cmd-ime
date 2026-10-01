@@ -14,9 +14,9 @@ enum AppearancePreference: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .system: "System"
-        case .light: "Light"
-        case .dark: "Dark"
+        case .system: String(localized: "System")
+        case .light: String(localized: "Light")
+        case .dark: String(localized: "Dark")
         }
     }
 
@@ -333,7 +333,7 @@ struct KeycapView: View {
                        value: isPressed)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(accessibilityLabelText)
-            .accessibilityValue(isPressed ? "Active" : (isBound ? "Bound" : "Unbound"))
+            .accessibilityValue(isPressed ? String(localized: "Active") : (isBound ? String(localized: "Bound") : String(localized: "Unbound")))
     }
 
     private var accent: Color {
@@ -367,21 +367,21 @@ struct KeycapView: View {
     private var accessibilityLabelText: String {
         let keyText = [readableKeyName(label), detail].compactMap(\.self).joined(separator: " ")
         if let role {
-            return "\(slotLook.name(for: role)) key \(keyText)"
+            return String(localized: "\(slotLook.name(for: role)) key \(keyText)")
         }
-        return "Key \(keyText)"
+        return String(localized: "Key \(keyText)")
     }
 
     private func readableKeyName(_ value: String) -> String {
         switch value {
         case "⌘":
-            "Command"
+            String(localized: "Command")
         case "⌥":
-            "Option"
+            String(localized: "Option")
         case "⌃":
-            "Control"
+            String(localized: "Control")
         case "⇧":
-            "Shift"
+            String(localized: "Shift")
         default:
             value
         }
@@ -421,8 +421,8 @@ struct RoleBadge: View {
             .scaleEffect(reduceMotion ? 1 : (isActive ? 1.02 : 1))
             .animation(DesignTokens.Motion.stateChange, value: isActive)
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(slotLook.name(for: role)) role")
-            .accessibilityValue(isActive ? "Last switched" : "Available")
+            .accessibilityLabel("\(slotLook.name(for: role)) slot")
+            .accessibilityValue(isActive ? String(localized: "Last switched") : String(localized: "Available"))
     }
 }
 

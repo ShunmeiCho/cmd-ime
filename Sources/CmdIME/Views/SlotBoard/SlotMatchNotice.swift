@@ -24,9 +24,9 @@ struct SlotMatchNotice: View {
                 Button("Pin", action: onPin)
                     .buttonStyle(ConsoleButtonStyle())
                     .disabled(pinUnavailableReason != nil)
-                    .help(pinUnavailableReason ?? "Make this input source the slot’s preferred source.")
+                    .help(pinUnavailableReason ?? String(localized: "Make this input source the slot’s preferred source."))
                     .accessibilityLabel("Pin \(source.localizedName) as the preferred input source for \(slotName)")
-                    .accessibilityValue(pinUnavailableReason ?? "Not pinned")
+                    .accessibilityValue(pinUnavailableReason ?? String(localized: "Not pinned"))
                 if let pinUnavailableReason {
                     Text(pinUnavailableReason).fixedSize(horizontal: false, vertical: true)
                 }

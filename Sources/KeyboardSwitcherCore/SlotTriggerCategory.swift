@@ -22,8 +22,8 @@ public enum SlotTriggerCategoryError: Error, Equatable, LocalizedError, Sendable
 
     public var errorDescription: String? {
         switch self {
-        case let .mismatchedTrigger(category): "Choose a trigger matching the \(category.rawValue) category."
-        case let .conflictingBinding(binding): "The trigger \(binding.trigger.displayName) is already assigned."
+        case let .mismatchedTrigger(category): CoreLocalization.text("Choose a trigger matching the %@ category.", CoreLocalization.displayName(category.rawValue))
+        case let .conflictingBinding(binding): CoreLocalization.text("The trigger %@ is already assigned.", String(describing: binding.trigger.displayName))
         }
     }
 }

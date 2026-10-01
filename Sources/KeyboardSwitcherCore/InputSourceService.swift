@@ -114,11 +114,11 @@ public enum InputSourceServiceError: Error, LocalizedError, Equatable {
     public var errorDescription: String? {
         switch self {
         case let .notFound(id):
-            "Input source not found: \(id)."
+            CoreLocalization.text("Input source not found: %@.", String(describing: id))
         case let .missingProperty(property):
-            "Input source is missing property: \(property)."
+            CoreLocalization.text("Input source is missing property: %@.", String(describing: property))
         case let .selectionFailed(id, status):
-            "Failed to select input source \(id), OSStatus \(status)."
+            CoreLocalization.text("Failed to select input source %@, OSStatus %@.", String(describing: id), String(describing: status))
         }
     }
 }
@@ -187,9 +187,9 @@ public final class MacInputSourceService: InputSourceService {
 
         var errorDescription: String? {
             switch self {
-            case .helperUnavailable: "The bundled keyboardctl scanner is unavailable."
-            case .timedOut: "The input-source scanner did not finish in time."
-            case let .unsuccessfulExit(status): "The input-source scanner exited with status \(status)."
+            case .helperUnavailable: CoreLocalization.text("The bundled keyboardctl scanner is unavailable.")
+            case .timedOut: CoreLocalization.text("The input-source scanner did not finish in time.")
+            case let .unsuccessfulExit(status): CoreLocalization.text("The input-source scanner exited with status %@.", String(describing: status))
             }
         }
     }

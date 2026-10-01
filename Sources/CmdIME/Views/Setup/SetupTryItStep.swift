@@ -17,15 +17,15 @@ struct SetupTryItStep: View {
         let progress = progress()
         VStack(alignment: .leading, spacing: 10) {
             Text(model.config.showSwitchIndicator
-                ? "Click into the field, then fire each trigger. The matching line lights up, the input source changes, and the switch indicator shows up near the caret."
-                : "Click into the field, then fire each trigger. The matching line lights up and the input source changes.")
+                ? String(localized: "Click into the field, then fire each trigger. The matching line lights up, the input source changes, and the switch indicator shows up near the caret.")
+                : String(localized: "Click into the field, then fire each trigger. The matching line lights up and the input source changes."))
                 .setupBodyText()
 
             if !model.isListening {
                 SetupNotice(
                     systemImage: "pause.circle.fill",
                     tone: .warning,
-                    text: "The keyboard listener is paused, so triggers do nothing right now."
+                    text: String(localized: "The keyboard listener is paused, so triggers do nothing right now.")
                 ) {
                     Button("Resume") {
                         model.startListeningIfReady()
@@ -66,7 +66,7 @@ struct SetupTryItStep: View {
             SetupNotice(
                 systemImage: "info.circle.fill",
                 tone: .neutral,
-                text: "While Settings is open, CmdIME is in the Dock and the app switcher. After this window closes, it keeps running in the background with no menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use General > Quit CmdIME. The switch indicator can be customized on the Indicator page."
+                text: String(localized: "While Settings is open, CmdIME is in the Dock and the app switcher. After this window closes, it keeps running in the background with no menu bar icon. \(SetupGuideCopy.reopenHint) To stop it, use General > Quit CmdIME. The switch indicator can be customized on the Indicator page.")
             )
 
             HStack(spacing: 8) {
@@ -109,8 +109,8 @@ struct SetupTryItStep: View {
         guard after.triedSlots.contains(slot), !before.triedSlots.contains(slot) else { return }
         let name = model.config.displayName(for: slot)
         SetupGuideNavigation.announce(after.isComplete
-            ? "Trigger confirmed for \(name). Every available bound slot was tried. Press Finish to close the guide."
-            : "Switched to \(name). \(progressText(for: after))")
+            ? String(localized: "Trigger confirmed for \(name). Every available bound slot was tried. Press Finish to close the guide.")
+            : String(localized: "Switched to \(name). \(progressText(for: after))"))
     }
 
     private func progress() -> SetupTryItProgress {
@@ -121,8 +121,8 @@ struct SetupTryItStep: View {
     private func unmatchedText(for progress: SetupTryItProgress) -> String {
         let names = progress.unmatchedSlots.map { model.config.displayName(for: $0) }
         return names.count == 1
-            ? "\(names[0]) has no matching input source, so its trigger cannot switch yet. Choose a source for it on the slot board."
-            : "\(names.joined(separator: ", ")) have no matching input source, so their triggers cannot switch yet. Choose a source for each on the slot board."
+            ? String(localized: "\(names[0]) has no matching input source, so its trigger cannot switch yet. Choose a source for it on the slot board.")
+            : String(localized: "\(names.joined(separator: ", ")) have no matching input source, so their triggers cannot switch yet. Choose a source for each on the slot board.")
     }
 
     /// "Tap Right Command alone" for the next untried slot, nil once all were tried.
@@ -136,25 +136,25 @@ struct SetupTryItStep: View {
 
     private func placeholder(for progress: SetupTryItProgress) -> String {
         if progress.boundSlots.isEmpty {
-            return progress.unmatchedSlots.isEmpty ? "No slot has a key yet" : "No slot can switch yet"
+            return progress.unmatchedSlots.isEmpty ? String(localized: "No slot has a key yet") : String(localized: "No slot can switch yet")
         }
         guard let instruction = nextInstruction(for: progress) else {
-            return "Every slot switched. Type to check, then press Finish."
+            return String(localized: "Every slot switched. Type to check, then press Finish.")
         }
-        return "\(instruction), then type here"
+        return String(localized: "\(instruction), then type here")
     }
 
     /// Repeats the next key outside the field, where typed text cannot hide it.
     private func progressText(for progress: SetupTryItProgress) -> String {
         if progress.boundSlots.isEmpty {
             return progress.unmatchedSlots.isEmpty
-                ? "No slot has a key yet. Go back and press Change to bind one, or finish now."
-                : "No slot can switch yet. Go back and press Change to choose input sources, or finish now."
+                ? String(localized: "No slot has a key yet. Go back and press Change to bind one, or finish now.")
+                : String(localized: "No slot can switch yet. Go back and press Change to choose input sources, or finish now.")
         }
-        let count = "\(progress.triedSlots.count) of \(progress.boundSlots.count) slots tried"
+        let count = String(localized: "\(progress.triedSlots.count) of \(progress.boundSlots.count) slots tried")
         guard let instruction = nextInstruction(for: progress) else {
-            return "\(count). Setup is done: press Finish."
+            return String(localized: "\(count). Setup is done: press Finish.")
         }
-        return "\(count). Next: \(instruction)"
+        return String(localized: "\(count). Next: \(instruction)")
     }
 }

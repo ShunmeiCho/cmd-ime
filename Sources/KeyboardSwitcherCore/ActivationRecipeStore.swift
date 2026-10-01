@@ -26,7 +26,7 @@ public struct ActivationRecipeStore {
         guard let data = try? Data(contentsOf: url) else { return LoadResult(recipes: [], problems: []) }
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let entries = object["recipes"] as? [Any] else {
-            return LoadResult(recipes: [], problems: ["\(url.lastPathComponent) is not valid: expected {\"recipes\": [...]}"])
+            return LoadResult(recipes: [], problems: [CoreLocalization.text("%@ is not valid: expected {\"recipes\": [...]}", url.lastPathComponent)])
         }
         var recipes: [ActivationRecipe] = []
         var problems: [String] = []
@@ -35,12 +35,12 @@ public struct ActivationRecipeStore {
             guard JSONSerialization.isValidJSONObject(entry),
                   let entryData = try? JSONSerialization.data(withJSONObject: entry),
                   let recipe = try? JSONDecoder().decode(ActivationRecipe.self, from: entryData) else {
-                problems.append("Recipe \(index + 1) was skipped: it needs \"sourceIDPrefix\" and a known \"strategy\".")
+                problems.append(CoreLocalization.text("Recipe %@ was skipped: it needs \"sourceIDPrefix\" and a known \"strategy\".", String(index + 1)))
                 continue
             }
             // An empty prefix would match every input source.
             guard !recipe.sourceIDPrefix.trimmingCharacters(in: .whitespaces).isEmpty else {
-                problems.append("Recipe \(index + 1) was skipped: \"sourceIDPrefix\" is empty.")
+                problems.append(CoreLocalization.text("Recipe %@ was skipped: \"sourceIDPrefix\" is empty.", String(index + 1)))
                 continue
             }
             recipes.append(recipe)

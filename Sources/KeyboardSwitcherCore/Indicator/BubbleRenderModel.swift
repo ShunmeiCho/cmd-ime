@@ -70,7 +70,7 @@ public struct BubbleRenderModel: Equatable, Sendable {
 }
 
 public enum IndicatorBubbleResolver {
-    public static let noSourceDetail = "No input method selected"
+    public static let noSourceDetail = CoreLocalization.text("No input method selected")
 
     /// Nil when `slotID` names no slot. A missing or unknown theme id resolves to the
     /// default built-in, so a config written before themes existed renders Glass with

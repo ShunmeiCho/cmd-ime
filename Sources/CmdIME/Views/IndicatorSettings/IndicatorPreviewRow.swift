@@ -44,8 +44,8 @@ struct IndicatorPreviewRow: View {
             stage(current)
             HStack(spacing: 8) {
                 ConsoleSegmentedControl(
-                    options: [ConsoleSegmentOption(value: Page.dark, label: "Dark page"),
-                              ConsoleSegmentOption(value: Page.light, label: "Light page")],
+                    options: [ConsoleSegmentOption(value: Page.dark, label: String(localized: "Dark page")),
+                              ConsoleSegmentOption(value: Page.light, label: String(localized: "Light page"))],
                     selection: $page
                 )
                 .frame(width: 176)

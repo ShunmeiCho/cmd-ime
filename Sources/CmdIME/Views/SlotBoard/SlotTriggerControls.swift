@@ -95,11 +95,11 @@ enum BindingTriggerType: CaseIterable, Hashable {
     var displayName: String {
         switch self {
         case .shortcut:
-            "Shortcut"
+            String(localized: "Shortcut")
         case .singleTap:
-            "Single"
+            String(localized: "Single")
         case .doubleTap:
-            "Double"
+            String(localized: "Double")
         }
     }
 }

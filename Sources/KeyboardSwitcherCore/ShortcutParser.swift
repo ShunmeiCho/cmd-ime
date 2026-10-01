@@ -9,13 +9,13 @@ public enum ShortcutParserError: Error, Equatable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .empty:
-            "Shortcut is empty."
+            CoreLocalization.text("Shortcut is empty.")
         case let .unknownKey(key):
-            "Unknown key: \(key)."
+            CoreLocalization.text("Unknown key: %@.", String(describing: key))
         case let .missingKey(shortcut):
-            "Shortcut needs a non-modifier key: \(shortcut)."
+            CoreLocalization.text("Shortcut needs a non-modifier key: %@.", String(describing: shortcut))
         case let .duplicateModifier(modifier):
-            "Duplicate modifier: \(modifier)."
+            CoreLocalization.text("Duplicate modifier: %@.", String(describing: modifier))
         }
     }
 }

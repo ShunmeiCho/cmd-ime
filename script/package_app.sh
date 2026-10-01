@@ -133,11 +133,26 @@ if [[ -f "$ICON_SOURCE" ]]; then
   cp "$ICON_SOURCE" "$APP_RESOURCES/AppIcon.icns"
 fi
 
+# SwiftUI's default localization lookup uses Bundle.main, not Bundle.module.
+# Compile catalogs into the assembled app before signing (also works with SwiftPM
+# versions that merely copy .xcstrings into their resource bundle).
+for catalog in "$ROOT_DIR"/Sources/CmdIME/Resources/*.xcstrings; do
+  xcrun xcstringstool compile "$catalog" --output-directory "$APP_RESOURCES"
+done
+
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleLocalizations</key>
+  <array>
+    <string>en</string>
+    <string>zh-Hans</string>
+    <string>ja</string>
+  </array>
   <key>CFBundleExecutable</key>
   <string>$APP_NAME</string>
   <key>CFBundleIdentifier</key>

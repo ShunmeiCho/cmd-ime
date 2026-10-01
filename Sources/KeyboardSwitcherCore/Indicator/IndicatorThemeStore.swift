@@ -20,11 +20,11 @@ public enum IndicatorThemeStoreError: Error, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .builtInIsReadOnly: "Built-in themes cannot be changed. Duplicate the theme to edit it."
-        case let .invalidName(name): "\(name.debugDescription) cannot be used as a theme id."
-        case let .notFound(id): "The theme \(id.debugDescription) was not found."
+        case .builtInIsReadOnly: CoreLocalization.text("Built-in themes cannot be changed. Duplicate the theme to edit it.")
+        case let .invalidName(name): CoreLocalization.text("%@ cannot be used as a theme id.", String(describing: name.debugDescription))
+        case let .notFound(id): CoreLocalization.text("The theme %@ was not found.", String(describing: id.debugDescription))
         case let .invalid(issue): issue.message
-        case let .writeFailed(reason): "Could not write the theme: \(reason)"
+        case let .writeFailed(reason): CoreLocalization.text("Could not write the theme: %@", String(describing: reason))
         }
     }
 }
@@ -161,9 +161,9 @@ public struct IndicatorThemeStore {
 
     private static func reading(_ file: URL) -> Result<IndicatorTheme, IndicatorThemeIssue> {
         if let size = FileManager.default.indicatorFileSize(at: file), size > IndicatorTheme.maxFileBytes {
-            return .failure(.unreadable("the file is larger than \(IndicatorTheme.maxFileBytes / 1024) KB"))
+            return .failure(.unreadable(CoreLocalization.text("the file is larger than %@ KB", String(describing: IndicatorTheme.maxFileBytes / 1024))))
         }
-        guard let data = try? Data(contentsOf: file) else { return .failure(.unreadable("the file cannot be opened")) }
+        guard let data = try? Data(contentsOf: file) else { return .failure(.unreadable(CoreLocalization.text("the file cannot be opened"))) }
         return IndicatorTheme.decoding(data, fileName: file.lastPathComponent)
     }
 

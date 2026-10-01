@@ -21,7 +21,7 @@ public enum WhatsNewNotice {
 
     public static func message(for version: String) -> String? {
         guard let (major, minor) = majorMinor(version) else { return nil }
-        return messages["\(major).\(minor)"]
+        return messages["\(major).\(minor)"].map { CoreLocalization.text($0) }
     }
 
     /// Accept major.minor or major.minor.patch, with ASCII numeric components only.

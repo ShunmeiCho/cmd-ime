@@ -7,10 +7,10 @@ import SwiftUI
 struct IndicatorTypographyRows: View {
     private static let textScaleStep = 0.05
     private static let weightLabels: [IndicatorFontWeight: String] = [
-        .regular: "Regular", .medium: "Medium", .semibold: "Semi", .bold: "Bold", .heavy: "Heavy",
+        .regular: String(localized: "Regular"), .medium: String(localized: "Medium"), .semibold: String(localized: "Semi"), .bold: String(localized: "Bold"), .heavy: String(localized: "Heavy"),
     ]
     private static let designNames: [(IndicatorFontDesign, String)] = [
-        (.default, "System"), (.rounded, "System Rounded"), (.serif, "System Serif"), (.monospaced, "System Mono"),
+        (.default, String(localized: "System")), (.rounded, String(localized: "System Rounded")), (.serif, String(localized: "System Serif")), (.monospaced, String(localized: "System Mono")),
     ]
 
     @ObservedObject var model: AppModel
@@ -27,13 +27,13 @@ struct IndicatorTypographyRows: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            CompactSettingRow("Font") {
+            CompactSettingRow(String(localized: "Font")) {
                 VStack(alignment: .leading, spacing: 4) {
                     fontMenu
                     fontNotice
                 }
             }
-            CompactSettingRow("Weight") {
+            CompactSettingRow(String(localized: "Weight")) {
                 ConsoleSegmentedControl(
                     options: IndicatorFontWeight.allCases.map {
                         ConsoleSegmentOption(value: $0, label: Self.weightLabels[$0] ?? $0.rawValue)
@@ -44,7 +44,7 @@ struct IndicatorTypographyRows: View {
                     )
                 )
             }
-            CompactSettingRow("Text \(Int((textScale * 100).rounded()))%") {
+            CompactSettingRow(String(localized: "Text \(Int((textScale * 100).rounded()))%")) {
                 Slider(
                     value: Binding(
                         get: { textScale },
@@ -73,7 +73,7 @@ struct IndicatorTypographyRows: View {
                 .accessibilityValue("\(Int((textScale * 100).rounded())) percent")
             }
             if theme.isBuiltIn {
-                Text("Changing the text creates an editable copy of \(theme.name).")
+                Text("Changing the text creates an editable copy of \(theme.localizedDisplayName).")
                     .font(.caption2)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
@@ -85,7 +85,7 @@ struct IndicatorTypographyRows: View {
     private var currentFontName: String {
         typography.displayFamily
             ?? Self.designNames.first { $0.0 == typography.displayDesign }?.1
-            ?? "System"
+            ?? String(localized: "System")
     }
 
     private var isFamilyMissing: Bool {
@@ -128,23 +128,23 @@ struct IndicatorTypographyRows: View {
                     .textFieldStyle(.roundedBorder)
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        fontGroup("System", Self.designNames.map(\.1).filter(matches)) { name in
-                            guard let design = Self.designNames.first(where: { $0.1 == name })?.0 else { return }
+                        fontGroup(String(localized: "System"), Self.designNames.filter { matches($0.1) }.map(\.0),
+                                  label: { design in Self.designNames.first { $0.0 == design }?.1 ?? design.rawValue }) { design in
                             model.editIndicatorTheme {
                                 $0.typography.displayFamily = nil
                                 $0.typography.displayDesign = design
                             }
                         }
-                        fontGroup("Presets", TypographyPreset.allCases.map { $0.rawValue.capitalized }.filter(matches)) { name in
-                            guard let preset = TypographyPreset.allCases.first(where: { $0.rawValue.capitalized == name }) else { return }
+                        fontGroup(String(localized: "Presets"), TypographyPreset.allCases.filter { matches(IndicatorCatalogLabel.localized($0.rawValue.capitalized)) },
+                                  label: { IndicatorCatalogLabel.localized($0.rawValue.capitalized) }) { preset in
                             model.editIndicatorTheme { theme in
                                 let scale = theme.typography.textScale
                                 theme.typography = preset.typography
                                 theme.typography.textScale = scale
                             }
                         }
-                        fontGroup("Imported", imported.filter(matches)) { select($0) }
-                        fontGroup("Installed", installed.filter(matches)) { select($0) }
+                        fontGroup(String(localized: "Imported"), imported.filter(matches)) { select($0) }
+                        fontGroup(String(localized: "Installed"), installed.filter(matches)) { select($0) }
                     }
                 }
                 .frame(height: 280)
@@ -155,16 +155,19 @@ struct IndicatorTypographyRows: View {
     }
 
     @ViewBuilder
-    private func fontGroup(_ title: String, _ names: [String], pick: @escaping (String) -> Void) -> some View {
-        if !names.isEmpty {
+    private func fontGroup<Value: Hashable>(_ title: String, _ values: [Value],
+                                           label: @escaping (Value) -> String = { String(describing: $0) },
+                                           pick: @escaping (Value) -> Void) -> some View {
+        if !values.isEmpty {
             Text(title.uppercased())
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .padding(.top, 8)
                 .padding(.bottom, 2)
-            ForEach(names, id: \.self) { name in
+            ForEach(values, id: \.self) { value in
+                let name = label(value)
                 Button {
-                    pick(name)
+                    pick(value)
                     showsFonts = false
                 } label: {
                     HStack {
@@ -186,7 +189,7 @@ struct IndicatorTypographyRows: View {
     private var fontNotice: some View {
         if let family = typography.displayFamily {
             if isFamilyMissing {
-                IndicatorNotice(text: "\(family) is not available. Using the system font.")
+                IndicatorNotice(text: String(localized: "\(family) is not available. Using the system font."))
             } else if !BubbleFontResolver.hasExactWeight(family: family, weight: typography.displayWeight) {
                 Text("Nearest available weight is used.")
                     .font(.caption2)

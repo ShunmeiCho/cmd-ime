@@ -45,7 +45,7 @@ final class TriggerRecordingSession: ObservableObject {
             if warning == nil, !eligibility.canClear, draft == nil {
                 cancel()
             } else {
-                reject("Record a trigger before saving.")
+                reject(String(localized: "Record a trigger before saving."))
             }
             return
         }
@@ -110,7 +110,7 @@ final class TriggerRecordingSession: ObservableObject {
             },
         ]
         onCaptureChanged(true)
-        announce("Recording. Press a trigger. Return saves; Escape cancels; Delete clears the draft. Tab moves to buttons; Space or Return activates the focused button.")
+        announce(String(localized: "Recording. Press a trigger. Return saves; Escape cancels; Delete clears the draft. Tab moves to buttons; Space or Return activates the focused button."))
         if let draft, let error = onValidate(draft) { reject(error) }
     }
 
@@ -118,8 +118,8 @@ final class TriggerRecordingSession: ObservableObject {
         guard isRecording, sessionID == nil || sessionID == self.sessionID else { return }
         let dismiss = onDismiss
         switch reason {
-        case .committed: announce("Trigger saved.")
-        default: announce("Recording cancelled. Previous trigger unchanged.")
+        case .committed: announce(String(localized: "Trigger saved."))
+        default: announce(String(localized: "Recording cancelled. Previous trigger unchanged."))
         }
         cleanup()
         dismiss?()
@@ -233,7 +233,7 @@ final class TriggerRecordingSession: ObservableObject {
                     if eligibility.canClear { clearDraft() }
                 } else if code != kVK_Escape && code != kVK_Return && code != kVK_ANSI_KeypadEnter {
                     eligibility.reject()
-                    reject("Use a modifier together with an ordinary key.")
+                    reject(String(localized: "Use a modifier together with an ordinary key."))
                 }
             }
             return
@@ -242,7 +242,7 @@ final class TriggerRecordingSession: ObservableObject {
         case let .chord(trigger):
             captured(trigger)
         case .tap, .doubleTap:
-            reject("This recorder only accepts keyboard shortcuts.")
+            reject(String(localized: "This recorder only accepts keyboard shortcuts."))
         case .cancel:
             cancel()
         case .commit:
@@ -258,17 +258,17 @@ final class TriggerRecordingSession: ObservableObject {
         eligibility.clear()
         warning = nil
         captureRevision += 1
-        announce("Trigger cleared. Press Return to save, or Escape to cancel.")
+        announce(String(localized: "Trigger cleared. Press Return to save, or Escape to cancel."))
     }
 
     private func captured(_ trigger: KeyTrigger) {
         guard SlotTriggerCategory.shortcut.matches(trigger) else {
-            reject("This recorder only accepts keyboard shortcuts.")
+            reject(String(localized: "This recorder only accepts keyboard shortcuts."))
             return
         }
         guard !trigger.keyName.isEmpty else {
             eligibility.reject()
-            reject("This key is not supported. Try another trigger.")
+            reject(String(localized: "This key is not supported. Try another trigger."))
             return
         }
         draft = trigger
@@ -284,7 +284,7 @@ final class TriggerRecordingSession: ObservableObject {
         if let error = onValidate?(trigger) {
             reject(error)
         } else {
-            announce("Captured \(trigger.displayName). Press Return to save.")
+            announce(String(localized: "Captured \(trigger.localizedDisplayName). Press Return to save."))
         }
     }
 

@@ -11,23 +11,23 @@ struct SlotModifierMenu: View {
     let onUpdated: () -> Void
 
     private static let keys = [
-        ("left-command", "Left Command"), ("right-command", "Right Command"),
-        ("left-option", "Left Option"), ("right-option", "Right Option"),
-        ("left-control", "Left Control"), ("right-control", "Right Control"),
-        ("left-shift", "Left Shift"), ("right-shift", "Right Shift"),
+        ("left-command", String(localized: "Left Command")), ("right-command", String(localized: "Right Command")),
+        ("left-option", String(localized: "Left Option")), ("right-option", String(localized: "Right Option")),
+        ("left-control", String(localized: "Left Control")), ("right-control", String(localized: "Right Control")),
+        ("left-shift", String(localized: "Left Shift")), ("right-shift", String(localized: "Right Shift")),
     ]
 
     private var trigger: KeyTrigger? { model.trigger(for: role, category: category) }
     private var name: String { model.config.displayName(for: role) }
-    private var title: String { category == .single ? "Single tap" : "Double tap" }
+    private var title: String { category == .single ? String(localized: "Single tap") : String(localized: "Double tap") }
     private var value: String {
-        guard let trigger else { return "None" }
-        return Self.keys.first { $0.0 == trigger.keyName }?.1 ?? trigger.displayName
+        guard let trigger else { return String(localized: "None") }
+        return Self.keys.first { $0.0 == trigger.keyName }?.1 ?? trigger.localizedDisplayName
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(category == .single ? "Single tap" : "Double tap")
+            Text(category == .single ? String(localized: "Single tap") : String(localized: "Double tap"))
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textSecondary)
                 .accessibilityHidden(true)
@@ -35,18 +35,18 @@ struct SlotModifierMenu: View {
                               tint: SlotLook(slots: model.config.slots).tint(for: role)) {
                 Button("None") { select(nil) }
                     .accessibilityLabel("No \(title.lowercased()) trigger for \(name)")
-                    .accessibilityValue(trigger == nil ? "Selected" : "Not selected")
+                    .accessibilityValue(trigger == nil ? String(localized: "Selected") : String(localized: "Not selected"))
                 Divider()
                 ForEach(Self.keys, id: \.0) { key, label in
                     let candidate = candidate(for: key)
                     let owner = candidate.flatMap(ownerName)
                     let cap = LiveKeycap(keyName: key)
-                    Button("\(cap.label) \(cap.detail ?? "")  \(label)\(owner.map { " — used by \($0)" } ?? "")") {
+                    Button("\(cap.label) \(cap.detail ?? "")  \(label)\(owner.map { String(localized: " — used by \($0)") } ?? "")") {
                         select(candidate)
                     }
                     .disabled(owner != nil || candidate == nil)
                     .accessibilityLabel("\(label), \(title.lowercased()) for \(name)")
-                    .accessibilityValue(owner.map { "Used by \($0)" } ?? (trigger == candidate ? "Selected" : "Not selected"))
+                    .accessibilityValue(owner.map { String(localized: "Used by \($0)") } ?? (trigger == candidate ? String(localized: "Selected") : String(localized: "Not selected")))
                 }
                 Divider()
                 Text("Many Chinese input methods use Shift to switch between Chinese and English.")
@@ -62,9 +62,9 @@ struct SlotModifierMenu: View {
 
     /// Same text voice as the input-source menu above it: glyph plus side, no raised keycap.
     private var shortValue: String {
-        guard let trigger else { return "None" }
+        guard let trigger else { return String(localized: "None") }
         let cap = LiveKeycap(keyName: trigger.keyName)
-        let side = cap.detail == "L" ? "Left" : cap.detail == "R" ? "Right" : nil
+        let side = cap.detail == "L" ? String(localized: "Left") : cap.detail == "R" ? String(localized: "Right") : nil
         return [cap.label, side].compactMap { $0 }.joined(separator: " ")
     }
 

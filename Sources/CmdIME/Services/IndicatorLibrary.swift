@@ -6,7 +6,7 @@ import KeyboardSwitcherCore
 /// registers the imported fonts, so it is touched once at launch.
 @MainActor
 final class IndicatorLibrary: ObservableObject {
-    static let unusableFontMessage = "Not a usable font file."
+    static let unusableFontMessage = String(localized: "Not a usable font file.")
 
     @Published private(set) var listing: IndicatorThemeListing
     @Published private(set) var fonts: [IndicatorFontRegistrar.Entry] = []
@@ -39,7 +39,7 @@ final class IndicatorLibrary: ObservableObject {
     }
 
     func themeNames(using family: String) -> [String] {
-        themes.filter { $0.typography.displayFamily?.caseInsensitiveCompare(family) == .orderedSame }.map(\.name)
+        themes.filter { $0.typography.displayFamily?.caseInsensitiveCompare(family) == .orderedSame }.map(\.localizedDisplayName)
     }
 
     // MARK: - Themes
@@ -141,5 +141,63 @@ final class IndicatorLibrary: ObservableObject {
             message = error.localizedDescription
             return false
         }
+    }
+}
+
+/// Localizes catalog labels at presentation time, never user-provided names.
+enum IndicatorCatalogLabel {
+    static func localized(_ name: String) -> String {
+        switch name {
+        case "Neutral White": String(localized: "Neutral White")
+        case "Cool Gray": String(localized: "Cool Gray")
+        case "Pale Beige": String(localized: "Pale Beige")
+        case "Cobalt": String(localized: "Cobalt")
+        case "Royal Blue": String(localized: "Royal Blue")
+        case "Botanical Green": String(localized: "Botanical Green")
+        case "Mint Green": String(localized: "Mint Green")
+        case "Terracotta Orange": String(localized: "Terracotta Orange")
+        case "Signal Red": String(localized: "Signal Red")
+        case "Aubergine": String(localized: "Aubergine")
+        case "Charcoal": String(localized: "Charcoal")
+        case "Powder Blue": String(localized: "Powder Blue")
+        case "Oxblood": String(localized: "Oxblood")
+        case "Electric Blue": String(localized: "Electric Blue")
+        case "Carbon": String(localized: "Carbon")
+        case "Warm Charcoal": String(localized: "Warm Charcoal")
+        case "Ultramarine": String(localized: "Ultramarine")
+        case "Safety Orange": String(localized: "Safety Orange")
+        case "Cyan": String(localized: "Cyan")
+        case "Brick Red": String(localized: "Brick Red")
+        case "Tangerine": String(localized: "Tangerine")
+        case "Slate Blue": String(localized: "Slate Blue")
+        case "Adaptive": String(localized: "Adaptive")
+        case "Adaptive, Slot Color": String(localized: "Adaptive, Slot Color")
+        case "Badge": String(localized: "Badge")
+        case "Mark": String(localized: "Mark")
+        case "Mark, Slot Color": String(localized: "Mark, Slot Color")
+        case "Badge, Slot Color": String(localized: "Badge, Slot Color")
+        case "Glass": String(localized: "Glass")
+        case "Liquid Glass": String(localized: "Liquid Glass")
+        case "Switcher, Liquid": String(localized: "Switcher, Liquid")
+        case "Classic": String(localized: "Classic")
+        case "Paper, One Ink": String(localized: "Paper, One Ink")
+        case "Paper, Two Inks": String(localized: "Paper, Two Inks")
+        case "Paper, Slot Inks": String(localized: "Paper, Slot Inks")
+        case "Typographic": String(localized: "Typographic")
+        case "Tile": String(localized: "Tile")
+        case "Line": String(localized: "Line")
+        case "Switcher": String(localized: "Switcher")
+        case "Switcher, Slot Color": String(localized: "Switcher, Slot Color")
+        case "System": String(localized: "System")
+        case "Programmatic": String(localized: "Programmatic")
+        case "Literary": String(localized: "Literary")
+        default: name
+        }
+    }
+}
+
+extension IndicatorTheme {
+    var localizedDisplayName: String {
+        isBuiltIn ? IndicatorCatalogLabel.localized(name) : name
     }
 }

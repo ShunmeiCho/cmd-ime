@@ -24,7 +24,7 @@ CmdIME 让你 Mac 上的每个输入源都有自己的按键。单击左 Command
 
 [![CmdIME 演示：一个键对应一个输入源](demo-videos/renders/preview-promo.gif)](demo-videos/renders/cmdime-promo.mp4)
 
-演示里出现的是 Switcher、Glass 和 Liquid Glass 三种指示气泡主题。
+演示里出现的是切换器、玻璃和液态玻璃三种指示气泡主题。
 [打开完整视频](demo-videos/renders/cmdime-promo.mp4)。
 
 ## 为什么不用 Control+Space
@@ -58,10 +58,10 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 安装脚本会下载最新的发布版本，对照公布的 SHA-256 进行校验，把 `CmdIME.app` 安装到
 `/Applications`，链接 `keyboardctl`，然后打开应用。之后在系统设置 > 隐私与安全性中允许
-**Accessibility**（辅助功能）和 **Input Monitoring**（输入监控）；应用内的设置引导会带你
+**辅助功能**和**输入监控**；应用内的设置向导会带你
 完成这两项授权和第一次切换。
 
-需要 macOS 13 或更高版本，且为 Apple 芯片的 Mac（暂不支持 Intel Mac）。之后的更新可以在应用内通过 **Update Now**（立即更新）安装。
+需要 macOS 13 或更高版本，且为 Apple 芯片的 Mac（暂不支持 Intel Mac）。之后的更新可以在应用内通过**立即更新**安装。
 
 > [!NOTE]
 > CmdIME 目前是预览版本：已签名，但未经公证。一行命令的安装脚本是最顺畅的方式。
@@ -97,25 +97,25 @@ swift test
 
 ## 功能一览
 
-- **Slots 页上的槽位面板。** 左侧是已安装的输入源，右侧是你的槽位。把输入源拖进来即可
+- **“槽位”页上的槽位面板。** 左侧是已安装的输入源，右侧是你的槽位。把输入源拖进来即可
   添加槽位，拖动拖动柄调整顺序，可以重命名、设置颜色或移除槽位，移除后还能撤销。添加或
   移除输入源时，列表会跟随系统设置同步更新；macOS 列出两次的同一个输入源只显示一次。
 - **每个槽位三种可选触发方式。** 八个修饰键之一的单击或双击，以及一个 Option+J 这样的
   快捷键。任选其中几种设置；设置了的任意一种都会切换到该槽位。
 
 <p align="center">
-  <img src="Assets/readme/slot-board.png" width="640" alt="深色外观下 CmdIME 设置窗口的 Slots 页：左侧是侧栏和已安装的输入源，右侧是三个槽位及各自的单击、双击和快捷键触发，下方是 Live keys。">
+  <img src="Assets/readme/slot-board.png" width="640" alt="深色外观下 CmdIME 设置窗口的“槽位”页：左侧是侧栏和已安装的输入源，右侧是三个槽位及各自的单击、双击和快捷键触发，下方是实时按键。">
 </p>
 
-<p align="center"><sub>Slots 页。这里是三个槽位，你用几个输入源就可以加几个。</sub></p>
+<p align="center"><sub>“槽位”页。这里是三个槽位，你用几个输入源就可以加几个。</sub></p>
 
-- **光标附近的切换指示气泡。** 十八种内置主题，包括 Glass、macOS 26 及以上的
-  Liquid Glass、纸张风格、显示所有槽位的切换器、把切换器缩到只剩图标的徽章、只保留刚
-  切到的那一个输入源的标记，以及两个 Adaptive（自适应）主题：单次切换时显示标记，气泡还在
-  时再切一次或者用 Peek，就展开成徽章那样的一整排。另外还支持你自己的主题和字体。
+- **光标附近的切换指示气泡。** 十八种内置主题，包括玻璃、macOS 26 及以上的
+  液态玻璃、纸张风格、显示所有槽位的切换器、把切换器缩到只剩图标的徽章、只保留刚
+  切到的那一个输入源的标记，以及两个自适应主题：单次切换时显示标记，气泡还在
+  时再切一次或者用速览，就展开成徽章那样的一整排。另外还支持你自己的主题和字体。
 
 <p align="center">
-  <img src="Assets/readme/themes.png" width="100%" alt="设置里全部 18 个内置指示气泡主题：三种 Switcher、两种 Badge、两种 Mark、两种 Adaptive、Glass、Liquid Glass、Classic、三种纸张风格、Typographic、Tile 和 Line。">
+  <img src="Assets/readme/themes.png" width="100%" alt="设置里全部 18 个内置指示气泡主题：三种切换器、两种徽章、两种标记、两种自适应、玻璃、液态玻璃、经典、三种纸张风格、文字排版、色块和单行。">
 </p>
 
 <p align="center"><sub>设置里的全部 18 个内置主题。</sub></p>
@@ -124,19 +124,19 @@ swift test
   <img src="Assets/readme/adaptive.gif" width="640" alt="在文本编辑里输入 hello，切到中文时只出现一个「中」字标记，紧接着切到日文，标记展开成 A 中 あ 一整排，然后输入ありがとう。">
 </p>
 
-<p align="center"><sub>Adaptive：单次切换只显示一个字形，气泡还在时再切换就展开成整排。</sub></p>
+<p align="center"><sub>自适应：单次切换只显示一个字形，气泡还在时再切换就展开成整排。</sub></p>
 
 - **每个槽位的颜色完全由你决定。** 可以选预设色，也可以用系统取色器挑任意颜色。
-  把指示气泡的「Color」设为 Slot，气泡就用这个颜色，不用看字也知道自己在哪个输入源。
+  把指示气泡的「颜色」设为「槽位」，气泡就用这个颜色，不用看字也知道自己在哪个输入源。
 
 <p align="center">
-  <img src="Assets/readme/slot-colors.gif" width="440" alt="设置预览里的 Switcher 指示气泡依次切换三个槽位，每个槽位用自己的颜色高亮：日文红色、英文灰色、中文蓝色。">
+  <img src="Assets/readme/slot-colors.gif" width="440" alt="设置预览里的切换器指示气泡依次切换三个槽位，每个槽位用自己的颜色高亮：日文红色、英文灰色、中文蓝色。">
 </p>
 
 <p align="center"><sub>三个槽位，三种你自己选的颜色。</sub></p>
 
-- **按应用设定输入源。** 在 Apps 页面，把一个应用从列表、访达或 Dock 拖到某个槽位上，
-  它每次切到前台时都会用这个槽位；拖到 **Keep as is**（保持不变）上，CmdIME 就不去动它。
+- **按应用设定输入源。** 在“应用”页面，把一个应用从列表、访达或程序坞拖到某个槽位上，
+  它每次切到前台时都会用这个槽位；拖到**保持不变**上，CmdIME 就不去动它。
   可以让 CmdIME 记住你在每个应用里最后用的输入源（默认关闭，只保存在内存里）；可以给其余
   所有应用指定一个槽位；还能在离开密码框后切回原来的输入源，否则 macOS 会一直停在 ABC
   （默认开启）。你按下的触发键始终优先。
@@ -148,7 +148,7 @@ swift test
 <p align="center"><sub>应用规则：Code 用英文，Chat 用中文，点一下就切过去。</sub></p>
 
 <p align="center">
-  <img src="Assets/readme/apps-drag.gif" width="640" alt="Apps 页的应用规则面板：把搜索结果里的 WeChat 拖到中文栏，再把 Chat 拖到日文栏。">
+  <img src="Assets/readme/apps-drag.gif" width="640" alt="“应用”页的应用规则面板：把搜索结果里的 WeChat 拖到中文栏，再把 Chat 拖到日文栏。">
 </p>
 
 <p align="center"><sub>把应用拖到某个槽位上，它就用这个槽位。</sub></p>
@@ -161,7 +161,7 @@ swift test
 
 - **不止 CmdIME 自己的切换，任何切换都有提示。** 用 Control+Space、地球仪键或菜单栏
   切换时也会显示气泡，切换应用后也可以显示。可以在指定应用里隐藏气泡，也可以设置它停留
-  多久。**Peek** 触发键在不切换的情况下显示当前输入源；还有一个可选的 Caps Lock 气泡，
+  多久。**速览**触发键在不切换的情况下显示当前输入源；还有一个可选的 Caps Lock 气泡，
   在 Caps Lock 打开或关闭时显示。
 
 <p align="center">
@@ -172,16 +172,17 @@ swift test
 
 - **可以带走的设置。** 把槽位、触发键、应用规则、主题、字体和激活配方导出到一个文件夹，
   在另一台 Mac 上导入。`keyboardctl` 或编辑器对配置的修改，在 CmdIME 运行时直接生效。
-  About 页的 **Copy Diagnostics** 会整理好报告问题需要的信息。
-- **应用内更新。** 默认每六小时检查一次，在 **Update Now** 旁边附上改动摘要，
+  “关于”页的**复制诊断信息**会整理好报告问题需要的信息。
+- **应用内更新。** 默认每六小时检查一次，在**立即更新**旁边附上改动摘要，
   原地安装并保留你的权限。
-- **跟随浅色和深色的设置窗口，** 也可以固定为你选的那一种。
+- **跟随浅色和深色的设置窗口，** 也可以固定为你选的那一种。设置窗口有英文、简体中文和日文界面，
+  跟随 macOS 的语言；想单独给 CmdIME 换一种语言，请到系统设置 > 通用 > 语言与地区 > 应用程序。
 
 <p align="center">
-  <img src="Assets/readme/general.png" width="640" alt="深色外观下的 General 页：开机启动、外观、更新、设置向导、设置文件和退出 CmdIME。">
+  <img src="Assets/readme/general.png" width="640" alt="深色外观下的“通用”页：登录时启动、外观、更新、设置向导、设置文件和退出 CmdIME。">
 </p>
 
-<p align="center"><sub>General：外观、更新，以及设置的导出和导入。</sub></p>
+<p align="center"><sub>通用：外观、更新，以及设置的导出和导入。</sub></p>
 
 - **`keyboardctl`，** 一个命令行工具，用于扫描、绑定、切换、应用规则、迁移设置和诊断，
   另外还有在本机上实测的可靠性检查（Reliability Lab）。
@@ -194,7 +195,7 @@ swift test
 CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键盘布局。首次设置时，
 它为每种主要语言创建一个槽位，并按系统顺序取该语言下第一个可选的输入源；没有主要语言的
 输入源会被跳过。每个槽位都可以在它的卡片上指向任意一个已安装的输入源，显示
-"Not matched"（未匹配）的槽位也一样。
+“未匹配”的槽位也一样。
 
 | 检测到的槽位 | 默认触发键 |
 | --- | --- |
@@ -210,29 +211,29 @@ CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键
 
 在面板上：
 
-- "..." 菜单里有 Move Up、Move Down、Rename、Color 和 Remove Slot，这些操作同样可以通过
-  键盘和 VoiceOver 完成。按 Esc 取消拖动。被移除的槽位可以用 **Undo**（撤销）恢复，
+- "..." 菜单里有上移、下移、重命名、颜色和移除槽位，这些操作同样可以通过
+  键盘和 VoiceOver 完成。按 Esc 取消拖动。被移除的槽位可以用**撤销**恢复，
   直到下一次槽位变更为止。
-- 点击槽位的徽标可以为它指定一种颜色。输入源列表、Live keys 和切换指示气泡都会跟随
+- 点击槽位的徽标可以为它指定一种颜色。输入源列表、实时按键和切换指示气泡都会跟随
   这个颜色。
-- "Current"（当前）标记的是 macOS 当前选中的输入源，不论它是通过什么方式选中的。
-  **Switch**（切换）会直接选中该槽位的输入源；它不会测试触发键。
-- "Duplicate"（重复）标记指向同一个输入源的两个槽位。"Source missing"（输入源缺失）
+- “当前”标记的是 macOS 当前选中的输入源，不论它是通过什么方式选中的。
+  **切换**会直接选中该槽位的输入源；它不会测试触发键。
+- “重复”标记指向同一个输入源的两个槽位。“输入源缺失”
   标记其输入源已不再安装、已回退到另一个输入源的槽位。
-- 面板下方的 Live keys（实时按键）是一个小键盘，会点亮绑定到当前槽位的按键。
+- 面板下方的实时按键是一个小键盘，会点亮绑定到当前槽位的按键。
 
 </details>
 
 <details>
 <summary><strong>触发方式详解</strong></summary>
 
-- `Single tap`（单击）：八个物理修饰键之一（左或右的 Command、Option、Control、Shift）。
-- `Double tap`（双击）：同样这些键，按两次。
-- `Shortcut`（快捷键）：点击 **Record…**（录制），同时按下一个修饰键和一个按键，例如
-  `option+j`，然后点 Save。按 Esc 取消；录制期间单击和双击触发会暂停。
+- `单击`：八个物理修饰键之一（左或右的 Command、Option、Control、Shift）。
+- `双击`：同样这些键，按两次。
+- `快捷键`：点击**录制…**，同时按下一个修饰键和一个按键，例如
+  `option+j`，然后点“保存”。按 Esc 取消；录制期间单击和双击触发会暂停。
 
-如果某个按键已经被另一个槽位用于同一种手势，或者已被某个按键重映射或 Peek 触发键
-（"Show Current Input Source"）占用，它会显示为已占用并且无法选择。同一个按键可以是一个
+如果某个按键已经被另一个槽位用于同一种手势，或者已被某个按键重映射或速览触发键
+（“显示当前输入源”）占用，它会显示为已占用并且无法选择。同一个按键可以是一个
 槽位的单击触发键，同时是另一个槽位的双击触发键。许多中文输入法使用 Shift 来切换中英文，
 因此 CmdIME 从不自动分配 Shift。
 
@@ -253,29 +254,29 @@ CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键
 <summary><strong>切换指示气泡与主题</strong></summary>
 
 CmdIME 通过编程方式切换输入源，因此不会调出 macOS 私有的输入源选择器。打开切换指示气泡
-（**Indicator > Switch indicator > Enabled**）后，它会在切换后显示自己的轻量确认气泡。
+（**指示气泡 > 切换指示气泡 > 启用**）后，它会在切换后显示自己的轻量确认气泡。
 
 macOS 14 及以上每次输入源变化时，还会在光标下方显示系统自己的小图标，CmdIME 的切换也不例外，
 所以你可能会同时看到两个。CmdIME 没法在切换时把它去掉。想在当前用户的所有 app 里隐藏它，勾选
-**Indicator > macOS indicator > Hide the input source badge macOS shows under the cursor**，
+**指示气泡 > 系统自带提示 > 隐藏 macOS 在光标下方显示的输入源图标**，
 或者运行 `defaults write kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled -bool false`。
 各个 app 重新打开后生效，注销再登录后全部生效。隐藏之后，Control+Space 会改为在屏幕中央显示
 旧式列表。取消勾选，或者运行
 `defaults delete kCFPreferencesAnyApplication TSMLanguageIndicatorEnabled`，即可恢复。
 
-在 Indicator 页，切换指示气泡可以关闭，可以选用十八种内置主题之一（显示所有槽位的切换器、
-把切换器缩到只剩图标的徽章、只显示刚切到的槽位的标记、两个自适应主题、Glass（玻璃）、
-适用于 macOS 26 及以上的 Liquid Glass、Classic（经典）、使用一种油墨、两种油墨或槽位颜色
+在“指示气泡”页，切换指示气泡可以关闭，可以选用十八种内置主题之一（显示所有槽位的切换器、
+把切换器缩到只剩图标的徽章、只显示刚切到的槽位的标记、两个自适应主题、玻璃、
+适用于 macOS 26 及以上的液态玻璃、经典、使用一种油墨、两种油墨或槽位颜色
 油墨的纸张风格、纯文字、纯色块，或者单行），用一个滑块调整大小、百分比就是它实际画出来的
 尺寸，在主题允许的范围内选择显示图标和文字、只显示图标或只显示文字，还可以按每个槽位自己
 的颜色、系统强调色或单色来着色。字体族、字重和文字大小属于主题；编辑内置主题时会生成一份
 副本。
 
-**Adaptive** 和 **Adaptive, Slot Color** 会随你的操作改变形状。单次切换显示 Mark（标记），
-只有你刚切到的那个槽位。气泡还没消失时又来一次切换，它会原地展开成 Badge（徽章）那样的
-一整排，列出所有槽位，很像按住 Control 再按空格时 macOS 显示的那个列表。Peek 总是显示
-Badge 那一排。其他主题都只有一种形状；在主题编辑器里打开 **Expand while switching**
-（切换时展开），你自己的 Mark 主题也会有同样的行为。
+**自适应**和**自适应，槽位色**会随你的操作改变形状。单次切换显示标记，
+只有你刚切到的那个槽位。气泡还没消失时又来一次切换，它会原地展开成徽章那样的
+一整排，列出所有槽位，很像按住 Control 再按空格时 macOS 显示的那个列表。速览总是显示
+徽章那一排。其他主题都只有一种形状；在主题编辑器里打开**连续切换时展开**，
+你自己的标记主题也会有同样的行为。
 
 自定义主题以 JSON 文件的形式存放在 `~/.config/cmd-ime/themes`，导入的字体存放在
 `~/.config/cmd-ime/fonts`，两者都在配置文件旁边。字体只为 CmdIME 注册，不会在系统范围内
@@ -284,35 +285,35 @@ Badge 那一排。其他主题都只有一种形状；在主题编辑器里打�
 切换指示气泡出现在其他应用之上，所以它的主题跟随 macOS 的外观，而不是设置窗口的外观，
 除非主题自己把色调固定了。
 
-Indicator 页的 **When it shows**（何时显示）：
+“指示气泡”页的**何时显示**：
 
-- **Other switches**（其他切换，默认开启）：输入源不经 CmdIME 改变时也显示气泡，
+- **其他切换**（默认开启）：输入源不经 CmdIME 改变时也显示气泡，
   比如 Control+Space、地球仪键、菜单栏或其他应用，也包括在终端或编辑器里运行的
   `keyboardctl switch` 和 `keyboardctl source`。
-- **App switch**（切换应用，默认关闭）：切换应用后，等新应用稳定下来，如果输入源和切换前
+- **切换应用时**（默认关闭）：切换应用后，等新应用稳定下来，如果输入源和切换前
   不同，且还没有别的气泡显示过这次变化，就显示气泡。
-- **Hidden in**（隐藏于）：在这些应用里，切换气泡和 Caps Lock 气泡都不显示，CmdIME 自己的
-  切换也不例外。Peek 在这里照样显示，因为那是你主动要看的。
-- **Stays**（停留）：每种气泡停留多久，Peek 和 Caps Lock 气泡也一样：**Automatic**（自动，
-  按主题自己的时长），或者 0.5、1、1.5、2、3、5 秒。直接写进 config.json 的值会被限制在
+- **隐藏于**：在这些应用里，切换气泡和 Caps Lock 气泡都不显示，CmdIME 自己的
+  切换也不例外。速览在这里照样显示，因为那是你主动要看的。
+- **停留**：每种气泡停留多久，速览和 Caps Lock 气泡也一样：**自动**（按主题
+  自己的时长），或者 0.5、1、1.5、2、3、5 秒。直接写进 config.json 的值会被限制在
   0.3 到 10 秒之间。
 
 这两种新增的气泡只在键盘控制运行时出现，而且只针对属于某个槽位的输入源。切换指示气泡
 关闭时，上面这几行会变灰。
 
-**More bubbles**（更多气泡）：
+**更多气泡**：
 
-- **Peek**：用某个修饰键的单击或双击，在不切换的情况下显示当前输入源的气泡，即使切换
-  气泡已关闭、或者在 **Hidden in** 列出的应用里也会显示。用自适应主题时，它总是显示完整
+- **速览**：用某个修饰键的单击或双击，在不切换的情况下显示当前输入源的气泡，即使切换
+  气泡已关闭、或者在**隐藏于**列出的应用里也会显示。用自适应主题时，它总是显示完整
   的一排。已被槽位或按键重映射占用的按键会显示为已占用。想用 Option+P 这样的快捷键，
-  请运行 `keyboardctl bind option+p peek`；选 **None**（无）会移除 Peek 触发键，从命令行
+  请运行 `keyboardctl bind option+p peek`；选**无**会移除速览触发键，从命令行
   设置的快捷键也一样。不属于任何槽位的输入源不显示气泡。
 - **Caps Lock**（默认关闭）：Caps Lock 打开或关闭时显示 "A" 或 "a" 的气泡，使用你的主题；
-  按槽位着色的主题在「Color」设为 Slot 时会用当前槽位的颜色（当前输入源不属于任何槽位时
-  用第一个槽位）。Switcher 把它显示成单个色块，Badge 显示成标记。即使切换气泡已关闭，
+  按槽位着色的主题在「颜色」设为「槽位」时会用当前槽位的颜色（当前输入源不属于任何槽位时
+  用第一个槽位）。切换器把它显示成单个色块，徽章显示成标记。即使切换气泡已关闭，
   它也会显示。
 
-Peek 和 Caps Lock 气泡同样需要键盘控制在运行。
+速览和 Caps Lock 气泡同样需要键盘控制在运行。
 
 </details>
 
@@ -320,47 +321,47 @@ Peek 和 Caps Lock 气泡同样需要键盘控制在运行。
 <summary><strong>按应用设定输入源</strong></summary>
 
 <p align="center">
-  <img src="Assets/readme/apps.png" width="640" alt="深色外观下的 Apps 页：应用规则面板里 Code 在英文栏、WeChat 在中文栏、Chat 在日文栏、Screen Sharing 在 Keep as is；App Memory 记着一个应用；其他应用设为中文；以及密码框切回开关。">
+  <img src="Assets/readme/apps.png" width="640" alt="深色外观下的“应用”页：应用规则面板里 Code 在英文栏、WeChat 在中文栏、Chat 在日文栏、Screen Sharing 在“保持不变”；应用记忆记着一个应用；其他应用设为中文；以及密码框切回开关。">
 </p>
 
-<p align="center"><sub>Apps 页：应用规则、App Memory、其他应用的槽位和密码框切回开关。</sub></p>
+<p align="center"><sub>“应用”页：应用规则、应用记忆、其他应用的槽位和密码框切回开关。</sub></p>
 
-Apps 页面决定某个应用切到前台时发生什么。它做的每次切换都和触发键走同一条路径，所以
+“应用”页面决定某个应用切到前台时发生什么。它做的每次切换都和触发键走同一条路径，所以
 切换应用后马上按下的触发键始终优先。
 
-- **App Rules**（应用规则）：一块和槽位面板类似的面板。左侧列表显示正在运行的应用；在它的
+- **应用规则**：一块和槽位面板类似的面板。左侧列表显示正在运行的应用；在它的
   搜索框里输入名称或 bundle id，可以找到已安装的应用。右侧每个槽位一栏，另有一栏
-  **Keep as is**（保持不变）。把应用从列表、访达或 Dock 拖到某一栏上，就给了它这条规则；
+  **保持不变**。把应用从列表、访达或程序坞拖到某一栏上，就给了它这条规则；
   把它的标签拖到另一栏可以改规则，拖回列表就移除规则。不想拖动的话：应用的右键菜单里有
-  **Add to**（添加到）各栏；标签的菜单（点它的箭头按钮或右键）里有 **Move To**（移到）、
-  **Remember**（记住）和 **Remove Rule**（移除规则），标签上的 × 也能移除规则；面板下方的
-  **Add App**（添加应用，可选正在运行的应用或 **Choose App…**）会把应用放到第一个槽位。
+  **添加到**各栏；标签的菜单（点它的箭头按钮或右键）里有**移到**、
+  **记忆**和**移除规则**，标签上的 × 也能移除规则；面板下方的
+  **添加应用**（可选正在运行的应用或**选择应用…**）会把应用放到第一个槽位。
   面板下方有一行文字，说明每次改动做了什么，或者某次拖放为什么被拒绝。
 
-  槽位规则会在应用每次切到前台时选中该槽位。**Keep as is** 从不切换，并把这个应用排除在
-  App Memory 之外，适合远程桌面、虚拟机和游戏。**Remember**（只用于槽位规则，带一个时钟
-  标记）会恢复你在该应用里最后用的输入源，规则的槽位只在第一次使用，即使 App Memory 关闭
-  也是如此；标签移到别的槽位时它会保留，拖到 **Keep as is** 上时则会去掉。移除一个槽位后，
-  它的应用会留在一栏 **Slot deleted**（槽位已删除）里，这一栏不接收新应用，其中的规则在你
+  槽位规则会在应用每次切到前台时选中该槽位。**保持不变**从不切换，并把这个应用排除在
+  应用记忆之外，适合远程桌面、虚拟机和游戏。**记忆**（只用于槽位规则，带一个时钟
+  标记）会恢复你在该应用里最后用的输入源，规则的槽位只在第一次使用，即使应用记忆关闭
+  也是如此；标签移到别的槽位时它会保留，拖到**保持不变**上时则会去掉。移除一个槽位后，
+  它的应用会留在一栏**槽位已删除**里，这一栏不接收新应用，其中的规则在你
   把它们移走之前不会选中任何槽位。面板不接受 CmdIME 自己，从命令行给它写的规则也永远不会
-  生效；已经卸载的应用会保留规则，并标上 **Not installed**（未安装）。
-- **App Memory**（按应用记忆，默认关闭）：回到某个应用时，选中你上次在那里用的输入源，
+  生效；已经卸载的应用会保留规则，并标上**未安装**。
+- **应用记忆**（默认关闭）：回到某个应用时，选中你上次在那里用的输入源，
   不管当时是怎么选的：触发键、Control+Space、菜单栏或地球仪键。它只保存在内存里：
   CmdIME 退出后就清空，暂停键盘控制也会清空。页面会列出它记住的应用以及各自的输入源，
-  可以用 **Forget** 忘掉一个，或用 **Forget All** 全部忘掉。macOS 在密码框里强制切成的
+  可以用**忘记**忘掉一个，或用**全部忘记**全部忘掉。macOS 在密码框里强制切成的
   输入源不会被记住，CmdIME 自己的设置窗口也不会。
-- **Other apps**（其他应用）：给既没有规则、也没有记忆的应用指定一个槽位，或选
-  **Keep as is**（默认）。App Memory 开启时，这个槽位只在应用第一次切到前台时使用。
-- **Password fields**（密码框，默认开启）：在密码框里 macOS 会切换到 ABC 这类 ASCII
+- **其他应用**：给既没有规则、也没有记忆的应用指定一个槽位，或选
+  **保持不变**（默认）。应用记忆开启时，这个槽位只在应用第一次切到前台时使用。
+- **密码框**（默认开启）：在密码框里 macOS 会切换到 ABC 这类 ASCII
   输入源，之后一直停在那里。密码框结束、且前台仍是同一个应用时，CmdIME 会切回你原来的
-  输入源。如果先切换了应用，就不再切回。设了 **Keep as is** 规则的应用也不会切回。
+  输入源。如果先切换了应用，就不再切回。设了**保持不变**规则的应用也不会切回。
 
-优先顺序：规则优先于 App Memory，除非规则选了 **Remember**；Other apps 的槽位只覆盖两者
+优先顺序：规则优先于应用记忆，除非规则选了**记忆**；其他应用的槽位只覆盖两者
 都没有的应用。应用切到前台时如果已经是该用的输入源，就什么也不做。这里做的切换，包括
 密码框之后的切回，都会像触发键一样显示切换指示气泡（只针对属于某个槽位的输入源）。键盘
 控制暂停时什么都不会发生。
 
-如果 macOS 自带的「自动切换到文稿的输入法」（键盘 > 输入法）处于开启状态，App Memory
+如果 macOS 自带的「自动切换到文稿的输入法」（键盘 > 输入法）处于开启状态，应用记忆
 会给出提醒：macOS 会在每次切换窗口时选中它记住的输入源，与按应用切换互相冲突。
 Spotlight、Raycast、Alfred 这类启动器不会被识别为应用，菜单栏应用和系统提示框也不会：
 在其中做的切换会算在下面那个应用上，给它们设的规则也永远不会生效。
@@ -386,7 +387,7 @@ keyboardctl app-rule remove com.microsoft.VSCode
 直接选中，不增加延迟。
 
 如果别的日文输入法出现同样的症状，可以在 `~/.config/cmd-ime/activation-recipes.json`
-里加一条激活配方，然后点 Slots 页输入源列表上方的 Refresh 按钮：
+里加一条激活配方，然后点“槽位”页输入源列表上方的“刷新”按钮：
 
 ```json
 { "recipes": [
@@ -424,22 +425,22 @@ CmdIME 0.1.10 或更高版本。macOS 把 `com.apple.50onPaletteIM` 暴露为一
 <summary><strong>设置窗口、外观与退出</strong></summary>
 
 CmdIME 是一个后台代理程序。设置窗口只是一个控制面板：关闭窗口不会停止键盘监听。
-设置窗口开着时，CmdIME 出现在 Dock 和应用切换器里。窗口关掉后，它仍在后台运行，没有菜单栏图标。
+设置窗口开着时，CmdIME 出现在程序坞和应用切换器里。窗口关掉后，它仍在后台运行，没有菜单栏图标。
 需要打开设置时，再次打开 `CmdIME.app` 即可。
 
-窗口左侧有侧栏，包括 **Slots**、**Apps**、**Indicator**、**General** 和 **About**（设置引导
-还没完成时另有 **Setup**）。侧栏底部是键盘控制的状态，带 **Pause**（暂停）或 **Resume**
-（恢复）按钮；缺少 Accessibility 或 Input Monitoring 权限时，它会展开成修复步骤。
+窗口左侧有侧栏，包括**槽位**、**应用**、**指示气泡**、**通用**和**关于**（向导
+还没完成时另有**设置向导**）。侧栏底部是键盘控制的状态，带**暂停**或**恢复**
+按钮；缺少辅助功能或输入监控权限时，它会展开成修复步骤。
 
-全新安装后，设置窗口会打开侧栏第一项 **Setup** 页，里面是三步的设置引导：允许键盘访问、
+全新安装后，设置窗口会打开侧栏第一项**设置向导**页，里面是三步的设置引导：允许键盘访问、
 检查检测到的槽位、然后试着切换一次。完成或跳过后这一页会消失，之后通过
-**General > Show Setup Guide** 可以再次打开。从早期版本更新的用户看到的则是一行新功能提示。
+**通用 > 显示设置向导**可以再次打开。从早期版本更新的用户看到的则是一行新功能提示。
 
-设置窗口跟随 macOS 的外观。**General > Appearance**（通用 > 外观）可以把它固定为
-**Light** 或 **Dark**，或者交还给 **System**。窗口建立在系统材质之上，更新条在 macOS 26
+设置窗口跟随 macOS 的外观。**通用 > 外观**可以把它固定为
+**浅色**或**深色**，或者改回**跟随系统**。窗口建立在系统材质之上，更新条在 macOS 26
 及以上使用 Liquid Glass；开启“减少透明度”时，全部变为不透明。
 
-要停止后台代理程序，请使用 **General > Quit CmdIME**，或者运行：
+要停止后台代理程序，请使用**通用 > 退出 CmdIME**，或者运行：
 
 ```sh
 keyboardctl quit
@@ -456,18 +457,18 @@ CmdIME 大部分时间没有窗口，所以它会自己检查新版本：默认�
 Release（除此之外不发送任何内容），发现新版本时，为这个版本发一条系统通知。设置窗口顶部
 会显示同一条更新提示，并附上这一版的开头一句话和每项改动的标题。
 
-**General > Updates**（通用 > 更新）里有用于手动检查的 **Check**（About 页也有同样的按钮，
-叫 **Check for Updates**）和 **Check automatically** 开关；这个开关打开时，还有
-**Every 6 hours / Daily / Weekly** 频率选择，以及 **Notify me about updates**：关掉它就不再
+**通用 > 更新**里有用于手动检查的**检查**（“关于”页也有同样的按钮，
+叫**检查更新**）和**自动检查**开关；这个开关打开时，还有
+**频率**选择（**6 小时 / 每天 / 每周**），以及**通知我有更新**：关掉它就不再
 发通知，但窗口里的更新提示照常显示。通知权限只在有更新要通知时、或者你打开这个开关时
 申请，首次启动时不会申请。macOS 不允许应用自己修改通知权限：如果通知被关掉了，
-General 会提示，并提供 **Open Notification Settings…**。
+“通用”页会提示，并提供**打开通知设置…**。
 
-**Update Now** 会原地安装更新：下载发布的 zip，对照发布的 `.sha256` 校验，
+**立即更新**会原地安装更新：下载发布的 zip，对照发布的 `.sha256` 校验，
 验证新应用带有有效的代码签名、并且与正在运行的应用来自同一个开发者团队，
-然后替换应用包并重新打开 CmdIME。由于签名身份没有变化，Accessibility 和
-Input Monitoring 的授权会保留。**Release Notes** 打开 GitHub 的发布页面，
-**Skip** 不再提醒这个版本。如果 CmdIME 是用 Homebrew 安装的，`brew upgrade`
+然后替换应用包并重新打开 CmdIME。由于签名身份没有变化，辅助功能和
+输入监控的授权会保留。**发布说明**打开 GitHub 的发布页面，
+**跳过**不再提醒这个版本。如果 CmdIME 是用 Homebrew 安装的，`brew upgrade`
 照常可用；原地更新之后，Homebrew 记录的版本号会落后，直到下一次 `brew upgrade`。
 
 </details>
@@ -519,12 +520,12 @@ swift run keyboardctl listen
 - `keyboardctl lab [--slots a,b] [--attempts N] [--client <bundle id>] [--away <bundle id>] [--json]`：
   可靠性检查（Reliability Lab）。它真的切换到每个槽位，在 TextEdit（或 `--client` 指定的应用）里
   打字，通过辅助功能 API 读回文字，按实际打出来的内容判断，而不是按 macOS 报告的结果。`--away`
-  用来检查 App Memory：每次切换后先把那个应用切到前台、在那里选中 ABC 再切回来，正在运行的
-  CmdIME 必须在打字前把槽位的输入源恢复回来；使用前先打开 "Remember input source per app"。
+  用来检查应用记忆：每次切换后先把那个应用切到前台、在那里选中 ABC 再切回来，正在运行的
+  CmdIME 必须在打字前把槽位的输入源恢复回来；使用前先打开“按应用记忆输入源”。
   运行它的终端需要辅助功能权限，运行期间会接管键盘。`keyboardctl help` 还列出了 `--settle`、
   `--rest` 和 `--latin-first`。
-- `keyboardctl diagnose [--json]`：先输出当前输入源；然后是按应用设定的摘要（App Memory 是否
-  开启、App Rules 的数量、Other apps 槽位、密码框切回，以及 macOS 的「自动切换到文稿的输入法」
+- `keyboardctl diagnose [--json]`：先输出当前输入源；然后是按应用设定的摘要（应用记忆是否
+  开启、应用规则的数量、其他应用槽位、密码框切回，以及 macOS 的「自动切换到文稿的输入法」
   开启时的警告）；再输出每个槽位配置的偏好（`preferredIDs`、`fallbackLanguage`、
   `languagePrefixes`、`nameContains`）、匹配到的输入源，以及匹配原因（`preferredID`、
   `fallbackLanguage`、`languagePrefix`、`nameContains` 或 `none`）。传入 `--json` 可得到同一份
@@ -532,15 +533,15 @@ swift run keyboardctl listen
   `rememberInputSourcePerApp`、`appRuleCount`、`appDefaultSlot`、`restoreAfterPasswordField`、
   `systemPerDocumentSwitching`、`slots`）：`slots` 条目保留 `slot` ID，并包含 `name` 和
   `duplicateSlots`（没有重复时为空数组）。
-- `keyboardctl bind <trigger> peek`：把这个触发键设为 Peek，在不切换的情况下显示当前
-  输入源的气泡。Peek 触发键只有一个，所以它会替换之前的那个；如果槽位或重映射原本占着
+- `keyboardctl bind <trigger> peek`：把这个触发键设为速览，在不切换的情况下显示当前
+  输入源的气泡。速览触发键只有一个，所以它会替换之前的那个；如果槽位或重映射原本占着
   这个触发键，它会把触发键拿过来，并在 stderr 上说明。
   `control+space` 这类 macOS 输入源快捷键会被拒绝。`peek`（不区分大小写）优先于名为
-  "peek" 的槽位。要移除它，请用 **Indicator > More bubbles > Peek > None**。
-- `keyboardctl app-rule list|set|remove`：即 Apps 页面上的 App Rules。`set` 接受一个
+  "peek" 的槽位。要移除它，请用**指示气泡 > 更多气泡 > 速览 > 无**。
+- `keyboardctl app-rule list|set|remove`：即“应用”页面上的应用规则。`set` 接受一个
   bundle id 或 `--frontmost`（运行时处于前台的应用），然后是一个槽位或 `keep`；加上
   `--remember` 表示规则改为恢复上次的输入源（和 `keep` 一起用会被拒绝）。`list` 输出每条
-  规则，标出槽位已被删除的规则，最后列出 Other apps 的槽位。`remove` 接受一个 bundle id。
+  规则，标出槽位已被删除的规则，最后列出其他应用的槽位。`remove` 接受一个 bundle id。
   正在运行的 CmdIME 会立即应用改动。详见上文的**按应用设定输入源**。
 - `keyboardctl export <new-folder>` / `keyboardctl import <folder>`：见下文的迁移设置。
 - `keyboardctl slots`：按顺序列出槽位 ID、名称、触发键和匹配结果，
@@ -571,7 +572,7 @@ swift run keyboardctl listen
 重新读取。文件暂时无法读取时（编辑器保存到一半，或有拼写错误），CmdIME 会保留当前设置；
 如果在文件修好之前需要保存，它会先把文件复制为旁边的 `config.json.unreadable.<uuid>.bak`。
 
-在 Slots 页，**Manage > Reset to Detected**（管理 > 重置为检测结果）会先请求确认，然后才用
+在“槽位”页，**管理 > 重置为检测结果**会先请求确认，然后才用
 检测到的默认值替换所有槽位和触发键。无关的设置会被保留，包括通用的指示气泡偏好。保存之前，
 GUI 会把原文件备份为配置文件旁边的 `config.json.before-reset.bak`；之后的重置会使用各不相同
 的备份名称，而不是覆盖之前的备份。如果备份或保存失败，重置不会生效。
@@ -595,19 +596,19 @@ GUI 会把原文件备份为配置文件旁边的 `config.json.before-reset.bak`
 </details>
 
 <details>
-<summary><strong>迁移设置，以及 Copy Diagnostics</strong></summary>
+<summary><strong>迁移设置，以及复制诊断信息</strong></summary>
 
-**General > Settings file**（设置文件）里有 **Export Settings…**、**Import Settings…** 和
-**Show Backups**。导出的结果是一个新文件夹，包含 `config.json`（槽位、触发键、App Rules、
+**通用 > 设置文件**里有**导出设置…**、**导入设置…** 和
+**显示备份**。导出的结果是一个新文件夹，包含 `config.json`（槽位、触发键、应用规则、
 指示气泡，以及保存在其中的其他所有设置）、你的 `themes/`、导入的 `fonts/` 和
-`activation-recipes.json`；CmdIME 不会写入已经存在的文件夹。App Memory 记住的内容、设置
-窗口的外观、检查更新的选项和开机启动（Launch at login）都不在 `config.json` 里，不会随之
+`activation-recipes.json`；CmdIME 不会写入已经存在的文件夹。应用记忆记住的内容、设置
+窗口的外观、检查更新的选项和“登录时启动”都不在 `config.json` 里，不会随之
 迁移。在设置里导入时，会先显示文件夹里有多少个槽位、主题和字体，替换任何内容之前都会先问你。
 
 导入前会先把当前设置复制到 `~/.config/cmd-ime/backups/before-import-<时间>/`，导入这个
 文件夹就能撤销。没有可读 `config.json` 的文件夹，以及来自更新版本 CmdIME 的配置，都会被
 拒绝。导入的文件会替换本地同名文件；导出里没有的本地主题和字体会保留。新设置无需重启即可
-生效，导入也不会让设置引导重新出现。被同名文件替换的字体，在 CmdIME 重启之前仍显示旧的样子。
+生效，导入也不会让设置向导重新出现。被同名文件替换的字体，在 CmdIME 重启之前仍显示旧的样子。
 
 命令行也可以做同样的事，比如用脚本配置第二台 Mac：
 
@@ -616,7 +617,7 @@ keyboardctl export ~/Desktop/CmdIME-settings
 keyboardctl import ~/Desktop/CmdIME-settings
 ```
 
-**About > Copy Diagnostics** 会复制 CmdIME 和 macOS 的版本、键盘控制是否在运行、两项权限，
+**关于 > 复制诊断信息**会复制 CmdIME 和 macOS 的版本、键盘控制是否在运行、两项权限，
 以及 `keyboardctl diagnose` 的报告。其中只有设置和输入源的名称，不包含你输入的任何内容。
 把它粘贴到 issue 里即可。
 
@@ -641,9 +642,9 @@ augroup END
 
 你这台机器上的输入源 id 用 `keyboardctl scan` 查。
 
-CmdIME 会把这些选择当成它之外发生的切换，所以在切换气泡和 **Indicator > Other switches**
+CmdIME 会把这些选择当成它之外发生的切换，所以在切换气泡和**指示气泡 > 其他切换**
 都开启时（默认都开启），只要这次选择真的改变了输入源、且该输入源属于某个槽位，就会显示
-气泡（需要键盘控制在运行）。把你的终端或编辑器加到 **Indicator > Hidden in** 里，在那里
+气泡（需要键盘控制在运行）。把你的终端或编辑器加到**指示气泡 > 隐藏于**里，在那里
 就不会再弹出气泡。
 
 **它承诺什么，不承诺什么。** 切换没生效时，`keyboardctl source` 会以非零状态退出并在 stderr 说明
@@ -663,7 +664,7 @@ keyboardctl lab --attempts 30
 <summary><strong>"CmdIME is damaged" 或 "Apple cannot check it for malicious software"</strong></summary>
 
 应用并没有损坏。预览版已签名但未公证，而浏览器下载的 zip 会带上隔离标记，所以 Gatekeeper
-会拦住第一次启动。“已损坏”这个提示下通常没有 **Open Anyway**（仍要打开）可点。下面两种方法
+会拦住第一次启动。“已损坏”这个提示下通常没有**仍要打开**可点。下面两种方法
 任选其一：
 
 1. 删掉下载的 zip 和应用，用一行命令重新安装。它不经过浏览器的隔离流程：
@@ -679,7 +680,7 @@ keyboardctl lab --attempts 30
    ```
 
 如果 macOS 显示的是 "Apple cannot check it for malicious software"（Apple 无法检查其是否包含
-恶意软件），系统设置 > 隐私与安全性里可能会有 **Open Anyway**；按上面的方法去掉标记也可以。
+恶意软件），系统设置 > 隐私与安全性里可能会有**仍要打开**；按上面的方法去掉标记也可以。
 Apple 关于 [Gatekeeper](https://support.apple.com/guide/security/gatekeeper-and-runtime-protection-sec5599b66df/web) 和 [Developer ID](https://developer.apple.com/developer-id/) 的文档说明了这些检查。
 
 </details>
@@ -687,12 +688,12 @@ Apple 关于 [Gatekeeper](https://support.apple.com/guide/security/gatekeeper-an
 <details>
 <summary><strong>macOS 反复请求权限</strong></summary>
 
-macOS 是针对应用的代码身份保存 Accessibility 和 Input Monitoring 授权的，所以如果你批准了
+macOS 是针对应用的代码身份保存辅助功能和输入监控授权的，所以如果你批准了
 某一个重新构建的 `CmdIME.app`，随后又从 `dist/`、`dist/release/` 或 `/Applications` 运行
 另一份副本，macOS 可能会再次询问。请使用一个固定的应用位置。重置方法：
 
 1. 退出 CmdIME。
-2. 在系统设置 > 隐私与安全性 > Accessibility 和 Input Monitoring 中移除旧的
+2. 在系统设置 > 隐私与安全性 > 辅助功能和输入监控中移除旧的
    `CmdIME.app` 条目。
 3. 把应用安装或复制到你实际使用的位置，例如
    `/Applications/CmdIME.app`。
@@ -727,7 +728,7 @@ CMDIME_ALLOW_UNNOTARIZED=1 ./script/package_app.sh
 
 不传版本号时，版本取自 `./VERSION`。脚本会输出 SHA-256，并生成
 `dist/CmdIME-<version>.zip`、`dist/CmdIME-<version>.zip.sha256` 和固定名称的 `dist/CmdIME.zip`；
-发布时三个文件都要上传，因为 **Update Now** 需要 `.sha256`，而官网链接的是 `CmdIME.zip`。
+发布时三个文件都要上传，因为**立即更新**需要 `.sha256`，而官网链接的是 `CmdIME.zip`。
 
 经过公证的打包需要 `Developer ID Application` 签名身份；如果要打包明确标注为未经公证的
 预览版，请设置 `CMDIME_ALLOW_UNNOTARIZED=1`。一次性的公证设置：
@@ -748,8 +749,8 @@ xcrun notarytool store-credentials "cmd-ime-notary" \
 `Contents/Resources` 链接 `keyboardctl`，这是一个指向 `Contents/MacOS` 中已签名辅助程序的
 兼容性符号链接。
 
-发布的应用保持原生 SwiftUI 和 AppKit 实现：全局键盘监听、Accessibility 和
-Input Monitoring、登录项以及输入源切换都依赖 macOS API。通过 Mac App Store 分发需要一个
+发布的应用保持原生 SwiftUI 和 AppKit 实现：全局键盘监听、辅助功能和
+输入监控、登录项以及输入源切换都依赖 macOS API。通过 Mac App Store 分发需要一个
 单独的、启用沙盒的构建；参见 [docs/app-store.md](docs/app-store.md)。
 
 </details>
@@ -758,10 +759,10 @@ Input Monitoring、登录项以及输入源切换都依赖 macOS API。通过 Ma
 <summary><strong>项目结构</strong></summary>
 
 - `Sources/KeyboardSwitcherCore`：配置与槽位、触发键解析、输入源扫描与匹配、切换以及全局
-  事件监听（event tap）、App Rules 与 App Memory、指示气泡主题、设置的导出与导入、可靠性
+  事件监听（event tap）、应用规则与应用记忆、指示气泡主题、设置的导出与导入、可靠性
   检查的判定，以及更新信息解析
 - `Sources/CmdIME`：带有 SwiftUI 设置窗口的 AppKit 后台应用
-- `Sources/keyboardctl`：用于扫描、配置、切换、诊断、App Rules、设置导出与导入、可靠性检查
+- `Sources/keyboardctl`：用于扫描、配置、切换、诊断、应用规则、设置导出与导入、可靠性检查
   和监听模式的 CLI；App 也会调用它来扫描输入源
 - `script`：本地运行、安装和发布脚本
 - `Casks`：Homebrew cask 模板

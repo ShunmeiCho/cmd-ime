@@ -49,12 +49,12 @@ public enum AppRuleBoard {
         in config: SwitcherConfig,
         ownAppID: String?
     ) -> DropResult {
-        guard !appID.isEmpty else { return .refused("That is not an app.") }
-        guard appID != ownAppID else { return .refused("CmdIME never switches input sources for itself.") }
+        guard !appID.isEmpty else { return .refused(CoreLocalization.text("That is not an app.")) }
+        guard appID != ownAppID else { return .refused(CoreLocalization.text("CmdIME never switches input sources for itself.")) }
         let existing = config.appRule(for: appID)
         guard existing?.target != target else { return .unchanged }
         if case .slot(let id) = target, config.slot(id) == nil {
-            return .refused("That slot was deleted. Drop the app on another slot.")
+            return .refused(CoreLocalization.text("That slot was deleted. Drop the app on another slot."))
         }
         let rule = AppRule(
             appID: appID,

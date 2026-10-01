@@ -15,8 +15,8 @@ struct SetupPermissionsStep: View {
                 .setupBodyText()
 
             SetupPermissionRow(
-                title: "Accessibility",
-                purpose: "Lets CmdIME handle a trigger before other apps see it, and find the text caret for the switch indicator.",
+                title: String(localized: "Accessibility"),
+                purpose: String(localized: "Lets CmdIME handle a trigger before other apps see it, and find the text caret for the switch indicator."),
                 granted: model.permissions.accessibilityGranted
             ) {
                 session.didOpenPermissionSettings = true
@@ -24,8 +24,8 @@ struct SetupPermissionsStep: View {
             }
 
             SetupPermissionRow(
-                title: "Input Monitoring",
-                purpose: "Lets CmdIME see key presses while another app is in front, so triggers work everywhere.",
+                title: String(localized: "Input Monitoring"),
+                purpose: String(localized: "Lets CmdIME see key presses while another app is in front, so triggers work everywhere."),
                 granted: model.permissions.inputMonitoringGranted
             ) {
                 session.didOpenPermissionSettings = true
@@ -49,7 +49,7 @@ struct SetupPermissionsStep: View {
                 SetupNotice(
                     systemImage: "xmark.octagon.fill",
                     tone: .danger,
-                    text: "Both permissions are ready, but the keyboard listener could not start. macOS often applies a new permission only after the app restarts."
+                    text: String(localized: "Both permissions are ready, but the keyboard listener could not start. macOS often applies a new permission only after the app restarts.")
                 ) {
                     Button("Try Again") {
                         model.startListeningIfReady()
@@ -61,9 +61,9 @@ struct SetupPermissionsStep: View {
                 SetupNotice(
                     systemImage: "pause.circle.fill",
                     tone: .warning,
-                    text: "Permissions are ready, but the keyboard listener is not running. Start it before trying your triggers."
+                    text: String(localized: "Permissions are ready, but the keyboard listener is not running. Start it before trying your triggers.")
                 ) {
-                    Button(model.keyboardControlStatus == "Paused" ? "Resume" : "Start Listening") {
+                    Button(model.isKeyboardControlPaused ? String(localized: "Resume") : String(localized: "Start Listening")) {
                         model.startListeningIfReady()
                     }
                     .buttonStyle(ConsoleButtonStyle(prominent: true))
@@ -72,7 +72,7 @@ struct SetupPermissionsStep: View {
                 SetupNotice(
                     systemImage: "arrow.clockwise.circle.fill",
                     tone: .neutral,
-                    text: "Turned it on and it still reads Missing? macOS sometimes reports a new permission only after the app restarts."
+                    text: String(localized: "Turned it on and it still reads Missing? macOS sometimes reports a new permission only after the app restarts.")
                 ) {
                     RelaunchButton(model: model, prominent: false, failed: $session.relaunchFailed)
                 }
@@ -80,8 +80,8 @@ struct SetupPermissionsStep: View {
 
             if showsQuitInsteadOfRelaunch {
                 Text(model.config.hasCompletedSetup
-                    ? "After quitting, open CmdIME again from Spotlight or the Applications folder."
-                    : "After quitting, open CmdIME again from Spotlight or the Applications folder. The guide continues where it stopped.")
+                    ? String(localized: "After quitting, open CmdIME again from Spotlight or the Applications folder.")
+                    : String(localized: "After quitting, open CmdIME again from Spotlight or the Applications folder. The guide continues where it stopped."))
                     .setupNoteText()
             }
 
@@ -90,7 +90,7 @@ struct SetupPermissionsStep: View {
         }
         .onChange(of: state.shouldOfferRelaunch) { offered in
             if offered {
-                SetupGuideNavigation.announce("The keyboard listener could not start. Try again, or restart CmdIME.")
+                SetupGuideNavigation.announce(String(localized: "The keyboard listener could not start. Try again, or restart CmdIME."))
             }
         }
     }
@@ -124,16 +124,16 @@ private struct SetupPermissionRow: View {
                     .setupNoteText()
             }
             .accessibilityElement(children: .combine)
-            .accessibilityValue(granted ? "Ready" : "Missing")
+            .accessibilityValue(granted ? String(localized: "Ready") : String(localized: "Missing"))
 
             Spacer(minLength: 8)
 
             if granted {
-                StatusPill(text: "Ready", systemImage: "checkmark", tone: .success)
+                StatusPill(text: String(localized: "Ready"), systemImage: "checkmark", tone: .success)
                     .accessibilityHidden(true)
             } else {
                 // The restart hint refers to this word, and status is never icon-only.
-                StatusPill(text: "Missing", systemImage: "exclamationmark.triangle.fill", tone: .warning)
+                StatusPill(text: String(localized: "Missing"), systemImage: "exclamationmark.triangle.fill", tone: .warning)
                     .accessibilityHidden(true)
                 Button("Open Settings", action: onOpenSettings)
                     .buttonStyle(ConsoleButtonStyle())
@@ -143,7 +143,7 @@ private struct SetupPermissionRow: View {
         .padding(10)
         .background(SetupInsetBackground())
         .onChange(of: granted) { granted in
-            SetupGuideNavigation.announce("\(title) is \(granted ? "ready" : "missing")")
+            SetupGuideNavigation.announce(granted ? String(localized: "\(title) is ready") : String(localized: "\(title) is missing"))
         }
     }
 }

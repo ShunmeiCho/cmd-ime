@@ -6,14 +6,14 @@ struct PeekAndCapsLockSection: View {
     @ObservedObject var model: AppModel
 
     private static let keys = [
-        ("left-command", "Left Command"), ("right-command", "Right Command"),
-        ("left-option", "Left Option"), ("right-option", "Right Option"),
-        ("left-control", "Left Control"), ("right-control", "Right Control"),
-        ("left-shift", "Left Shift"), ("right-shift", "Right Shift"),
+        ("left-command", String(localized: "Left Command")), ("right-command", String(localized: "Right Command")),
+        ("left-option", String(localized: "Left Option")), ("right-option", String(localized: "Right Option")),
+        ("left-control", String(localized: "Left Control")), ("right-control", String(localized: "Right Control")),
+        ("left-shift", String(localized: "Left Shift")), ("right-shift", String(localized: "Right Shift")),
     ]
 
     var body: some View {
-        CompactSection(title: "More bubbles") {
+        CompactSection(title: String(localized: "More bubbles")) {
             VStack(alignment: .leading, spacing: 10) {
                 peekRow
                 Text("Shows the bubble for the current input source without switching. For a shortcut such as Option+P, run keyboardctl bind option+p peek.")
@@ -29,22 +29,22 @@ struct PeekAndCapsLockSection: View {
     }
 
     private var peekRow: some View {
-        CompactSettingRow("Peek") {
+        CompactSettingRow(String(localized: "Peek")) {
             ConsoleMenuButton(title: peekValue) {
                 Button("None") { model.commitPeekTrigger(nil) }
-                    .accessibilityValue(model.peekTrigger == nil ? "Selected" : "Not selected")
+                    .accessibilityValue(model.peekTrigger == nil ? String(localized: "Selected") : String(localized: "Not selected"))
                 ForEach([TriggerGesture.tap, .doubleTap], id: \.self) { gesture in
                     Divider()
-                    Text(gesture == .tap ? "Single tap" : "Double tap")
+                    Text(gesture == .tap ? String(localized: "Single tap") : String(localized: "Double tap"))
                     ForEach(Self.keys, id: \.0) { key, label in
                         let candidate = candidate(for: key, gesture: gesture)
                         let owner = candidate.flatMap(ownerName)
-                        Button("\(label)\(owner.map { " — used by \($0)" } ?? "")") {
+                        Button(owner.map { String(localized: "\(label) — used by \($0)") } ?? label) {
                             model.commitPeekTrigger(candidate)
                         }
                         .disabled(owner != nil || candidate == nil)
-                        .accessibilityLabel("\(label), \(gesture == .tap ? "single tap" : "double tap")")
-                        .accessibilityValue(owner.map { "Used by \($0)" } ?? (model.peekTrigger == candidate ? "Selected" : "Not selected"))
+                        .accessibilityLabel("\(label), \(gesture == .tap ? String(localized: "single tap") : String(localized: "double tap"))")
+                        .accessibilityValue(owner.map { String(localized: "Used by \($0)") } ?? (model.peekTrigger == candidate ? String(localized: "Selected") : String(localized: "Not selected")))
                     }
                 }
             }
@@ -56,7 +56,7 @@ struct PeekAndCapsLockSection: View {
     }
 
     private var capsLockRow: some View {
-        CompactSettingRow("Caps Lock") {
+        CompactSettingRow(String(localized: "Caps Lock")) {
             Toggle(
                 "Show a bubble when Caps Lock changes",
                 isOn: Binding(
@@ -73,10 +73,10 @@ struct PeekAndCapsLockSection: View {
     }
 
     private var peekValue: String {
-        guard let trigger = model.peekTrigger else { return "None" }
+        guard let trigger = model.peekTrigger else { return String(localized: "None") }
         guard trigger.kind == .oneShotModifier,
-              let label = Self.keys.first(where: { $0.0 == trigger.keyName })?.1 else { return trigger.displayName }
-        return trigger.gesture == .doubleTap ? "Double \(label)" : label
+              let label = Self.keys.first(where: { $0.0 == trigger.keyName })?.1 else { return trigger.localizedDisplayName }
+        return trigger.gesture == .doubleTap ? String(localized: "Double \(label)") : label
     }
 
     private func candidate(for key: String, gesture: TriggerGesture) -> KeyTrigger? {

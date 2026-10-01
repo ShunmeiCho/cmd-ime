@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "CmdIME",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v13),
     ],
@@ -15,7 +16,8 @@ let package = Package(
         .target(name: "KeyboardSwitcherCore"),
         .executableTarget(
             name: "CmdIME",
-            dependencies: ["KeyboardSwitcherCore"]
+            dependencies: ["KeyboardSwitcherCore"],
+            resources: [.process("Resources")]
         ),
         .executableTarget(
             name: "keyboardctl",

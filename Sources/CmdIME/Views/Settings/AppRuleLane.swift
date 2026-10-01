@@ -7,8 +7,8 @@ struct AppRuleLaneLook {
 
     func title(_ lane: AppRuleBoard.Lane) -> String {
         switch lane.target {
-        case .keepAsIs: "Keep as is"
-        case .slot(let id): lane.slotExists ? config.displayName(for: id) : "Slot deleted (\(id.rawValue))"
+        case .keepAsIs: String(localized: "Keep as is")
+        case .slot(let id): lane.slotExists ? config.displayName(for: id) : String(localized: "Slot deleted (\(id.rawValue))")
         }
     }
 
@@ -102,8 +102,8 @@ struct AppRuleLane: View {
     }
 
     private var placeholder: String {
-        if !lane.slotExists { return "Move these apps to another slot." }
-        return lane.target == .keepAsIs ? "Drop apps here to leave their input source alone." : "Drop apps here."
+        if !lane.slotExists { return String(localized: "Move these apps to another slot.") }
+        return lane.target == .keepAsIs ? String(localized: "Drop apps here to leave their input source alone.") : String(localized: "Drop apps here.")
     }
 }
 
@@ -175,7 +175,7 @@ struct AppRuleChip: View {
                     .help("Remember: brings back the input source you last used here; the slot is used only the first time.")
             }
         }
-        .help(app.isInstalled ? app.name : "\(app.name) is not installed")
+        .help(app.isInstalled ? app.name : String(localized: "\(app.name) is not installed"))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel(app: app))
         .accessibilityActions { accessibilityActions }
@@ -203,7 +203,7 @@ struct AppRuleChip: View {
             Button("Move to \(look.title(lane))") { model.dropApp(appID: rule.appID, name: nil, on: lane.target) }
         }
         if case .slot = rule.target {
-            Button(rule.rememberInstead ? "Stop remembering" : "Remember") { rememberBinding.wrappedValue.toggle() }
+            Button(rule.rememberInstead ? String(localized: "Stop remembering") : String(localized: "Remember")) { rememberBinding.wrappedValue.toggle() }
         }
         Button("Remove rule") { model.removeAppRule(for: rule.appID) }
     }
@@ -221,8 +221,8 @@ struct AppRuleChip: View {
 
     private func accessibilityLabel(app: InstalledApp) -> String {
         var parts = [app.name]
-        if rule.rememberInstead { parts.append("remember") }
-        if !app.isInstalled { parts.append("not installed") }
+        if rule.rememberInstead { parts.append(String(localized: "remember")) }
+        if !app.isInstalled { parts.append(String(localized: "not installed")) }
         return parts.joined(separator: ", ")
     }
 }

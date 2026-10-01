@@ -18,7 +18,7 @@ struct KeyboardControlFooter: View {
     var body: some View {
         let status = RuntimeStatusPresentation(model: model)
         VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
-            SectionLabel("Keyboard control")
+            SectionLabel(String(localized: "Keyboard control"))
             statusRow(status)
             if needsAttention {
                 PermissionsCard(model: model, status: status)
@@ -41,7 +41,7 @@ struct KeyboardControlFooter: View {
                 }
                 .buttonStyle(ConsoleButtonStyle())
                 .help("Show or hide keyboard permission details")
-                .accessibilityValue(showsPermissionDetails ? "Expanded" : "Collapsed")
+                .accessibilityValue(showsPermissionDetails ? String(localized: "Expanded") : String(localized: "Collapsed"))
                 if showsPermissionDetails {
                     PermissionsCard(model: model, status: status)
                 }
@@ -127,39 +127,39 @@ private struct RuntimeStatusPresentation {
 
     init(model: AppModel) {
         if model.permissions.isReady && model.sources.isEmpty {
-            title = "No Input Sources"
-            detail = "No input methods are available. Refresh methods or add an input source in System Settings."
+            title = String(localized: "No Input Sources")
+            detail = String(localized: "No input methods are available. Refresh methods or add an input source in System Settings.")
             systemImage = "keyboard.badge.ellipsis"
             tone = .warning
-            primaryActionTitle = model.isListening ? "Pause" : "Resume"
+            primaryActionTitle = model.isListening ? String(localized: "Pause") : String(localized: "Resume")
             primaryActionProminent = !model.isListening
         } else if model.isListening {
-            title = "Active"
-            detail = "Listening for your configured shortcuts."
+            title = String(localized: "Active")
+            detail = String(localized: "Listening for your configured shortcuts.")
             systemImage = "checkmark.circle.fill"
             tone = .success
-            primaryActionTitle = "Pause"
+            primaryActionTitle = String(localized: "Pause")
             primaryActionProminent = false
         } else if !model.permissions.isReady {
-            title = "Needs Permission"
-            detail = "Grant Accessibility and Input Monitoring to enable global shortcuts."
+            title = String(localized: "Needs Permission")
+            detail = String(localized: "Grant Accessibility and Input Monitoring to enable global shortcuts.")
             systemImage = "exclamationmark.triangle.fill"
             tone = .warning
             primaryActionTitle = nil
             primaryActionProminent = true
         } else if model.didListenerFailToStart {
-            title = "Listener Failed"
-            detail = "Keyboard listener could not start. Re-grant permissions, then try again."
+            title = String(localized: "Listener Failed")
+            detail = String(localized: "Keyboard listener could not start. Re-grant permissions, then try again.")
             systemImage = "xmark.octagon.fill"
             tone = .danger
             primaryActionTitle = nil
             primaryActionProminent = true
         } else {
-            title = "Paused"
-            detail = "Shortcuts are not being captured."
+            title = String(localized: "Paused")
+            detail = String(localized: "Shortcuts are not being captured.")
             systemImage = "pause.circle.fill"
             tone = .neutral
-            primaryActionTitle = "Resume"
+            primaryActionTitle = String(localized: "Resume")
             primaryActionProminent = true
         }
     }
@@ -180,16 +180,16 @@ private struct PermissionsCard: View {
 
             VStack(spacing: 0) {
                 PermissionMiniStatus(
-                    title: "Accessibility",
+                    title: String(localized: "Accessibility"),
                     granted: model.permissions.accessibilityGranted,
-                    actionTitle: "Open",
+                    actionTitle: String(localized: "Open"),
                     action: model.openAccessibilitySettings
                 )
 
                 PermissionMiniStatus(
-                    title: "Input Monitoring",
+                    title: String(localized: "Input Monitoring"),
                     granted: model.permissions.inputMonitoringGranted,
-                    actionTitle: "Open",
+                    actionTitle: String(localized: "Open"),
                     action: model.openInputMonitoringSettings
                 )
             }
@@ -234,6 +234,6 @@ private struct PermissionMiniStatus: View {
         .padding(.vertical, DesignTokens.Layout.rowGap)
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), \(granted ? "ready" : "missing")")
+        .accessibilityLabel(granted ? String(localized: "\(title), ready") : String(localized: "\(title), missing"))
     }
 }

@@ -16,7 +16,7 @@ enum UpdateServiceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidResponse:
-            "Could not read the latest CmdIME release."
+            String(localized: "Could not read the latest CmdIME release.")
         }
     }
 }
