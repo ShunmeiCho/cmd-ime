@@ -502,7 +502,10 @@ If the CLI is not linked yet, use `pkill -x CmdIME`.
 <summary><strong>Updates</strong></summary>
 
 CmdIME has no window most of the time, so it looks for new releases itself: by default
-every six hours it asks GitHub for the newest release (nothing else is sent), and when
+every six hours it asks GitHub for the newest release (nothing else is sent). GitHub's API
+answers only 60 such requests an hour per network without an account, so on a shared office or
+school network CmdIME falls back to the release page, which gives the version without the summary
+of changes. When
 there is one it posts a single system notification for that version, with the release's
 opening sentence, a **Release Notes** button and, where CmdIME can update itself in place,
 **Update Now**. If macOS does not let
