@@ -13,6 +13,10 @@ final class IndicatorLibrary: ObservableObject {
     /// The last failure of a theme or font operation, shown inline by the settings.
     @Published var message: String?
 
+    /// Set by AppModel while a settings import writes themes/ and fonts/: a theme or font written
+    /// meanwhile would be overwritten by the import, with no copy in its backup.
+    var isImportRunning = false
+
     private let themeStore: IndicatorThemeStore
     private let fontStore: FontStore
     private let registrar = IndicatorFontRegistrar()
@@ -103,6 +107,7 @@ final class IndicatorLibrary: ObservableObject {
     /// Copies each file in, checks that it really holds fonts, then registers it for
     /// this process. A file with no usable font is removed again.
     func importFonts(from urls: [URL]) {
+        guard !refusedDuringImport() else { return }
         message = nil
         for url in urls {
             do {
@@ -121,6 +126,7 @@ final class IndicatorLibrary: ObservableObject {
     /// No confirmation: the original file is elsewhere. Themes that used the family
     /// fall back to the system font and say so.
     func removeFont(_ entry: IndicatorFontRegistrar.Entry) {
+        guard !refusedDuringImport() else { return }
         registrar.unregister(entry.font)
         perform { try fontStore.removing(entry.font) }
         reloadFonts()
@@ -131,8 +137,15 @@ final class IndicatorLibrary: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([directory])
     }
 
+    private func refusedDuringImport() -> Bool {
+        guard isImportRunning else { return false }
+        message = String(localized: "Settings are being imported. Try again when the import has finished.")
+        return true
+    }
+
     @discardableResult
     private func perform(_ work: () throws -> Void) -> Bool {
+        guard !refusedDuringImport() else { return false }
         do {
             try work()
             message = nil

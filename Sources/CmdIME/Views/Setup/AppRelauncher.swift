@@ -60,9 +60,7 @@ struct RelaunchButton: View {
     var body: some View {
         if AppRelauncher.canRelaunch, !failed {
             Button("Relaunch CmdIME") {
-                if AppRelauncher.scheduleReopenAfterExit() {
-                    model.quit()
-                } else {
+                if !model.relaunch() {
                     failed = true
                     SetupGuideNavigation.announce(String(localized: "Relaunch is not available. Quit CmdIME and open it again."))
                 }

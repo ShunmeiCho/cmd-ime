@@ -99,6 +99,8 @@ final class AppModel: ObservableObject {
     private var isReloadHeldBackByImport = false
     /// A quit arrived during an import and was cancelled; the import's end quits again.
     private var isQuitWaitingForImport = false
+    /// That quit was a relaunch; the reopen helper starts when the import ends.
+    private var isReopenWaitingForImport = false
     /// Light, dark or system, for the settings window only; the switch indicator keeps following its theme.
     @Published var appearance = AppearancePreference.stored {
         didSet {
@@ -316,6 +318,20 @@ final class AppModel: ObservableObject {
     /// Quitting mid-import would leave the settings partly imported, so every quit that reaches
     /// AppKit (Quit CmdIME, the Dock menu, the restart after Update Now or Relaunch, logout) waits for
     /// the import to end. `keyboardctl quit` force-terminates and is not covered.
+    /// Relaunch CmdIME (also the restart after Update Now). During an import the quit waits for it,
+    /// possibly longer than the reopen helper waits, so the helper starts only once the import ends.
+    /// False when there is no bundle to reopen or the helper could not start.
+    func relaunch() -> Bool {
+        guard AppRelauncher.canRelaunch else { return false }
+        if settingsTransferActivity == .importing {
+            isReopenWaitingForImport = true
+        } else if !AppRelauncher.scheduleReopenAfterExit() {
+            return false
+        }
+        quit()
+        return true
+    }
+
     func shouldDelayQuitForImport() -> Bool {
         guard settingsTransferActivity == .importing else { return false }
         isQuitWaitingForImport = true
@@ -328,8 +344,10 @@ final class AppModel: ObservableObject {
     func importSettings(from folder: URL) async {
         guard settingsTransferActivity == nil else { return }
         settingsTransferActivity = .importing
+        indicatorLibrary.isImportRunning = true
         defer {
             settingsTransferActivity = nil
+            indicatorLibrary.isImportRunning = false
             if isReloadHeldBackByImport {
                 isReloadHeldBackByImport = false
                 // Unchanged after a finished import; after one that stopped partway, or an
@@ -338,6 +356,11 @@ final class AppModel: ObservableObject {
             }
             if isQuitWaitingForImport {
                 isQuitWaitingForImport = false
+                if isReopenWaitingForImport {
+                    isReopenWaitingForImport = false
+                    // Started only now: the helper waits a bounded time for this process to exit.
+                    _ = AppRelauncher.scheduleReopenAfterExit()
+                }
                 NSApp.terminate(nil)
             }
         }
@@ -906,9 +929,7 @@ final class AppModel: ObservableObject {
                     self?.updateInstallStage = stage.displayName
                 }
                 updateInstallStage = String(localized: "Restarting…")
-                if AppRelauncher.scheduleReopenAfterExit() {
-                    quit()
-                } else {
+                if !relaunch() {
                     updateInstallStage = nil
                     updateInstallError = String(localized: "Updated. Quit CmdIME and open it again to use the new version.")
                 }
