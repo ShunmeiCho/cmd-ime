@@ -19848,6 +19848,294 @@
           }
         }
       }
+    },
+    "Add Program": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Program"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加程序"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムを追加"
+          }
+        }
+      }
+    },
+    "Add Program…": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Program…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加程序…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムを追加…"
+          }
+        }
+      }
+    },
+    "Add a rule for a program in the terminal": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a rule for a program in the terminal"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为终端里的程序添加规则"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルのプログラムにルールを追加"
+          }
+        }
+      }
+    },
+    "Program name": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program name"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序名"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラム名"
+          }
+        }
+      }
+    },
+    "Program rules": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program rules"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序规则"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムルール"
+          }
+        }
+      }
+    },
+    "Program rules are paused": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program rules are paused"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序规则已暂停"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムルールを一時停止しました"
+          }
+        }
+      }
+    },
+    "Program rules are on": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program rules are on"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序规则已开启"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムルールをオンにしました"
+          }
+        }
+      }
+    },
+    "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac for now.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac for now."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有规则的程序在当前聚焦的终端面板里运行时，会切到它的槽位。CmdIME 只读取终端里正在运行的程序的名称，不读取屏幕上的内容。目前只支持这台 Mac 上的 Herdr 面板。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールのあるプログラムが、フォーカスのあるターミナルのペインで動いている間、そのスロットに切り替わります。CmdIME が読み取るのはターミナルで動いているプログラムの名前だけで、画面の内容は読み取りません。現在はこの Mac の Herdr のペインでのみ動作します。"
+          }
+        }
+      }
+    },
+    "Type the command the program is started with, such as %@. Upper and lower case count.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type the command the program is started with, such as %@. Upper and lower case count."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入启动这个程序用的命令，例如 %@。区分大小写。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムを起動するコマンドを入力します（例: %@）。大文字と小文字は区別されます。"
+          }
+        }
+      }
+    },
+    "A program name has no spaces and no slashes.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A program name has no spaces and no slashes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序名不能包含空格和斜杠。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラム名に空白やスラッシュは使えません。"
+          }
+        }
+      }
+    },
+    "Programs started as %@": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Programs started as %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以 %@ 启动的程序"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ として起動したプログラム"
+          }
+        }
+      }
+    },
+    "%@ already has a rule; this replaces it.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ already has a rule; this replaces it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已经有规则，这次会替换它。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ にはすでにルールがあり、これで置き換えます。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

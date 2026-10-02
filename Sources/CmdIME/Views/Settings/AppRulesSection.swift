@@ -5,7 +5,8 @@ import SwiftUI
 /// App Rules (CONTEXT.md) as a board, the way the slot board works: apps on the left, one lane per
 /// slot plus "Keep as is" on the right, and dragging an app onto a lane gives it that rule. Add App,
 /// the app rows' menus and each chip's menu do the same without dragging. Website Rules live in the
-/// same lanes as globe chips, added through Add Website.
+/// same lanes as globe chips, added through Add Website; Program Rules as terminal chips, added
+/// through Add Program.
 struct AppRulesSection: View {
     @ObservedObject var model: AppModel
     @State private var query = ""
@@ -13,6 +14,7 @@ struct AppRulesSection: View {
     @State private var installed: [InstalledApp] = []
     @State private var isScanningInstalled = true
     @State private var isAddingWebsite = false
+    @State private var isAddingProgram = false
 
     var body: some View {
         let lanes = AppRuleBoard.lanes(for: model.config)
@@ -22,7 +24,7 @@ struct AppRulesSection: View {
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .explanation()
-            if model.config.appRules.isEmpty, model.config.websiteRules.isEmpty {
+            if model.config.appRules.isEmpty, model.config.websiteRules.isEmpty, model.config.programRules.isEmpty {
                 Text("Drag an app from the list onto a slot, or use Add App or Add Website.")
                     .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
@@ -46,14 +48,21 @@ struct AppRulesSection: View {
                 Button("Add Website…") { isAddingWebsite = true }
                     .fixedSize()
                     .accessibilityLabel("Add a rule for a website")
+                Button("Add Program…") { isAddingProgram = true }
+                    .fixedSize()
+                    .accessibilityLabel("Add a rule for a program in the terminal")
             }
             Text("For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+            programRulesRow
         }
         .sheet(isPresented: $isAddingWebsite) {
             AddWebsiteSheet(model: model, lanes: AppRuleLaneLook(config: model.config).destinations(lanes))
+        }
+        .sheet(isPresented: $isAddingProgram) {
+            AddProgramSheet(model: model, lanes: AppRuleLaneLook(config: model.config).destinations(lanes))
         }
         .onAppear { AppMetadataCache.shared.removeAll() }
         .onDisappear { model.dismissAppRuleNotice() }
@@ -95,6 +104,29 @@ struct AppRulesSection: View {
             query: query
         )
         return candidates.map { InstalledApp(id: $0.id, name: $0.name) }
+    }
+
+    /// The switch that pauses every Program Rule, and what CmdIME reads for them. The note is
+    /// always shown, in Brief too.
+    private var programRulesRow: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text("Program rules")
+                Spacer(minLength: DesignTokens.Layout.rowGap)
+                Toggle("Program rules", isOn: Binding(
+                    get: { !model.config.programRulesPaused },
+                    set: { [model] isOn in model.setProgramRulesPaused(!isOn) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .tint(DesignTokens.Colors.success)
+                .controlSize(.small)
+            }
+            Text("A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac for now.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private var addMenu: some View {

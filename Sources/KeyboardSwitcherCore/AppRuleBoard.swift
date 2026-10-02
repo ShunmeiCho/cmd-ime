@@ -11,6 +11,8 @@ public enum AppRuleBoard {
         public let rules: [AppRule]
         /// The website chips of this lane, one per domain, in the order the user added them.
         public let websiteRules: [WebsiteRule]
+        /// The program chips of this lane, one per name, in the order the user added them.
+        public let programRules: [ProgramRule]
     }
 
     public enum DropResult: Equatable, Sendable {
@@ -25,16 +27,18 @@ public enum AppRuleBoard {
     public static func lanes(for config: SwitcherConfig) -> [Lane] {
         let slotIDs = config.slots.map(\.id)
         let websiteRules = config.websiteRules.uniquedByDomain()
+        let programRules = config.programRules.uniquedByName()
         func lane(_ target: AppRuleTarget, slotExists: Bool) -> Lane {
             Lane(
                 target: target,
                 slotExists: slotExists,
                 rules: config.appRules.filter { $0.target == target },
-                websiteRules: websiteRules.filter { $0.target == target }
+                websiteRules: websiteRules.filter { $0.target == target },
+                programRules: programRules.filter { $0.target == target }
             )
         }
         var deleted: [InputRole] = []
-        for target in config.appRules.map(\.target) + websiteRules.map(\.target) {
+        for target in config.appRules.map(\.target) + websiteRules.map(\.target) + programRules.map(\.target) {
             if case .slot(let id) = target, !slotIDs.contains(id), !deleted.contains(id) {
                 deleted.append(id)
             }

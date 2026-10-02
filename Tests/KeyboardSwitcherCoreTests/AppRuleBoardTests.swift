@@ -159,6 +159,27 @@ struct AppRuleBoardWebsiteTests {
         #expect(board.last?.websiteRules.map(\.domain) == ["bank.example"])
     }
 
+    @Test("each lane lists its program chips, one per name; a deleted slot keeps its lane for them")
+    func lanesListProgramChips() {
+        let gone = InputRole(rawValue: "korean")
+        var config = SwitcherConfig.default
+        config.programRules = [
+            ProgramRule(name: "claude", target: .slot(chinese)),
+            ProgramRule(name: "vim", target: .keepAsIs),
+            ProgramRule(name: "ssh", target: .slot(gone)),
+            ProgramRule(name: "claude", target: .slot(english)),
+        ]
+
+        let board = AppRuleBoard.lanes(for: config)
+
+        #expect(board.first { $0.target == .slot(english) }?.programRules.map(\.name) == ["claude"])
+        #expect(board.first { $0.target == .slot(chinese) }?.programRules.isEmpty == true)
+        #expect(board.last?.programRules.map(\.name) == ["vim"])
+        let deleted = board[board.count - 2]
+        #expect(!deleted.slotExists)
+        #expect(deleted.programRules.map(\.name) == ["ssh"])
+    }
+
     @Test("a website rule naming a deleted slot stays visible in that slot's lane")
     func deletedSlotKeepsWebsiteChip() {
         let gone = InputRole(rawValue: "korean")
