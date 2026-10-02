@@ -68,14 +68,7 @@ public struct SetupGuideInput: Equatable, Sendable {
         hasConfirmedSlots: Bool
     ) {
         // A slot reached only through the Toggle has a trigger too.
-        let boundSlotIDs = Set(config.bindings.flatMap { binding -> [InputRole] in
-            guard binding.enabled else { return [] }
-            switch binding.action.type {
-            case .switchInputSource: return binding.action.role.map { [$0] } ?? []
-            case .toggleSlots: return binding.action.roles ?? []
-            case .sendKey, .disable, .showIndicator: return []
-            }
-        })
+        let boundSlotIDs = Set(config.reachingTriggers.map(\.slot))
         self.init(
             accessibilityGranted: accessibilityGranted,
             inputMonitoringGranted: inputMonitoringGranted,
@@ -151,7 +144,7 @@ public struct SetupUnboundSlots: Equatable, Sendable {
     private let slotCount: Int
 
     public init(config: SwitcherConfig) {
-        let boundIDs = Set(config.slotTriggers.map(\.slot))
+        let boundIDs = Set(config.reachingTriggers.map(\.slot))
         names = config.slots.filter { !boundIDs.contains($0.id) }.map(\.name)
         slotCount = config.slots.count
     }

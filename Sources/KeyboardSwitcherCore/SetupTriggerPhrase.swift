@@ -73,7 +73,7 @@ public struct SetupTryItProgress: Equatable, Sendable {
     public init(config: SwitcherConfig, sources: [InputSourceInfo], evidence: SetupTriggerEvidence) {
         let tried = evidence.triedSlotIDs(config: config, sources: sources)
         var seen = Set<InputRole>()
-        let withTrigger = config.slotTriggers.map(\.slot).filter { seen.insert($0).inserted }
+        let withTrigger = config.reachingTriggers.map(\.slot).filter { seen.insert($0).inserted }
         let matched = Set(withTrigger.filter {
             InputSourceMatcher.bestMatch(for: $0, sources: sources, config: config) != nil
         })

@@ -666,14 +666,17 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
     }
 
-    /// A Toggle goes to the other slot when the source in front is one of its two, else to the one
-    /// switched to last. Compared against the sources a switch to each slot would select.
+    /// A Toggle goes to the other slot when the source in front belongs to one of its two, else to
+    /// the one switched to last. "Belongs to" is the matcher Peek uses, over every slot in order, so a
+    /// source an earlier slot falls back to counts as that slot's, not as one of the Toggle's.
     private func decidingToggle(_ target: SwitchTarget) -> SwitchTarget {
         guard case let .toggle(first, second) = target else {
             return target
         }
         let currentID = (try? inputSources.currentInputSource())?.id
-        let current = [first, second].first { currentID != nil && resolvedSource(for: .slot($0))?.id == currentID }
+        let current = (try? currentSources()).flatMap {
+            InputSourceMatcher.slotID(forSelectedSourceID: currentID, sources: $0, config: config)
+        }
         return .slot(ToggleDecision.target(first: first, second: second, current: current, recentSlots: recentSlots))
     }
 

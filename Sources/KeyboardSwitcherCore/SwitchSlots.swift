@@ -443,6 +443,16 @@ public extension SwitcherConfig {
         slotTriggers.filter { $0.trigger.kind == .keyPress }
     }
 
+    /// `slotTriggers` plus the Toggle's trigger for each of its two slots, in slot order: every
+    /// trigger that can take the user to a slot. The setup guide counts and proves slots with it.
+    var reachingTriggers: [(slot: InputRole, trigger: KeyTrigger)] {
+        let toggle = toggleBinding.flatMap { binding in toggleSlots.map { (binding.trigger, [$0.0, $0.1]) } }
+        return slots.flatMap { slot in
+            slotTriggers.filter { $0.slot == slot.id }
+                + (toggle.map { $0.1.contains(slot.id) ? [(slot: slot.id, trigger: $0.0)] : [] } ?? [])
+        }
+    }
+
     /// Every enabled switch trigger bound to an existing slot, in slot order.
     var slotTriggers: [(slot: InputRole, trigger: KeyTrigger)] {
         slots.flatMap { slot in

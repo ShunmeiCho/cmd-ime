@@ -20,7 +20,7 @@ public struct SetupTriggerFingerprint: Equatable, Sendable {
     public init?(slotID: InputRole, config: SwitcherConfig, sources: [InputSourceInfo]) {
         guard config.slot(slotID) != nil,
               let source = InputSourceMatcher.bestMatch(for: slotID, sources: sources, config: config) else { return nil }
-        let triggers = Set(config.slotTriggers.filter { $0.slot == slotID }.map(\.trigger))
+        let triggers = Set(config.reachingTriggers.filter { $0.slot == slotID }.map(\.trigger))
         guard !triggers.isEmpty else { return nil }
         self.triggers = triggers
         preference = config.preference(for: slotID)

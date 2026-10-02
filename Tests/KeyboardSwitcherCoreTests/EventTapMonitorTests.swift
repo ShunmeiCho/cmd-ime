@@ -1227,6 +1227,28 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(roles, [.chinese, .japanese, .chinese])
     }
 
+    func testToggleCountsASourceAnEarlierSlotFallsBackToAsThatSlots() throws {
+        // An earlier slot whose own source is gone falls back to ABC, so ABC belongs to it, not to
+        // the Toggle's English: from there the Toggle goes to the one used last.
+        var config = try SwitcherConfig.default.replacingToggleBinding(with: ShortcutParser.parse("option+t"), slots: .english, .chinese)
+        let other = InputRole(rawValue: "other-english")
+        config.slots.insert(SwitchSlot(id: other, name: "Other", tintHex: "#888888"), at: 0)
+        config.inputSources[other.rawValue] = RoleInputSourcePreference(preferredIDs: ["com.example.missing"], fallbackLanguage: "en")
+        let sources = makeSwitchSources()
+        let service = StubInputSourceService(sources: sources)
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        var roles: [InputRole] = []
+        monitor.onSwitch = { role, _ in roles.append(role) }
+
+        monitor.requestSwitch(to: sources[0], reportingAs: .english)
+        drainMainQueue()
+        _ = monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 17, flags: [.maskAlternate]))
+        drainMainQueue()
+
+        XCTAssertEqual(roles, [.english, .english])
+        XCTAssertEqual(service.selectedIDs.last, "com.apple.keylayout.ABC")
+    }
+
     func testPeekOnAOneShotModifierFiresOnTheTap() throws {
         let config = try SwitcherConfig.default.replacingPeekBinding(with: ShortcutParser.parse("right-option"))
         let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))

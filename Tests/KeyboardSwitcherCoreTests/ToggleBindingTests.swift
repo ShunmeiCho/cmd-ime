@@ -26,11 +26,25 @@ struct ToggleBindingTests {
         #expect(try second.replacingToggleBinding(with: nil, slots: .english, .chinese).toggleBinding == nil)
     }
 
-    @Test("a taken trigger, the same slot twice, an unknown slot and macOS's own shortcut are refused")
-    func refusals() throws {
+    @Test("a key one of the two slots has moves to the toggle")
+    func takesOverAKeyOfItsOwnSlots() throws {
         // The legacy defaults tap Left Command for English.
+        let leftCommand = try trigger("left-command")
+        #expect(SwitcherConfig.default.toggleTakeover(of: leftCommand, slots: .english, .chinese)?.action.role == .english)
+
+        let config = try SwitcherConfig.default.replacingToggleBinding(with: leftCommand, slots: .english, .chinese)
+
+        #expect(config.toggleBinding?.trigger == leftCommand)
+        #expect(!config.bindings.contains { $0.action.role == .english && $0.trigger == leftCommand })
+    }
+
+    @Test("a key another slot has, the same slot twice, an unknown slot and macOS's own shortcut are refused")
+    func refusals() throws {
+        // Right Command belongs to Chinese in the legacy defaults, which this toggle does not name.
+        let rightCommand = try trigger("right-command")
+        #expect(SwitcherConfig.default.toggleTakeover(of: rightCommand, slots: .english, .japanese) == nil)
         #expect(throws: ToggleBindingError.self) {
-            try SwitcherConfig.default.replacingToggleBinding(with: trigger("left-command"), slots: .english, .chinese)
+            try SwitcherConfig.default.replacingToggleBinding(with: rightCommand, slots: .english, .japanese)
         }
         #expect(throws: ToggleBindingError.sameSlot) {
             try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .english)
@@ -86,6 +100,10 @@ struct ToggleBindingTests {
                                     listenerRunning: true, hasConfirmedSlots: true)
 
         #expect(state.boundSlotCount == 3)
+        #expect(!SetupUnboundSlots(config: config).hasUnboundSlots)
+        #expect(SetupTriggerFingerprint(slotID: .english, config: config, sources: [
+            InputSourceInfo(id: "com.apple.keylayout.ABC", localizedName: "ABC", languages: ["en"], isSelectCapable: true),
+        ])?.triggers == [try trigger("option+t")])
     }
 
     @Test("an older file without roles decodes, and a file without a toggle encodes no roles key")

@@ -32,8 +32,18 @@ extension SwitcherConfig {
         return (roles[0], roles[1])
     }
 
-    /// Replaces the Toggle, or removes it when `trigger` is nil. Refuses a trigger another enabled
-    /// binding answers to, with the rule Peek uses.
+    /// The binding a Toggle on `trigger` takes over: a trigger of one of its own two slots, which the
+    /// Toggle reaches anyway. Nil when the trigger is free or another binding owns it.
+    public func toggleTakeover(of trigger: KeyTrigger, slots first: InputRole, _ second: InputRole) -> KeyBinding? {
+        bindings.first {
+            $0.enabled && $0.action.type == .switchInputSource && ($0.action.role == first || $0.action.role == second)
+                && Self.triggers($0.trigger, collideWith: trigger)
+        }
+    }
+
+    /// Replaces the Toggle, or removes it when `trigger` is nil. A trigger one of its two slots has is
+    /// taken from that slot (the Toggle reaches it anyway); a trigger anything else answers to is
+    /// refused, with the rule Peek uses.
     public func replacingToggleBinding(with trigger: KeyTrigger?, slots first: InputRole, _ second: InputRole) throws(ToggleBindingError) -> SwitcherConfig {
         var result = self
         result.bindings.removeAll { $0.action.type == .toggleSlots }
@@ -41,6 +51,9 @@ extension SwitcherConfig {
         try validateToggle(first, second)
         if trigger.isReservedMacInputSourceShortcut {
             throw .reservedByMacOS(trigger)
+        }
+        while let taken = result.toggleTakeover(of: trigger, slots: first, second) {
+            result.bindings.removeAll { $0 == taken }
         }
         if let occupant = result.bindings.first(where: { $0.enabled && Self.triggers($0.trigger, collideWith: trigger) }) {
             throw .conflictingBinding(occupant)

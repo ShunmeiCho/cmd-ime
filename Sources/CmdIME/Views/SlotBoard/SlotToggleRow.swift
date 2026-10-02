@@ -78,7 +78,9 @@ struct SlotToggleRow: View {
                 ForEach(Self.keys, id: \.0) { key, label in
                     let candidate = candidate(for: key, gesture: gesture)
                     let owner = candidate.flatMap { ownerName($0, pair: pair) }
-                    Button(owner.map { String(localized: "\(label) — used by \($0)") } ?? label) {
+                    let mover = candidate.flatMap { takenFrom($0, pair: pair) }
+                    Button(owner.map { String(localized: "\(label) — used by \($0)") }
+                        ?? mover.map { String(localized: "\(label) — moves from \($0)") } ?? label) {
                         model.commitToggle(candidate, slots: pair[0], pair[1])
                     }
                     .disabled(owner != nil || candidate == nil)
@@ -113,6 +115,11 @@ struct SlotToggleRow: View {
         guard var result = try? ShortcutParser.parse(key) else { return nil }
         result.gesture = gesture
         return result
+    }
+
+    /// The slot of the pair a key would be taken from, named for the menu.
+    private func takenFrom(_ candidate: KeyTrigger, pair: [InputRole]) -> String? {
+        model.config.toggleTakeover(of: candidate, slots: pair[0], pair[1])?.action.role.map { model.config.displayName(for: $0) }
     }
 
     /// Asks the same pure check the save goes through, so the menu never offers a key it would refuse.
