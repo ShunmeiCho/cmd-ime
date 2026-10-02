@@ -128,7 +128,7 @@ struct WebsiteReadSchedulerTests {
         #expect(scheduler.nextReadDue == nil)
     }
 
-    @Test("a read that could not tell is retried four times, 200 ms apart, then given up")
+    @Test("a read that could not tell is retried at widening intervals for about five seconds, then given up")
     func unknownReadIsRetried() throws {
         var scheduler = WebsiteReadScheduler()
         scheduler.activated(at: 0)
@@ -138,8 +138,10 @@ struct WebsiteReadSchedulerTests {
             reads.append(try runDueRead(&scheduler, outcome: .unknown))
         }
 
-        #expect(reads.count == 1 + WebsiteReadScheduler.maxRetries)
-        #expect(zip(reads, reads.dropFirst()).allSatisfy { abs($1 - $0 - retryInterval) < tolerance })
+        let gaps = zip(reads, reads.dropFirst()).map { $1 - $0 }
+        #expect(gaps.count == WebsiteReadScheduler.retryIntervals.count)
+        #expect(zip(gaps, WebsiteReadScheduler.retryIntervals).allSatisfy { abs($0 - $1) < tolerance })
+        #expect(abs(try #require(reads.last) - 4.8) < tolerance)
     }
 
     @Test("a retry that answers ends the retries")
