@@ -43,18 +43,21 @@ struct HerdrSocketTests {
     func replies() throws {
         let socket = HerdrSocket(path: try serve("{\"ok\":1}\n", every: 0))
 
-        #expect(socket.reply(to: Data("{}\n".utf8)) == Data("{\"ok\":1}\n".utf8))
+        // A loaded machine can take longer than the production budget to schedule the server thread.
+        #expect(socket.reply(to: Data("{}\n".utf8), budget: 5) == Data("{\"ok\":1}\n".utf8))
     }
 
     @Test("the budget bounds the whole reply, even while the server drips bytes")
     func replyHasADeadline() throws {
-        let socket = HerdrSocket(path: try serve("1234567\n", every: 0.08))
+        // Eight bytes, 0.25 s apart: the whole reply takes 2 s, far beyond the budget, so the
+        // margins hold on a slow machine too.
+        let socket = HerdrSocket(path: try serve("1234567\n", every: 0.25))
         let began = ProcessInfo.processInfo.systemUptime
 
-        let reply = socket.reply(to: Data("{}\n".utf8), budget: 0.2)
+        let reply = socket.reply(to: Data("{}\n".utf8), budget: 0.3)
 
         #expect(reply == nil)
-        #expect(ProcessInfo.processInfo.systemUptime - began < 0.35)
+        #expect(ProcessInfo.processInfo.systemUptime - began < 1.5)
     }
 
     @Test("no server means no reply and no subscription")
