@@ -20521,26 +20521,26 @@
         }
       }
     },
-    "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may.": {
+    "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may. If you said no, allow CmdIME in System Settings > Privacy & Security > Automation, then quit and reopen CmdIME.": {
       "extractionState": "manual",
       "generatesSymbol": false,
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may."
+            "value": "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may. If you said no, allow CmdIME in System Settings > Privacy & Security > Automation, then quit and reopen CmdIME."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terminal.app，以及从支持这项功能的版本起的 Ghostty，能告诉 CmdIME 前台标签页里在运行哪个程序：CmdIME 会去询问它们，macOS 会就每个终端问你一次是否允许。"
+            "value": "Terminal.app，以及从支持这项功能的版本起的 Ghostty，能告诉 CmdIME 前台标签页里在运行哪个程序：CmdIME 会去询问它们，macOS 会就每个终端问你一次是否允许。如果当时选了不允许，请在“系统设置 > 隐私与安全性 > 自动化”里允许 CmdIME，然后退出并重新打开 CmdIME。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terminal.app と、対応したリリース以降の Ghostty は、前面のタブで動いているプログラムを CmdIME に伝えられます。CmdIME はそれらに問い合わせ、macOS は端末ごとに一度、許可するかどうかを確認します。"
+            "value": "Terminal.app と、対応したリリース以降の Ghostty は、前面のタブで動いているプログラムを CmdIME に伝えられます。CmdIME はそれらに問い合わせ、macOS は端末ごとに一度、許可するかどうかを確認します。許可しなかった場合は、「システム設定 > プライバシーとセキュリティ > オートメーション」で CmdIME を許可してから、CmdIME を終了してもう一度開いてください。"
           }
         }
       }

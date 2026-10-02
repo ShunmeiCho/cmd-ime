@@ -66,4 +66,18 @@ struct TerminalScriptSourceTests {
         #expect(TerminalScriptSource.dictionaryOffers(.ghostty, sdef: new))
         #expect(TerminalScriptSource.dictionaryOffers(.terminalApp, sdef: #"<property name="tty" code="ttty"/>"#))
     }
+
+    @Test("a program is kept only when both reads name the same tab and the same program")
+    func confirmation() {
+        let tab = TerminalScriptSource.Answer.process(paneID: "7", pid: 100)
+        let sameTabNewProcess = TerminalScriptSource.Answer.process(paneID: "7", pid: 200)
+        let otherTab = TerminalScriptSource.Answer.device(paneID: "/dev/ttys002", device: "/dev/ttys002")
+
+        #expect(TerminalScriptSource.confirm(first: tab, firstProgram: "claude", second: tab, secondProgram: "claude")
+            == .program(paneID: "7", name: "claude"))
+        #expect(TerminalScriptSource.confirm(first: tab, firstProgram: "claude", second: sameTabNewProcess, secondProgram: "zsh")
+            == .changed(paneID: "7"))
+        #expect(TerminalScriptSource.confirm(first: tab, firstProgram: "claude", second: otherTab, secondProgram: "claude")
+            == .changed(paneID: "/dev/ttys002"))
+    }
 }

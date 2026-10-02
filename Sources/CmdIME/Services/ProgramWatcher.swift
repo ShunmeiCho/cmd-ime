@@ -177,31 +177,32 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         case .reply(let reply):
             guard let found = TerminalScriptSource.answer(kind: kind, reply: reply) else { return Answer(context: .unknown) }
             availability.answered()
-            let paneID: String
-            let program: String?
-            switch found {
-            case .process(let pane, let processID):
-                (paneID, program) = (pane, TerminalDevice.program(ofPID: processID))
-            case .device(let pane, let device):
-                (paneID, program) = (pane, TerminalDevice.foregroundProgram(ofDevice: device))
-            }
+            let program = Self.program(of: found)
             // The terminal vouched for the tab in front when it answered, not now: ask again, as the
-            // Herdr read does, and keep the program only if the same tab is still in front.
+            // Herdr read does, and look the program up again too. Only the same tab running the same
+            // program both times is kept (review I1: a program that exited in between kept its rule).
             guard case .reply(let again) = Self.runScript(TerminalScriptSource.script(for: kind)),
                   let foundAgain = TerminalScriptSource.answer(kind: kind, reply: again) else { return Answer(context: .unknown) }
-            let paneNow: String = switch foundAgain {
-            case .process(let pane, _), .device(let pane, _): pane
-            }
-            guard paneNow == paneID else {
+            switch TerminalScriptSource.confirm(first: found, firstProgram: program, second: foundAgain, secondProgram: Self.program(of: foundAgain)) {
+            case .changed(let paneNow):
                 return Answer(context: .unknown, paneID: "terminal:" + paneNow, paneChangedDuringRead: true)
+            case .program(let paneID, let name):
+                return Answer(context: HerdrSurface.context(program: name, rules: rules), paneID: "terminal:" + paneID)
             }
-            return Answer(context: HerdrSurface.context(program: program, rules: rules), paneID: "terminal:" + paneID)
         case .failed(let code):
             availability.failed(errorCode: code, appPID: pid)
             // A refusal: this terminal is read as one that cannot say. Anything else: cannot tell.
             return availability.shouldAsk(appPID: pid) ? Answer(context: .unknown) : nil
         case .timedOut:
             return Answer(context: .unknown)
+        }
+    }
+
+    /// The foreground program an answer points at: Ghostty's pid, or Terminal's tty through the kernel.
+    private static func program(of answer: TerminalScriptSource.Answer) -> String? {
+        switch answer {
+        case .process(_, let processID): TerminalDevice.program(ofPID: processID)
+        case .device(_, let device): TerminalDevice.foregroundProgram(ofDevice: device)
         }
     }
 

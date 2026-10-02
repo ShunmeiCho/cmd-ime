@@ -53,21 +53,37 @@ public enum TerminalDevice {
         return group
     }
 
-    /// argv[0] from `KERN_PROCARGS2`: an argument count, the executable path, padding, then argv.
-    /// The rest of the buffer (other arguments, the environment) is not looked at.
     private static func argv0(of pid: pid_t) -> String? {
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
         var size = 0
         guard sysctl(&mib, UInt32(mib.count), nil, &size, nil, 0) == 0, size > MemoryLayout<Int32>.size else { return nil }
         var buffer = [UInt8](repeating: 0, count: size)
         guard sysctl(&mib, UInt32(mib.count), &buffer, &size, nil, 0) == 0 else { return nil }
-        var index = MemoryLayout<Int32>.size
-        while index < size, buffer[index] != 0 { index += 1 }
-        while index < size, buffer[index] == 0 { index += 1 }
-        let start = index
-        while index < size, buffer[index] != 0 { index += 1 }
-        guard index > start else { return nil }
-        return String(decoding: buffer[start..<index], as: UTF8.self)
+        return argv0(fromProcArgs: buffer.prefix(size))
     }
     #endif
+
+    /// The executable path's slot is padded with NULs to a multiple of this (measured on macOS 27.2 with paths
+    /// of 8, 10, 12, 13 and 19 bytes).
+    static let procArgsPathAlignment = 8
+
+    /// argv[0] from a `KERN_PROCARGS2` buffer: an Int32 argument count, the executable path padded with NULs
+    /// to `procArgsPathAlignment`, then argv. argv[0] is read at the computed start, never found by skipping
+    /// NULs: an empty argv[0] would otherwise hand over the next argument, or the environment, as the name
+    /// (review I1). Nil when the count is zero, the layout is not the expected one, or argv[0] is empty.
+    /// Nothing after argv[0] is looked at.
+    static func argv0<Bytes: Collection>(fromProcArgs bytes: Bytes) -> String? where Bytes.Element == UInt8, Bytes.Index == Int {
+        let countSize = MemoryLayout<Int32>.size
+        guard bytes.count > countSize else { return nil }
+        let base = bytes.startIndex
+        let argc = (0..<countSize).reduce(Int32(0)) { $0 | Int32(bytes[base + $1]) << (8 * $1) }
+        guard argc >= 1 else { return nil }
+        let pathStart = base + countSize
+        guard let pathEnd = bytes[pathStart...].firstIndex(of: 0) else { return nil }
+        let pathSlot = (pathEnd - pathStart + 1 + procArgsPathAlignment - 1) / procArgsPathAlignment * procArgsPathAlignment
+        let argvStart = pathStart + pathSlot
+        guard argvStart < bytes.endIndex, bytes[pathEnd..<argvStart].allSatisfy({ $0 == 0 }),
+              let argvEnd = bytes[argvStart...].firstIndex(of: 0), argvEnd > argvStart else { return nil }
+        return String(decoding: bytes[argvStart..<argvEnd], as: UTF8.self)
+    }
 }
