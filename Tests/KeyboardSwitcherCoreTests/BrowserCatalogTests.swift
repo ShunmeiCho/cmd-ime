@@ -42,6 +42,17 @@ struct BrowserCatalogTests {
         #expect(!BrowserCatalog.isMeasured(bundleID))
     }
 
+    @Test("an app that registers for http or https counts as opening web pages")
+    func declaredWebSchemes() {
+        let browser: [[String: Any]] = [["CFBundleURLName": "Web", "CFBundleURLSchemes": ["HTTP", "https", "file"]]]
+        let mailClient: [[String: Any]] = [["CFBundleURLSchemes": ["mailto"]], ["CFBundleURLName": "no schemes"]]
+
+        #expect(BrowserCatalog.declaresWebSchemes(urlTypes: browser))
+        #expect(!BrowserCatalog.declaresWebSchemes(urlTypes: mailClient))
+        #expect(!BrowserCatalog.declaresWebSchemes(urlTypes: nil))
+        #expect(!BrowserCatalog.declaresWebSchemes(urlTypes: "not an array"))
+    }
+
     @Test("only Safari, Chrome and Aside are measured")
     func measuredBrowsers() {
         #expect(Set(BrowserCatalog.bundleIDs.filter(BrowserCatalog.isMeasured))

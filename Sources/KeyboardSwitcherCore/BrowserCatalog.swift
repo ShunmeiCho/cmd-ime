@@ -47,6 +47,20 @@ public enum BrowserCatalog {
         engines[bundleID] != nil
     }
 
+    /// Whether an app says it opens web pages: its Info.plist `CFBundleURLTypes` lists `http` or
+    /// `https`. That is how macOS itself decides what may be the default browser, so a browser
+    /// this catalog has never heard of is still read for website rules. A few apps that are not
+    /// browsers register the schemes too (a downloader, a link picker); reading them finds no
+    /// page and changes nothing.
+    public static func declaresWebSchemes(urlTypes: Any?) -> Bool {
+        guard let types = urlTypes as? [[String: Any]] else { return false }
+        return types.contains { type in
+            (type["CFBundleURLSchemes"] as? [String] ?? []).contains { webSchemes.contains($0.lowercased()) }
+        }
+    }
+
+    private static let webSchemes: Set<String> = ["http", "https"]
+
     public static func isMeasured(_ bundleID: String) -> Bool {
         measured.contains(bundleID)
     }
