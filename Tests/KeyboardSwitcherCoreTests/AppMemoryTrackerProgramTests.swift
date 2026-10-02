@@ -132,7 +132,8 @@ struct AppMemoryTrackerProgramTests {
 
     @Test("a program started in the pane in focus gets its rule; one without a rule changes nothing")
     func programChangeInOnePane() {
-        var tracker = makeTracker(settings(ghosttyRule: nil))
+        // Ghostty has its own rule (japanese): a fallback to it would show.
+        var tracker = makeTracker()
         _ = activateGhostty(&tracker)
         #expect(read(&tracker, 1, .rule("zsh"), on: abc) == .none)
 

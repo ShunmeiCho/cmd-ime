@@ -121,8 +121,13 @@ public struct AppMemoryTracker: Equatable, Sendable {
     }
 
     private struct WebsiteHold: Equatable, Sendable {
-        /// What the user arrived with, to compare the decided target against.
+        /// What the user arrived with, to compare the decided target against. A pane that came
+        /// into focus has none: the source at the read is what its rule is compared against.
         let arrivalSourceID: String?
+        /// The app came to the front: without a rule for the page or program, its own target
+        /// applies. False for a pane that came into focus inside a terminal already in front,
+        /// where a program without a rule changes nothing.
+        let fallsBackToApp: Bool
     }
 
     /// `frontBrowserPID` when the app in front as following starts is a browser, `frontTerminalPID`
@@ -195,8 +200,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
     @discardableResult
     public mutating func update(settings: AppActivationSettings, context: AppMemoryContext = AppMemoryContext()) -> Restore {
         let pageTargetBefore = currentPageRuleTarget
-        if settings.websiteRules != self.settings.websiteRules || settings.programRules != self.settings.programRules
-            || settings.programRulesPaused != self.settings.programRulesPaused {
+        if rulesOfTheSurfaceInFrontChange(to: settings) {
             // The page is read again against the new rules; a read matched against the old ones is
             // stale. What the page was stays known until then, so its source is still kept out of
             // the browser's memory.
@@ -241,8 +245,11 @@ public struct AppMemoryTracker: Equatable, Sendable {
         forced = nil
         beforeForced = nil
         // The user chose by hand before the page was read: that choice stands. macOS repeating
-        // the current source on a focus change is not a choice.
-        if sourceID != previousSourceID {
+        // the current source on a focus change is not a choice. In a terminal a change from
+        // outside is not one either: a multiplexer selects ASCII for its prefix key and puts the
+        // source back around a pane switch, and those notices can arrive after the focus notice.
+        // A hand switch there still stands while the pane and its program stay the same.
+        if sourceID != previousSourceID, frontSurface?.kind != .terminal {
             userChoseSource()
         }
         guard !isOnRuledPage else { return }
@@ -365,7 +372,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         // it only records the page.
         let holdsForWebsite = canRestore && surfaceWatch != nil
         if holdsForWebsite {
-            websiteHold = WebsiteHold(arrivalSourceID: arrivalSourceID)
+            websiteHold = WebsiteHold(arrivalSourceID: arrivalSourceID, fallsBackToApp: true)
         } else if context.isTriggerPending, surfaceWatch != nil {
             contextOnlyGeneration = activationGeneration
         }
@@ -424,17 +431,29 @@ public struct AppMemoryTracker: Equatable, Sendable {
     }
 
     /// Focus moved to another pane of the terminal in front. A Program Rule is applied again every
-    /// time a pane comes into focus, whatever was chosen there or in the pane just left, so the
-    /// next read decides afresh: a new generation, nothing known about the program, and no user
-    /// choice standing. A notice for a terminal that is not being read is dropped.
+    /// time a pane comes into focus, so this is handled like an activation inside the terminal:
+    /// a new generation (reads of the pane just left are stale), a wait for the first read of the
+    /// new pane, and the next read decides afresh. What differs from an app coming to the front:
+    /// - The program of the pane just left stays known until that read, so a source its rule
+    ///   selected is still kept out of the terminal's memory if the new pane cannot be read.
+    /// - A trigger whose first read is still to come keeps standing: the notice can arrive after
+    ///   a trigger pressed in the new pane, so it moves the choice to the new generation.
+    /// - A source a password field replaced in the pane just left is not put back in this one.
+    /// A notice for a terminal that is not being read is dropped.
     public mutating func paneFocused(pid: Int32, actualFrontmostAppID: String? = nil, actualTerminalPID: Int32? = nil) {
         guard let watch = programWatch, pid == watch.pid,
               actualFrontmostAppID == nil || actualFrontmostAppID == frontmostAppID,
               actualTerminalPID == nil || actualTerminalPID == watch.pid else { return }
+        if contextOnlyGeneration == activationGeneration {
+            contextOnlyGeneration = activationGeneration + 1
+        }
         activationGeneration += 1
-        websiteContext = nil
-        isWebsiteContextStale = false
-        contextOnlyGeneration = nil
+        isWebsiteContextStale = true
+        beforeForced = nil
+        // A wait that began when the terminal came to the front keeps its fallback.
+        if websiteHold == nil, contextOnlyGeneration != activationGeneration {
+            websiteHold = WebsiteHold(arrivalSourceID: nil, fallsBackToApp: false)
+        }
     }
 
     private mutating func contextRead(
@@ -471,18 +490,17 @@ public struct AppMemoryTracker: Equatable, Sendable {
         }
         guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
         if let hold {
-            return websiteRestore(page: page, appID: appID, arrivalSourceID: hold.arrivalSourceID,
+            return websiteRestore(page: page, appID: appID, arrivalSourceID: hold.arrivalSourceID ?? currentSourceID,
                                   currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
-                                  slotOfSource: slotOfSource)
+                                  fallsBackToApp: hold.fallsBackToApp, slotOfSource: slotOfSource)
         }
         // An unread page that turns out to have no rule changes nothing: the hold already chose.
         guard page != .unknown, page != previous, !(previous == nil && page == .noRule) else { return .none }
-        // In a terminal, a program without a rule changes nothing: only an activation falls back
-        // to the terminal's own target.
-        guard frontSurface?.kind != .terminal || page != .noRule else { return .none }
+        // A page that lost its rule gets the browser's own target. In a terminal a program without
+        // a rule changes nothing: only the terminal coming to the front falls back to its target.
         return websiteRestore(page: page, appID: appID, arrivalSourceID: currentSourceID,
                               currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
-                              slotOfSource: slotOfSource)
+                              fallsBackToApp: frontSurface?.kind != .terminal, slotOfSource: slotOfSource)
     }
 
     /// No read arrived in time after the browser came to the front: its own target applies.
@@ -533,9 +551,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
         guard actualFrontmostAppID == nil || actualFrontmostAppID == appID,
               actualSurfacePID == nil || actualSurfacePID == frontSurface?.pid else { return .none }
         guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
-        return websiteRestore(page: .unknown, appID: appID, arrivalSourceID: hold.arrivalSourceID,
+        return websiteRestore(page: .unknown, appID: appID, arrivalSourceID: hold.arrivalSourceID ?? currentSourceID,
                               currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
-                              slotOfSource: slotOfSource)
+                              fallsBackToApp: hold.fallsBackToApp, slotOfSource: slotOfSource)
     }
 
     public mutating func forget(_ appID: String) {
@@ -602,6 +620,20 @@ public struct AppMemoryTracker: Equatable, Sendable {
         return ruleTarget(for: key)
     }
 
+    /// Whether `next` changes the rules the app in front is read against. Rules of the other
+    /// kind changing must not make the page or program in front be decided again: that would
+    /// apply its rule over a choice the user has made since.
+    private func rulesOfTheSurfaceInFrontChange(to next: AppActivationSettings) -> Bool {
+        switch frontSurface?.kind {
+        case .browser:
+            next.websiteRules != settings.websiteRules
+        case .terminal:
+            next.programRules != settings.programRules || next.programRulesPaused != settings.programRulesPaused
+        case nil:
+            false
+        }
+    }
+
     /// What the rule named `key` selects in the app in front: a website rule by its domain in a
     /// browser, a Program Rule by its name in a terminal. Nil when there is no such rule.
     private func ruleTarget(for key: String) -> AppActivationTarget? {
@@ -630,6 +662,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         arrivalSourceID: String?,
         currentSourceID: String?,
         isRestorePending: Bool,
+        fallsBackToApp: Bool,
         slotOfSource: (String) -> InputRole?
     ) -> Restore {
         // The source to put back belongs to the restore still on its way; one kept from an earlier,
@@ -644,7 +677,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
             guard case .rule(let key) = page else { return nil }
             return ruleTarget(for: key)
         }()
-        let target = ruleTarget ?? settings.target(for: appID, rememberedSourceID: remembered[appID])
+        let ownTarget = fallsBackToApp ? settings.target(for: appID, rememberedSourceID: remembered[appID]) : .none
+        let target = ruleTarget ?? ownTarget
         switch target {
         case .source(let sourceID) where sourceID != arrivalSourceID:
             sourceBeforeRestore = sourceBeforeRestore ?? currentSourceID
