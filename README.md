@@ -362,6 +362,12 @@ Peek and the Caps Lock bubble also need keyboard control to be running.
 
 <p align="center"><sub>The Apps page: App Rules, App Memory, a slot for other apps and the password-field switch.</sub></p>
 
+<p align="center">
+  <img src="Assets/readme/website-rules.png" width="560" alt="The rule board with website chips: github.com and stackoverflow.com on English, wikipedia.org and zhihu.com on Chinese, docs.google.com on Japanese, localhost on Keep as is.">
+</p>
+
+<p align="center"><sub>Website rules: sites sit on the same lanes as apps.</sub></p>
+
 The Apps page decides what happens when an app comes to the front. Each switch it makes
 goes through the same path as a trigger, so a trigger you press right after switching
 apps always wins.
@@ -393,8 +399,10 @@ apps always wins.
   browser's own App Rule, App Memory and the Other apps slot; a trigger you press
   afterwards still wins, and focus in the address bar changes nothing. For this CmdIME
   reads only the site address of the page in front, through Accessibility, and keeps none
-  of it; a browser set to **Keep as is** is never read. Tested in Safari and Chrome; other
-  browsers are not tested yet. A page that changes address without changing its title
+  of it; a browser set to **Keep as is** is never read. A browser is any app in
+  CmdIME's own list or any app that registers to open web links, so a browser it has never
+  heard of is read too. Tested in Safari and Chrome; the address read was also checked in
+  Aside. A page that changes address without changing its title
   (some single-page apps) is noticed only at the next tab or window change.
 - **App Memory** (off by default): coming back to an app selects the input source you last
   used there, however you chose it: a trigger, Control+Space, the menu bar or the Globe

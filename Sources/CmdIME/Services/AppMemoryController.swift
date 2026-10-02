@@ -362,9 +362,22 @@ final class AppMemoryController {
 
     /// The pid when `app` is a browser whose pages can be read for website rules.
     private static func browserPID(of app: NSRunningApplication?) -> pid_t? {
-        guard let app, let bundleID = app.bundleIdentifier, BrowserCatalog.isBrowser(bundleID) else { return nil }
+        guard let app, let bundleID = app.bundleIdentifier, isBrowser(app, bundleID: bundleID) else { return nil }
         return app.processIdentifier
     }
+
+    /// A listed browser, or any app that registers for web addresses. The Info.plist answer is
+    /// kept per app id: it is asked on every activation.
+    private static func isBrowser(_ app: NSRunningApplication, bundleID: String) -> Bool {
+        if BrowserCatalog.isBrowser(bundleID) { return true }
+        if let known = opensWebPages[bundleID] { return known }
+        let urlTypes = app.bundleURL.flatMap { Bundle(url: $0) }?.infoDictionary?["CFBundleURLTypes"]
+        let answer = bundleID != ownAppID && BrowserCatalog.declaresWebSchemes(urlTypes: urlTypes)
+        opensWebPages[bundleID] = answer
+        return answer
+    }
+
+    private static var opensWebPages: [String: Bool] = [:]
 
     /// The app in front when following starts, if it is one the tracker follows (see
     /// `AppMemoryTracker.appActivated`): a regular app, or CmdIME.
