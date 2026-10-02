@@ -20880,6 +20880,30 @@
           }
         }
       }
+    },
+    "New in 0.16: Toggle, one key between two slots; an optional space between Chinese and English; Terminal.app tabs followed by program rules.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.16: Toggle, one key between two slots; an optional space between Chinese and English; Terminal.app tabs followed by program rules."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.16 新增：轮换键，一个键在两个槽位之间切换；可选的中英文之间自动加空格；程序规则跟随 Terminal.app 的标签页。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.16 の新機能：切り替えキー（1 つのキーで 2 つのスロットを行き来）、中国語と英語の間の自動スペース（任意）、Terminal.app のタブに追従するプログラムルール。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
