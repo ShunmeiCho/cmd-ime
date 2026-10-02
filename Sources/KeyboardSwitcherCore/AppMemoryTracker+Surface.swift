@@ -302,20 +302,20 @@ extension AppMemoryTracker {
         }
         let pendingBefore = sourceBeforeRestore
         let arrivalSourceID = pendingBefore ?? arrivalSourceID
-        let ruleTarget: AppActivationTarget? = {
+        let pageRuleTarget: AppActivationTarget? = {
             guard case .rule(let key) = page else { return nil }
             return ruleTarget(for: key)
         }()
         let ownTarget = fallsBackToApp ? settings.target(for: appID, rememberedSourceID: remembered[appID]) : .none
-        let target = ruleTarget ?? ownTarget
+        let target = pageRuleTarget ?? ownTarget
         switch target {
         case .source(let sourceID) where sourceID != arrivalSourceID:
             sourceBeforeRestore = sourceBeforeRestore ?? currentSourceID
-            isWebsiteSwitchInFlight = ruleTarget != nil
+            isWebsiteSwitchInFlight = pageRuleTarget != nil
             return .select(sourceID: sourceID)
         case .slot(let slot) where arrivalSourceID.flatMap(slotOfSource) != slot:
             sourceBeforeRestore = sourceBeforeRestore ?? currentSourceID
-            isWebsiteSwitchInFlight = ruleTarget != nil
+            isWebsiteSwitchInFlight = pageRuleTarget != nil
             return .selectSlot(slot)
         default:
             // Nothing to select here, but a switch asked for the page just left must not land on
