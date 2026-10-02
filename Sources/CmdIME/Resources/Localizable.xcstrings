@@ -20472,6 +20472,30 @@
           }
         }
       }
+    },
+    "New in 0.15: an input source per program in the terminal on the Apps page: English at the shell prompt, another slot inside an agent CLI.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.15: an input source per program in the terminal on the Apps page: English at the shell prompt, another slot inside an agent CLI."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.15 新增：在“应用”页为终端里的每个程序设定输入源，比如在 shell 提示符下用英文，进了 agent CLI 用另一个槽位。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.15 の新機能：「アプリ」ページでターミナルのプログラムごとに入力ソースを設定できます。シェルのプロンプトでは英語、エージェント CLI の中では別のスロット、という使い方です。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
