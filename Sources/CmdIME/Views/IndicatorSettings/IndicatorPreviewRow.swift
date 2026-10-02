@@ -17,6 +17,7 @@ struct IndicatorPreviewRow: View {
     private static let bubbleLeading: CGFloat = 44
     private static let bubbleLift: CGFloat = 12
     private static let headroom: CGFloat = 16
+    private static let controlInset: CGFloat = 7
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var model: AppModel
@@ -40,27 +41,29 @@ struct IndicatorPreviewRow: View {
 
     var body: some View {
         let current = currentModel
-        VStack(alignment: .leading, spacing: 8) {
-            stage(current)
-            HStack(spacing: 8) {
-                ConsoleSegmentedControl(
-                    options: [ConsoleSegmentOption(value: Page.dark, label: String(localized: "Dark page")),
-                              ConsoleSegmentOption(value: Page.light, label: String(localized: "Light page"))],
-                    selection: $page
-                )
-                .frame(width: 176)
-                .accessibilityLabel("Preview background")
-                Spacer(minLength: 0)
-                if fit.scale < 1 {
-                    Text("Shown at \(Int((fit.scale * 100).rounded())) percent")
-                        .font(.caption)
-                        .foregroundStyle(DesignTokens.Colors.textSecondary)
+        // The controls sit inside the stage, on the line of the sample text: the bubble starts
+        // above that line, so they never cover it.
+        stage(current)
+            .overlay(alignment: .bottomTrailing) {
+                HStack(spacing: 8) {
+                    if fit.scale < 1 {
+                        Text("Shown at \(Int((fit.scale * 100).rounded())) percent")
+                            .font(.caption)
+                            .foregroundStyle((page == .dark ? Color.white : Color.black).opacity(0.62))
+                    }
+                    ConsoleSegmentedControl(
+                        options: [ConsoleSegmentOption(value: Page.dark, label: String(localized: "Dark page")),
+                                  ConsoleSegmentOption(value: Page.light, label: String(localized: "Light page"))],
+                        selection: $page
+                    )
+                    .frame(width: 176)
+                    .accessibilityLabel("Preview background")
+                    Button("Next slot", action: showNextSlot)
+                        .buttonStyle(ConsoleButtonStyle())
+                        .disabled(model.config.slots.count < 2)
                 }
-                Button("Next slot", action: showNextSlot)
-                    .buttonStyle(ConsoleButtonStyle())
-                    .disabled(model.config.slots.count < 2)
+                .padding(Self.controlInset)
             }
-        }
         .onAppear { if let current { present(current, replay: false) } }
         .onChange(of: current) { next in
             guard let next else { return }
