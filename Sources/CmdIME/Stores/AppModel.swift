@@ -776,6 +776,36 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Adds a Website Rule (CONTEXT.md), or replaces the one for the same domain where it stands.
+    func setWebsiteRule(_ rule: WebsiteRule) {
+        if commitFromAppsPage(config.setting(rule)) {
+            reportAppRule(.done(String(localized: "Rule saved for \(rule.domain)")))
+        }
+    }
+
+    /// A website chip dropped on a lane of the rule board: the decision is core `AppRuleBoard.drop`.
+    func dropWebsite(domain: String, on target: AppRuleTarget) {
+        switch AppRuleBoard.drop(websiteDomain: domain, on: target, in: config) {
+        case .unchanged:
+            return
+        case .refused(let reason):
+            reportAppRule(.refused(reason))
+        case .changed(let next):
+            if commitFromAppsPage(next) {
+                switch target {
+                case .keepAsIs: reportAppRule(.done(String(localized: "\(domain) keeps its input source")))
+                case .slot(let id): reportAppRule(.done(String(localized: "\(domain) now gets \(config.displayName(for: id))")))
+                }
+            }
+        }
+    }
+
+    func removeWebsiteRule(for domain: String) {
+        if commitFromAppsPage(config.removingWebsiteRule(for: domain)) {
+            reportAppRule(.done(String(localized: "Rule removed for \(domain)")))
+        }
+    }
+
     func setAppDefaultSlot(_ slot: InputRole?) {
         var next = config
         next.appDefaultSlot = slot

@@ -155,6 +155,9 @@ swift test
   保持)。それ以外のアプリ全体にスロットを 1 つ割り当てることも、パスワード欄のあとに元の
   入力ソースへ戻すこともできます(初期状態はオン。macOS はパスワード欄のあと ABC のままに
   します)。押したトリガーは常に優先されます。
+- **Web サイトごとの入力ソース。** Web サイトごとにスロットを指定できます。`github.com` の
+  ページが前面にある間は(Safari でも Chrome でも)英語、隣のタブは日本語、という使い方が
+  できます。CmdIME が読み取るのは前面のページのサイトアドレスだけで、何も保存しません。
 
 <p align="center">
   <img src="Assets/readme/per-app.gif" width="720" alt="並んだ 2 つのデモアプリ。Code には英語、Chat には中国語のアプリのルール。Chat をクリックすると「中」が出て你好と入力、Code をクリックすると A が出て git push、Chat に戻って好的。">
@@ -255,7 +258,9 @@ CmdIME は、特定のキーボードレイアウトを固定で組み込むの�
 - `ダブルタップ`: 同じキーを 2 回タップ。
 - `ショートカット`: **記録…** をクリックし、`option+j` のように
   修飾キーとキーを一緒に押してから、「保存」をクリックします。Esc でキャンセルできます。
-  記録中はタップのトリガーが一時停止します。
+  記録中はタップのトリガーが一時停止します。**押した側（左または右）のキーだけ** に
+  チェックを入れると、その側の修飾キーだけに反応します。`left-option+j` と
+  `right-option+j` を別々のスロットに割り当てられます。
 
 同じジェスチャーで別のスロットがすでに使っているキー、キーのリマップに使われている
 キー、クイックビュートリガー(「現在の入力ソースを表示」)に使われているキーは、使用中として
@@ -396,6 +401,18 @@ CmdIME 専用に登録され、システム全体には何もインストール�
   ルールはどのスロットも選びません。ボードは CmdIME 自身を受け付けず、コマンドラインから
   書いたルールも適用されません。アンインストールしたアプリのルールは残り、
   **未インストール**と表示されます。
+- **Web サイトのルール**: ボードの下の **Web サイトを追加…** で、Web サイトごとにスロット、
+  または**そのままにする**を指定できます。`github.com` のようにドメインを入力します。ルールは
+  サブドメインも対象にします(オフにできます)。複数のルールが一致するときは、いちばん長い
+  ドメインが優先されます。ルールは地球のアイコンのチップとしてアプリと同じレーンに並び、
+  移動や削除も同じ操作です。そのドメインのページが前面にある間は(CmdIME が知っている
+  どのブラウザでも)、ブラウザ自身のアプリのルール、アプリの記憶、「その他のアプリ」の
+  スロットより優先されます。そのあとで押したトリガーが優先される点は変わらず、アドレスバーに
+  フォーカスが移っても切り替えは起きません。このために CmdIME はアクセシビリティを通じて
+  前面のページのサイトアドレスだけを読み取り、何も保存しません。**そのままにする**に設定した
+  ブラウザは読み取りません。Safari と Chrome でテスト済みで、ほかのブラウザはまだテストして
+  いません。タイトルが変わらないままアドレスだけが変わるページ(一部のシングルページアプリ)
+  は、次にタブやウインドウを切り替えたときに反映されます。
 - **アプリの記憶**(初期状態はオフ): アプリに戻ると、そこで最後に使った
   入力ソースを選びます。トリガー、Control+Space、メニューバー、地球儀キーのどれで選んだ
   ものでも対象です。メモリ上だけに保持され、CmdIME を終了すると消えます。キーボード操作を
@@ -431,6 +448,12 @@ keyboardctl app-rule set com.microsoft.VSCode english
 keyboardctl app-rule set --frontmost keep
 keyboardctl app-rule set com.tinyspeck.slackmacgap chinese --remember
 keyboardctl app-rule remove com.microsoft.VSCode
+keyboardctl website-rule list
+keyboardctl website-rule set github.com english
+keyboardctl website-rule set docs.google.com japanese --exact
+keyboardctl website-rule set localhost keep
+keyboardctl website-rule test https://gist.github.com/
+keyboardctl website-rule remove github.com
 ```
 
 </details>
@@ -576,6 +599,7 @@ swift run keyboardctl diagnose --json
 swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
+swift run keyboardctl bind left-option+k english     # 左の Option キーだけ
 swift run keyboardctl bind double-left-command english
 swift run keyboardctl bind double-right-option peek
 swift run keyboardctl remap right-control escape

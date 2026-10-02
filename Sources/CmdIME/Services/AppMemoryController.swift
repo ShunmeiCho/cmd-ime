@@ -19,6 +19,22 @@ final class AppMemoryController {
     private var activationObserver: NSObjectProtocol?
     private var secureInputEndPoll: Timer?
     private var publishedMemory: [String: String] = [:]
+    /// Reads the page in front of a browser for website rules, on its own thread.
+    private lazy var websites = WebsiteWatcher { [weak self] reading in
+        MainActor.assumeIsolated { self?.websiteDidRead(reading) }
+    }
+    /// What the watcher was last pointed at, so it is only retargeted when that changes.
+    private var websiteTarget: WebsiteTarget?
+    /// The generation whose wait for the page already has its expiry scheduled.
+    private var heldGeneration: Int?
+    /// Where a tracker built by the next `start()` begins counting.
+    private var nextGenerationBase = 0
+
+    private struct WebsiteTarget: Equatable {
+        let pid: pid_t
+        let generation: Int
+        let rules: [WebsiteRule]
+    }
 
     private(set) var isActive = false
     /// App id to remembered source id, every time that changes.
@@ -44,8 +60,14 @@ final class AppMemoryController {
         self.settings = settings
         let shouldRun = isListening && settings.isAnythingOn
         if shouldRun, isActive {
-            tracker.update(settings: settings)
+            // New settings can retire a website switch still on its way.
+            let restore = tracker.update(
+                settings: settings,
+                context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
+            )
             publishMemory()
+            syncWebsiteWatch()
+            perform(restore)
         } else if shouldRun {
             start()
         } else if isActive {
@@ -74,7 +96,8 @@ final class AppMemoryController {
                 sourceID: sourceID,
                 actualFrontmostAppID: Self.appID(of: actual),
                 isRegularApp: actual?.activationPolicy == .regular,
-                context: context
+                context: context,
+                browserPID: Self.browserPID(of: actual)
             )
         } else {
             tracker.switchConfirmed(sourceID: sourceID, context: context)
@@ -96,6 +119,9 @@ final class AppMemoryController {
         tracker = AppMemoryTracker(
             ownAppID: Self.ownAppID,
             frontmostAppID: Self.trackedAppID(of: Self.actualFrontmostApp()),
+            frontBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
+            // Never a number an earlier run used: a read or an expiry left over from it stays stale.
+            activationGeneration: nextGenerationBase,
             settings: settings
         )
         // Only activations are observed, never terminations: an app that quits and comes back
@@ -117,13 +143,20 @@ final class AppMemoryController {
             NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
         }
         activationObserver = nil
+        nextGenerationBase = tracker.activationGeneration + 1
+        heldGeneration = nil
         tracker.forgetAll()
         isActive = false
         afterTrackerChange()
     }
 
     private func appDidActivate(_ app: NSRunningApplication?) {
-        guard isActive, isPermitted, let app, let noticedID = Self.appID(of: app) else { return }
+        guard isActive, let app, let noticedID = Self.appID(of: app) else { return }
+        guard isPermitted else {
+            // Nothing is read once permission is gone, a browser's pages included.
+            syncWebsiteWatch()
+            return
+        }
         // Reconcile to what is in front now; the notice may be stale (see AppMemoryTracker.appActivated).
         let actual = Self.actualFrontmostApp() ?? app
         let restore = tracker.appActivated(
@@ -133,11 +166,72 @@ final class AppMemoryController {
             // Secure input belongs to the process in front, which a system alert can be; identity comes from `actual`.
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             actualFrontmostAppID: Self.appID(of: actual),
+            browserPID: Self.browserPID(of: actual),
+            slotOfSource: slotForSourceID
+        )
+        let targetBefore = websiteTarget
+        afterTrackerChange()
+        // A read made while another app was briefly in front was dropped; with the browser back
+        // and the watcher still on it, ask for a fresh one.
+        if websiteTarget != nil, websiteTarget == targetBefore {
+            websites.refresh()
+        }
+        perform(restore)
+    }
+
+    /// A read of the page in front came back from the watcher thread. Like an activation notice it
+    /// is a prompt to look: the tracker drops it unless it is for the browser in front now.
+    private func websiteDidRead(_ reading: WebsiteReading) {
+        guard isActive, isPermitted else {
+            syncWebsiteWatch()
+            return
+        }
+        let restore = tracker.websiteRead(
+            reading,
+            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
+            actualBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
+            currentSourceID: currentSourceID(),
+            context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             slotOfSource: slotForSourceID
         )
         afterTrackerChange()
         perform(restore)
     }
+
+    /// The browser's own target waited for its page and no read came in time.
+    private func websiteHoldDidExpire(generation: Int) {
+        guard isActive, isPermitted else { return }
+        let restore = tracker.websiteHoldExpired(
+            generation: generation,
+            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
+            actualBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
+            currentSourceID: currentSourceID(),
+            context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
+            slotOfSource: slotForSourceID
+        )
+        afterTrackerChange()
+        perform(restore)
+    }
+
+    /// Points the watcher at the browser the tracker wants read, and bounds the wait for its page.
+    private func syncWebsiteWatch() {
+        // Pages are read only while following runs and CmdIME is still permitted to.
+        let watch = isActive && isPermitted ? tracker.websiteWatch : nil
+        let target = watch.map { WebsiteTarget(pid: $0.pid, generation: $0.generation, rules: settings.websiteRules) }
+        if target != websiteTarget {
+            websiteTarget = target
+            websites.retarget(pid: target?.pid, generation: target?.generation ?? 0, rules: target?.rules ?? [])
+        }
+        guard isActive, tracker.isWebsiteHoldWaiting, heldGeneration != tracker.activationGeneration else { return }
+        let generation = tracker.activationGeneration
+        heldGeneration = generation
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.websiteHoldBudget) { [weak self] in
+            self?.websiteHoldDidExpire(generation: generation)
+        }
+    }
+
+    /// How long a browser's own target waits for the first read of its page.
+    private static let websiteHoldBudget: TimeInterval = 0.25
 
     private func perform(_ restore: AppMemoryTracker.Restore) {
         guard let monitor = monitor() else { return }
@@ -162,6 +256,7 @@ final class AppMemoryController {
     private func afterTrackerChange() {
         publishMemory()
         watchSecureInputEnd()
+        syncWebsiteWatch()
     }
 
     private func publishMemory() {
@@ -263,6 +358,12 @@ final class AppMemoryController {
 
     private static func appID(of app: NSRunningApplication?) -> String? {
         app?.cmdIMEAppID
+    }
+
+    /// The pid when `app` is a browser whose pages can be read for website rules.
+    private static func browserPID(of app: NSRunningApplication?) -> pid_t? {
+        guard let app, let bundleID = app.bundleIdentifier, BrowserCatalog.isBrowser(bundleID) else { return nil }
+        return app.processIdentifier
     }
 
     /// The app in front when following starts, if it is one the tracker follows (see

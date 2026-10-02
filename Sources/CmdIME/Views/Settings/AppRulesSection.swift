@@ -4,13 +4,15 @@ import SwiftUI
 
 /// App Rules (CONTEXT.md) as a board, the way the slot board works: apps on the left, one lane per
 /// slot plus "Keep as is" on the right, and dragging an app onto a lane gives it that rule. Add App,
-/// the app rows' menus and each chip's menu do the same without dragging.
+/// the app rows' menus and each chip's menu do the same without dragging. Website Rules live in the
+/// same lanes as globe chips, added through Add Website.
 struct AppRulesSection: View {
     @ObservedObject var model: AppModel
     @State private var query = ""
     @State private var running = InstalledApp.running()
     @State private var installed: [InstalledApp] = []
     @State private var isScanningInstalled = true
+    @State private var isAddingWebsite = false
 
     var body: some View {
         let lanes = AppRuleBoard.lanes(for: model.config)
@@ -20,8 +22,8 @@ struct AppRulesSection: View {
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .explanation()
-            if model.config.appRules.isEmpty {
-                Text("Drag an app from the list onto a slot, or use Add App.")
+            if model.config.appRules.isEmpty, model.config.websiteRules.isEmpty {
+                Text("Drag an app from the list onto a slot, or use Add App or Add Website.")
                     .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
             }
@@ -39,7 +41,19 @@ struct AppRulesSection: View {
             if let notice = model.appRuleNotice {
                 AppRuleNoticeRow(notice: notice) { model.dismissAppRuleNotice() }
             }
-            addMenu
+            HStack(spacing: DesignTokens.Layout.rowGap) {
+                addMenu
+                Button("Add Website…") { isAddingWebsite = true }
+                    .fixedSize()
+                    .accessibilityLabel("Add a rule for a website")
+            }
+            Text("For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .sheet(isPresented: $isAddingWebsite) {
+            AddWebsiteSheet(model: model, lanes: AppRuleLaneLook(config: model.config).destinations(lanes))
         }
         .onAppear { AppMetadataCache.shared.removeAll() }
         .onDisappear { model.dismissAppRuleNotice() }

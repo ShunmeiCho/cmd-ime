@@ -74,6 +74,24 @@ struct SettingsTransferTests {
         #expect(try Data(contentsOf: backup.appendingPathComponent("fonts/Face.otf")) == Data("font-target".utf8))
     }
 
+    @Test("website rules survive an export and an import")
+    func websiteRulesSurviveTransfer() throws {
+        var exported = SwitcherConfig.default
+        exported.websiteRules = [
+            WebsiteRule(domain: "example.com", includesSubdomains: false, target: .slot(.japanese)),
+            WebsiteRule(domain: "localhost", target: .keepAsIs),
+        ]
+        let source = try makeTransfer(named: "source", config: exported)
+        let folder = root.appendingPathComponent("export")
+        _ = try source.export(to: folder)
+        let target = try makeTransfer(named: "target")
+
+        let result = try target.importSettings(from: folder)
+
+        #expect(result.config.websiteRules == exported.websiteRules)
+        #expect(try target.store.load().websiteRules == exported.websiteRules)
+    }
+
     @Test("local files the export does not have are kept")
     func importKeepsOtherLocalFiles() throws {
         let source = try makeTransfer(named: "source")

@@ -21,7 +21,18 @@ enum CmdIMEMain {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let model = AppModel()
+    private let model = AppModel(configStore: AppDelegate.configStore)
+
+    /// DEBUG builds read `--args -CmdIMEConfigPath <file>` so a device check can run on a scratch
+    /// config instead of the user's own.
+    private static var configStore: ConfigStore {
+        #if DEBUG
+        if let path = UserDefaults.standard.string(forKey: "CmdIMEConfigPath"), !path.isEmpty {
+            return ConfigStore(url: URL(fileURLWithPath: path))
+        }
+        #endif
+        return ConfigStore()
+    }
     private lazy var updateNotifications = UpdateNotificationDelegate { [model] action, releaseURL in
         switch action {
         case UpdateNotification.releaseNotesAction:

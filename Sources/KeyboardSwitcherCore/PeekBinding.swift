@@ -64,5 +64,6 @@ extension SwitcherConfig {
         }
         if existing.kind == .oneShotModifier || candidate.kind == .oneShotModifier { return true }
         return existing.gesture == candidate.gesture && Set(existing.modifiers) == Set(candidate.modifiers)
+            && existing.modifierSides == candidate.modifierSides
     }
 }

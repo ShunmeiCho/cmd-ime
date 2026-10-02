@@ -120,6 +120,16 @@ cat >"$INFO_PLIST" <<PLIST
         <string>public.data</string>
       </array>
     </dict>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>com.shunmei.cmd-ime.website-rule</string>
+      <key>UTTypeDescription</key>
+      <string>CmdIME website rule</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+    </dict>
   </array>
 </dict>
 </plist>

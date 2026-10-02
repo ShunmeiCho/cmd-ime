@@ -25,7 +25,7 @@ struct AppRuleLaneLook {
     }
 }
 
-/// One slot, or "Keep as is": a drop target holding the apps whose rule points here.
+/// One slot, or "Keep as is": a drop target holding the apps and websites whose rule points here.
 struct AppRuleLane: View {
     @ObservedObject var model: AppModel
     let lane: AppRuleBoard.Lane
@@ -39,7 +39,7 @@ struct AppRuleLane: View {
         let tint = look.tint(lane)
         VStack(alignment: .leading, spacing: 6) {
             header(tint: tint)
-            if lane.rules.isEmpty {
+            if chipCount == 0 {
                 Text(placeholder)
                     .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
@@ -47,6 +47,9 @@ struct AppRuleLane: View {
                 TriggerKeycapFlow(spacing: 6) {
                     ForEach(lane.rules, id: \.appID) { rule in
                         AppRuleChip(model: model, rule: rule, lanes: look.destinations(lanes))
+                    }
+                    ForEach(lane.websiteRules, id: \.domain) { rule in
+                        WebsiteRuleChip(model: model, rule: rule, lanes: look.destinations(lanes))
                     }
                 }
             }
@@ -70,6 +73,8 @@ struct AppRuleLane: View {
     private static let targetedFillOpacity = 0.14
     private static let targetedStrokeOpacity = 0.70
 
+    private var chipCount: Int { lane.rules.count + lane.websiteRules.count }
+
     private func header(tint: Color) -> some View {
         HStack(spacing: 6) {
             Image(systemName: lane.target == .keepAsIs ? "minus.circle" : "circle.fill")
@@ -79,24 +84,25 @@ struct AppRuleLane: View {
             Text(look.title(lane))
                 .font(DesignTokens.Typography.body.weight(.semibold))
             Spacer(minLength: DesignTokens.Layout.rowGap)
-            if !lane.rules.isEmpty {
-                Text("\(lane.rules.count)")
+            if chipCount > 0 {
+                Text("\(chipCount)")
                     .font(DesignTokens.Typography.auxiliary.monospacedDigit())
                     .foregroundStyle(DesignTokens.Colors.textMuted)
             }
         }
     }
 
-    /// A deleted slot's lane takes only rule chips: its own come back unchanged and any other is
+    /// A deleted slot's lane takes only chips: its own come back unchanged and any other is
     /// refused with a notice (core `AppRuleBoard.drop`). New apps and files it refuses before the drop.
     private var dropTarget: AppDropTarget {
         let target = lane.target
         let slotExists = lane.slotExists
         return AppDropTarget(
             types: AppDropReader.laneTypes,
-            accepts: { info in slotExists ? AppDropReader.laneAccepts(info) : info.hasItemsConforming(to: [AppDropReader.ruleType]) },
+            accepts: { info in slotExists ? AppDropReader.laneAccepts(info) : info.hasItemsConforming(to: AppDropReader.chipTypes) },
             isTargeted: $isTargeted,
             found: { [model] id, name in model.dropApp(appID: id, name: name, on: target) },
+            foundWebsite: { [model] domain in model.dropWebsite(domain: domain, on: target) },
             notAnApp: { [model] in model.refuseNonAppDrop() }
         )
     }

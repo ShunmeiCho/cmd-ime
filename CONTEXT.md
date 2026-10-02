@@ -45,8 +45,12 @@ The per-app record of the input source that was last active while that app was i
 _Avoid_: Auto-switch, per-app cache, history
 
 **App Rule**:
-A default slot the user set for one app, or "keep as is"; bringing that app to the front selects the slot, and an app with a rule is never restored from App Memory. "Keep as is" also keeps the app out of App Memory. A rule marked Remember restores the app's memory and uses its slot only when nothing is remembered. Usage statistics may propose one, but nothing becomes a rule without the user's confirmation, so switching stays predictable.
+A default slot the user set for one app, or "keep as is"; bringing that app to the front selects the slot, and an app with a rule is never restored from App Memory. "Keep as is" also keeps the app out of App Memory. A rule marked Remember restores the app's memory and uses its slot only when nothing is remembered. Usage statistics may propose one, but nothing becomes a rule without the user's confirmation, so switching stays predictable. A browser whose App Rule is "keep as is" never has its pages read, so no Website Rule applies in it.
 _Avoid_: Habit rule, smart switching, AI switching
+
+**Website Rule**:
+A slot the user set for one website's domain, or "keep as is", applied in every browser CmdIME knows: when a page on that domain (and on its subdomains, when the rule includes them) is in front, it beats the browser's own App Rule, App Memory and the Default Slot. One rule per domain; the longest matching domain wins. CmdIME reads only the address of the page in front and keeps none of it.
+_Avoid_: Site rule, URL rule, browser rule
 
 **Default Slot** (UI: "Apps without a rule or memory"):
 The slot selected when an app with no App Rule and nothing in App Memory comes to the front. Unset means the input source is left as it is.

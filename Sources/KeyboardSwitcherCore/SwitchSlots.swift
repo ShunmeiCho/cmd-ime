@@ -253,7 +253,9 @@ extension SwitcherConfig {
                   !(binding.action.type == .switchInputSource && binding.action.role == role),
                   binding.trigger.keyCode == trigger.keyCode else { return false }
             if trigger.kind == .oneShotModifier || binding.trigger.kind == .oneShotModifier { return true }
+            // Chords differing only in a required side are different triggers (the sided one wins).
             return binding.trigger.gesture == trigger.gesture && Set(binding.trigger.modifiers) == Set(trigger.modifiers)
+                && binding.trigger.modifierSides == trigger.modifierSides
         }
     }
 

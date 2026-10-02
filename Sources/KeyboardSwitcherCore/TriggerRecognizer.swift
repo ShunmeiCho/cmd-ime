@@ -38,6 +38,19 @@ public struct TriggerRecognizer: Sendable {
         return result
     }()
 
+    /// The side of each modifier held by one of its two keys; a modifier held on both sides has none.
+    public static func heldSides(_ keyCodes: Set<Int>) -> [Modifier: ModifierSide] {
+        var sides: [Modifier: ModifierSide] = [:]
+        var bothSides = Set<Modifier>()
+        for code in keyCodes {
+            guard let family = modifierFamilies[code], let name = modifierTriggers[code]?.keyName else { continue }
+            let side: ModifierSide = name.hasPrefix("left-") ? .left : .right
+            if let seen = sides[family], seen != side { bothSides.insert(family) }
+            sides[family] = side
+        }
+        return sides.filter { !bothSides.contains($0.key) }
+    }
+
     private let doubleTapWindow: TimeInterval
 
     public private(set) var draft: KeyTrigger?

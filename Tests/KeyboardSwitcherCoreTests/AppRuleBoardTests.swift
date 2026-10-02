@@ -115,6 +115,114 @@ struct AppRuleBoardDropTests {
     }
 }
 
+struct AppRuleBoardWebsiteTests {
+    private func config(websites: [WebsiteRule], apps: [AppRule] = []) -> SwitcherConfig {
+        var config = SwitcherConfig.default
+        config.appRules = apps
+        config.websiteRules = websites
+        return config
+    }
+
+    @Test("a new website rule takes only a domain in stored form, never a page address")
+    func dropRefusesAnAddress() {
+        let empty = config(websites: [])
+
+        for payload in ["https://user:secret@example.com/private?q=token", "Example.com", "example.com/path", "not a site"] {
+            guard case .refused = AppRuleBoard.drop(websiteDomain: payload, on: .keepAsIs, in: empty) else {
+                Issue.record("\(payload) was not refused")
+                continue
+            }
+        }
+        guard case .changed(let changed) = AppRuleBoard.drop(websiteDomain: "127.0.0.1", on: .keepAsIs, in: empty) else {
+            Issue.record("an address in stored form was refused")
+            return
+        }
+        #expect(changed.websiteRules.first?.includesSubdomains == false)
+    }
+
+    @Test("each lane lists its website chips beside its apps, one chip per domain")
+    func lanesListWebsiteChips() {
+        let board = AppRuleBoard.lanes(for: config(
+            websites: [
+                WebsiteRule(domain: "example.com", target: .slot(chinese)),
+                WebsiteRule(domain: "bank.example", target: .keepAsIs),
+                WebsiteRule(domain: "docs.example", target: .slot(english)),
+                WebsiteRule(domain: "example.com", includesSubdomains: false, target: .slot(english)),
+            ],
+            apps: [AppRule(appID: terminal, target: .slot(english))]
+        ))
+
+        let englishLane = board.first { $0.target == .slot(english) }
+        #expect(englishLane?.websiteRules.map(\.domain) == ["example.com", "docs.example"])
+        #expect(englishLane?.rules.map(\.appID) == [terminal])
+        #expect(board.first { $0.target == .slot(chinese) }?.websiteRules.isEmpty == true)
+        #expect(board.last?.websiteRules.map(\.domain) == ["bank.example"])
+    }
+
+    @Test("a website rule naming a deleted slot stays visible in that slot's lane")
+    func deletedSlotKeepsWebsiteChip() {
+        let gone = InputRole(rawValue: "korean")
+        let board = AppRuleBoard.lanes(for: config(websites: [WebsiteRule(domain: "example.com", target: .slot(gone))]))
+
+        let lane = board[board.count - 2]
+        #expect(lane.target == .slot(gone))
+        #expect(!lane.slotExists)
+        #expect(lane.websiteRules.map(\.domain) == ["example.com"])
+    }
+
+    @Test("dropping a new domain on a lane creates its rule, with subdomains unless told otherwise")
+    func dropCreatesRule() {
+        let result = AppRuleBoard.drop(websiteDomain: "example.com", on: .slot(english), in: config(websites: []))
+        let exact = AppRuleBoard.drop(websiteDomain: "example.com", includesSubdomains: false, on: .keepAsIs, in: config(websites: []))
+
+        guard case .changed(let next) = result, case .changed(let exactNext) = exact else { Issue.record("expected a change"); return }
+        #expect(next.websiteRules == [WebsiteRule(domain: "example.com", includesSubdomains: true, target: .slot(english))])
+        #expect(exactNext.websiteRules == [WebsiteRule(domain: "example.com", includesSubdomains: false, target: .keepAsIs)])
+    }
+
+    @Test("moving a website chip keeps its subdomain setting and its place in the list")
+    func moveKeepsSubdomainsAndOrder() {
+        let start = config(websites: [
+            WebsiteRule(domain: "example.com", includesSubdomains: false, target: .slot(chinese)),
+            WebsiteRule(domain: "docs.example", target: .slot(english)),
+        ])
+
+        let result = AppRuleBoard.drop(websiteDomain: "example.com", on: .keepAsIs, in: start)
+
+        guard case .changed(let next) = result else { Issue.record("expected a change"); return }
+        #expect(next.websiteRules == [
+            WebsiteRule(domain: "example.com", includesSubdomains: false, target: .keepAsIs),
+            WebsiteRule(domain: "docs.example", target: .slot(english)),
+        ])
+    }
+
+    @Test("a website chip dropped on its own lane changes nothing, a deleted slot's lane included")
+    func sameLaneIsUnchanged() {
+        let gone = InputRole(rawValue: "korean")
+        let start = config(websites: [
+            WebsiteRule(domain: "example.com", target: .slot(english)),
+            WebsiteRule(domain: "docs.example", target: .slot(gone)),
+        ])
+
+        #expect(AppRuleBoard.drop(websiteDomain: "example.com", on: .slot(english), in: start) == .unchanged)
+        #expect(AppRuleBoard.drop(websiteDomain: "docs.example", on: .slot(gone), in: start) == .unchanged)
+    }
+
+    @Test("an empty domain and a deleted slot's lane are refused")
+    func refusals() {
+        let gone = InputRole(rawValue: "korean")
+        let start = config(websites: [WebsiteRule(domain: "example.com", target: .slot(english))])
+
+        for result in [
+            AppRuleBoard.drop(websiteDomain: "", on: .slot(english), in: start),
+            AppRuleBoard.drop(websiteDomain: "example.com", on: .slot(gone), in: start),
+            AppRuleBoard.drop(websiteDomain: "new.example", on: .slot(gone), in: start),
+        ] {
+            guard case .refused = result else { Issue.record("expected a refusal, got \(result)"); continue }
+        }
+    }
+}
+
 struct AppCandidateListTests {
     private let running = [
         AppCandidate(id: wechat, name: "WeChat"),
@@ -171,5 +279,15 @@ struct AppDragPayloadTests {
     func otherTextIsIgnored() {
         #expect(AppDragPayload.decode("com.apple.Terminal") == nil)
         #expect(AppDragPayload.decode("cmdime-app\n") == nil)
+    }
+}
+
+struct WebsiteDragPayloadTests {
+    @Test("an encoded website chip decodes back to its domain, and other text is not one")
+    func roundTripAndOtherText() {
+        #expect(WebsiteDragPayload.decode(WebsiteDragPayload.encode(domain: "example.com")) == "example.com")
+        #expect(WebsiteDragPayload.decode("example.com") == nil)
+        #expect(WebsiteDragPayload.decode("cmdime-website\n") == nil)
+        #expect(WebsiteDragPayload.decode(AppDragPayload.encode(appID: terminal, name: "Terminal")) == nil)
     }
 }

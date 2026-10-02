@@ -40,18 +40,25 @@ public enum Modifier: String, Codable, CaseIterable, Comparable, Sendable {
     public static let latching: Set<Modifier> = [.capsLock, .fn]
 }
 
+public enum ModifierSide: String, Codable, Sendable {
+    case left
+    case right
+}
+
 public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
     public var kind: TriggerKind
     public var gesture: TriggerGesture
     public var keyCode: Int
     public var keyName: String
     public var modifiers: [Modifier]
+    public var modifierSides: [Modifier: ModifierSide]
 
     public init(
         kind: TriggerKind,
         keyCode: Int,
         keyName: String,
         modifiers: [Modifier] = [],
+        modifierSides: [Modifier: ModifierSide] = [:],
         gesture: TriggerGesture = .tap
     ) {
         self.kind = kind
@@ -59,6 +66,13 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         self.keyCode = keyCode
         self.keyName = keyName
         self.modifiers = modifiers.sorted()
+        self.modifierSides = Self.validModifierSides(modifierSides, kind: kind, modifiers: modifiers)
+    }
+
+    private static func validModifierSides(
+        _ sides: [Modifier: ModifierSide], kind: TriggerKind, modifiers: [Modifier]
+    ) -> [Modifier: ModifierSide] {
+        sides.filter { kind == .keyPress && modifiers.contains($0.key) && !Modifier.latching.contains($0.key) }
     }
 
     public var displayName: String {
@@ -66,8 +80,21 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
             return gesture == .doubleTap ? "double-\(keyName)" : keyName
         }
 
-        let prefix = modifiers.map(\.rawValue).joined(separator: "+")
+        let prefix = modifierKeyNames.joined(separator: "+")
         return prefix.isEmpty ? keyName : "\(prefix)+\(keyName)"
+    }
+
+    /// The chord's modifiers as key names: `left-option` where a side is required, else `option`.
+    public var modifierKeyNames: [String] {
+        modifiers.map { modifier in
+            modifierSides[modifier].map { "\($0.rawValue)-\(modifier.rawValue)" } ?? modifier.rawValue
+        }
+    }
+
+    /// The same chord requiring these sides (none for either side).
+    public func requiringSides(_ sides: [Modifier: ModifierSide]) -> KeyTrigger {
+        KeyTrigger(kind: kind, keyCode: keyCode, keyName: keyName, modifiers: modifiers,
+                   modifierSides: sides, gesture: gesture)
     }
 
     public var isReservedMacInputSourceShortcut: Bool {
@@ -85,6 +112,15 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         case keyCode
         case keyName
         case modifiers
+        case modifierSides
+    }
+
+    private struct LenientModifierSide: Decodable {
+        let value: ModifierSide?
+
+        init(from decoder: Decoder) throws {
+            value = try? decoder.singleValueContainer().decode(ModifierSide.self)
+        }
     }
 
     public init(from decoder: Decoder) throws {
@@ -94,6 +130,14 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         keyCode = try container.decode(Int.self, forKey: .keyCode)
         keyName = try container.decode(String.self, forKey: .keyName)
         modifiers = try container.decode([Modifier].self, forKey: .modifiers)
+        let decodedSides = (try? container.decodeIfPresent([String: LenientModifierSide].self, forKey: .modifierSides)) ?? [:]
+        var sides: [Modifier: ModifierSide] = [:]
+        for (key, side) in decodedSides {
+            if let modifier = Modifier(rawValue: key), let value = side.value {
+                sides[modifier] = value
+            }
+        }
+        modifierSides = Self.validModifierSides(sides, kind: kind, modifiers: modifiers)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -103,6 +147,10 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
         try container.encode(keyCode, forKey: .keyCode)
         try container.encode(keyName, forKey: .keyName)
         try container.encode(modifiers, forKey: .modifiers)
+        if !modifierSides.isEmpty {
+            let sides = Dictionary(uniqueKeysWithValues: modifierSides.map { ($0.key.rawValue, $0.value) })
+            try container.encode(sides, forKey: .modifierSides)
+        }
     }
 }
 
@@ -296,6 +344,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var rememberInputSourcePerApp: Bool
     /// App Rules (CONTEXT.md), in the order the user added them. One per app id.
     public var appRules: [AppRule]
+    /// Website rules, in the order the user added them. One per domain.
+    public var websiteRules: [WebsiteRule]
     /// The slot an app with no rule and nothing remembered gets when it comes to the front;
     /// nil leaves the input source unchanged.
     public var appDefaultSlot: InputRole?
@@ -324,6 +374,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         switchIndicatorBehavior: SwitchIndicatorBehavior = SwitchIndicatorBehavior(),
         rememberInputSourcePerApp: Bool = false,
         appRules: [AppRule] = [],
+        websiteRules: [WebsiteRule] = [],
         appDefaultSlot: InputRole? = nil,
         restoreAfterPasswordField: Bool = true,
         showCapsLockIndicator: Bool = false,
@@ -344,6 +395,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.switchIndicatorBehavior = switchIndicatorBehavior
         self.rememberInputSourcePerApp = rememberInputSourcePerApp
         self.appRules = appRules
+        self.websiteRules = websiteRules
         self.appDefaultSlot = appDefaultSlot
         self.restoreAfterPasswordField = restoreAfterPasswordField
         self.showCapsLockIndicator = showCapsLockIndicator
@@ -506,6 +558,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case switchIndicatorBehavior
         case rememberInputSourcePerApp
         case appRules
+        case websiteRules
         case appDefaultSlot
         case restoreAfterPasswordField
         case showCapsLockIndicator
@@ -559,6 +612,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         ) ?? SwitchIndicatorBehavior()
         rememberInputSourcePerApp = try container.decodeIfPresent(Bool.self, forKey: .rememberInputSourcePerApp) ?? false
         appRules = (try container.decodeIfPresent([LenientAppRule].self, forKey: .appRules) ?? []).compactMap(\.rule)
+        websiteRules = (try container.decodeIfPresent([LenientWebsiteRule].self, forKey: .websiteRules) ?? [])
+            .compactMap(\.rule)
+            .uniquedByDomain()
         appDefaultSlot = try container.decodeIfPresent(InputRole.self, forKey: .appDefaultSlot)
         restoreAfterPasswordField = try container.decodeIfPresent(Bool.self, forKey: .restoreAfterPasswordField) ?? true
         showCapsLockIndicator = try container.decodeIfPresent(Bool.self, forKey: .showCapsLockIndicator) ?? false
@@ -592,6 +648,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encode(switchIndicatorBehavior, forKey: .switchIndicatorBehavior)
         try container.encode(rememberInputSourcePerApp, forKey: .rememberInputSourcePerApp)
         try container.encode(appRules, forKey: .appRules)
+        try container.encode(websiteRules, forKey: .websiteRules)
         try container.encodeIfPresent(appDefaultSlot, forKey: .appDefaultSlot)
         try container.encode(restoreAfterPasswordField, forKey: .restoreAfterPasswordField)
         try container.encode(showCapsLockIndicator, forKey: .showCapsLockIndicator)

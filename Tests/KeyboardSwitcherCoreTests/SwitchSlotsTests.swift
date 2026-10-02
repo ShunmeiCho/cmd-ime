@@ -162,6 +162,20 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertEqual(config, snapshot)
     }
 
+    func testUndoRestoresALeftChordBesideTheRightChordOfAnotherSlot() throws {
+        var config = SwitcherConfig.default
+        config.upsertSwitchBinding(trigger: try ShortcutParser.parse("left-option+j"), role: .chinese)
+        config.upsertSwitchBinding(trigger: try ShortcutParser.parse("right-option+j"), role: .japanese)
+        let snapshot = config
+
+        let removal = try config.removingSlotWithReceipt(.chinese)
+        let restored = try removal.config.restoringSlot(removal.removed)
+
+        XCTAssertEqual(restored.skippedBindings, [])
+        XCTAssertEqual(restored.config, snapshot)
+        XCTAssertNotNil(config.conflictingBinding(for: try ShortcutParser.parse("left-option+j"), excluding: .japanese))
+    }
+
     func testRemovalReceiptPreservesAbsentPreferenceColorAndBindings() throws {
         var config = SwitcherConfig.default
         config.inputSources["japanese"] = nil

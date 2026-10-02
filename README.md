@@ -150,6 +150,9 @@ same two permissions before global keyboard listening works.
   in each app (off by default, kept in memory only); pick a slot for every other app; and
   switch back after a password field, where macOS leaves ABC selected (on by default). A
   trigger you press still wins.
+- **Input sources per website.** Give a website its own slot: while a page on `github.com`
+  is in front, in Safari or Chrome, you are on English, and the tab next to it can be on
+  Chinese. CmdIME reads only the site address of the page in front and keeps none of it.
 
 <p align="center">
   <img src="Assets/readme/per-app.gif" width="720" alt="Two demo apps side by side, Code with an App Rule for English and Chat with one for Chinese. Clicking Chat shows the 中 bubble and 你好 is typed; clicking Code shows A and git push is typed; back in Chat, 好的.">
@@ -249,7 +252,9 @@ On the board:
   Control, Shift).
 - `Double tap`: the same keys, tapped twice.
 - `Shortcut`: click **Record…**, press a modifier together with a key such as
-  `option+j`, then Save. Esc cancels; tap triggers are paused while recording.
+  `option+j`, then Save. Esc cancels; tap triggers are paused while recording. Tick
+  **Only the left or right key I pressed** to make the shortcut answer to that side of the
+  modifier alone; `left-option+j` and `right-option+j` can then go to different slots.
 
 A key already used for the same gesture by another slot, by a key remap or by the Peek
 trigger ("Show Current Input Source") is shown as used and cannot be picked. The same key
@@ -380,6 +385,17 @@ apps always wins.
   takes no new apps, and those rules select no slot until you move them. The board refuses
   CmdIME itself, and a rule for it written from the command line never applies. An app
   that is no longer installed keeps its rule, marked **Not installed**.
+- **Website rules**: **Add Website…** below the board gives a website its own slot, or
+  **Keep as is**. Type a domain such as `github.com`; the rule covers its subdomains
+  unless you turn that off, and the longest matching domain wins. The rule appears as a
+  globe chip on the same lanes as the apps and moves and is removed the same way. While a
+  page on that domain is in front, in any browser CmdIME knows, its rule beats the
+  browser's own App Rule, App Memory and the Other apps slot; a trigger you press
+  afterwards still wins, and focus in the address bar changes nothing. For this CmdIME
+  reads only the site address of the page in front, through Accessibility, and keeps none
+  of it; a browser set to **Keep as is** is never read. Tested in Safari and Chrome; other
+  browsers are not tested yet. A page that changes address without changing its title
+  (some single-page apps) is noticed only at the next tab or window change.
 - **App Memory** (off by default): coming back to an app selects the input source you last
   used there, however you chose it: a trigger, Control+Space, the menu bar or the Globe
   key. It is kept in memory only: it is empty after CmdIME quits, and pausing keyboard
@@ -413,6 +429,12 @@ keyboardctl app-rule set com.microsoft.VSCode english
 keyboardctl app-rule set --frontmost keep
 keyboardctl app-rule set com.tinyspeck.slackmacgap chinese --remember
 keyboardctl app-rule remove com.microsoft.VSCode
+keyboardctl website-rule list
+keyboardctl website-rule set github.com english
+keyboardctl website-rule set docs.google.com japanese --exact
+keyboardctl website-rule set localhost keep
+keyboardctl website-rule test https://gist.github.com/
+keyboardctl website-rule remove github.com
 ```
 
 </details>
@@ -556,6 +578,7 @@ swift run keyboardctl diagnose --json
 swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
+swift run keyboardctl bind left-option+k english     # only the left Option key
 swift run keyboardctl bind double-left-command english
 swift run keyboardctl bind double-right-option peek
 swift run keyboardctl remap right-control escape

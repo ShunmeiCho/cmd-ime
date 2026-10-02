@@ -6073,30 +6073,6 @@
         }
       }
     },
-    "Drag an app from the list onto a slot, or use Add App.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Drag an app from the list onto a slot, or use Add App."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将列表中的应用拖到槽位上，或使用“添加应用”。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リストからスロットにアプリをドラッグするか、「アプリを追加」を使ってください。"
-          }
-        }
-      }
-    },
     "Drag onto a slot to give %@ a rule": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -19369,6 +19345,318 @@
         }
       }
     },
+    "That is not a website.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That is not a website."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这不是网站。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これは Web サイトではありません。"
+          }
+        }
+      }
+    },
+    "That slot was deleted. Drop the website on another slot.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That slot was deleted. Drop the website on another slot."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "该槽位已被删除。请将网站拖到其他槽位上。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのスロットは削除されました。別のスロットに Web サイトをドロップしてください。"
+          }
+        }
+      }
+    },
+    "Add Website…": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Website…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加网站…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web サイトを追加…"
+          }
+        }
+      }
+    },
+    "Add Website": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Website"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加网站"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web サイトを追加"
+          }
+        }
+      }
+    },
+    "Add a rule for a website": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a rule for a website"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为网站添加规则"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web サイトにルールを追加"
+          }
+        }
+      }
+    },
+    "Add": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
+          }
+        }
+      }
+    },
+    "Domain": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domain"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "域名"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドメイン"
+          }
+        }
+      }
+    },
+    "Include subdomains": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include subdomains"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "包含子域名"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブドメインを含める"
+          }
+        }
+      }
+    },
+    "Move or remove": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move or remove"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移动或移除"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動または削除"
+          }
+        }
+      }
+    },
+    "%@ and its subdomains": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ and its subdomains"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 及其子域名"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ とそのサブドメイン"
+          }
+        }
+      }
+    },
+    "%@ only": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ only"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅 %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のみ"
+          }
+        }
+      }
+    },
+    "Type a domain such as %@, or paste a page address.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type a domain such as %@, or paste a page address."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入域名（例如 %@），或粘贴网页地址。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のようなドメインを入力するか、ページのアドレスをペーストしてください。"
+          }
+        }
+      }
+    },
+    "Only the left or right key I pressed": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the left or right key I pressed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只认我按下的那一侧（左或右）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "押した側（左または右）のキーだけ"
+          }
+        }
+      }
+    },
     "Brief": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -19485,6 +19773,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "オンの間、CmdIME は macOS がカーソルの下に表示するバッジを隠します。オフにすると元に戻ります。"
+          }
+        }
+      }
+    },
+    "Drag an app from the list onto a slot, or use Add App or Add Website.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag an app from the list onto a slot, or use Add App or Add Website."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将列表中的应用拖到槽位上，或使用“添加应用”“添加网站”。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リストからスロットにアプリをドラッグするか、「アプリを追加」「Web サイトを追加」を使ってください。"
+          }
+        }
+      }
+    },
+    "For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对于网站规则，CmdIME 只读取前台页面的网站地址，且不会保留。已在 Safari 和 Chrome 中测试，其他浏览器尚未测试。设为“保持不变”的浏览器永远不会被读取。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web サイトのルールでは、CmdIME は前面にあるページのサイトアドレスだけを読み取り、何も保存しません。Safari と Chrome でテスト済みで、ほかのブラウザはまだテストしていません。「そのままにする」に設定したブラウザは読み取りません。"
+          }
+        }
+      }
+    },
+    "New in 0.14: an input source per website on the Apps page, and shortcuts that tell the left modifier key from the right.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.14: an input source per website on the Apps page, and shortcuts that tell the left modifier key from the right."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.14 新增：在“应用”页为每个网站设定输入源；快捷键可以区分左右修饰键。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.14 の新機能：「アプリ」ページで Web サイトごとに入力ソースを設定できます。ショートカットで左右の修飾キーを区別できます。"
           }
         }
       }

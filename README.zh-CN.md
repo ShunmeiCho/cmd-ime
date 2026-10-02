@@ -140,6 +140,8 @@ swift test
   可以让 CmdIME 记住你在每个应用里最后用的输入源（默认关闭，只保存在内存里）；可以给其余
   所有应用指定一个槽位；还能在离开密码框后切回原来的输入源，否则 macOS 会一直停在 ABC
   （默认开启）。你按下的触发键始终优先。
+- **按网站设定输入源。** 给一个网站单独指定槽位：`github.com` 的页面在前台时（Safari 或
+  Chrome）用英文，旁边的标签页可以用中文。CmdIME 只读取前台页面的网站地址，并且不会保留。
 
 <p align="center">
   <img src="Assets/readme/per-app.gif" width="720" alt="两个并排的演示应用：Code 设了英文规则，Chat 设了中文规则。点 Chat 出现「中」气泡并输入你好；点 Code 出现 A 并输入 git push；回到 Chat 输入好的。">
@@ -231,7 +233,9 @@ CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键
 - `单击`：八个物理修饰键之一（左或右的 Command、Option、Control、Shift）。
 - `双击`：同样这些键，按两次。
 - `快捷键`：点击**录制…**，同时按下一个修饰键和一个按键，例如
-  `option+j`，然后点“保存”。按 Esc 取消；录制期间单击和双击触发会暂停。
+  `option+j`，然后点“保存”。按 Esc 取消；录制期间单击和双击触发会暂停。勾选
+  **只认我按下的那一侧（左或右）** 后，快捷键只响应那一侧的修饰键；`left-option+j` 和
+  `right-option+j` 可以分别绑定到不同的槽位。
 
 如果某个按键已经被另一个槽位用于同一种手势，或者已被某个按键重映射或速览触发键
 （“显示当前输入源”）占用，它会显示为已占用并且无法选择。同一个按键可以是一个
@@ -345,6 +349,14 @@ macOS 14 及以上每次输入源变化时，还会在光标下方显示系统�
   它的应用会留在一栏**槽位已删除**里，这一栏不接收新应用，其中的规则在你
   把它们移走之前不会选中任何槽位。面板不接受 CmdIME 自己，从命令行给它写的规则也永远不会
   生效；已经卸载的应用会保留规则，并标上**未安装**。
+- **网站规则**：看板下方的 **添加网站…** 可以给一个网站单独指定槽位，或设为**保持不变**。
+  输入域名，例如 `github.com`；规则默认包含它的子域名（可以关掉），多条规则同时匹配时
+  取最长的域名。规则以地球图标的标签出现在和应用相同的泳道里，移动和删除的方式也一样。
+  只要该域名的页面在前台（任何 CmdIME 认识的浏览器里），它的规则就优先于浏览器自己的
+  应用规则、应用记忆和“其他应用”槽位；之后你按下的触发键仍然优先，焦点进入地址栏不会
+  引起切换。为此 CmdIME 只通过辅助功能读取前台页面的网站地址，并且不会保留；设为
+  **保持不变**的浏览器永远不会被读取。已在 Safari 和 Chrome 中测试，其他浏览器尚未测试。
+  地址变了但标题没变的页面（部分单页应用）要到下一次切换标签页或窗口时才会被发现。
 - **应用记忆**（默认关闭）：回到某个应用时，选中你上次在那里用的输入源，
   不管当时是怎么选的：触发键、Control+Space、菜单栏或地球仪键。它只保存在内存里：
   CmdIME 退出后就清空，暂停键盘控制也会清空。页面会列出它记住的应用以及各自的输入源，
@@ -374,6 +386,12 @@ keyboardctl app-rule set com.microsoft.VSCode english
 keyboardctl app-rule set --frontmost keep
 keyboardctl app-rule set com.tinyspeck.slackmacgap chinese --remember
 keyboardctl app-rule remove com.microsoft.VSCode
+keyboardctl website-rule list
+keyboardctl website-rule set github.com english
+keyboardctl website-rule set docs.google.com japanese --exact
+keyboardctl website-rule set localhost keep
+keyboardctl website-rule test https://gist.github.com/
+keyboardctl website-rule remove github.com
 ```
 
 </details>
@@ -498,6 +516,7 @@ swift run keyboardctl diagnose --json
 swift run keyboardctl bind left-command english
 swift run keyboardctl bind right-command chinese
 swift run keyboardctl bind option+j japanese
+swift run keyboardctl bind left-option+k english     # 只认左侧的 Option 键
 swift run keyboardctl bind double-left-command english
 swift run keyboardctl bind double-right-option peek
 swift run keyboardctl remap right-control escape

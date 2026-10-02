@@ -50,6 +50,153 @@ final class EventTapMonitorTests: XCTestCase {
     }
 
     #if DEBUG
+    private let sidedModifierCases: [(name: String, flag: CGEventFlags, left: UInt64, right: UInt64)] = [
+        ("control", .maskControl, 0x1, 0x2000),
+        ("shift", .maskShift, 0x2, 0x4),
+        ("command", .maskCommand, 0x8, 0x10),
+        ("option", .maskAlternate, 0x20, 0x40),
+    ]
+
+    private func sidedChord(_ modifier: String, side: String) throws -> KeyTrigger {
+        let json = """
+        {"kind":"keyPress","keyCode":38,"keyName":"j","modifiers":["\(modifier)"],"modifierSides":{"\(modifier)":"\(side)"}}
+        """
+        return try JSONDecoder().decode(KeyTrigger.self, from: Data(json.utf8))
+    }
+
+    private func chordIsConsumed(_ trigger: KeyTrigger, flags: CGEventFlags) -> Bool {
+        let config = SwitcherConfig(bindings: [KeyBinding(trigger: trigger, action: BindingAction(type: .disable))], inputSources: [:])
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService())
+        return monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: flags)) == nil
+    }
+
+    func testSidedChordMatchesOnlyLeftWithLeftDeviceBit() throws {
+        for item in sidedModifierCases {
+            let flags = CGEventFlags(rawValue: item.flag.rawValue | item.left)
+            XCTAssertTrue(chordIsConsumed(try sidedChord(item.name, side: "left"), flags: flags), item.name)
+            XCTAssertFalse(chordIsConsumed(try sidedChord(item.name, side: "right"), flags: flags), item.name)
+        }
+    }
+
+    func testSidedChordMatchesOnlyRightWithRightDeviceBit() throws {
+        for item in sidedModifierCases {
+            let flags = CGEventFlags(rawValue: item.flag.rawValue | item.right)
+            XCTAssertTrue(chordIsConsumed(try sidedChord(item.name, side: "right"), flags: flags), item.name)
+            XCTAssertFalse(chordIsConsumed(try sidedChord(item.name, side: "left"), flags: flags), item.name)
+        }
+    }
+
+    func testSidedChordRejectsBothDeviceBits() throws {
+        for item in sidedModifierCases {
+            let flags = CGEventFlags(rawValue: item.flag.rawValue | item.left | item.right)
+            for side in ["left", "right"] {
+                XCTAssertFalse(chordIsConsumed(try sidedChord(item.name, side: side), flags: flags), item.name)
+            }
+        }
+    }
+
+    func testSidedChordFallsBackToEitherSideWithoutDeviceBits() throws {
+        for item in sidedModifierCases {
+            for side in ["left", "right"] {
+                XCTAssertTrue(chordIsConsumed(try sidedChord(item.name, side: side), flags: item.flag), item.name)
+            }
+        }
+    }
+
+    func testEitherSideChordAcceptsEveryDeviceBitCombination() throws {
+        for item in sidedModifierCases {
+            let trigger = try ShortcutParser.parse("\(item.name)+j")
+            for bits in [0, item.left, item.right, item.left | item.right] {
+                XCTAssertTrue(chordIsConsumed(trigger, flags: CGEventFlags(rawValue: item.flag.rawValue | bits)), item.name)
+            }
+        }
+    }
+
+    func testSidedChordKeepsAggregateAndLatchingRules() throws {
+        let trigger = try sidedChord("option", side: "left")
+        let leftOption = CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | 0x20)
+        XCTAssertTrue(chordIsConsumed(trigger, flags: leftOption.union([.maskAlphaShift, .maskSecondaryFn])))
+        XCTAssertFalse(chordIsConsumed(trigger, flags: leftOption.union(.maskCommand)))
+        XCTAssertFalse(chordIsConsumed(trigger, flags: CGEventFlags(rawValue: 0x20)))
+    }
+
+    func testSidedBindingBeatsEitherSideRegardlessOfOrder() throws {
+        let generic = KeyBinding(trigger: try ShortcutParser.parse("option+j"), action: BindingAction(type: .disable))
+        let specific = KeyBinding(trigger: try sidedChord("option", side: "left"), action: .showIndicator)
+        for bindings in [[generic, specific], [specific, generic]] {
+            let monitor = EventTapMonitor(config: SwitcherConfig(bindings: bindings, inputSources: [:]), inputSources: StubInputSourceService())
+            var peeks = 0
+            monitor.onPeek = { peeks += 1 }
+            XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | 0x20))))
+            drainMainQueue()
+            XCTAssertEqual(peeks, 1)
+        }
+    }
+
+    func testMoreSidedModifiersBeatLessSpecificBinding() throws {
+        let lessSpecific = KeyBinding(trigger: try ShortcutParser.parse("left-option+shift+j"), action: BindingAction(type: .disable))
+        let moreSpecific = KeyBinding(trigger: try ShortcutParser.parse("left-option+right-shift+j"), action: .showIndicator)
+        for bindings in [[lessSpecific, moreSpecific], [moreSpecific, lessSpecific]] {
+            let monitor = EventTapMonitor(config: SwitcherConfig(bindings: bindings, inputSources: [:]), inputSources: StubInputSourceService())
+            var peeks = 0
+            monitor.onPeek = { peeks += 1 }
+            let flags = CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | CGEventFlags.maskShift.rawValue | 0x20 | 0x4)
+            XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: flags)))
+            drainMainQueue()
+            XCTAssertEqual(peeks, 1)
+        }
+    }
+
+    func testEqualSpecificityKeepsFirstMatchingBindingForSyntheticEvent() throws {
+        let first = KeyBinding(trigger: try sidedChord("option", side: "left"), action: .showIndicator)
+        let second = KeyBinding(trigger: try sidedChord("option", side: "right"), action: BindingAction(type: .disable))
+        for (bindings, expectedPeeks) in [([first, second], 1), ([second, first], 0)] {
+            let monitor = EventTapMonitor(config: SwitcherConfig(bindings: bindings, inputSources: [:]), inputSources: StubInputSourceService())
+            var peeks = 0
+            monitor.onPeek = { peeks += 1 }
+            XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: .maskAlternate)))
+            drainMainQueue()
+            XCTAssertEqual(peeks, expectedPeeks)
+        }
+    }
+
+    func testRepeatOfAConsumedSidedChordStaysConsumedWhenTheOtherSideIsAdded() throws {
+        let binding = KeyBinding(trigger: try sidedChord("shift", side: "left"), action: BindingAction(type: .disable))
+        let monitor = EventTapMonitor(config: SwitcherConfig(bindings: [binding], inputSources: [:]), inputSources: StubInputSourceService())
+        let leftOnly = CGEventFlags(rawValue: CGEventFlags.maskShift.rawValue | 0x2)
+        let bothSides = CGEventFlags(rawValue: CGEventFlags.maskShift.rawValue | 0x2 | 0x4)
+        let repeated = makeKeyboardEvent(keyCode: 38, flags: bothSides)
+        repeated.setIntegerValueField(.keyboardEventAutorepeat, value: 1)
+
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: leftOnly)))
+        XCTAssertNil(monitor.handleKeyDownForTesting(repeated))
+        XCTAssertNil(monitor.handleKeyUpForTesting(makeKeyboardEvent(keyCode: 38, flags: bothSides, keyDown: false)))
+        // A fresh press with both sides held is still no match.
+        let freshPress = makeKeyboardEvent(keyCode: 38, flags: bothSides)
+        XCTAssertFalse(monitor.handleKeyDownForTesting(freshPress) == nil)
+    }
+
+    func testRemapOutputCarriesTheDeviceBitOfItsSide() throws {
+        let monitor = EventTapMonitor(config: SwitcherConfig(bindings: [], inputSources: [:]), inputSources: StubInputSourceService())
+
+        let sided = monitor.outputFlags(for: try ShortcutParser.parse("right-option+k"))
+        let either = monitor.outputFlags(for: try ShortcutParser.parse("option+k"))
+
+        XCTAssertEqual(sided.rawValue, CGEventFlags.maskAlternate.rawValue | 0x40)
+        XCTAssertEqual(either, .maskAlternate)
+    }
+
+    func testDisabledSidedBindingDoesNotBeatEitherSide() throws {
+        let generic = KeyBinding(trigger: try ShortcutParser.parse("option+j"), action: .showIndicator)
+        let specific = KeyBinding(trigger: try sidedChord("option", side: "left"), action: BindingAction(type: .disable), enabled: false)
+        let monitor = EventTapMonitor(config: SwitcherConfig(bindings: [specific, generic], inputSources: [:]), inputSources: StubInputSourceService())
+        var peeks = 0
+        monitor.onPeek = { peeks += 1 }
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 38, flags: CGEventFlags(rawValue: CGEventFlags.maskAlternate.rawValue | 0x20))))
+        drainMainQueue()
+        XCTAssertEqual(peeks, 1)
+    }
+
     func testTriggeredSwitchRejectsPendingSingleTapEvidenceAfterRecreation() throws {
         var config = SwitcherConfig.default
         config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("double-left-command"), action: .switchInputSource(.english)))
