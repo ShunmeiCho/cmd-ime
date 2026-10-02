@@ -2,6 +2,7 @@ import Foundation
 import KeyboardSwitcherCore
 #if os(macOS)
 import AppKit
+import Carbon
 #endif
 
 /// Shell integration for Program Rules: the hook, the rc line, and the switch the hook asks for.
@@ -51,20 +52,20 @@ extension CLI {
         }
     }
 
-    /// What the hook runs: the program a command line starts, looked up in the Program Rules. No
-    /// rule, a paused feature, Keep as is, an unreadable config or a terminal that is not in front
-    /// all end silently, and nothing is ever written: this runs on every command of every shell.
+    /// What the hook runs: the program a command line starts, looked up in the Program Rules by
+    /// core `ShellIntegration.slotToSelect`. Nothing to select and an unreadable config end
+    /// silently, and nothing is ever written: this runs on every command of every shell.
     func switchForProgram() throws {
         #if os(macOS)
         let line = args.dropFirst().joined(separator: " ")
-        guard let name = ShellIntegration.programName(inCommandLine: line),
-              let data = try? Data(contentsOf: configURL),
+        guard let data = try? Data(contentsOf: configURL),
               let config = try? JSONDecoder().decode(SwitcherConfig.self, from: data),
-              !config.programRulesPaused,
-              case .slot(let slot)? = config.programRule(for: name)?.target,
-              config.slots.contains(where: { $0.id == slot }),
-              let frontmost = NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
-              TerminalCatalog.isTerminal(frontmost) else { return }
+              let slot = ShellIntegration.slotToSelect(
+                  commandLine: line,
+                  config: config,
+                  frontmostAppID: NSWorkspace.shared.frontmostApplication?.bundleIdentifier,
+                  isSecureInputOn: IsSecureEventInputEnabled()
+              ) else { return }
         try select(slot, in: config, service: MacInputSourceService())
         #else
         throw CLIError.unsupportedPlatform

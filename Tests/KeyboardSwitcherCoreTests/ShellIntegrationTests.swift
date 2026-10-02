@@ -70,6 +70,49 @@ struct ShellIntegrationTests {
     }
 }
 
+struct ShellIntegrationSwitchTests {
+    private let ghostty = "com.mitchellh.ghostty"
+
+    private func config(paused: Bool = false, ghosttyRule: AppRuleTarget? = nil) -> SwitcherConfig {
+        var config = SwitcherConfig.default
+        config.programRules = [
+            ProgramRule(name: "claude", target: .slot(.chinese)),
+            ProgramRule(name: "vim", target: .keepAsIs),
+            ProgramRule(name: "ssh", target: .slot(InputRole(rawValue: "korean"))),
+        ]
+        config.programRulesPaused = paused
+        config.appRules = ghosttyRule.map { [AppRule(appID: ghostty, target: $0)] } ?? []
+        return config
+    }
+
+    private func slot(_ line: String, _ config: SwitcherConfig, front: String? = "com.mitchellh.ghostty",
+                      secure: Bool = false) -> InputRole? {
+        ShellIntegration.slotToSelect(commandLine: line, config: config, frontmostAppID: front, isSecureInputOn: secure)
+    }
+
+    @Test("a program with a slot rule selects its slot while a terminal is in front")
+    func selectsTheRuleSlot() {
+        #expect(slot("claude --resume", config()) == .chinese)
+        #expect(slot("claude", config(ghosttyRule: .slot(.japanese))) == .chinese)
+    }
+
+    @Test("no rule, Keep as is, a deleted slot and paused rules select nothing")
+    func selectsNothingWithoutASlot() {
+        #expect(slot("ls -la", config()) == nil)
+        #expect(slot("vim notes", config()) == nil)
+        #expect(slot("ssh host", config()) == nil)
+        #expect(slot("claude", config(paused: true)) == nil)
+    }
+
+    @Test("a terminal set to Keep as is, another app in front and a password field select nothing")
+    func respectsWhatNothingSwitchesAutomatically() {
+        #expect(slot("claude", config(ghosttyRule: .keepAsIs)) == nil)
+        #expect(slot("claude", config(), front: "com.apple.Safari") == nil)
+        #expect(slot("claude", config(), front: nil) == nil)
+        #expect(slot("claude", config(), secure: true) == nil)
+    }
+}
+
 struct ShellIntegrationInstallerTests {
     private func scratchDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("cmdime-shell-\(UUID().uuidString)")

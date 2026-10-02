@@ -134,24 +134,31 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         guard let pid else { return }
         // Without a server there is nothing to ask and nothing to poll for; the next target
         // (an activation, a change of rules) looks again.
-        guard HerdrSocket.exists else {
+        guard Self.herdr.exists else {
             send(.noRule, pid: pid)
             return
         }
         openFocusStreamIfNeeded()
-        let (context, paneID) = Self.read(pid: pid, rules: rules, localMachine: localMachine)
+        let answer = Self.read(pid: pid, rules: rules, localMachine: localMachine)
         defer { scheduleRead(after: Self.pollInterval) }
-        if let paneID, let lastPaneID, paneID != lastPaneID {
-            // Focus moved and no event said so (the subscription was down): report it as one. The
-            // tracker starts a new generation and this watcher is pointed at it, so this read is
-            // not sent.
-            self.lastPaneID = paneID
+        if answer.focusMovedMeanwhile || (lastPaneID != nil && answer.paneID != nil && answer.paneID != lastPaneID) {
+            // Focus moved during the read, or since the last one with no event to say so (the
+            // subscription was down): report it as a focus change. The tracker starts a new
+            // generation and this watcher is pointed at it, so this read is not sent: its program
+            // may belong to the pane just left.
+            lastPaneID = answer.focusMovedMeanwhile ? nil : answer.paneID
             let send = onPaneFocus
             DispatchQueue.main.async { send(pid) }
             return
         }
-        lastPaneID = paneID
-        send(context, pid: pid)
+        lastPaneID = answer.paneID
+        send(answer.context, pid: pid)
+    }
+
+    private struct Answer {
+        let context: ProgramContext
+        var paneID: String?
+        var focusMovedMeanwhile = false
     }
 
     /// Every read is sent, as for a page: main may drop one, and a repeat gets it through later.
@@ -163,7 +170,8 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
     }
 
     private func openFocusStreamIfNeeded() {
-        guard focusStream == nil, let descriptor = HerdrSocket.openFocusSubscription() else { return }
+        guard focusStream == nil,
+              let descriptor = Self.herdr.openSubscription(HerdrSurface.focusSubscriptionRequest) else { return }
         focusStream = HerdrFocusStream(
             descriptor: descriptor,
             onFocus: { [weak self] in self?.onWatcherThread(#selector(ProgramWatcher.focusPushed)) },
@@ -177,20 +185,30 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         perform(selector, on: thread, with: nil, waitUntilDone: false)
     }
 
+    private static let herdr = HerdrSocket.default
+
     /// The program in the focused pane against the rules, and that pane's id. A window that does
     /// not show the local Herdr (a plain tab, or another machine's panes) has nothing to ask:
     /// `noRule`, so nothing waits for it. A window or a server that does not answer is `unknown`.
-    private static func read(pid: pid_t, rules: [ProgramRule], localMachine: String?) -> (ProgramContext, paneID: String?) {
+    /// The focused pane is asked for again after its program: a pane switch between the two
+    /// questions would pair one pane's program with the other pane.
+    private static func read(pid: pid_t, rules: [ProgramRule], localMachine: String?) -> Answer {
         dispatchPrecondition(condition: .notOnQueue(.main))
-        guard let title = focusedWindowTitle(pid: pid) else { return (.unknown, nil) }
+        guard let title = focusedWindowTitle(pid: pid) else { return Answer(context: .unknown) }
         guard let machine = HerdrSurface.machine(inWindowTitle: title), machine == localMachine else {
-            return (.noRule, nil)
+            return Answer(context: .noRule)
         }
-        guard let panes = HerdrSocket.reply(to: HerdrSurface.paneListRequest),
-              let pane = HerdrReplyParser.focusedPane(from: panes) else { return (.unknown, nil) }
-        let program = HerdrSocket.reply(to: HerdrSurface.processInfoRequest(paneID: pane.paneID))
+        guard let pane = focusedPane() else { return Answer(context: .unknown) }
+        let program = herdr.reply(to: HerdrSurface.processInfoRequest(paneID: pane.paneID))
             .flatMap(HerdrReplyParser.program(from:))
-        return (HerdrSurface.context(program: program, rules: rules), pane.paneID)
+        guard focusedPane()?.paneID == pane.paneID else {
+            return Answer(context: .unknown, focusMovedMeanwhile: true)
+        }
+        return Answer(context: HerdrSurface.context(program: program, rules: rules), paneID: pane.paneID)
+    }
+
+    private static func focusedPane() -> HerdrReplyParser.FocusedPane? {
+        herdr.reply(to: HerdrSurface.paneListRequest).flatMap(HerdrReplyParser.focusedPane(from:))
     }
 
     /// This Mac's name as Herdr writes it in the window title: the host name up to its first dot.

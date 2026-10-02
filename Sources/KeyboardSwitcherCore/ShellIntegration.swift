@@ -70,6 +70,25 @@ public enum ShellIntegration {
         return ProgramName.normalized(userInput: base)
     }
 
+    /// The slot the hook's report selects, or nil for "leave the source alone": no rule for the
+    /// program, rules paused, a Keep as is rule, a deleted slot, a password field in front (the
+    /// source there is not the user's to lose), or an app in front that is not a terminal or is a
+    /// terminal with a Keep as is App Rule, which nothing switches automatically.
+    public static func slotToSelect(
+        commandLine: String,
+        config: SwitcherConfig,
+        frontmostAppID: String?,
+        isSecureInputOn: Bool
+    ) -> InputRole? {
+        guard !isSecureInputOn, !config.programRulesPaused,
+              let frontmostAppID, TerminalCatalog.isTerminal(frontmostAppID),
+              config.appRule(for: frontmostAppID)?.target != .keepAsIs,
+              let name = programName(inCommandLine: commandLine),
+              case .slot(let slot)? = config.programRule(for: name)?.target,
+              config.slots.contains(where: { $0.id == slot }) else { return nil }
+        return slot
+    }
+
     private static func isAssignment(_ word: String) -> Bool {
         guard let equals = word.firstIndex(of: "="), equals != word.startIndex else { return false }
         return word[..<equals].allSatisfy { $0.isLetter || $0.isNumber || $0 == "_" }
