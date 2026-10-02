@@ -14,6 +14,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     public var onSilentSwitch: ((InputSourceInfo) -> Void)?
     /// A peek binding fired. Called on the main queue, after the tap callback has returned.
     public var onPeek: (() -> Void)?
+    /// Auto space (issue #10): reads the one character before the caret. Called off the main thread,
+    /// never from the tap callback. Nil (the CLI, tests that do not set it) leaves auto space off.
+    public var characterBeforeCaret: (@Sendable () -> String?)?
     /// Caps Lock turned on (true) or off. Called on the main queue, after the tap callback has returned.
     public var onCapsLockChange: ((Bool) -> Void)?
 
@@ -262,6 +265,11 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// Slots this monitor confirmed a switch to, most recent first; a Toggle reads it.
     private(set) var recentSlots: [InputRole] = []
 
+    private(set) var autoSpace = AutoSpaceState()
+
+    /// Set by tests to observe the space and the re-posted key without posting real events.
+    var autoSpaceKeyPoster: ((CGEvent) -> Void)?
+
     private func currentSources() throws -> [InputSourceInfo] {
         try sourceSnapshot ?? inputSources.listInputSources()
     }
@@ -313,13 +321,13 @@ public final class EventTapMonitor: @unchecked Sendable {
 
         if let globalMonitor = addGlobalMouseDownMonitor(Self.oneShotCancelEventMask, { [weak self] event in
             guard Self.cancelsOneShot(event) else { return }
-            self?.cancelOneShotFromMouseDown()
+            self?.cancelOneShotFromMouseDown(clicked: event.type != .scrollWheel)
         }) {
             mouseDownMonitors.append(globalMonitor)
         }
         if let localMonitor = addLocalMouseDownMonitor(Self.oneShotCancelEventMask, { [weak self] event in
             if Self.cancelsOneShot(event) {
-                self?.cancelOneShotFromMouseDown()
+                self?.cancelOneShotFromMouseDown(clicked: event.type != .scrollWheel)
             }
             return event
         }) {
@@ -327,14 +335,23 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
     }
 
-    private func cancelOneShotFromMouseDown() {
+    private func cancelOneShotFromMouseDown(clicked: Bool) {
         if Thread.isMainThread {
             oneShotState.cancel()
+            // A click can move the caret, so the character read before it says nothing about where
+            // the next key lands. A scroll does not move it.
+            if clicked { autoSpace.cancel() }
         } else {
             DispatchQueue.main.async { [weak self] in
                 self?.oneShotState.cancel()
+                if clicked { self?.autoSpace.cancel() }
             }
         }
+    }
+
+    /// An app switch or a focus change: the caret the read looked at is no longer where keys go.
+    public func cancelAutoSpace() {
+        autoSpace.cancel()
     }
 
     func removeMouseDownMonitors() {
@@ -452,6 +469,9 @@ public final class EventTapMonitor: @unchecked Sendable {
             // A repeat may belong to a key pressed before recording began.
             consumedKeyDowns.remove(keyCode)
             return Unmanaged.passUnretained(event)
+        }
+        if autoSpace.phase != .idle, spaceBefore(event) {
+            return nil
         }
         guard let binding = keyPressBinding(forKeyCode: keyCode, flags: event.flags) else {
             // A repeat of a consumed press stays consumed though the modifiers changed since (the
@@ -784,8 +804,12 @@ public final class EventTapMonitor: @unchecked Sendable {
             onSwitch?(role, source)
             if !isCapturingShortcut, let trigger, let evidenceEpoch, evidenceEpoch == triggerEvidenceEpoch {
                 onTriggeredSwitch?(role, source, trigger)
+                armAutoSpace(switchingTo: source)
+            } else {
+                autoSpace.cancel()
             }
         } else {
+            autoSpace.cancel()
             onSilentSwitch?(source)
         }
         if let prefix {
@@ -793,6 +817,61 @@ public final class EventTapMonitor: @unchecked Sendable {
         } else {
             onMessage?(CoreLocalization.text("Selected %@.", String(describing: source.localizedName)))
         }
+    }
+
+    /// A trigger switch into a Latin source: read the character before the caret off the main thread and
+    /// keep only whether the next key needs a space. The tap never waits on the read.
+    private func armAutoSpace(switchingTo source: InputSourceInfo) {
+        guard config.autoSpaceAfterHan, let reader = characterBeforeCaret, AutoSpace.arms(switchingTo: source) else {
+            autoSpace.cancel()
+            return
+        }
+        let generation = autoSpace.armed()
+        let monitor = WeakMonitor(self)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let before = AutoSpace.classify(reader())
+            Self.scheduleOnMainQueue(after: 0) {
+                monitor.value?.autoSpace.read(before, generation: generation)
+            }
+        }
+    }
+
+    /// Called from the tap callback. When the key gets a space, posts the space and the key again (both
+    /// marked, so the tap lets them through) and the caller swallows the original, keeping their order.
+    private func spaceBefore(_ event: CGEvent) -> Bool {
+        let flags = event.flags
+        let held = flags.contains(.maskCommand) || flags.contains(.maskControl) || flags.contains(.maskAlternate)
+        let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
+        guard autoSpace.keyDown(characters: Self.characters(of: event), commandControlOrOption: held || isRepeat),
+              let key = event.copy() else {
+            return false
+        }
+        let post = autoSpaceKeyPoster ?? { $0.post(tap: .cghidEventTap) }
+        for isDown in [true, false] {
+            guard let space = CGEvent(keyboardEventSource: nil, virtualKey: Self.spaceKeyCode, keyDown: isDown) else { continue }
+            space.flags = []
+            space.setIntegerValueField(.eventSourceUserData, value: Self.syntheticEventMarker)
+            post(space)
+        }
+        key.setIntegerValueField(.eventSourceUserData, value: Self.syntheticEventMarker)
+        post(key)
+        return true
+    }
+
+    private static let spaceKeyCode: CGKeyCode = 49
+    private static let maxKeyCharacters = 4
+
+    private static func characters(of event: CGEvent) -> String {
+        var length = 0
+        var buffer = [UniChar](repeating: 0, count: maxKeyCharacters)
+        event.keyboardGetUnicodeString(maxStringLength: maxKeyCharacters, actualStringLength: &length, unicodeString: &buffer)
+        return String(utf16CodeUnits: buffer, count: length)
+    }
+
+    /// Lets the read's completion find the monitor without keeping it alive.
+    private final class WeakMonitor: @unchecked Sendable {
+        weak var value: EventTapMonitor?
+        init(_ value: EventTapMonitor) { self.value = value }
     }
 
     /// Marks the Kana key this monitor posts, so its own tap lets it through untouched.

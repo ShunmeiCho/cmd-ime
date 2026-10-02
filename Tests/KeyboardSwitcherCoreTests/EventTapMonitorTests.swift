@@ -1249,6 +1249,71 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(service.selectedIDs.last, "com.apple.keylayout.ABC")
     }
 
+    func testAutoSpacePostsASpaceBeforeTheFirstLetterAfterHan() {
+        var config = SwitcherConfig.default
+        config.autoSpaceAfterHan = true
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        monitor.characterBeforeCaret = { "中" }
+        var posted: [(keyCode: Int64, down: Bool)] = []
+        monitor.autoSpaceKeyPoster = { posted.append(($0.getIntegerValueField(.keyboardEventKeycode), $0.type == .keyDown)) }
+
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        waitForAutoSpaceRead(monitor)
+        let first = makeTypedEvent(keyCode: 0, character: "a")
+        XCTAssertNil(monitor.handleKeyDownForTesting(first), "the original key is swallowed and posted again after the space")
+        let second = makeTypedEvent(keyCode: 0, character: "a")
+
+        XCTAssertEqual(posted.map(\.keyCode), [49, 49, 0])
+        XCTAssertEqual(posted.map(\.down), [true, false, true])
+        XCTAssertTrue(monitor.handleKeyDownForTesting(second)?.takeUnretainedValue() === second, "only the first key gets a space")
+    }
+
+    func testAutoSpaceStaysOffWhenTheSettingIsOffOrTheCaretFollowsNoHan() {
+        for (enabled, before) in [(false, "中"), (true, "a"), (true, "，")] {
+            var config = SwitcherConfig.default
+            config.autoSpaceAfterHan = enabled
+            let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+            monitor.characterBeforeCaret = { before }
+            var posted = 0
+            monitor.autoSpaceKeyPoster = { _ in posted += 1 }
+
+            tapLeftCommand(monitor)
+            drainMainQueue()
+            waitForAutoSpaceRead(monitor)
+            let key = makeTypedEvent(keyCode: 0, character: "a")
+
+            XCTAssertTrue(monitor.handleKeyDownForTesting(key)?.takeUnretainedValue() === key)
+            XCTAssertEqual(posted, 0)
+        }
+    }
+
+    func testAutoSpaceIsDroppedByAClickOrAnAppSwitch() {
+        var config = SwitcherConfig.default
+        config.autoSpaceAfterHan = true
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        monitor.characterBeforeCaret = { "中" }
+        var posted = 0
+        monitor.autoSpaceKeyPoster = { _ in posted += 1 }
+
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        waitForAutoSpaceRead(monitor)
+        monitor.cancelAutoSpace()
+        let key = makeTypedEvent(keyCode: 0, character: "a")
+
+        XCTAssertTrue(monitor.handleKeyDownForTesting(key)?.takeUnretainedValue() === key)
+        XCTAssertEqual(posted, 0)
+    }
+
+    /// The read runs on a global queue and reports on the main queue.
+    private func waitForAutoSpaceRead(_ monitor: EventTapMonitor) {
+        let deadline = Date(timeIntervalSinceNow: 2)
+        while Date() < deadline, case .reading = monitor.autoSpace.phase {
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.01))
+        }
+    }
+
     func testPeekOnAOneShotModifierFiresOnTheTap() throws {
         let config = try SwitcherConfig.default.replacingPeekBinding(with: ShortcutParser.parse("right-option"))
         let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
@@ -1338,6 +1403,13 @@ private func makeKeyboardEvent(keyCode: Int, flags: CGEventFlags = [], keyDown: 
         keyDown: keyDown
     )!
     event.flags = flags
+    return event
+}
+
+private func makeTypedEvent(keyCode: Int, character: Character) -> CGEvent {
+    let event = makeKeyboardEvent(keyCode: keyCode)
+    var units = Array(String(character).utf16)
+    event.keyboardSetUnicodeString(stringLength: units.count, unicodeString: &units)
     return event
 }
 
