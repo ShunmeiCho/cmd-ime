@@ -9,7 +9,6 @@ extension CLI {
     private static let shellInitUsage = "Usage: keyboardctl shell-init zsh"
     private static let shellIntegrationUsage = "Usage: keyboardctl shell-integration install | uninstall [--file <rc file>]"
     private static let fileFlag = "--file"
-    private static let maxBackupsPerSecond = 9
 
     func printShellHook() throws {
         guard args.count == 2, args[1] == ShellIntegration.zshName else {
@@ -26,29 +25,27 @@ extension CLI {
         guard rest.isEmpty || (rest.count == 2 && rest[0] == Self.fileFlag) else {
             throw CLIError.invalidArgument(Self.shellIntegrationUsage)
         }
-        let url = rest.count == 2 ? URL(fileURLWithPath: rest[1]) : Self.defaultRCFile
-        let existing = FileManager.default.fileExists(atPath: url.path)
-        let rc = existing ? try String(contentsOf: url, encoding: .utf8) : ""
+        let url = rest.count == 2
+            ? URL(fileURLWithPath: rest[1])
+            : ShellIntegrationInstaller.defaultRCFile(environment: ProcessInfo.processInfo.environment, home: NSHomeDirectory())
         switch operation {
         case "install":
-            let line = ShellIntegration.rcLine(keyboardctlPath: Self.ownPath)
-            guard let next = ShellIntegration.installing(line: line, into: rc) else {
+            switch try ShellIntegrationInstaller.install(keyboardctlPath: Self.ownPath, rcFile: url) {
+            case .unchanged:
                 print("Shell integration is already in \(url.path)")
-                return
+            case .changed(let backup):
+                print("Added to \(url.path):\n\(ShellIntegration.rcLine(keyboardctlPath: Self.ownPath))")
+                if let backup { print("The file as it was: \(backup.path)") }
+                print("Open a new terminal window to use it.")
             }
-            let backup = existing ? try Self.backUp(url) : nil
-            try next.write(to: url, atomically: true, encoding: .utf8)
-            print("Added to \(url.path):\n\(line)")
-            if let backup { print("The file as it was: \(backup.path)") }
-            print("Open a new terminal window to use it.")
         case "uninstall":
-            guard let next = ShellIntegration.uninstalling(from: rc) else {
+            switch try ShellIntegrationInstaller.uninstall(rcFile: url) {
+            case .unchanged:
                 print("Shell integration is not in \(url.path)")
-                return
+            case .changed(let backup):
+                print("Removed from \(url.path)")
+                if let backup { print("The file as it was: \(backup.path)") }
             }
-            let backup = try Self.backUp(url)
-            try next.write(to: url, atomically: true, encoding: .utf8)
-            print("Removed from \(url.path)\nThe file as it was: \(backup.path)")
         default:
             throw CLIError.invalidArgument(Self.shellIntegrationUsage)
         }
@@ -78,27 +75,5 @@ extension CLI {
     private static var ownPath: String {
         let path = Bundle.main.executablePath ?? CommandLine.arguments[0]
         return URL(fileURLWithPath: path).resolvingSymlinksInPath().path
-    }
-
-    private static var defaultRCFile: URL {
-        let directory = ProcessInfo.processInfo.environment["ZDOTDIR"].flatMap { $0.isEmpty ? nil : $0 }
-            ?? NSHomeDirectory()
-        return URL(fileURLWithPath: directory).appendingPathComponent(".zshrc")
-    }
-
-    private static func backUp(_ url: URL) throws -> URL {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyyMMdd-HHmmss"
-        let stem = url.lastPathComponent + ".before-cmdime." + formatter.string(from: Date())
-        let directory = url.deletingLastPathComponent()
-        // Two edits within one second get two copies: an earlier copy is never replaced.
-        let names = [stem] + (2...Self.maxBackupsPerSecond).map { "\(stem)-\($0)" }
-        guard let name = names.first(where: { !FileManager.default.fileExists(atPath: directory.appendingPathComponent($0).path) }) else {
-            throw CLIError.invalidArgument("Too many copies of \(url.lastPathComponent) from this second; try again.")
-        }
-        let backup = directory.appendingPathComponent(name)
-        try FileManager.default.copyItem(at: url, to: backup)
-        return backup
     }
 }

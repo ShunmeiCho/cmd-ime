@@ -15,6 +15,7 @@ struct AppRulesSection: View {
     @State private var isScanningInstalled = true
     @State private var isAddingWebsite = false
     @State private var isAddingProgram = false
+    @State private var isShowingShellIntegration = false
 
     var body: some View {
         let lanes = AppRuleBoard.lanes(for: model.config)
@@ -60,6 +61,9 @@ struct AppRulesSection: View {
         }
         .sheet(isPresented: $isAddingWebsite) {
             AddWebsiteSheet(model: model, lanes: AppRuleLaneLook(config: model.config).destinations(lanes))
+        }
+        .sheet(isPresented: $isShowingShellIntegration) {
+            ShellIntegrationSheet()
         }
         .sheet(isPresented: $isAddingProgram) {
             AddProgramSheet(model: model, lanes: AppRuleLaneLook(config: model.config).destinations(lanes))
@@ -113,6 +117,9 @@ struct AppRulesSection: View {
             HStack {
                 Text("Program rules")
                 Spacer(minLength: DesignTokens.Layout.rowGap)
+                Button("Shell Integration…") { isShowingShellIntegration = true }
+                    .controlSize(.small)
+                    .fixedSize()
                 Toggle("Program rules", isOn: Binding(
                     get: { !model.config.programRulesPaused },
                     set: { [model] isOn in model.setProgramRulesPaused(!isOn) }
@@ -122,7 +129,7 @@ struct AppRulesSection: View {
                 .tint(DesignTokens.Colors.success)
                 .controlSize(.small)
             }
-            Text("A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac for now.")
+            Text("A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac, and in other terminals with shell integration.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)

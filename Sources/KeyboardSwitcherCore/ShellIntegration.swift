@@ -78,3 +78,66 @@ public enum ShellIntegration {
         "'" + path.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 }
+
+/// The file work of shell integration, shared by `keyboardctl shell-integration` and Settings. The
+/// rc file is copied beside itself before it changes, and an earlier copy is never replaced.
+public enum ShellIntegrationInstaller {
+    public enum Outcome: Equatable, Sendable {
+        /// The file changed; `backup` is the copy of what it was (nil when there was no file).
+        case changed(backup: URL?)
+        /// The line was already there (install) or was not there (uninstall).
+        case unchanged
+    }
+
+    public enum InstallerError: Error, Equatable {
+        case tooManyBackups
+    }
+
+    private static let rcFileName = ".zshrc"
+    private static let backupInfix = ".before-cmdime."
+    private static let maxBackupsPerSecond = 9
+
+    /// `$ZDOTDIR/.zshrc` when the shell uses one, else `~/.zshrc`.
+    public static func defaultRCFile(environment: [String: String], home: String) -> URL {
+        let directory = environment["ZDOTDIR"].flatMap { $0.isEmpty ? nil : $0 } ?? home
+        return URL(fileURLWithPath: directory).appendingPathComponent(rcFileName)
+    }
+
+    public static func isInstalled(rcFile: URL) -> Bool {
+        (try? String(contentsOf: rcFile, encoding: .utf8)).map(ShellIntegration.isInstalled(in:)) ?? false
+    }
+
+    public static func install(keyboardctlPath: String, rcFile: URL, now: Date = Date()) throws -> Outcome {
+        let exists = FileManager.default.fileExists(atPath: rcFile.path)
+        let rc = exists ? try String(contentsOf: rcFile, encoding: .utf8) : ""
+        let line = ShellIntegration.rcLine(keyboardctlPath: keyboardctlPath)
+        guard let next = ShellIntegration.installing(line: line, into: rc) else { return .unchanged }
+        let backup = exists ? try backUp(rcFile, now: now) : nil
+        try next.write(to: rcFile, atomically: true, encoding: .utf8)
+        return .changed(backup: backup)
+    }
+
+    public static func uninstall(rcFile: URL, now: Date = Date()) throws -> Outcome {
+        guard FileManager.default.fileExists(atPath: rcFile.path) else { return .unchanged }
+        let rc = try String(contentsOf: rcFile, encoding: .utf8)
+        guard let next = ShellIntegration.uninstalling(from: rc) else { return .unchanged }
+        let backup = try backUp(rcFile, now: now)
+        try next.write(to: rcFile, atomically: true, encoding: .utf8)
+        return .changed(backup: backup)
+    }
+
+    private static func backUp(_ url: URL, now: Date) throws -> URL {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let stem = url.lastPathComponent + backupInfix + formatter.string(from: now)
+        let directory = url.deletingLastPathComponent()
+        let names = [stem] + (2...maxBackupsPerSecond).map { "\(stem)-\($0)" }
+        guard let name = names.first(where: { !FileManager.default.fileExists(atPath: directory.appendingPathComponent($0).path) }) else {
+            throw InstallerError.tooManyBackups
+        }
+        let backup = directory.appendingPathComponent(name)
+        try FileManager.default.copyItem(at: url, to: backup)
+        return backup
+    }
+}

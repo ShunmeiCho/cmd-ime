@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import KeyboardSwitcherCore
 
@@ -63,5 +64,58 @@ struct ShellIntegrationTests {
     @Test("a line with no program names none", arguments: ["", "   ", "FOO=1", "noglob"])
     func noProgramName(line: String) {
         #expect(ShellIntegration.programName(inCommandLine: line) == nil)
+    }
+}
+
+struct ShellIntegrationInstallerTests {
+    private func scratchDirectory() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("cmdime-shell-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        return url
+    }
+
+    @Test("install copies the rc file and appends the line; uninstall gives the file back; both twice in a second keep every copy")
+    func installAndUninstall() throws {
+        let directory = try scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let rc = directory.appendingPathComponent(".zshrc")
+        let before = "export A=1\n"
+        try before.write(to: rc, atomically: true, encoding: .utf8)
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+
+        guard case .changed(let firstBackup?) = try ShellIntegrationInstaller.install(keyboardctlPath: ctl, rcFile: rc, now: now) else {
+            Issue.record("install changed nothing")
+            return
+        }
+        #expect(try String(contentsOf: firstBackup, encoding: .utf8) == before)
+        #expect(ShellIntegrationInstaller.isInstalled(rcFile: rc))
+        #expect(try ShellIntegrationInstaller.install(keyboardctlPath: ctl, rcFile: rc, now: now) == .unchanged)
+
+        guard case .changed(let secondBackup?) = try ShellIntegrationInstaller.uninstall(rcFile: rc, now: now) else {
+            Issue.record("uninstall changed nothing")
+            return
+        }
+        #expect(secondBackup != firstBackup)
+        #expect(try String(contentsOf: rc, encoding: .utf8) == before)
+        #expect(try String(contentsOf: firstBackup, encoding: .utf8) == before)
+        #expect(try ShellIntegrationInstaller.uninstall(rcFile: rc, now: now) == .unchanged)
+    }
+
+    @Test("install creates the rc file when there is none, with nothing to copy")
+    func installWithoutAFile() throws {
+        let directory = try scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let rc = directory.appendingPathComponent(".zshrc")
+
+        #expect(try ShellIntegrationInstaller.install(keyboardctlPath: ctl, rcFile: rc) == .changed(backup: nil))
+        #expect(ShellIntegrationInstaller.isInstalled(rcFile: rc))
+        #expect(try ShellIntegrationInstaller.uninstall(rcFile: directory.appendingPathComponent("absent")) == .unchanged)
+    }
+
+    @Test("the rc file follows ZDOTDIR when the shell uses one")
+    func rcFileLocation() {
+        #expect(ShellIntegrationInstaller.defaultRCFile(environment: [:], home: "/Users/a").path == "/Users/a/.zshrc")
+        #expect(ShellIntegrationInstaller.defaultRCFile(environment: ["ZDOTDIR": "/Users/a/.zsh"], home: "/Users/a").path == "/Users/a/.zsh/.zshrc")
+        #expect(ShellIntegrationInstaller.defaultRCFile(environment: ["ZDOTDIR": ""], home: "/Users/a").path == "/Users/a/.zshrc")
     }
 }
