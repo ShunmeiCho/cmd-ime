@@ -24,14 +24,14 @@ public struct HerdrSocket: Sendable {
 
     /// Sends one request line and returns the reply line, or nil when the server is not there,
     /// has not finished its reply within `budget`, or answers more than a reply can be. The
-    /// budget covers the whole exchange: a server that sends a byte now and then cannot hold
-    /// the caller longer.
+    /// budget covers the whole exchange, sending included: a server that reads or sends a byte
+    /// now and then cannot hold the caller longer.
     public func reply(to request: Data, budget: TimeInterval = HerdrSocket.replyBudget) -> Data? {
         #if canImport(Darwin)
         let deadline = ProcessInfo.processInfo.systemUptime + budget
-        guard let descriptor = connect(sendTimeout: budget) else { return nil }
+        guard let descriptor = connect() else { return nil }
         defer { close(descriptor) }
-        guard Self.send(request, on: descriptor) else { return nil }
+        guard Self.send(request, on: descriptor, deadline: deadline) else { return nil }
         var reply = Data()
         var chunk = [UInt8](repeating: 0, count: Self.chunkBytes)
         while reply.last != Self.lineFeed {
@@ -52,8 +52,8 @@ public struct HerdrSocket: Sendable {
     /// Sending times out; reading does not, since events come whenever focus moves.
     public func openSubscription(_ request: Data) -> Int32? {
         #if canImport(Darwin)
-        guard let descriptor = connect(sendTimeout: Self.replyBudget) else { return nil }
-        guard Self.send(request, on: descriptor) else {
+        guard let descriptor = connect() else { return nil }
+        guard Self.send(request, on: descriptor, deadline: ProcessInfo.processInfo.systemUptime + Self.replyBudget) else {
             close(descriptor)
             return nil
         }
@@ -64,7 +64,8 @@ public struct HerdrSocket: Sendable {
     }
 
     #if canImport(Darwin)
-    private func connect(sendTimeout: TimeInterval) -> Int32? {
+    /// Connecting to a local socket does not wait: it succeeds or fails at once.
+    private func connect() -> Int32? {
         let descriptor = socket(AF_UNIX, SOCK_STREAM, 0)
         guard descriptor >= 0 else { return nil }
         var address = sockaddr_un()
@@ -78,7 +79,6 @@ public struct HerdrSocket: Sendable {
         }
         var on: Int32 = 1
         setsockopt(descriptor, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
-        Self.setTimeout(SO_SNDTIMEO, sendTimeout, on: descriptor)
         let connected = withUnsafePointer(to: &address) { pointer in
             pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 Darwin.connect(descriptor, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
@@ -99,11 +99,14 @@ public struct HerdrSocket: Sendable {
         setsockopt(descriptor, SOL_SOCKET, option, &value, socklen_t(MemoryLayout<timeval>.size))
     }
 
-    private static func send(_ data: Data, on descriptor: Int32) -> Bool {
+    private static func send(_ data: Data, on descriptor: Int32, deadline: TimeInterval) -> Bool {
         data.withUnsafeBytes { buffer in
             guard let base = buffer.baseAddress else { return false }
             var sent = 0
             while sent < buffer.count {
+                let remaining = deadline - ProcessInfo.processInfo.systemUptime
+                guard remaining > 0 else { return false }
+                setTimeout(SO_SNDTIMEO, remaining, on: descriptor)
                 let count = write(descriptor, base + sent, buffer.count - sent)
                 guard count > 0 else { return false }
                 sent += count

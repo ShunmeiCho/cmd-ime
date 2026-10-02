@@ -13,7 +13,8 @@ final class HerdrFocusStream: @unchecked Sendable {
     // Touched only on `queue`.
     private var buffer = Data()
 
-    init(descriptor: Int32, onFocus: @escaping @Sendable () -> Void, onClose: @escaping @Sendable () -> Void) {
+    /// `onFocus` gets the time the event was read here (`ProcessInfo.systemUptime`).
+    init(descriptor: Int32, onFocus: @escaping @Sendable (TimeInterval) -> Void, onClose: @escaping @Sendable () -> Void) {
         source = DispatchSource.makeReadSource(fileDescriptor: descriptor, queue: queue)
         source.setEventHandler { [weak self] in
             guard let self else { return }
@@ -26,7 +27,7 @@ final class HerdrFocusStream: @unchecked Sendable {
             }
             self.buffer.append(contentsOf: chunk[..<count])
             if self.takeLines().contains(where: Self.isFocusEvent) {
-                onFocus()
+                onFocus(ProcessInfo.processInfo.systemUptime)
             }
         }
         source.setCancelHandler { close(descriptor) }

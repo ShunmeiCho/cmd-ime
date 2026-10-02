@@ -30,8 +30,8 @@ final class AppMemoryController {
         onReading: { [weak self] reading in
             MainActor.assumeIsolated { self?.programDidRead(reading) }
         },
-        onPaneFocus: { [weak self] pid in
-            MainActor.assumeIsolated { self?.paneDidFocus(pid: pid) }
+        onPaneFocus: { [weak self] pid, time in
+            MainActor.assumeIsolated { self?.paneDidFocus(pid: pid, at: time) }
         }
     )
     private var programTarget: ProgramTarget?
@@ -95,7 +95,7 @@ final class AppMemoryController {
     func sourceDidChange() {
         guard isActive, isPermitted, let current = currentSourceID() else { return }
         let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        tracker.sourceChanged(to: current, context: context(frontmostPID: frontmost))
+        tracker.sourceChanged(to: current, context: context(frontmostPID: frontmost), at: Self.now)
         afterTrackerChange()
     }
 
@@ -114,7 +114,8 @@ final class AppMemoryController {
                 isRegularApp: actual?.activationPolicy == .regular,
                 context: context,
                 browserPID: Self.browserPID(of: actual),
-                terminalPID: Self.terminalPID(of: actual)
+                terminalPID: Self.terminalPID(of: actual),
+                at: Self.now
             )
         } else {
             tracker.switchConfirmed(sourceID: sourceID, context: context)
@@ -221,12 +222,14 @@ final class AppMemoryController {
         perform(restore)
     }
 
-    /// Focus moved to another pane of the terminal. The tracker starts a new generation, which
-    /// points the watcher at it, and the read that follows applies the pane's rule.
-    private func paneDidFocus(pid: pid_t) {
+    /// Focus moved to another pane of the terminal at `time`, read when the watcher received the
+    /// notice. The tracker starts a new generation, which points the watcher at it, and the read
+    /// that follows applies the pane's rule.
+    private func paneDidFocus(pid: pid_t, at time: TimeInterval) {
         guard isActive, isPermitted else { return }
         tracker.paneFocused(
             pid: pid,
+            at: time,
             actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
             actualTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp())
         )
@@ -363,12 +366,16 @@ final class AppMemoryController {
         }
         let restore = tracker.secureInputEnded(
             currentSourceID: currentSourceID(),
-            context: context(frontmostPID: frontmost?.processIdentifier)
+            context: context(frontmostPID: frontmost?.processIdentifier),
+            slotOfSource: slotForSourceID
         )
         perform(restore)
     }
 
     private static let secureInputPollInterval: TimeInterval = 0.25
+
+    /// The clock the tracker orders choices and pane focus changes by; the watcher reads the same one.
+    private static var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
     private func selectableSource(_ id: String) -> InputSourceInfo? {
         InputSourceMatcher.selectableSources(from: sources()).first { $0.id == id }
