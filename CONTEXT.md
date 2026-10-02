@@ -53,7 +53,7 @@ A slot the user set for one website's domain, or "keep as is", applied in every 
 _Avoid_: Site rule, URL rule, browser rule
 
 **Program Rule**:
-A slot the user set for one program that runs in a terminal (a shell, an agent CLI, an editor), or "keep as is", keyed by the program's name: while that program is the one in the focused terminal pane, it beats the terminal's own App Rule, App Memory and the Default Slot. It is applied again every time the pane comes into focus, whatever was last typed there. A program with no rule changes nothing. CmdIME reads only the program's name, never what is on the screen.
+A slot the user set for one program that runs in a terminal (a shell, an agent CLI, an editor), or "keep as is", keyed by the program's name: while that program is the one in the focused terminal pane, it beats the terminal's own App Rule, App Memory and the Default Slot. It is applied again every time the pane comes into focus, whatever was last typed there. CmdIME reads only the program's name, never what is on the screen.
 _Avoid_: Terminal rule (a slot for the terminal app itself is an App Rule), CLI rule, pane rule
 
 **Default Slot** (UI: "Apps without a rule or memory"):
