@@ -26,3 +26,10 @@ public struct WebsiteReading: Equatable, Sendable {
         self.context = context
     }
 }
+
+/// What the program in a terminal's focused pane is, as far as Program Rules care: the same three
+/// answers as for a page, with the program's name in `rule`. A surface no source can answer for
+/// (a plain terminal tab) is `noRule`, not `unknown`: there is nothing to wait for.
+public typealias ProgramContext = WebsiteContext
+/// One read of that program, stamped like a read of a page.
+public typealias ProgramReading = WebsiteReading
