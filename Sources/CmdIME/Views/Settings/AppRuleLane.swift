@@ -25,7 +25,7 @@ struct AppRuleLaneLook {
     }
 }
 
-/// One slot, or "Keep as is": a drop target holding the apps and websites whose rule points here.
+/// One slot, or "Keep as is": a drop target holding the apps, websites and programs whose rule points here.
 struct AppRuleLane: View {
     @ObservedObject var model: AppModel
     let lane: AppRuleBoard.Lane
@@ -51,6 +51,9 @@ struct AppRuleLane: View {
                     ForEach(lane.websiteRules, id: \.domain) { rule in
                         WebsiteRuleChip(model: model, rule: rule, lanes: look.destinations(lanes))
                     }
+                    ForEach(lane.programRules, id: \.name) { rule in
+                        ProgramRuleChip(model: model, rule: rule, lanes: look.destinations(lanes))
+                    }
                 }
             }
         }
@@ -73,7 +76,7 @@ struct AppRuleLane: View {
     private static let targetedFillOpacity = 0.14
     private static let targetedStrokeOpacity = 0.70
 
-    private var chipCount: Int { lane.rules.count + lane.websiteRules.count }
+    private var chipCount: Int { lane.rules.count + lane.websiteRules.count + lane.programRules.count }
 
     private func header(tint: Color) -> some View {
         HStack(spacing: 6) {

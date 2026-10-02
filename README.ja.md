@@ -420,6 +420,19 @@ CmdIME 専用に登録され、システム全体には何もインストール�
   登録されているアプリもブラウザとして扱うので、一覧にないブラウザでも使えます。Safari と
   Chrome でテスト済みで、アドレスの読み取りは Aside でも確認しました。タイトルが変わらないままアドレスだけが変わるページ(一部のシングルページアプリ)
   は、次にタブやウインドウを切り替えたときに反映されます。
+- **プログラムのルール**: **プログラムを追加…** で、ターミナルのプログラムごとにスロット、
+  または**そのまま**を指定できます。`zsh` のプロンプトでは英語、`claude` の中では中国語、
+  という使い方です。プログラムを起動するコマンド名を入力します（完全一致、大文字と小文字を
+  区別）。そのプログラムがフォーカスのあるターミナルのペインで動いている間、そのルールは
+  ターミナル自身のアプリルール、アプリメモリ、「その他のアプリ」のスロットより優先され、
+  ペインにフォーカスが移るたびに適用し直されます。その後に押したトリガーが優先され、
+  ルールのないプログラムでは何も変わりません。スイッチ 1 つですべてのプログラムルールを
+  一時停止できます。CmdIME が読み取るのはターミナルで動いているプログラムの名前だけで、
+  画面の内容は読み取りません。この Mac の [Herdr](https://herdr.dev) のペインに追従します。
+  ほかのターミナルでは、`.zshrc` に 1 行加えると zsh がプログラムを知らせます
+  （**シェル統合…**、または `keyboardctl shell-integration install`。変更前にファイルを
+  コピーします）。シェル統合では、すでにプログラムが動いているタブに戻っても何も知らされず、
+  見ていないタブで終了したコマンドでも入力ソースが切り替わることがあります。
 - **アプリの記憶**(初期状態はオフ): アプリに戻ると、そこで最後に使った
   入力ソースを選びます。トリガー、Control+Space、メニューバー、地球儀キーのどれで選んだ
   ものでも対象です。メモリ上だけに保持され、CmdIME を終了すると消えます。キーボード操作を
@@ -461,6 +474,11 @@ keyboardctl website-rule set docs.google.com japanese --exact
 keyboardctl website-rule set localhost keep
 keyboardctl website-rule test https://gist.github.com/
 keyboardctl website-rule remove github.com
+keyboardctl program-rule list
+keyboardctl program-rule set claude chinese
+keyboardctl program-rule set vim keep
+keyboardctl program-rule remove claude
+keyboardctl shell-integration install     # ~/.zshrc に 1 行追加。uninstall で削除
 ```
 
 </details>

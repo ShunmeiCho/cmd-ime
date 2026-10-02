@@ -806,6 +806,28 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// A Program Rule added from the sheet, or moved to another lane from its chip.
+    func setProgramRule(_ rule: ProgramRule) {
+        guard commitFromAppsPage(config.setting(rule)) else { return }
+        switch rule.target {
+        case .keepAsIs: reportAppRule(.done(String(localized: "\(rule.name) keeps its input source")))
+        case .slot(let id): reportAppRule(.done(String(localized: "\(rule.name) now gets \(config.displayName(for: id))")))
+        }
+    }
+
+    func removeProgramRule(for name: String) {
+        if commitFromAppsPage(config.removingProgramRule(for: name)) {
+            reportAppRule(.done(String(localized: "Rule removed for \(name)")))
+        }
+    }
+
+    /// The one switch that pauses every Program Rule and brings them back.
+    func setProgramRulesPaused(_ paused: Bool) {
+        if commitFromAppsPage(config.settingProgramRulesPaused(paused)) {
+            statusText = paused ? String(localized: "Program rules are paused") : String(localized: "Program rules are on")
+        }
+    }
+
     func setAppDefaultSlot(_ slot: InputRole?) {
         var next = config
         next.appDefaultSlot = slot

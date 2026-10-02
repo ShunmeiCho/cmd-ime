@@ -18,11 +18,22 @@ public struct WebsiteReading: Equatable, Sendable {
     /// Counts up per watcher; an older read never overrides a newer one.
     public var sequence: Int
     public var context: WebsiteContext
+    /// For a terminal, the pane the program was read in, as its multiplexer names it. Nil for a
+    /// page, and for a terminal window that shows no pane the reader can name.
+    public var paneID: String?
 
-    public init(pid: Int32, generation: Int, sequence: Int, context: WebsiteContext) {
+    public init(pid: Int32, generation: Int, sequence: Int, context: WebsiteContext, paneID: String? = nil) {
         self.pid = pid
         self.generation = generation
         self.sequence = sequence
         self.context = context
+        self.paneID = paneID
     }
 }
+
+/// What the program in a terminal's focused pane is, as far as Program Rules care: the same three
+/// answers as for a page, with the program's name in `rule`. A surface no source can answer for
+/// (a plain terminal tab) is `noRule`, not `unknown`: there is nothing to wait for.
+public typealias ProgramContext = WebsiteContext
+/// One read of that program, stamped like a read of a page.
+public typealias ProgramReading = WebsiteReading

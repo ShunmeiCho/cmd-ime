@@ -311,7 +311,8 @@ private struct CompactLiveKeysStrip: View {
                 ForEach(Array(entries.enumerated()), id: \.offset) { _, entry in
                     let gesture = entry.trigger.gesture == .doubleTap ? "×2" : (entries.count > 1 ? "x1" : nil)
                     LiveStripKey(keycap.label, role: entry.slot,
-                                 detail: [keycap.detail, gesture].compactMap { $0 }.joined(separator: " "),
+                                 // No space: "R ×2" does not fit the keycap's width on one line.
+                                 detail: [keycap.detail, gesture].compactMap { $0 }.joined(),
                                  isActive: model.activeRole == entry.slot, fillsWidth: true)
                         .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.localizedDisplayName)")
                 }

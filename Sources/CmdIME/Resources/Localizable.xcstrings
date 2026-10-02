@@ -19848,6 +19848,654 @@
           }
         }
       }
+    },
+    "Add Program": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Program"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加程序"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムを追加"
+          }
+        }
+      }
+    },
+    "Add Program…": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Program…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加程序…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムを追加…"
+          }
+        }
+      }
+    },
+    "Add a rule for a program in the terminal": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a rule for a program in the terminal"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "为终端里的程序添加规则"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルのプログラムにルールを追加"
+          }
+        }
+      }
+    },
+    "Program name": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program name"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序名"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラム名"
+          }
+        }
+      }
+    },
+    "Program rules": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program rules"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序规则"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムルール"
+          }
+        }
+      }
+    },
+    "Program rules are paused": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program rules are paused"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序规则已暂停"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムルールを一時停止しました"
+          }
+        }
+      }
+    },
+    "Program rules are on": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Program rules are on"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序规则已开启"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムルールをオンにしました"
+          }
+        }
+      }
+    },
+    "Type the command the program is started with, such as %@. Upper and lower case count.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type the command the program is started with, such as %@. Upper and lower case count."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入启动这个程序用的命令，例如 %@。区分大小写。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラムを起動するコマンドを入力します（例: %@）。大文字と小文字は区別されます。"
+          }
+        }
+      }
+    },
+    "A program name has no spaces and no slashes.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A program name has no spaces and no slashes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "程序名不能包含空格和斜杠。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プログラム名に空白やスラッシュは使えません。"
+          }
+        }
+      }
+    },
+    "Programs started as %@": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Programs started as %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以 %@ 启动的程序"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ として起動したプログラム"
+          }
+        }
+      }
+    },
+    "%@ already has a rule; this replaces it.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ already has a rule; this replaces it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已经有规则，这次会替换它。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ にはすでにルールがあり、これで置き換えます。"
+          }
+        }
+      }
+    },
+    "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac, and in other terminals with shell integration.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac, and in other terminals with shell integration."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有规则的程序在当前聚焦的终端面板里运行时，会切到它的槽位。CmdIME 只读取终端里正在运行的程序的名称，不读取屏幕上的内容。支持这台 Mac 上的 Herdr 面板；其他终端需要安装 shell 集成。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールのあるプログラムが、フォーカスのあるターミナルのペインで動いている間、そのスロットに切り替わります。CmdIME が読み取るのはターミナルで動いているプログラムの名前だけで、画面の内容は読み取りません。この Mac の Herdr のペインで動作し、ほかのターミナルではシェル統合が必要です。"
+          }
+        }
+      }
+    },
+    "Shell Integration…": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shell Integration…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shell 集成…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェル統合…"
+          }
+        }
+      }
+    },
+    "Shell Integration": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shell Integration"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shell 集成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェル統合"
+          }
+        }
+      }
+    },
+    "In a terminal without Herdr, zsh can tell CmdIME which program starts and when you are back at the prompt. That takes this one line in .zshrc:": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In a terminal without Herdr, zsh can tell CmdIME which program starts and when you are back at the prompt. That takes this one line in .zshrc:"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在没有 Herdr 的终端里，zsh 可以告诉 CmdIME 启动了哪个程序、什么时候回到提示符。只需要在 .zshrc 里加这一行："
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herdr のないターミナルでは、zsh がどのプログラムを起動したか、いつプロンプトに戻ったかを CmdIME に伝えられます。必要なのは .zshrc のこの 1 行です:"
+          }
+        }
+      }
+    },
+    "CmdIME copies .zshrc before changing it and changes nothing else in it. A command that ends in a tab you are not looking at can still switch the input source.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME copies .zshrc before changing it and changes nothing else in it. A command that ends in a tab you are not looking at can still switch the input source."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME 修改 .zshrc 前会先备份，并且不改动其他内容。在你没有看着的标签页里结束的命令，仍可能切换输入源。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME は .zshrc を変更する前にコピーを取り、ほかの内容は変更しません。見ていないタブで終了したコマンドでも入力ソースが切り替わることがあります。"
+          }
+        }
+      }
+    },
+    "Copy Line": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Line"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制这一行"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この行をコピー"
+          }
+        }
+      }
+    },
+    "Add to .zshrc": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to .zshrc"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加到 .zshrc"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".zshrc に追加"
+          }
+        }
+      }
+    },
+    "Remove from .zshrc": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from .zshrc"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从 .zshrc 移除"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".zshrc から削除"
+          }
+        }
+      }
+    },
+    "Copied.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copied."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已复制。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーしました。"
+          }
+        }
+      }
+    },
+    "Could not change .zshrc: %@": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not change .zshrc: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法修改 .zshrc：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".zshrc を変更できませんでした: %@"
+          }
+        }
+      }
+    },
+    "The line is already in .zshrc.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The line is already in .zshrc."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这一行已经在 .zshrc 里。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この行はすでに .zshrc にあります。"
+          }
+        }
+      }
+    },
+    "The line is not in .zshrc.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The line is not in .zshrc."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这一行不在 .zshrc 里。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この行は .zshrc にありません。"
+          }
+        }
+      }
+    },
+    "Added. Open a new terminal window to use it.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Added. Open a new terminal window to use it."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加。打开新的终端窗口后生效。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加しました。新しいターミナルウインドウを開くと有効になります。"
+          }
+        }
+      }
+    },
+    "Removed.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已移除。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除しました。"
+          }
+        }
+      }
+    },
+    "The file as it was: %@": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file as it was: %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改前的文件：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更前のファイル: %@"
+          }
+        }
+      }
+    },
+    "New in 0.15: an input source per program in the terminal on the Apps page: English at the shell prompt, another slot inside an agent CLI.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.15: an input source per program in the terminal on the Apps page: English at the shell prompt, another slot inside an agent CLI."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.15 新增：在“应用”页为终端里的每个程序设定输入源，比如在 shell 提示符下用英文，进了 agent CLI 用另一个槽位。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.15 の新機能：「アプリ」ページでターミナルのプログラムごとに入力ソースを設定できます。シェルのプロンプトでは英語、エージェント CLI の中では別のスロット、という使い方です。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

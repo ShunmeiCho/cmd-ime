@@ -341,6 +341,8 @@ struct KeycapView: View {
         self.expandsHorizontally = expandsHorizontally
     }
 
+    private static let detailMinimumScale: CGFloat = 0.8
+
     var body: some View {
         HStack(spacing: 4) {
             Text(label)
@@ -348,6 +350,9 @@ struct KeycapView: View {
             if let detail {
                 Text(detail)
                     .font(DesignTokens.Typography.auxiliary.monospaced().weight(.semibold))
+                    // A keycap has one line; text a narrow key cannot hold shrinks instead of wrapping.
+                    .lineLimit(1)
+                    .minimumScaleFactor(Self.detailMinimumScale)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .padding(.top, 2)
             }

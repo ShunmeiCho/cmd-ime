@@ -105,13 +105,22 @@ public struct AppActivationSettings: Equatable, Sendable {
         Dictionary(websiteRules.map { ($0.domain, $0.target) }, uniquingKeysWith: { _, later in later })
     }
 
+    /// Program rules, one per exact name; paused rules are retained but never applied.
+    public var programRules: [ProgramRule]
+    public var programRulesPaused: Bool
+    public var programTargets: [String: AppRuleTarget] {
+        Dictionary(programRules.map { ($0.name, $0.target) }, uniquingKeysWith: { _, later in later })
+    }
+
     public init(
         remembersPerApp: Bool = false,
         rules: [AppRule] = [],
         defaultSlot: InputRole? = nil,
         restoresAfterPasswordField: Bool = false,
         slotIDs: Set<InputRole> = [],
-        websiteRules: [WebsiteRule] = []
+        websiteRules: [WebsiteRule] = [],
+        programRules: [ProgramRule] = [],
+        programRulesPaused: Bool = false
     ) {
         self.remembersPerApp = remembersPerApp
         // A later duplicate wins, the same as `setting(_:)` replacing in place.
@@ -120,6 +129,8 @@ public struct AppActivationSettings: Equatable, Sendable {
         self.restoresAfterPasswordField = restoresAfterPasswordField
         self.slotIDs = slotIDs
         self.websiteRules = websiteRules
+        self.programRules = programRules
+        self.programRulesPaused = programRulesPaused
     }
 
     public init(config: SwitcherConfig) {
@@ -129,14 +140,16 @@ public struct AppActivationSettings: Equatable, Sendable {
             defaultSlot: config.appDefaultSlot,
             restoresAfterPasswordField: config.restoreAfterPasswordField,
             slotIDs: Set(config.slots.map(\.id)),
-            websiteRules: config.websiteRules
+            websiteRules: config.websiteRules,
+            programRules: config.programRules,
+            programRulesPaused: config.programRulesPaused
         )
     }
 
     /// Whether anything needs to follow app activations at all.
     public var isAnythingOn: Bool {
         remembersPerApp || !rules.isEmpty || defaultSlot != nil || restoresAfterPasswordField
-            || !websiteTargets.isEmpty
+            || !websiteTargets.isEmpty || (!programRulesPaused && !programRules.isEmpty)
     }
 
     /// Whether the pages of browser `appID` are read: only with a website rule to apply, and never
@@ -149,6 +162,18 @@ public struct AppActivationSettings: Equatable, Sendable {
     /// slot. Nil when there is no such rule.
     public func websiteTarget(forRule domain: String) -> AppActivationTarget? {
         guard let target = websiteTargets[domain] else { return nil }
+        guard case .slot(let slot) = target, slotIDs.contains(slot) else { return AppActivationTarget.none }
+        return .slot(slot)
+    }
+
+    /// A Keep as is app is never queried, even when a program inside it has a rule.
+    public func watchesPrograms(in appID: String) -> Bool {
+        !programRulesPaused && !programRules.isEmpty && !leavesSourceAlone(in: appID)
+    }
+
+    /// Nil for no active rule; no switch for Keep as is or a deleted slot.
+    public func programTarget(forRule name: String) -> AppActivationTarget? {
+        guard !programRulesPaused, let target = programTargets[name] else { return nil }
         guard case .slot(let slot) = target, slotIDs.contains(slot) else { return AppActivationTarget.none }
         return .slot(slot)
     }

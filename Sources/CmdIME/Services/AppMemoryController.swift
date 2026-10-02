@@ -25,6 +25,16 @@ final class AppMemoryController {
     }
     /// What the watcher was last pointed at, so it is only retargeted when that changes.
     private var websiteTarget: WebsiteTarget?
+    /// Asks for the program in the terminal's focused pane for Program Rules, on its own thread.
+    private lazy var programs = ProgramWatcher(
+        onReading: { [weak self] reading in
+            MainActor.assumeIsolated { self?.programDidRead(reading) }
+        },
+        onPaneFocus: { [weak self] pid, paneID, time in
+            MainActor.assumeIsolated { self?.paneDidFocus(pid: pid, paneID: paneID, at: time) }
+        }
+    )
+    private var programTarget: ProgramTarget?
     /// The generation whose wait for the page already has its expiry scheduled.
     private var heldGeneration: Int?
     /// Where a tracker built by the next `start()` begins counting.
@@ -34,6 +44,12 @@ final class AppMemoryController {
         let pid: pid_t
         let generation: Int
         let rules: [WebsiteRule]
+    }
+
+    private struct ProgramTarget: Equatable {
+        let pid: pid_t
+        let generation: Int
+        let rules: [ProgramRule]
     }
 
     private(set) var isActive = false
@@ -79,7 +95,7 @@ final class AppMemoryController {
     func sourceDidChange() {
         guard isActive, isPermitted, let current = currentSourceID() else { return }
         let frontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier
-        tracker.sourceChanged(to: current, context: context(frontmostPID: frontmost))
+        tracker.sourceChanged(to: current, context: context(frontmostPID: frontmost), at: Self.now)
         afterTrackerChange()
     }
 
@@ -97,7 +113,9 @@ final class AppMemoryController {
                 actualFrontmostAppID: Self.appID(of: actual),
                 isRegularApp: actual?.activationPolicy == .regular,
                 context: context,
-                browserPID: Self.browserPID(of: actual)
+                browserPID: Self.browserPID(of: actual),
+                terminalPID: Self.terminalPID(of: actual),
+                at: Self.now
             )
         } else {
             tracker.switchConfirmed(sourceID: sourceID, context: context)
@@ -120,6 +138,7 @@ final class AppMemoryController {
             ownAppID: Self.ownAppID,
             frontmostAppID: Self.trackedAppID(of: Self.actualFrontmostApp()),
             frontBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
+            frontTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp()),
             // Never a number an earlier run used: a read or an expiry left over from it stays stale.
             activationGeneration: nextGenerationBase,
             settings: settings
@@ -167,16 +186,55 @@ final class AppMemoryController {
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             actualFrontmostAppID: Self.appID(of: actual),
             browserPID: Self.browserPID(of: actual),
+            terminalPID: Self.terminalPID(of: actual),
             slotOfSource: slotForSourceID
         )
         let targetBefore = websiteTarget
+        let programTargetBefore = programTarget
         afterTrackerChange()
         // A read made while another app was briefly in front was dropped; with the browser back
-        // and the watcher still on it, ask for a fresh one.
+        // and the watcher still on it, ask for a fresh one. The same goes for a terminal.
         if websiteTarget != nil, websiteTarget == targetBefore {
             websites.refresh()
         }
+        if programTarget != nil, programTarget == programTargetBefore {
+            programs.refresh()
+        }
         perform(restore)
+    }
+
+    /// A read of the program in the terminal's focused pane came back from the watcher thread:
+    /// a prompt to look, like a read of a page.
+    private func programDidRead(_ reading: ProgramReading) {
+        guard isActive, isPermitted else {
+            syncWebsiteWatch()
+            return
+        }
+        let restore = tracker.programRead(
+            reading,
+            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
+            actualTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp()),
+            currentSourceID: currentSourceID(),
+            context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
+            slotOfSource: slotForSourceID
+        )
+        afterTrackerChange()
+        perform(restore)
+    }
+
+    /// Focus moved to the pane `paneID` of the terminal; the watcher received the notice at
+    /// `time`. For a new pane the tracker starts a new generation, which points the watcher at
+    /// it, and the read that follows applies the pane's rule.
+    private func paneDidFocus(pid: pid_t, paneID: String, at time: TimeInterval) {
+        guard isActive, isPermitted else { return }
+        tracker.paneFocused(
+            pid: pid,
+            paneID: paneID,
+            at: time,
+            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
+            actualTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp())
+        )
+        afterTrackerChange()
     }
 
     /// A read of the page in front came back from the watcher thread. Like an activation notice it
@@ -201,14 +259,26 @@ final class AppMemoryController {
     /// The browser's own target waited for its page and no read came in time.
     private func websiteHoldDidExpire(generation: Int) {
         guard isActive, isPermitted else { return }
-        let restore = tracker.websiteHoldExpired(
-            generation: generation,
-            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
-            actualBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
-            currentSourceID: currentSourceID(),
-            context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
-            slotOfSource: slotForSourceID
-        )
+        let actual = Self.actualFrontmostApp()
+        let context = context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
+        // The wait belongs to a browser or to a terminal; the tracker ignores the other's expiry.
+        let restore = tracker.programWatch == nil
+            ? tracker.websiteHoldExpired(
+                generation: generation,
+                actualFrontmostAppID: Self.appID(of: actual),
+                actualBrowserPID: Self.browserPID(of: actual),
+                currentSourceID: currentSourceID(),
+                context: context,
+                slotOfSource: slotForSourceID
+            )
+            : tracker.programHoldExpired(
+                generation: generation,
+                actualFrontmostAppID: Self.appID(of: actual),
+                actualTerminalPID: Self.terminalPID(of: actual),
+                currentSourceID: currentSourceID(),
+                context: context,
+                slotOfSource: slotForSourceID
+            )
         afterTrackerChange()
         perform(restore)
     }
@@ -221,6 +291,12 @@ final class AppMemoryController {
         if target != websiteTarget {
             websiteTarget = target
             websites.retarget(pid: target?.pid, generation: target?.generation ?? 0, rules: target?.rules ?? [])
+        }
+        let programWatch = isActive && isPermitted ? tracker.programWatch : nil
+        let program = programWatch.map { ProgramTarget(pid: $0.pid, generation: $0.generation, rules: settings.programRules) }
+        if program != programTarget {
+            programTarget = program
+            programs.retarget(pid: program?.pid, generation: program?.generation ?? 0, rules: program?.rules ?? [])
         }
         guard isActive, tracker.isWebsiteHoldWaiting, heldGeneration != tracker.activationGeneration else { return }
         let generation = tracker.activationGeneration
@@ -291,12 +367,16 @@ final class AppMemoryController {
         }
         let restore = tracker.secureInputEnded(
             currentSourceID: currentSourceID(),
-            context: context(frontmostPID: frontmost?.processIdentifier)
+            context: context(frontmostPID: frontmost?.processIdentifier),
+            slotOfSource: slotForSourceID
         )
         perform(restore)
     }
 
     private static let secureInputPollInterval: TimeInterval = 0.25
+
+    /// The clock the tracker orders choices and pane focus changes by; the watcher reads the same one.
+    private static var now: TimeInterval { ProcessInfo.processInfo.systemUptime }
 
     private func selectableSource(_ id: String) -> InputSourceInfo? {
         InputSourceMatcher.selectableSources(from: sources()).first { $0.id == id }
@@ -363,6 +443,12 @@ final class AppMemoryController {
     /// The pid when `app` is a browser whose pages can be read for website rules.
     private static func browserPID(of app: NSRunningApplication?) -> pid_t? {
         guard let app, let bundleID = app.bundleIdentifier, isBrowser(app, bundleID: bundleID) else { return nil }
+        return app.processIdentifier
+    }
+
+    /// The pid when `app` is a terminal whose focused pane can be asked for its program.
+    private static func terminalPID(of app: NSRunningApplication?) -> pid_t? {
+        guard let app, let bundleID = app.bundleIdentifier, TerminalCatalog.isTerminal(bundleID) else { return nil }
         return app.processIdentifier
     }
 
