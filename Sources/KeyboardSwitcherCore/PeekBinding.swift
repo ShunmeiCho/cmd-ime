@@ -53,11 +53,13 @@ extension SwitcherConfig {
         case .switchInputSource: binding.action.role.map { displayName(for: $0) } ?? CoreLocalization.text("another binding")
         case .sendKey: CoreLocalization.text("a key remap")
         case .showIndicator: Self.peekDisplayName
+        case .toggleSlots: Self.toggleDisplayName
         case .disable: CoreLocalization.text("another binding")
         }
     }
 
-    private static func triggers(_ existing: KeyTrigger, collideWith candidate: KeyTrigger) -> Bool {
+    /// Shared by Peek and Toggle.
+    static func triggers(_ existing: KeyTrigger, collideWith candidate: KeyTrigger) -> Bool {
         guard existing.keyCode == candidate.keyCode else { return false }
         if existing.kind == .oneShotModifier, candidate.kind == .oneShotModifier {
             return existing.gesture == candidate.gesture

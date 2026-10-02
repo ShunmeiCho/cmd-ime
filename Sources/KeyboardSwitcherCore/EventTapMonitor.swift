@@ -94,11 +94,14 @@ public final class EventTapMonitor: @unchecked Sendable {
     private enum SwitchTarget {
         case slot(InputRole)
         case source(InputSourceInfo, reportingAs: InputRole?)
+        /// A Toggle: becomes `.slot` on the main queue, once the source in front can be read.
+        case toggle(InputRole, InputRole)
 
         var role: InputRole? {
             switch self {
             case .slot(let role): role
             case .source(_, let role): role
+            case .toggle: nil
             }
         }
     }
@@ -255,6 +258,9 @@ public final class EventTapMonitor: @unchecked Sendable {
         sourceSnapshot = sources
         updateConfig(config)
     }
+
+    /// Slots this monitor confirmed a switch to, most recent first; a Toggle reads it.
+    private(set) var recentSlots: [InputRole] = []
 
     private func currentSources() throws -> [InputSourceInfo] {
         try sourceSnapshot ?? inputSources.listInputSources()
@@ -562,6 +568,11 @@ public final class EventTapMonitor: @unchecked Sendable {
             Self.scheduleOnMainQueue(after: 0) { [weak self] in
                 self?.onPeek?()
             }
+        case .toggleSlots:
+            guard let roles = action.roles, roles.count == 2 else {
+                return
+            }
+            request(.toggle(roles[0], roles[1]), trigger: trigger, evidenceEpoch: evidenceEpoch)
         }
     }
 
@@ -614,10 +625,11 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
     }
 
-    private func beginSwitch(to target: SwitchTarget, generation: Int, trigger: KeyTrigger?, evidenceEpoch: UUID?) {
+    private func beginSwitch(to requested: SwitchTarget, generation: Int, trigger: KeyTrigger?, evidenceEpoch: UUID?) {
         guard isCurrentSwitch(generation) else {
             return
         }
+        let target = decidingToggle(requested)
         guard let source = resolvedSource(for: target) else {
             onMessage?(CoreLocalization.text("No input method matched this switch slot."))
             endSwitch(generation)
@@ -654,6 +666,17 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
     }
 
+    /// A Toggle goes to the other slot when the source in front is one of its two, else to the one
+    /// switched to last. Compared against the sources a switch to each slot would select.
+    private func decidingToggle(_ target: SwitchTarget) -> SwitchTarget {
+        guard case let .toggle(first, second) = target else {
+            return target
+        }
+        let currentID = (try? inputSources.currentInputSource())?.id
+        let current = [first, second].first { currentID != nil && resolvedSource(for: .slot($0))?.id == currentID }
+        return .slot(ToggleDecision.target(first: first, second: second, current: current, recentSlots: recentSlots))
+    }
+
     private func resolvedSource(for target: SwitchTarget) -> InputSourceInfo? {
         let role: InputRole
         switch target {
@@ -661,6 +684,8 @@ public final class EventTapMonitor: @unchecked Sendable {
             return source
         case .slot(let slot):
             role = slot
+        case .toggle:
+            return nil
         }
         if resolvedSources[role] == nil {
             refreshResolvedSources()
@@ -751,6 +776,8 @@ public final class EventTapMonitor: @unchecked Sendable {
             return
         }
         if let role {
+            recentSlots.removeAll { $0 == role }
+            recentSlots.insert(role, at: 0)
             onSwitch?(role, source)
             if !isCapturingShortcut, let trigger, let evidenceEpoch, evidenceEpoch == triggerEvidenceEpoch {
                 onTriggeredSwitch?(role, source, trigger)

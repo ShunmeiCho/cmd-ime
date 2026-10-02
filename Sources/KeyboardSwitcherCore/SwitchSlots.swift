@@ -311,7 +311,7 @@ extension SwitcherConfig {
         guard Set(slots.map(\.id)).count > 1 else { throw .lastSlot }
         var result = self
         result.slots.removeAll { $0.id == id }
-        result.bindings.removeAll { $0.action.type == .switchInputSource && $0.action.role == id }
+        result.bindings.removeAll { $0.action.names(slot: id) }
         result.inputSources.removeValue(forKey: id.rawValue)
         result.switchIndicatorCustomRoleColorHexes.removeValue(forKey: id.rawValue)
         return result
@@ -323,7 +323,7 @@ extension SwitcherConfig {
             slot: slots[index],
             index: index,
             bindings: bindings.enumerated().compactMap { offset, binding in
-                guard binding.action.type == .switchInputSource, binding.action.role == id else { return nil }
+                guard binding.action.names(slot: id) else { return nil }
                 return RemovedSlot.BindingEntry(offset: offset, binding: binding)
             },
             preference: inputSources[id.rawValue],
@@ -350,8 +350,8 @@ extension SwitcherConfig {
         result.switchIndicatorCustomRoleColorHexes[id.rawValue] = removed.customIndicatorColorHex
         var skipped: [RemovedSlot.BindingEntry] = []
         for entry in removed.bindings {
-            if entry.binding.enabled,
-               result.conflictingBinding(for: entry.binding.trigger, excluding: id) != nil {
+            if !result.canRestoreToggle(entry.binding)
+                || (entry.binding.enabled && result.conflictingBinding(for: entry.binding.trigger, excluding: id) != nil) {
                 skipped.append(entry)
                 continue
             }
@@ -359,6 +359,13 @@ extension SwitcherConfig {
             result.bindings.insert(entry.binding, at: index)
         }
         return (result, skipped)
+    }
+
+    /// A Toggle comes back only while its other slot still exists and no other Toggle took its place.
+    private func canRestoreToggle(_ binding: KeyBinding) -> Bool {
+        guard binding.action.type == .toggleSlots else { return true }
+        let ids = Set(slots.map(\.id))
+        return (binding.action.roles ?? []).allSatisfy(ids.contains) && toggleBinding == nil
     }
 
     /// Destination is the final index, not an insertion index before removal.

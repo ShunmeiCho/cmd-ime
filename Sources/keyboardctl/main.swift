@@ -240,6 +240,10 @@ struct CLI {
             try bindPeek(trigger, config: &config, store: store)
             return
         }
+        if target.lowercased() == Self.toggleKeyword {
+            try bindToggle(trigger, config: &config, store: store)
+            return
+        }
         let role = try requireSlot(target, in: config).id
         let displaced = config.bindings.compactMap { binding -> InputRole? in
             guard binding.trigger == trigger, binding.action.type == .switchInputSource,
@@ -268,6 +272,22 @@ struct CLI {
             fputs("note: \(trigger.displayName) was used by \(config.ownerDescription(of: binding)); it is now the peek trigger\n", stderr)
         }
         print("Bound \(trigger.displayName) to peek (show the current input source)")
+    }
+
+    private static let toggleKeyword = "toggle"
+
+    private func bindToggle(_ trigger: KeyTrigger, config: inout SwitcherConfig, store: ConfigStore) throws {
+        if trigger.isReservedMacInputSourceShortcut {
+            throw ToggleBindingError.reservedByMacOS(trigger)
+        }
+        let first = try requireSlot(argument(at: 3, name: "first slot"), in: config).id
+        let second = try requireSlot(argument(at: 4, name: "second slot"), in: config).id
+        let displaced = try config.upsertToggleBinding(trigger: trigger, slots: first, second)
+        try save(config, to: store)
+        for binding in displaced {
+            fputs("note: \(trigger.displayName) was used by \(config.ownerDescription(of: binding)); it is now the toggle trigger\n", stderr)
+        }
+        print("Bound \(trigger.displayName) to toggle between \(first.rawValue) and \(second.rawValue)")
     }
 
     private func remap() throws {
@@ -360,6 +380,10 @@ struct CLI {
         let triggers = config.bindings.filter {
             $0.enabled && $0.action.type == .switchInputSource && $0.action.role == slot.id
         }.map { $0.trigger.displayName }
+            + [config.toggleBinding].compactMap { binding in
+                guard let binding, binding.action.roles?.contains(slot.id) == true else { return nil }
+                return "toggle \(binding.trigger.displayName)"
+            }
         return triggers.isEmpty ? "No trigger" : triggers.joined(separator: ", ")
     }
 
@@ -726,6 +750,7 @@ struct CLI {
               keyboardctl diagnose [--json]
               keyboardctl listen
               keyboardctl bind <trigger> <slot|peek>
+              keyboardctl bind <trigger> toggle <slot> <slot>
               keyboardctl remap <trigger> <output>
               keyboardctl app-rule list
               keyboardctl app-rule set <bundle-id|--frontmost> <slot|keep> [--remember]
@@ -750,6 +775,7 @@ struct CLI {
               keyboardctl bind right-command chinese
               keyboardctl bind option+j japanese
               keyboardctl bind double-right-option peek    # show the current input source
+              keyboardctl bind left-command toggle english chinese    # one key between two slots
               keyboardctl remap right-control escape
               keyboardctl source                          # print the current input source id
               keyboardctl source com.apple.keylayout.ABC  # select it by id, prints nothing

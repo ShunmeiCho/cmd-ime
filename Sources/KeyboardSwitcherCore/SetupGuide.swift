@@ -67,9 +67,14 @@ public struct SetupGuideInput: Equatable, Sendable {
         listenerFailed: Bool = false,
         hasConfirmedSlots: Bool
     ) {
-        let boundSlotIDs = Set(config.bindings.compactMap { binding -> InputRole? in
-            guard binding.enabled, binding.action.type == .switchInputSource else { return nil }
-            return binding.action.role
+        // A slot reached only through the Toggle has a trigger too.
+        let boundSlotIDs = Set(config.bindings.flatMap { binding -> [InputRole] in
+            guard binding.enabled else { return [] }
+            switch binding.action.type {
+            case .switchInputSource: return binding.action.role.map { [$0] } ?? []
+            case .toggleSlots: return binding.action.roles ?? []
+            case .sendKey, .disable, .showIndicator: return []
+            }
         })
         self.init(
             accessibilityGranted: accessibilityGranted,

@@ -161,17 +161,36 @@ public enum BindingActionType: String, Codable, Sendable {
     /// Peek: show the bubble for the current input source without switching. A build from
     /// before 0.12.0 does not know it and drops the binding through `LenientKeyBinding`.
     case showIndicator
+    /// Toggle: switch between the two slots in `roles`. A build from before it drops the binding
+    /// through `LenientKeyBinding`.
+    case toggleSlots
 }
 
 public struct BindingAction: Codable, Equatable, Sendable {
     public var type: BindingActionType
     public var role: InputRole?
     public var output: KeyTrigger?
+    /// The two slots of a `toggleSlots` action. Optional so older files decode unchanged.
+    public var roles: [InputRole]?
 
-    public init(type: BindingActionType, role: InputRole? = nil, output: KeyTrigger? = nil) {
+    public init(type: BindingActionType, role: InputRole? = nil, output: KeyTrigger? = nil, roles: [InputRole]? = nil) {
         self.type = type
         self.role = role
         self.output = output
+        self.roles = roles
+    }
+
+    public static func toggleSlots(_ first: InputRole, _ second: InputRole) -> BindingAction {
+        BindingAction(type: .toggleSlots, roles: [first, second])
+    }
+
+    /// Whether removing the slot `id` leaves this action pointing at nothing.
+    public func names(slot id: InputRole) -> Bool {
+        switch type {
+        case .switchInputSource: role == id
+        case .toggleSlots: roles?.contains(id) ?? false
+        case .sendKey, .disable, .showIndicator: false
+        }
     }
 
     public static func switchInputSource(_ role: InputRole) -> BindingAction {

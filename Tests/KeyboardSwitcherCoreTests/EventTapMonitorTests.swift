@@ -1194,6 +1194,39 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(service.selectedIDs, [])
     }
 
+    func testToggleSwitchesBetweenItsTwoSlots() throws {
+        let config = try SwitcherConfig.default.replacingToggleBinding(with: ShortcutParser.parse("option+t"), slots: .english, .chinese)
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        var roles: [InputRole] = []
+        monitor.onSwitch = { role, _ in roles.append(role) }
+
+        for _ in 0..<3 {
+            XCTAssertNil(monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 17, flags: [.maskAlternate])), "a toggle chord is consumed")
+            drainMainQueue()
+        }
+
+        XCTAssertEqual(roles, [.english, .chinese, .english], "nothing known goes to the first slot, then back and forth")
+    }
+
+    func testToggleFromAThirdSourceGoesToTheSlotUsedLast() throws {
+        let config = try SwitcherConfig.default.replacingToggleBinding(with: ShortcutParser.parse("option+t"), slots: .english, .chinese)
+        let sources = makeSwitchSources()
+        let service = StubInputSourceService(sources: sources)
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        var roles: [InputRole] = []
+        monitor.onSwitch = { role, _ in roles.append(role) }
+
+        monitor.requestSwitch(to: sources[2], reportingAs: .chinese)
+        drainMainQueue()
+        monitor.requestSwitch(to: sources[1], reportingAs: .japanese)
+        drainMainQueue()
+        _ = monitor.handleKeyDownForTesting(makeKeyboardEvent(keyCode: 17, flags: [.maskAlternate]))
+        drainMainQueue()
+
+        XCTAssertEqual(roles, [.chinese, .japanese, .chinese])
+    }
+
     func testPeekOnAOneShotModifierFiresOnTheTap() throws {
         let config = try SwitcherConfig.default.replacingPeekBinding(with: ShortcutParser.parse("right-option"))
         let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))

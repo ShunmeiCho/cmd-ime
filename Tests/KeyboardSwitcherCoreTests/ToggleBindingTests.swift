@@ -1,0 +1,111 @@
+import Foundation
+import Testing
+@testable import KeyboardSwitcherCore
+
+struct ToggleBindingTests {
+    private func trigger(_ text: String) throws -> KeyTrigger {
+        try ShortcutParser.parse(text)
+    }
+
+    @Test("setting a toggle adds one binding naming both slots and keeps the slot bindings")
+    func setsTheToggle() throws {
+        let config = try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .chinese)
+
+        #expect(config.toggleBinding?.action == .toggleSlots(.english, .chinese))
+        #expect(config.toggleSlots.map { [$0.0, $0.1] } == [.english, .chinese])
+        #expect(config.bindings.filter { $0.action.type == .switchInputSource } == SwitcherConfig.default.bindings)
+    }
+
+    @Test("a second toggle replaces the first, and nil removes it")
+    func replacesAndRemoves() throws {
+        let first = try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .chinese)
+        let second = try first.replacingToggleBinding(with: trigger("double-right-option"), slots: .chinese, .japanese)
+
+        #expect(second.bindings.filter { $0.action.type == .toggleSlots }.count == 1)
+        #expect(second.toggleBinding?.action == .toggleSlots(.chinese, .japanese))
+        #expect(try second.replacingToggleBinding(with: nil, slots: .english, .chinese).toggleBinding == nil)
+    }
+
+    @Test("a taken trigger, the same slot twice, an unknown slot and macOS's own shortcut are refused")
+    func refusals() throws {
+        // The legacy defaults tap Left Command for English.
+        #expect(throws: ToggleBindingError.self) {
+            try SwitcherConfig.default.replacingToggleBinding(with: trigger("left-command"), slots: .english, .chinese)
+        }
+        #expect(throws: ToggleBindingError.sameSlot) {
+            try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .english)
+        }
+        #expect(throws: ToggleBindingError.unknownSlot(InputRole(rawValue: "korean"))) {
+            try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, InputRole(rawValue: "korean"))
+        }
+        #expect(throws: ToggleBindingError.reservedByMacOS(try trigger("control+space"))) {
+            try SwitcherConfig.default.replacingToggleBinding(with: trigger("control+space"), slots: .english, .chinese)
+        }
+    }
+
+    @Test("the CLI's bind takes the trigger from the slot that had it")
+    func upsertDisplaces() throws {
+        var config = SwitcherConfig.default
+
+        let displaced = try config.upsertToggleBinding(trigger: trigger("left-command"), slots: .english, .chinese)
+
+        #expect(displaced.map(\.action.role) == [.english])
+        #expect(config.toggleBinding?.trigger == (try trigger("left-command")))
+    }
+
+    @Test("removing a slot removes the toggle that names it, and undo brings both back")
+    func slotRemoval() throws {
+        let config = try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .chinese)
+
+        let (removed, receipt) = try config.removingSlotWithReceipt(.chinese)
+        #expect(removed.toggleBinding == nil)
+
+        let (restored, skipped) = try removed.restoringSlot(receipt)
+        #expect(skipped.isEmpty)
+        #expect(restored.toggleBinding?.action == .toggleSlots(.english, .chinese))
+    }
+
+    @Test("undo leaves the toggle out when its other slot is gone too")
+    func restoreWithoutTheOtherSlot() throws {
+        let config = try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .chinese)
+        let (withoutChinese, receipt) = try config.removingSlotWithReceipt(.chinese)
+        let withoutBoth = try withoutChinese.removingSlot(.english)
+
+        let (restored, skipped) = try withoutBoth.restoringSlot(receipt)
+
+        #expect(restored.toggleBinding == nil)
+        #expect(skipped.map(\.binding.action.type) == [.toggleSlots])
+    }
+
+    @Test("a slot reached only through the toggle counts as bound in the setup guide")
+    func setupGuideCountsToggleSlots() throws {
+        var config = try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .chinese)
+        config.bindings.removeAll { $0.action.type == .switchInputSource && $0.action.role != .japanese }
+
+        let state = SetupGuideInput(config: config, sources: [], accessibilityGranted: true, inputMonitoringGranted: true,
+                                    listenerRunning: true, hasConfirmedSlots: true)
+
+        #expect(state.boundSlotCount == 3)
+    }
+
+    @Test("an older file without roles decodes, and a file without a toggle encodes no roles key")
+    func compatibility() throws {
+        let old = #"{"type":"switchInputSource","role":"english"}"#
+        let action = try JSONDecoder().decode(BindingAction.self, from: Data(old.utf8))
+        #expect(action == .switchInputSource(.english))
+        #expect(!String(decoding: try JSONEncoder().encode(action), as: UTF8.self).contains("roles"))
+    }
+
+    @Test("the decision: the other slot from one of the two, the one used last from anywhere else")
+    func decision() {
+        let pick = { (current: InputRole?, recent: [InputRole]) in
+            ToggleDecision.target(first: .english, second: .chinese, current: current, recentSlots: recent)
+        }
+
+        #expect(pick(.english, []) == .chinese)
+        #expect(pick(.chinese, [.english]) == .english)
+        #expect(pick(.japanese, [.japanese, .chinese, .english]) == .chinese)
+        #expect(pick(nil, [.english]) == .english)
+        #expect(pick(.japanese, []) == .english)
+    }
+}
