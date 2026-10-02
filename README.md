@@ -524,6 +524,27 @@ source, but it is an auxiliary kana palette, not the normal Hiragana input metho
 </details>
 
 <details>
+<summary><strong>Space between Chinese and English</strong></summary>
+
+Off by default: **General > Typing > Space between Chinese and English**. Chinese input methods
+such as WeChat Input add a space between Chinese and Latin text they type themselves, but not
+before English typed in another input source, so `中文English` loses its space when a trigger
+switches to ABC. With the setting on:
+
+- After a trigger (or the Toggle) switches to an English input source, CmdIME reads the one
+  character before the caret, off the main thread, through Accessibility.
+- If that character is Chinese (Han), CmdIME types a half-width space before your first letter
+  or digit. A space, full-width punctuation such as `，` or `。`, or any other character before the
+  caret means no space, so a space your input method already added is never doubled.
+- Any other first key (space, delete, arrows, return, punctuation, a shortcut), a click or another
+  app in front drops it for that switch. Switches made by App Rules, websites or programs do not
+  add a space.
+- The character is not stored or sent anywhere. Terminals and password fields are left alone, as
+  are apps that do not expose their text through Accessibility.
+
+</details>
+
+<details>
 <summary><strong>Settings window, appearance and quitting</strong></summary>
 
 CmdIME is a background agent. The settings window is only a control panel: closing it

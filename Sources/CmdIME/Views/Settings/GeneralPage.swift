@@ -12,6 +12,7 @@ struct GeneralPage: View {
     var body: some View {
         VStack(alignment: .leading, spacing: DesignTokens.Layout.sectionGap) {
             CompactSection(title: String(localized: "General")) { startupRows }
+            CompactSection(title: String(localized: "Typing")) { typingRows }
             CompactSection(title: String(localized: "Updates")) { updateRows }
             CompactSection(title: String(localized: "Setup guide")) { setupGuideRow }
             CompactSection(title: String(localized: "Settings file")) { settingsFileRows }
@@ -22,6 +23,28 @@ struct GeneralPage: View {
         .foregroundStyle(DesignTokens.Colors.textPrimary)
         // The answer can change in System Settings while CmdIME keeps running.
         .onAppear { model.refreshNotificationPermission() }
+    }
+
+    private var typingRows: some View {
+        VStack(alignment: .leading, spacing: DesignTokens.Layout.rowGap) {
+            HStack {
+                Text("Space between Chinese and English")
+                Spacer(minLength: DesignTokens.Layout.rowGap)
+                Toggle("Space between Chinese and English", isOn: Binding(
+                    get: { model.config.autoSpaceAfterHan }, set: { model.setAutoSpaceAfterHan($0) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .tint(DesignTokens.Colors.success)
+                .controlSize(.small)
+            }
+            // New in 0.16: shown in Brief too while the feature is new (owner rule, issue #7). It also
+            // says what is read, which the user must know before turning it on.
+            Text("After a trigger switches to an English input source, CmdIME reads the one character before the caret. If it is Chinese, CmdIME types a space before your first letter or digit. The character is not stored. Terminals and password fields are left alone.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private var startupRows: some View {

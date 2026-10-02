@@ -698,7 +698,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encodeIfPresent(appDefaultSlot, forKey: .appDefaultSlot)
         try container.encode(restoreAfterPasswordField, forKey: .restoreAfterPasswordField)
         try container.encode(showCapsLockIndicator, forKey: .showCapsLockIndicator)
-        try container.encode(autoSpaceAfterHan, forKey: .autoSpaceAfterHan)
+        // Written only when on, so a file that never had it reads back byte for byte.
+        if autoSpaceAfterHan {
+            try container.encode(autoSpaceAfterHan, forKey: .autoSpaceAfterHan)
+        }
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }

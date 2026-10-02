@@ -21,7 +21,7 @@ enum SetupGuideCopy {
     /// the hint names only what every supported system has.
     static let reopenHint = String(localized: "To come back to this window, open CmdIME again from Spotlight or the Applications folder.")
     /// Matches what `EventTapMonitor` does. Shown in step 1 and on About.
-    static let privacy = String(localized: "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers. What you type is never stored and never sent anywhere. The only thing saved is your own configuration.")
+    static let privacy = String(localized: "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers; with Space between Chinese and English turned on, it also checks whether the first key after a switch is a letter or digit. What you type is never stored and never sent anywhere. The only thing saved is your own configuration.")
 }
 
 /// The inset surface used by permission rows and notices.

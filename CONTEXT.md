@@ -72,6 +72,10 @@ _Avoid_: Preview, show current, status
 A trigger that switches between two named slots: from one of them to the other, from any other input source to the one of the two switched to last. It is a binding action, not a slot; at most one exists.
 _Avoid_: Cycle, rotate, switch key
 
+**Auto space** (UI: "Space between Chinese and English"; zh-Hans 中英文之间加空格, ja 中国語と英語の間にスペース):
+An optional half-width space CmdIME types before the first letter or digit after a trigger switch into an English input source, when the character before the caret is Han. Off by default.
+_Avoid_: Pangu spacing, smart space
+
 ## Dynamic slots (PR1)
 
 The ordered `config.slots` collection stores stable `InputRole` string IDs,

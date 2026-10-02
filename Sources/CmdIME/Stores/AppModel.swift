@@ -59,6 +59,7 @@ final class AppModel: ObservableObject {
     @Published var sources: [InputSourceInfo] = []
     @Published var statusText = String(localized: "Ready")
     @Published var isListening = false
+    private var autoSpaceActivationObserver: NSObjectProtocol?
     @Published var activeRole: InputRole?
     let triggeredSwitches = SetupTriggerEvents()
     // Keep machine/report state in English; only the presentation is localized.
@@ -706,6 +707,13 @@ final class AppModel: ObservableObject {
         next.showCapsLockIndicator = visible
         guard commitShowingWindowFailure(next) else { return }
         statusText = visible ? String(localized: "Caps Lock indicator enabled") : String(localized: "Caps Lock indicator disabled")
+    }
+
+    func setAutoSpaceAfterHan(_ enabled: Bool) {
+        var next = config
+        next.autoSpaceAfterHan = enabled
+        guard commitShowingWindowFailure(next) else { return }
+        statusText = enabled ? String(localized: "Space between Chinese and English turned on") : String(localized: "Space between Chinese and English turned off")
     }
 
     var peekTrigger: KeyTrigger? { config.peekBinding?.trigger }
@@ -1599,6 +1607,8 @@ final class AppModel: ObservableObject {
             nextMonitor.onCapsLockChange = { [weak self] isOn in
                 MainActor.assumeIsolated { self?.showCapsLockIndicator(isOn: isOn) }
             }
+            nextMonitor.characterBeforeCaret = { CaretCharacterReader.characterBeforeCaret() }
+            observeActivationsForAutoSpace()
             try nextMonitor.start()
             monitor = nextMonitor
             isListening = true
@@ -1611,6 +1621,16 @@ final class AppModel: ObservableObject {
             isListening = false
             keyboardControlState = permissions.isReady ? "Failed" : "Needs permission"
             statusText = error.localizedDescription
+        }
+    }
+
+    /// Another app in front: the caret auto space read belongs to the app that was left.
+    private func observeActivationsForAutoSpace() {
+        guard autoSpaceActivationObserver == nil else { return }
+        autoSpaceActivationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.monitor?.cancelAutoSpace() }
         }
     }
 

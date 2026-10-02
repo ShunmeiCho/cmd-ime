@@ -4345,30 +4345,6 @@
         }
       }
     },
-    "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers. What you type is never stored and never sent anywhere. The only thing saved is your own configuration.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers. What you type is never stored and never sent anywhere. The only thing saved is your own configuration."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CmdIME 仅在内存中根据键码和修饰键状态检查每个按键事件，以识别触发键。输入内容不会被保存，也不会发送到任何地方。唯一保存的是你自己的配置。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CmdIME はトリガーを見つけるためだけに、各キーイベントのキーコードと修飾キーの状態をメモリ上で確認します。入力内容は保存されず、どこにも送信されません。保存するのは設定だけです。"
-          }
-        }
-      }
-    },
     "CmdIME never switches input sources for itself.": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -20709,6 +20685,150 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@: %2$@、%3$@ から移動しました"
+          }
+        }
+      }
+    },
+    "Typing": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typing"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力"
+          }
+        }
+      }
+    },
+    "Space between Chinese and English": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space between Chinese and English"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中英文之间加空格"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中国語と英語の間にスペース"
+          }
+        }
+      }
+    },
+    "After a trigger switches to an English input source, CmdIME reads the one character before the caret. If it is Chinese, CmdIME types a space before your first letter or digit. The character is not stored. Terminals and password fields are left alone.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After a trigger switches to an English input source, CmdIME reads the one character before the caret. If it is Chinese, CmdIME types a space before your first letter or digit. The character is not stored. Terminals and password fields are left alone."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用触发键切到英文输入法后，CmdIME 会读取光标前的一个字符。如果它是汉字，CmdIME 会在你打的第一个字母或数字前补一个半角空格。这个字符不会被保存。终端和密码框不处理。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トリガーで英語の入力ソースに切り替えると、CmdIME はカーソルの直前の 1 文字を読み取ります。それが漢字なら、最初に入力する英字か数字の前に半角スペースを入れます。読み取った文字は保存しません。ターミナルとパスワード欄では何もしません。"
+          }
+        }
+      }
+    },
+    "Space between Chinese and English turned on": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space between Chinese and English turned on"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已开启中英文之间加空格"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中国語と英語の間のスペースをオンにしました"
+          }
+        }
+      }
+    },
+    "Space between Chinese and English turned off": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space between Chinese and English turned off"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已关闭中英文之间加空格"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中国語と英語の間のスペースをオフにしました"
+          }
+        }
+      }
+    },
+    "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers; with Space between Chinese and English turned on, it also checks whether the first key after a switch is a letter or digit. What you type is never stored and never sent anywhere. The only thing saved is your own configuration.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers; with Space between Chinese and English turned on, it also checks whether the first key after a switch is a letter or digit. What you type is never stored and never sent anywhere. The only thing saved is your own configuration."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME 只在内存里按键码和修饰键状态检查每个按键事件，只为认出你的触发键；开启“中英文之间加空格”后，还会检查切换后的第一个键是不是字母或数字。你输入的内容不会被保存，也不会被发送到任何地方。唯一保存的是你自己的配置。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME は各キーイベントをメモリ上でキーコードと修飾キーの状態だけで確認し、トリガーを見分けるためにだけ使います。「中国語と英語の間にスペース」をオンにすると、切り替え後の最初のキーが英字か数字かも確認します。入力した内容は保存も送信もしません。保存するのはあなたの設定だけです。"
           }
         }
       }

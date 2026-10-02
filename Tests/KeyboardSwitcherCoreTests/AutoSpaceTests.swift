@@ -98,4 +98,15 @@ struct AutoSpaceTests {
             #expect(!spaced7)
         }
     }
+
+    @Test("the setting is off by default, written only when on, and survives a round trip")
+    func configKey() throws {
+        #expect(!SwitcherConfig.default.autoSpaceAfterHan)
+        #expect(!String(decoding: try JSONEncoder().encode(SwitcherConfig.default), as: UTF8.self).contains("autoSpaceAfterHan"))
+
+        var config = SwitcherConfig.default
+        config.autoSpaceAfterHan = true
+        let decoded = try JSONDecoder().decode(SwitcherConfig.self, from: JSONEncoder().encode(config))
+        #expect(decoded.autoSpaceAfterHan)
+    }
 }
