@@ -30,7 +30,7 @@ struct ShellIntegrationSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(RoundedRectangle(cornerRadius: DesignTokens.Radius.control, style: .continuous)
                     .fill(DesignTokens.Colors.surfaceInset))
-            Text("CmdIME copies .zshrc before changing it and changes nothing else in it. A command that ends in a tab you are not looking at can still switch the input source.")
+            Text("CmdIME copies .zshrc before changing it and changes nothing else in it. With this line the switch happens only when a program starts or exits: coming back to a tab changes nothing, and a command that ends in a tab you are not looking at can still switch the input source. In Herdr every pane is followed.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)

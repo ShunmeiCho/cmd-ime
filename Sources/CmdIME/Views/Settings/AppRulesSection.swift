@@ -129,7 +129,13 @@ struct AppRulesSection: View {
                 .tint(DesignTokens.Colors.success)
                 .controlSize(.small)
             }
-            Text("A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac, and in other terminals with shell integration.")
+            // Where it works fully and where it does not: said in Brief too, in the primary text
+            // colour, because a rule that seems to do nothing in a plain tab reads as a fault.
+            Label("Works best in Herdr: every pane is followed, also one you come back to. In other terminals, with shell integration, it switches only when a program starts or exits.", systemImage: "info.circle")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)

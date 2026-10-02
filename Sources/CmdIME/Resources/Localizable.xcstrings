@@ -20113,30 +20113,6 @@
         }
       }
     },
-    "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac, and in other terminals with shell integration.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. It works in Herdr panes on this Mac, and in other terminals with shell integration."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有规则的程序在当前聚焦的终端面板里运行时，会切到它的槽位。CmdIME 只读取终端里正在运行的程序的名称，不读取屏幕上的内容。支持这台 Mac 上的 Herdr 面板；其他终端需要安装 shell 集成。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ルールのあるプログラムが、フォーカスのあるターミナルのペインで動いている間、そのスロットに切り替わります。CmdIME が読み取るのはターミナルで動いているプログラムの名前だけで、画面の内容は読み取りません。この Mac の Herdr のペインで動作し、ほかのターミナルではシェル統合が必要です。"
-          }
-        }
-      }
-    },
     "Shell Integration…": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -20205,30 +20181,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Herdr のないターミナルでは、zsh がどのプログラムを起動したか、いつプロンプトに戻ったかを CmdIME に伝えられます。必要なのは .zshrc のこの 1 行です:"
-          }
-        }
-      }
-    },
-    "CmdIME copies .zshrc before changing it and changes nothing else in it. A command that ends in a tab you are not looking at can still switch the input source.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CmdIME copies .zshrc before changing it and changes nothing else in it. A command that ends in a tab you are not looking at can still switch the input source."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CmdIME 修改 .zshrc 前会先备份，并且不改动其他内容。在你没有看着的标签页里结束的命令，仍可能切换输入源。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CmdIME は .zshrc を変更する前にコピーを取り、ほかの内容は変更しません。見ていないタブで終了したコマンドでも入力ソースが切り替わることがあります。"
           }
         }
       }
@@ -20493,6 +20445,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "0.15 の新機能：「アプリ」ページでターミナルのプログラムごとに入力ソースを設定できます。シェルのプロンプトでは英語、エージェント CLI の中では別のスロット、という使い方です。"
+          }
+        }
+      }
+    },
+    "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有规则的程序在当前聚焦的终端面板里运行时，会切到它的槽位。CmdIME 只读取终端里正在运行的程序的名称，不读取屏幕上的内容。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールのあるプログラムが、フォーカスのあるターミナルのペインで動いている間、そのスロットに切り替わります。CmdIME が読み取るのはターミナルで動いているプログラムの名前だけで、画面の内容は読み取りません。"
+          }
+        }
+      }
+    },
+    "Works best in Herdr: every pane is followed, also one you come back to. In other terminals, with shell integration, it switches only when a program starts or exits.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Works best in Herdr: every pane is followed, also one you come back to. In other terminals, with shell integration, it switches only when a program starts or exits."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Herdr 里体验最好：每个面板都能跟随，切回已有的面板时也会生效。在其他终端里（需要 shell 集成），只在程序启动和退出时切换。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herdr で最もよく動きます：すべてのペインに追従し、戻ってきたペインでも切り替わります。ほかのターミナルでは（シェル統合が必要）、プログラムの起動時と終了時にだけ切り替わります。"
+          }
+        }
+      }
+    },
+    "CmdIME copies .zshrc before changing it and changes nothing else in it. With this line the switch happens only when a program starts or exits: coming back to a tab changes nothing, and a command that ends in a tab you are not looking at can still switch the input source. In Herdr every pane is followed.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME copies .zshrc before changing it and changes nothing else in it. With this line the switch happens only when a program starts or exits: coming back to a tab changes nothing, and a command that ends in a tab you are not looking at can still switch the input source. In Herdr every pane is followed."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME 修改 .zshrc 前会先备份，并且不改动其他内容。加了这一行后，只在程序启动和退出时切换：切回一个标签页不会有变化，在你没有看着的标签页里结束的命令仍可能切换输入源。在 Herdr 里每个面板都能跟随。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME は .zshrc を変更する前にコピーを取り、ほかの内容は変更しません。この行では、プログラムの起動時と終了時にだけ切り替わります。タブに戻っても何も変わらず、見ていないタブで終了したコマンドでも入力ソースが切り替わることがあります。Herdr ではすべてのペインに追従します。"
           }
         }
       }

@@ -150,6 +150,10 @@ same two permissions before global keyboard listening works.
   in each app (off by default, kept in memory only); pick a slot for every other app; and
   switch back after a password field, where macOS leaves ABC selected (on by default). A
   trigger you press still wins.
+- **Input sources per program in the terminal.** English at the `zsh` prompt, Chinese inside
+  `claude` or `codex`, by itself. **It works best in [Herdr](https://herdr.dev):** there CmdIME
+  follows every pane, also when you come back to one that is already running its program. In
+  other terminals it switches only when a program starts or exits.
 - **Input sources per website.** Give a website its own slot: while a page on `github.com`
   is in front, in Safari or Chrome, you are on English, and the tab next to it can be on
   Chinese. CmdIME reads only the site address of the page in front and keeps none of it.
@@ -404,7 +408,7 @@ apps always wins.
   heard of is read too. Tested in Safari and Chrome; the address read was also checked in
   Aside. A page that changes address without changing its title
   (some single-page apps) is noticed only at the next tab or window change.
-- **Program rules**: **Add Program…** gives a program in the terminal its own slot, or
+- **Program rules** (best in [Herdr](https://herdr.dev), see below): **Add Program…** gives a program in the terminal its own slot, or
   **Keep as is**: English at the `zsh` prompt, Chinese inside `claude`. Type the command the
   program is started with (exact, upper and lower case count). While that program runs in
   the terminal pane in focus, its rule beats the terminal's own App Rule, App Memory and
