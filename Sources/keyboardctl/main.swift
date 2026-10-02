@@ -91,6 +91,8 @@ struct CLI {
             try manageAppRule()
         case "website-rule":
             try manageWebsiteRule()
+        case "program-rule":
+            try manageProgramRule()
         case "export":
             try exportSettings()
         case "import":
@@ -510,7 +512,7 @@ struct CLI {
     /// like an input source id is read as one, so `keyboardctl <id>` works like `im-select <id>`.
     private static let knownCommands: Set<String> = [
         "help", "--help", "-h", "path", "scan", "init", "show", "switch", "source",
-        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "app-rule", "website-rule", "export", "import",
+        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "app-rule", "website-rule", "program-rule", "export", "import",
     ]
 
     /// Reads or sets the input source by id. Editor plugins call this on every mode change,
@@ -719,6 +721,9 @@ struct CLI {
               keyboardctl website-rule set <domain> <slot|keep> [--exact]
               keyboardctl website-rule remove <domain>
               keyboardctl website-rule test <url>
+              keyboardctl program-rule list
+              keyboardctl program-rule set <name> <slot|keep>
+              keyboardctl program-rule remove <name>
               keyboardctl quit
               keyboardctl path
               keyboardctl export <new-folder>
