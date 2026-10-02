@@ -120,14 +120,21 @@ public struct AppMemoryTracker: Equatable, Sendable {
         }
     }
 
-    /// When the choice that set `contextOnlyGeneration` was made (the caller's monotonic clock).
-    /// A pane focus compares it with when focus moved, to tell a choice made in the new pane
-    /// from one made in the pane just left.
+    /// The pane of the terminal in front that is in focus, as far as a focus notice or a read has
+    /// said. What the tracker knows about a program, a wait or a choice belongs to this pane; a
+    /// notice or a read naming another pane is a focus change, one naming this pane is not.
+    private var focusedPaneID: String?
+    /// When the trigger that set `contextOnlyGeneration` was confirmed (the caller's monotonic
+    /// clock). A focus notice carries when it was received, which can be well before it is
+    /// handled: the trigger was pressed in the new pane only if it came after that.
     private var lastChoiceAt: TimeInterval = 0
-    /// In a terminal, the source the last change from outside replaced. A change back to it is a
-    /// return, not a choice: a multiplexer selects ASCII for its prefix key and puts the source
-    /// back, and the two notices can arrive on either side of the focus notice.
-    private var outsideChangeReplaced: String?
+    /// When `beforeForced` was recorded, compared the same way: a password field of the pane
+    /// just left does not get its source put back into the new pane.
+    private var beforeForcedAt: TimeInterval = 0
+    /// The source that was current before a rule's switch that was still on its way when focus
+    /// left its pane. The next pane read as having no rule gets it back, whether or not the switch
+    /// has landed since; a rule, a trigger or a change of source by hand ends it.
+    private var retiredSwitchSourceID: String?
 
     private struct WebsiteHold: Equatable, Sendable {
         /// What the user arrived with, to compare the decided target against. A pane that came
@@ -137,10 +144,6 @@ public struct AppMemoryTracker: Equatable, Sendable {
         /// applies. False for a pane that came into focus inside a terminal already in front,
         /// where a program without a rule changes nothing.
         let fallsBackToApp: Bool
-        /// The source that was current before a rule's switch asked for in the pane just left and
-        /// still on its way when focus moved. A new pane without a rule gets it back, whether or
-        /// not that switch has landed since.
-        var retiredSwitchSourceID: String?
     }
 
     /// `frontBrowserPID` when the app in front as following starts is a browser, `frontTerminalPID`
@@ -249,7 +252,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         // Checked before the pending guard: a source forced while CmdIME's own restore is on its
         // way must still be marked, or it becomes the app's memory once secure input ends.
         if context.isSecureInputInFrontmostApp {
-            markForced(sourceID, replacing: previousSourceID)
+            markForced(sourceID, replacing: previousSourceID, at: time)
             return
         }
         guard !context.isOwnSwitchPending else { return }
@@ -258,19 +261,20 @@ public struct AppMemoryTracker: Equatable, Sendable {
         forced = nil
         beforeForced = nil
         // The user chose by hand before the page was read: that choice stands. macOS repeating
-        // the current source on a focus change is not a choice, and neither is a terminal's
-        // source coming back to what the last outside change replaced (see `outsideChangeReplaced`):
-        // that return takes the choice back instead of making a new one.
+        // the current source on a focus change is not a choice. In a terminal only a trigger is
+        // one: a multiplexer selects ASCII for its prefix key and puts the source back around a
+        // pane switch, the two notices arrive on either side of the focus notice, and nothing in
+        // them tells that round trip from a switch by hand. A switch by hand still stands while
+        // the pane and its program stay the same, and it ends a retired switch's put-back.
         if sourceID != previousSourceID {
-            if frontSurface?.kind == .terminal, sourceID == outsideChangeReplaced {
-                outsideChangeReplaced = nil
-                contextOnlyGeneration = nil
+            if frontSurface?.kind == .terminal {
+                retiredSwitchSourceID = nil
             } else {
                 userChoseSource(at: time)
-                outsideChangeReplaced = frontSurface?.kind == .terminal ? previousSourceID : nil
             }
         }
-        guard !isOnRuledPage else { return }
+        // What a pane not yet read holds may be under a rule: nothing is remembered until it is known.
+        guard !isOnRuledPage, !isProgramUndecided else { return }
         remember(sourceID, for: frontmostAppID)
     }
 
@@ -281,7 +285,6 @@ public struct AppMemoryTracker: Equatable, Sendable {
         lastSourceID = sourceID
         let wasAskedByWebsiteRule = isWebsiteSwitchInFlight
         isWebsiteSwitchInFlight = false
-        outsideChangeReplaced = nil
         guard !context.isSecureInputInFrontmostApp else { return }
         forced = nil
         beforeForced = nil
@@ -320,9 +323,10 @@ public struct AppMemoryTracker: Equatable, Sendable {
     }
 
     /// Secure input ended while `frontmostAppID` stayed in front. If the source is still the one
-    /// macOS forced, says to select the one it replaced. In a terminal the pane in front may not
-    /// be the one the password was typed in, so where its program has a rule, the rule decides
-    /// instead of what was replaced: the replaced source can belong to the pane just left.
+    /// macOS forced, says to select the one it replaced. In a terminal, a pane whose program is
+    /// known to have a slot rule gets that slot instead: the rule is what the pane is for. A pane
+    /// not read yet says nothing about a rule (what is known belongs to the pane just left), so
+    /// there the replaced source comes back.
     public mutating func secureInputEnded(
         currentSourceID: String?,
         context: AppMemoryContext,
@@ -337,7 +341,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
               before.sourceID != currentSourceID else {
             return .none
         }
-        if frontSurface?.kind == .terminal, case .slot(let slot)? = currentPageRuleTarget {
+        if frontSurface?.kind == .terminal, !isWebsiteContextStale, case .slot(let slot)? = currentPageRuleTarget {
             guard slotOfSource(currentSourceID) != slot else { return .none }
             isWebsiteSwitchInFlight = true
             return .selectSlot(slot)
@@ -461,38 +465,51 @@ public struct AppMemoryTracker: Equatable, Sendable {
                     slotOfSource: slotOfSource)
     }
 
-    /// Focus moved to another pane of the terminal in front at `time` (the caller's monotonic
-    /// clock, read when the notice was received, which can be well before it is handled here). A
-    /// Program Rule is applied again every time a pane comes into focus, so this is handled like
-    /// an activation inside the terminal: a new generation (reads of the pane just left are
-    /// stale), a wait for the first read of the new pane, and the next read decides afresh. What
-    /// differs from an app coming to the front:
-    /// - The program of the pane just left stays known until that read, so a source its rule
-    ///   selected is still kept out of the terminal's memory if the new pane cannot be read.
-    /// - A choice whose first read is still to come stands only when it was made after focus
-    ///   moved, that is, in the new pane; one made in the pane just left ends with that pane.
-    /// - A rule's switch still on its way belongs to the pane just left: the wait keeps the
-    ///   source to put back if the new pane has no rule.
-    /// A notice for a terminal that is not being read is dropped.
+    /// Focus moved to the pane `paneID` of the terminal in front; the notice was received at
+    /// `time` (the caller's monotonic clock), which can be well before it is handled here. A
+    /// notice for the pane already known to be in focus changes nothing, so a notice that repeats
+    /// what a read has said, or the other way round, is harmless. A Program Rule is applied again
+    /// every time a pane comes into focus, so a new pane is handled like an activation inside the
+    /// terminal: a new generation (reads of the pane just left are stale), a wait for the first
+    /// read of the new pane, and the next read decides afresh (`paneChanged`). A trigger whose
+    /// first read is still to come stands only when it was confirmed after the notice was
+    /// received, that is, in the new pane. A notice for a terminal that is not being read is dropped.
     public mutating func paneFocused(
         pid: Int32,
+        paneID: String,
         at time: TimeInterval,
         actualFrontmostAppID: String? = nil,
         actualTerminalPID: Int32? = nil
     ) {
         guard let watch = programWatch, pid == watch.pid,
               actualFrontmostAppID == nil || actualFrontmostAppID == frontmostAppID,
-              actualTerminalPID == nil || actualTerminalPID == watch.pid else { return }
-        let choiceWasMadeInTheNewPane = contextOnlyGeneration == activationGeneration && lastChoiceAt >= time
+              actualTerminalPID == nil || actualTerminalPID == watch.pid,
+              paneID != focusedPaneID else { return }
+        let triggerWasInTheNewPane = contextOnlyGeneration == activationGeneration && lastChoiceAt >= time
+        paneChanged(to: paneID, noticeReceivedAt: time)
         activationGeneration += 1
-        contextOnlyGeneration = choiceWasMadeInTheNewPane ? activationGeneration : nil
+        contextOnlyGeneration = triggerWasInTheNewPane ? activationGeneration : nil
+    }
+
+    /// Another pane is in focus, by a notice or by a read that names it. What differs from an app
+    /// coming to the front:
+    /// - The program of the pane just left stays known until the new pane is read, so a source
+    ///   its rule selected is still kept out of the terminal's memory meanwhile.
+    /// - A rule's switch still on its way belongs to the pane just left and is retired.
+    /// - A source a password field replaced before the notice was received belongs to the pane
+    ///   just left and is not put back here. A read gives no such time, and keeps it.
+    /// - A wait that began when the terminal came to the front keeps its fallback.
+    private mutating func paneChanged(to paneID: String, noticeReceivedAt: TimeInterval?) {
+        focusedPaneID = paneID
         isWebsiteContextStale = true
-        // A wait that began when the terminal came to the front keeps its fallback.
+        if isWebsiteSwitchInFlight {
+            retiredSwitchSourceID = retiredSwitchSourceID ?? sourceBeforeRestore
+        }
+        if let noticeReceivedAt, beforeForcedAt < noticeReceivedAt {
+            beforeForced = nil
+        }
         if websiteHold == nil {
             websiteHold = WebsiteHold(arrivalSourceID: nil, fallsBackToApp: false)
-        }
-        if isWebsiteSwitchInFlight, websiteHold?.retiredSwitchSourceID == nil {
-            websiteHold?.retiredSwitchSourceID = sourceBeforeRestore
         }
     }
 
@@ -513,6 +530,15 @@ public struct AppMemoryTracker: Equatable, Sendable {
             return .none
         }
         lastReadSequence = reading.sequence
+        // A read that names another pane than the one known to be in focus is how a focus change
+        // shows when no notice said so; this read is then the new pane's first.
+        if frontSurface?.kind == .terminal, let paneID = reading.paneID, paneID != focusedPaneID {
+            if focusedPaneID == nil {
+                focusedPaneID = paneID
+            } else {
+                paneChanged(to: paneID, noticeReceivedAt: nil)
+            }
+        }
         var page = reading.context
         if case .rule(let key) = page, ruleTarget(for: key) == nil {
             page = .noRule
@@ -529,11 +555,21 @@ public struct AppMemoryTracker: Equatable, Sendable {
             return .none
         }
         guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
+        // The pane is read: a switch retired when focus left the last one is settled now. A pane
+        // without a rule gets back what was there before it, landed or not; a rule decides below.
+        let retired = retiredSwitchSourceID
+        if page != .unknown {
+            retiredSwitchSourceID = nil
+        }
+        if page == .noRule, hold?.fallsBackToApp != true, let retired, retired != currentSourceID {
+            isWebsiteSwitchInFlight = false
+            sourceBeforeRestore = nil
+            return .putBack(sourceID: retired)
+        }
         if let hold {
             return websiteRestore(page: page, appID: appID, arrivalSourceID: hold.arrivalSourceID ?? currentSourceID,
                                   currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
-                                  fallsBackToApp: hold.fallsBackToApp,
-                                  retiredSwitchSourceID: hold.retiredSwitchSourceID, slotOfSource: slotOfSource)
+                                  fallsBackToApp: hold.fallsBackToApp, slotOfSource: slotOfSource)
         }
         // An unread page that turns out to have no rule changes nothing: the hold already chose.
         guard page != .unknown, page != previous, !(previous == nil && page == .noRule) else { return .none }
@@ -608,7 +644,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         sourceBeforeRestore = nil
     }
 
-    private mutating func markForced(_ sourceID: String, replacing previousSourceID: String?) {
+    private mutating func markForced(_ sourceID: String, replacing previousSourceID: String?, at time: TimeInterval) {
         guard let appID = frontmostAppID else {
             forced = nil
             return
@@ -620,6 +656,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
             beforeForced = previousSourceID.flatMap { previous in
                 previous == sourceID ? nil : ForcedSource(appID: appID, sourceID: previous)
             }
+            beforeForcedAt = time
         }
         forced = ForcedSource(appID: appID, sourceID: sourceID)
     }
@@ -643,7 +680,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
         isWebsiteContextStale = false
         websiteHold = nil
         contextOnlyGeneration = nil
-        outsideChangeReplaced = nil
+        focusedPaneID = nil
+        retiredSwitchSourceID = nil
     }
 
     /// The user chose a source in a browser (a trigger, or by hand). That starts a new generation:
@@ -652,6 +690,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
     private mutating func userChoseSource(at time: TimeInterval) {
         guard frontSurface != nil else { return }
         lastChoiceAt = time
+        retiredSwitchSourceID = nil
         websiteHold = nil
         activationGeneration += 1
         contextOnlyGeneration = activationGeneration
@@ -693,6 +732,12 @@ public struct AppMemoryTracker: Equatable, Sendable {
         return ruleTarget(for: key) != nil
     }
 
+    /// The terminal in front is being read and the program of the pane in focus is not known yet
+    /// (never read, or the pane changed since).
+    private var isProgramUndecided: Bool {
+        programWatch != nil && (websiteContext == nil || isWebsiteContextStale)
+    }
+
     private var isOnKeepAsIsSite: Bool {
         guard surfaceWatch != nil, case .rule(let key) = websiteContext else { return false }
         return isKeepAsIsRule(key)
@@ -706,7 +751,6 @@ public struct AppMemoryTracker: Equatable, Sendable {
         currentSourceID: String?,
         isRestorePending: Bool,
         fallsBackToApp: Bool,
-        retiredSwitchSourceID: String? = nil,
         slotOfSource: (String) -> InputRole?
     ) -> Restore {
         // The source to put back belongs to the restore still on its way; one kept from an earlier,
@@ -735,12 +779,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
         default:
             // Nothing to select here, but a switch asked for the page just left must not land on
             // this one: put back what was there before it, as leaving an app does.
-            // A page known to have no rule also takes back a switch of the pane just left that
-            // has landed since focus moved.
-            let landedBefore = page == .noRule && retiredSwitchSourceID != currentSourceID ? retiredSwitchSourceID : nil
-            guard let before = pendingBefore ?? landedBefore else { return .none }
+            guard let pendingBefore else { return .none }
             isWebsiteSwitchInFlight = false
-            return .putBack(sourceID: before)
+            return .putBack(sourceID: pendingBefore)
         }
     }
 

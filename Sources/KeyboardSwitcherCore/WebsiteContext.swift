@@ -18,12 +18,16 @@ public struct WebsiteReading: Equatable, Sendable {
     /// Counts up per watcher; an older read never overrides a newer one.
     public var sequence: Int
     public var context: WebsiteContext
+    /// For a terminal, the pane the program was read in, as its multiplexer names it. Nil for a
+    /// page, and for a terminal window that shows no pane the reader can name.
+    public var paneID: String?
 
-    public init(pid: Int32, generation: Int, sequence: Int, context: WebsiteContext) {
+    public init(pid: Int32, generation: Int, sequence: Int, context: WebsiteContext, paneID: String? = nil) {
         self.pid = pid
         self.generation = generation
         self.sequence = sequence
         self.context = context
+        self.paneID = paneID
     }
 }
 

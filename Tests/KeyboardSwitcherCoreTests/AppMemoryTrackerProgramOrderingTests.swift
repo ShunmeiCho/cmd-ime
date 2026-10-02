@@ -2,14 +2,21 @@ import Foundation
 import Testing
 @testable import KeyboardSwitcherCore
 
-/// Orderings found by the first review of Program Rules (R1): each failed before its fix.
+/// Orderings found by the three reviews of Program Rules (R1 to R3). Each failed before its fix.
+/// Events name their pane; a focus notice carries when it was received, a trigger when it was
+/// confirmed. The reviewers' originals are in `.claude/work/cards/program-rules/R*-adversarial-tests.swift.txt`.
 struct AppMemoryTrackerProgramOrderingTests {
     private let terminal = "com.mitchellh.ghostty"
     private let pid: Int32 = 701
     private let abc = "com.apple.keylayout.ABC"
     private let chinese = "com.apple.inputmethod.SCIM.ITABC"
     private let japanese = "com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese"
+    private let quiet = AppMemoryContext()
+    private let pending = AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true)
+    private let triggerPending = AppMemoryContext(isOwnSwitchPending: true)
+    private let secure = AppMemoryContext(isSecureInputInFrontmostApp: true)
 
+    /// claude is chinese, zsh is english; the terminal has no rule of its own and remembers.
     private func tracker() -> AppMemoryTracker {
         AppMemoryTracker(
             ownAppID: "cmdime", frontmostAppID: "editor",
@@ -24,93 +31,253 @@ struct AppMemoryTrackerProgramOrderingTests {
         [abc: InputRole.english, chinese: .chinese, japanese: .japanese][id]
     }
 
-    private func read(_ tracker: inout AppMemoryTracker, sequence: Int, program: ProgramContext,
-                      source: String, pending: Bool = false) -> AppMemoryTracker.Restore {
-        tracker.programRead(
-            ProgramReading(pid: pid, generation: tracker.activationGeneration,
-                           sequence: sequence, context: program),
-            actualFrontmostAppID: terminal, actualTerminalPID: pid, currentSourceID: source,
-            context: AppMemoryContext(isOwnSwitchPending: pending, isRestorePending: pending),
+    private func activate(_ state: inout AppMemoryTracker) {
+        _ = state.appActivated(terminal, currentSourceID: abc, context: quiet, terminalPID: pid, slotOfSource: slot)
+    }
+
+    private func read(_ state: inout AppMemoryTracker, _ sequence: Int, _ program: ProgramContext, pane: String? = "A",
+                      on source: String, context: AppMemoryContext = AppMemoryContext()) -> AppMemoryTracker.Restore {
+        state.programRead(
+            ProgramReading(pid: pid, generation: state.activationGeneration, sequence: sequence, context: program, paneID: pane),
+            actualFrontmostAppID: terminal, actualTerminalPID: pid, currentSourceID: source, context: context,
             slotOfSource: slot)
     }
 
-    @Test("a trigger after physical pane focus survives the delayed focus notice")
-    func delayedFocusDoesNotEraseNewerTrigger() {
-        var state = tracker()
-        _ = state.appActivated(terminal, currentSourceID: abc, context: AppMemoryContext(),
-                               terminalPID: pid, slotOfSource: slot)
-        _ = read(&state, sequence: 1, program: .rule("claude"), source: abc)
-        state.switchConfirmed(sourceID: chinese,
-                              context: AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true))
-        // Prefix starts, ends, and physical focus has moved to zsh. Its pushed notice is late.
-        state.sourceChanged(to: abc, context: AppMemoryContext())
-        state.sourceChanged(to: chinese, context: AppMemoryContext())
-        state.triggerConfirmed(sourceID: japanese, actualFrontmostAppID: terminal,
-                               context: AppMemoryContext(isOwnSwitchPending: true), terminalPID: pid, at: 2)
-        // The notice was received before the trigger (at 1) and is handled after it.
-        state.paneFocused(pid: pid, at: 1, actualFrontmostAppID: terminal, actualTerminalPID: pid)
-        #expect(read(&state, sequence: 2, program: .rule("zsh"), source: japanese) == .none)
+    private func focus(_ state: inout AppMemoryTracker, _ pane: String, at time: Double) {
+        state.paneFocused(pid: pid, paneID: pane, at: time, actualFrontmostAppID: terminal, actualTerminalPID: pid)
     }
 
-    @Test("leaving a ruled pane retires its still pending switch when the new pane has no rule")
-    func pendingRuleCannotLandInUnruledPane() {
-        var state = tracker()
-        _ = state.appActivated(terminal, currentSourceID: abc, context: AppMemoryContext(),
-                               terminalPID: pid, slotOfSource: slot)
-        #expect(read(&state, sequence: 1, program: .rule("claude"), source: abc) == .selectSlot(.chinese))
-        // The monitor is awaiting its Kana delay or selection-confirmation retry.
-        state.paneFocused(pid: pid, at: 1)
-        #expect(read(&state, sequence: 2, program: .noRule, source: abc, pending: true)
-                == .putBack(sourceID: abc))
+    private func trigger(_ state: inout AppMemoryTracker, _ source: String, at time: Double) {
+        state.triggerConfirmed(sourceID: source, actualFrontmostAppID: terminal, context: triggerPending,
+                               terminalPID: pid, at: time)
     }
 
-    @Test("a rule source cannot become terminal memory while a newly focused pane is unreadable")
+    /// Pane A runs claude and its rule's switch to chinese has landed.
+    private func onClaudeInA() -> AppMemoryTracker {
+        var state = tracker()
+        activate(&state)
+        _ = read(&state, 1, .rule("claude"), on: abc)
+        state.switchConfirmed(sourceID: chinese, context: pending)
+        return state
+    }
+
+    @Test("R1-1: a trigger in the new pane survives that pane's focus notice handled after it")
+    func lateFocusNoticeKeepsTheTrigger() {
+        var state = onClaudeInA()
+        trigger(&state, japanese, at: 2)
+
+        focus(&state, "B", at: 1)
+
+        #expect(read(&state, 2, .rule("zsh"), pane: "B", on: japanese) == .none)
+    }
+
+    @Test("R2-2: a trigger in the pane just left ends with it; the new pane's rule applies")
+    func triggerInThePaneLeftEndsWithIt() {
+        var state = onClaudeInA()
+        trigger(&state, japanese, at: 1)
+
+        focus(&state, "B", at: 2)
+
+        #expect(read(&state, 2, .rule("zsh"), pane: "B", on: japanese) == .selectSlot(.english))
+    }
+
+    @Test("R3-1: a read naming the new pane, then its notice with any time, keeps a trigger made there",
+          arguments: [1.0, 3.0])
+    func readThenNoticeForTheSamePane(noticeAt: Double) {
+        var state = onClaudeInA()
+        trigger(&state, japanese, at: 2)
+
+        #expect(read(&state, 2, .rule("zsh"), pane: "B", on: japanese) == .none)
+        focus(&state, "B", at: noticeAt)
+
+        #expect(read(&state, 3, .rule("zsh"), pane: "B", on: japanese) == .none)
+    }
+
+    @Test("R3: the latest of several choices stands when the notice was received before or with it",
+          arguments: [2.0, 4.0])
+    func latestChoiceStands(noticeAt: Double) {
+        var state = onClaudeInA()
+        state.sourceChanged(to: japanese, context: quiet, at: 2)
+        state.sourceChanged(to: abc, context: quiet, at: 3)
+        trigger(&state, japanese, at: 4)
+
+        focus(&state, "B", at: noticeAt)
+
+        #expect(read(&state, 2, .rule("zsh"), pane: "B", on: japanese) == .none)
+    }
+
+    @Test("R1-2: a rule's switch still on its way is put back when the new pane has no rule")
+    func pendingSwitchIsPutBack() {
+        var state = tracker()
+        activate(&state)
+        #expect(read(&state, 1, .rule("claude"), on: abc) == .selectSlot(.chinese))
+
+        focus(&state, "B", at: 1)
+
+        #expect(read(&state, 2, .noRule, pane: "B", on: abc, context: pending) == .putBack(sourceID: abc))
+    }
+
+    @Test("R2-3, R3-4: the retired switch is put back after it has landed, and after a read that could not tell")
+    func landedSwitchIsPutBack() {
+        for firstReadCannotTell in [false, true] {
+            var state = tracker()
+            activate(&state)
+            #expect(read(&state, 1, .rule("claude"), on: abc) == .selectSlot(.chinese))
+            focus(&state, "B", at: 1)
+            state.switchConfirmed(sourceID: chinese, context: pending)
+            if firstReadCannotTell {
+                #expect(read(&state, 2, .unknown, pane: nil, on: chinese) == .none)
+            }
+
+            #expect(read(&state, 3, .noRule, pane: "B", on: chinese) == .putBack(sourceID: abc))
+            #expect(read(&state, 4, .noRule, pane: "B", on: abc) == .none)
+        }
+    }
+
+    @Test("R3: a trigger or a switch by hand since ends the retired switch's put-back")
+    func newChoiceEndsThePutBack() {
+        for byTrigger in [false, true] {
+            var state = tracker()
+            activate(&state)
+            _ = read(&state, 1, .rule("claude"), on: abc)
+            focus(&state, "B", at: 1)
+            state.switchConfirmed(sourceID: chinese, context: pending)
+            if byTrigger {
+                trigger(&state, japanese, at: 2)
+            } else {
+                state.sourceChanged(to: japanese, context: quiet, at: 2)
+            }
+
+            #expect(read(&state, 2, .noRule, pane: "B", on: japanese) == .none)
+        }
+    }
+
+    @Test("R2: the expiry of a pane's wait only retires a switch still on its way")
+    func paneWaitExpiry() {
+        for isPending in [false, true] {
+            var state = tracker()
+            activate(&state)
+            _ = read(&state, 1, .rule("claude"), on: abc)
+            if !isPending { state.switchConfirmed(sourceID: chinese, context: pending) }
+            focus(&state, "B", at: 1)
+
+            let result = state.programHoldExpired(generation: state.activationGeneration,
+                currentSourceID: isPending ? abc : chinese, context: isPending ? pending : quiet, slotOfSource: slot)
+
+            #expect(result == (isPending ? .putBack(sourceID: abc) : .none))
+            #expect(!state.isWebsiteHoldWaiting)
+        }
+    }
+
+    @Test("R2: leaving the terminal during a pane's wait and coming back starts over")
+    func paneWaitRoundTrip() {
+        var state = onClaudeInA()
+        focus(&state, "B", at: 1)
+        let old = ProgramReading(pid: pid, generation: state.activationGeneration, sequence: 2, context: .rule("zsh"), paneID: "B")
+        _ = state.appActivated("editor", currentSourceID: chinese, context: quiet)
+
+        activate(&state)
+
+        #expect(state.programRead(old, currentSourceID: abc, context: quiet, slotOfSource: slot) == .none)
+        #expect(state.isWebsiteHoldWaiting)
+        #expect(read(&state, 3, .rule("claude"), on: abc) == .selectSlot(.chinese))
+    }
+
+    @Test("R1-3: a rule's source stays out of the terminal's memory while the new pane cannot be read")
     func unreadablePaneKeepsRuleSourceOutOfMemory() {
-        var state = tracker()
-        _ = state.appActivated(terminal, currentSourceID: abc, context: AppMemoryContext(),
-                               terminalPID: pid, slotOfSource: slot)
-        _ = read(&state, sequence: 1, program: .rule("claude"), source: abc)
-        state.switchConfirmed(sourceID: chinese,
-                              context: AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true))
+        var state = onClaudeInA()
         #expect(state.rememberedSourceID(for: terminal) == nil)
-        state.paneFocused(pid: pid, at: 1)
-        #expect(read(&state, sequence: 2, program: .unknown, source: chinese) == .none)
-        _ = state.appActivated("editor", currentSourceID: chinese, context: AppMemoryContext())
+
+        focus(&state, "B", at: 1)
+        #expect(read(&state, 2, .unknown, pane: nil, on: chinese) == .none)
+        _ = state.appActivated("editor", currentSourceID: chinese, context: quiet)
+
         #expect(state.rememberedSourceID(for: terminal) == nil)
     }
 
-    @Test("a delayed prefix restoration notification cannot suppress a real pane's rule")
-    func prefixNotificationAfterFocusDoesNotCancelRule() {
+    @Test("R3-6: a source chosen before the program is known is not remembered, so a rule found there cannot be undone by it")
+    func choiceBeforeTheFirstReadIsNotRemembered() {
         var state = tracker()
-        _ = state.appActivated(terminal, currentSourceID: abc, context: AppMemoryContext(),
-                               terminalPID: pid, slotOfSource: slot)
-        _ = read(&state, sequence: 1, program: .rule("claude"), source: abc)
-        state.switchConfirmed(sourceID: chinese,
-                              context: AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true))
-        state.sourceChanged(to: abc, context: AppMemoryContext())
-        // Physical restore happened already; its distributed notification is delivered after focus.
-        state.paneFocused(pid: pid, at: 1)
-        state.sourceChanged(to: chinese, context: AppMemoryContext())
-        #expect(read(&state, sequence: 2, program: .rule("zsh"), source: chinese) == .selectSlot(.english))
-        #expect(read(&state, sequence: 3, program: .rule("zsh"), source: chinese) == .none)
+        activate(&state)
+
+        state.sourceChanged(to: japanese, context: quiet, at: 1)
+        _ = read(&state, 1, .rule("claude"), on: japanese)
+        state.switchConfirmed(sourceID: chinese, context: pending)
+        #expect(state.rememberedSourceID(for: terminal) == nil)
+        _ = state.appActivated("editor", currentSourceID: chinese, context: quiet)
+        activate(&state)
+
+        #expect(read(&state, 2, .noRule, on: abc) == .none)
     }
 
-    @Test("Password Put-back from a pane already left cannot override the new pane's rule")
-    func passwordPutBackBelongsToItsPane() {
-        var state = tracker()
-        _ = state.appActivated(terminal, currentSourceID: abc, context: AppMemoryContext(),
-                               terminalPID: pid, slotOfSource: slot)
-        _ = read(&state, sequence: 1, program: .rule("claude"), source: abc)
-        state.switchConfirmed(sourceID: chinese,
-                              context: AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true))
-        state.sourceChanged(to: abc, context: AppMemoryContext(isSecureInputInFrontmostApp: true))
+    @Test("R2: a switch by hand under a rule is not remembered; under no rule it is")
+    func handSwitchAndMemory() {
+        var ruled = onClaudeInA()
+        ruled.sourceChanged(to: japanese, context: quiet)
+        #expect(read(&ruled, 2, .rule("claude"), on: japanese) == .none)
+        #expect(ruled.rememberedSourceID(for: terminal) == nil)
+
+        var unruled = tracker()
+        activate(&unruled)
+        _ = read(&unruled, 1, .noRule, on: abc)
+        unruled.sourceChanged(to: japanese, context: quiet)
+        _ = unruled.appActivated("editor", currentSourceID: japanese, context: quiet)
+        #expect(unruled.rememberedSourceID(for: terminal) == japanese)
+    }
+
+    @Test("R1-5: a password field's put-back stays with the pane it was in")
+    func passwordPutBackStaysWithItsPane() {
+        var state = onClaudeInA()
+        state.sourceChanged(to: abc, context: secure, at: 1)
         #expect(state.isAwaitingSecureInputEnd)
-        state.paneFocused(pid: pid, at: 1)
-        #expect(read(&state, sequence: 2, program: .rule("zsh"), source: abc) == .none)
-        #expect(state.secureInputEnded(currentSourceID: abc, context: AppMemoryContext(), slotOfSource: slot) == .none)
+
+        focus(&state, "B", at: 2)
+        #expect(read(&state, 2, .rule("zsh"), pane: "B", on: abc) == .none)
+
+        #expect(state.secureInputEnded(currentSourceID: abc, context: quiet, slotOfSource: slot) == .none)
     }
 
-    @Test("editing only Program Rules cannot reapply an unchanged website over a trigger")
+    @Test("R2-4: a password field in the new pane keeps its put-back when that pane's notice is handled late")
+    func newPanePasswordBeforeItsNotice() {
+        var state = tracker()
+        activate(&state)
+        _ = read(&state, 1, .noRule, on: abc)
+        state.sourceChanged(to: chinese, context: quiet, at: 1)
+        // Focus is in B already: its password field replaces chinese, and B's notice (received at 2) comes after.
+        state.sourceChanged(to: abc, context: secure, at: 3)
+
+        focus(&state, "B", at: 2)
+        _ = read(&state, 2, .noRule, pane: "B", on: abc, context: secure)
+
+        #expect(state.secureInputEnded(currentSourceID: abc, context: quiet, slotOfSource: slot) == .select(sourceID: chinese))
+    }
+
+    @Test("R2-5: a notice for the pane already in focus does not touch a password field's put-back")
+    func repeatedNoticeKeepsThePutBack() {
+        var state = tracker()
+        activate(&state)
+        _ = read(&state, 1, .noRule, on: abc)
+        state.sourceChanged(to: chinese, context: quiet, at: 1)
+        state.sourceChanged(to: abc, context: secure, at: 2)
+
+        focus(&state, "A", at: 3)
+
+        #expect(state.secureInputEnded(currentSourceID: abc, context: quiet, slotOfSource: slot) == .select(sourceID: chinese))
+    }
+
+    @Test("R3-5: a password that ends before the new pane is read does not get the rule of the pane just left")
+    func passwordEndsBeforeTheNewPaneIsRead() {
+        var state = onClaudeInA()
+        // In B already: a switch by hand, then B's password field; B's notice was received at 1.
+        state.sourceChanged(to: japanese, context: quiet, at: 2)
+        state.sourceChanged(to: abc, context: secure, at: 3)
+
+        focus(&state, "B", at: 1)
+
+        #expect(state.secureInputEnded(currentSourceID: abc, context: quiet, slotOfSource: slot) == .select(sourceID: japanese))
+    }
+
+    @Test("R1-5b: editing only Program Rules cannot reapply an unchanged website over a trigger")
     func programSettingsDoNotReapplyWebsiteRules() {
         let browser = "com.google.Chrome"
         let browserPID: Int32 = 900

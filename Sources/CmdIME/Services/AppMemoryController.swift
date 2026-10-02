@@ -30,8 +30,8 @@ final class AppMemoryController {
         onReading: { [weak self] reading in
             MainActor.assumeIsolated { self?.programDidRead(reading) }
         },
-        onPaneFocus: { [weak self] pid, time in
-            MainActor.assumeIsolated { self?.paneDidFocus(pid: pid, at: time) }
+        onPaneFocus: { [weak self] pid, paneID, time in
+            MainActor.assumeIsolated { self?.paneDidFocus(pid: pid, paneID: paneID, at: time) }
         }
     )
     private var programTarget: ProgramTarget?
@@ -222,13 +222,14 @@ final class AppMemoryController {
         perform(restore)
     }
 
-    /// Focus moved to another pane of the terminal at `time`, read when the watcher received the
-    /// notice. The tracker starts a new generation, which points the watcher at it, and the read
-    /// that follows applies the pane's rule.
-    private func paneDidFocus(pid: pid_t, at time: TimeInterval) {
+    /// Focus moved to the pane `paneID` of the terminal; the watcher received the notice at
+    /// `time`. For a new pane the tracker starts a new generation, which points the watcher at
+    /// it, and the read that follows applies the pane's rule.
+    private func paneDidFocus(pid: pid_t, paneID: String, at time: TimeInterval) {
         guard isActive, isPermitted else { return }
         tracker.paneFocused(
             pid: pid,
+            paneID: paneID,
             at: time,
             actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
             actualTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp())

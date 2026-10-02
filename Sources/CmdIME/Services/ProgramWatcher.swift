@@ -20,8 +20,9 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
     private static let titleBudget: Float = 0.25
 
     private let onReading: @Sendable (ProgramReading) -> Void
-    /// The terminal and when focus moved, on the clock `AppMemoryController` orders choices by.
-    private let onPaneFocus: @Sendable (pid_t, TimeInterval) -> Void
+    /// The terminal, the pane now in focus and when the notice was received, on the clock
+    /// `AppMemoryController` orders triggers by.
+    private let onPaneFocus: @Sendable (pid_t, String, TimeInterval) -> Void
     private let localMachine = ProgramWatcher.shortHostName()
     private var thread: Thread?
 
@@ -32,11 +33,9 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
     private var timer: Timer?
     private var sequence = 0
     private var settleUntil: TimeInterval = 0
-    /// The pane the last read found in focus, to notice a focus change no event announced.
-    private var lastPaneID: String?
     private var focusStream: HerdrFocusStream?
 
-    init(onReading: @escaping @Sendable (ProgramReading) -> Void, onPaneFocus: @escaping @Sendable (pid_t, TimeInterval) -> Void) {
+    init(onReading: @escaping @Sendable (ProgramReading) -> Void, onPaneFocus: @escaping @Sendable (pid_t, String, TimeInterval) -> Void) {
         self.onReading = onReading
         self.onPaneFocus = onPaneFocus
         super.init()
@@ -89,9 +88,6 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         dispatchPrecondition(condition: .notOnQueue(.main))
         timer?.invalidate()
         timer = nil
-        if target.pid != pid {
-            lastPaneID = nil
-        }
         pid = target.pid
         generation = target.generation
         rules = target.rules
@@ -110,15 +106,22 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         scheduleRead(after: 0)
     }
 
-    /// A focus event came in on the subscription, read there at `time`.
+    /// A focus event came in on the subscription, read there at `time`. The pane is asked for
+    /// here, since a tab or workspace event does not name it. When it cannot be read, nothing is
+    /// reported: the next read names its pane, and the tracker takes the focus change from that.
     @objc private func focusPushed(_ time: NSNumber) {
         guard let pid else { return }
         settleUntil = now + Self.focusSettle
-        // The read that follows finds the new pane; that is not a second focus change.
-        lastPaneID = nil
+        guard let pane = Self.focusedPane() else {
+            scheduleRead(after: Self.focusSettle)
+            return
+        }
         let send = onPaneFocus
         let at = time.doubleValue
-        DispatchQueue.main.async { send(pid, at) }
+        DispatchQueue.main.async { send(pid, pane.paneID, at) }
+        // A notice for the pane the tracker already knows changes nothing there, so no new
+        // target follows: read anyway, once the change has settled.
+        scheduleRead(after: Self.focusSettle)
     }
 
     @objc private func focusStreamClosed() {
@@ -137,38 +140,29 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         // Without a server there is nothing to ask and nothing to poll for; the next target
         // (an activation, a change of rules) looks again.
         guard Self.herdr.exists else {
-            send(.noRule, pid: pid)
+            send(.noRule, paneID: nil, pid: pid)
             return
         }
         openFocusStreamIfNeeded()
         let answer = Self.read(pid: pid, rules: rules, localMachine: localMachine)
-        defer { scheduleRead(after: Self.pollInterval) }
-        if let paneID = answer.paneID, let lastPaneID, paneID != lastPaneID {
-            // Another pane is in focus than at the last read that named one, and no event said so
-            // (the subscription was down, or focus moved during this read): report it as a focus
-            // change. The tracker starts a new generation and this watcher is pointed at it, so
-            // this read is not sent.
-            self.lastPaneID = paneID
-            let send = onPaneFocus
-            let at = now
-            DispatchQueue.main.async { send(pid, at) }
-            return
-        }
-        // A read that names no pane (the window or the server did not answer, or the window is
-        // not Herdr) keeps the last one known, so a focus change missed meanwhile still shows.
-        lastPaneID = answer.paneID ?? lastPaneID
-        send(answer.context, pid: pid)
+        send(answer.context, paneID: answer.paneID, pid: pid)
+        // A pane that changed during the read is read again at once: its program is not known yet.
+        scheduleRead(after: answer.paneChangedDuringRead ? Self.rereadDelay : Self.pollInterval)
     }
+
+    private static let rereadDelay: TimeInterval = 0.05
 
     private struct Answer {
         let context: ProgramContext
         var paneID: String?
+        var paneChangedDuringRead = false
     }
 
     /// Every read is sent, as for a page: main may drop one, and a repeat gets it through later.
-    private func send(_ context: ProgramContext, pid: pid_t) {
+    /// It names its pane, which is how the tracker sees a focus change no event announced.
+    private func send(_ context: ProgramContext, paneID: String?, pid: pid_t) {
         sequence += 1
-        let reading = ProgramReading(pid: pid, generation: generation, sequence: sequence, context: context)
+        let reading = ProgramReading(pid: pid, generation: generation, sequence: sequence, context: context, paneID: paneID)
         let send = onReading
         DispatchQueue.main.async { send(reading) }
     }
@@ -210,7 +204,9 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         // Only a pane read again says whose program this is: a second answer that fails is
         // "cannot tell", and one that names another pane is that pane with its program unread.
         guard let paneNow = focusedPane() else { return Answer(context: .unknown) }
-        guard paneNow.paneID == pane.paneID else { return Answer(context: .unknown, paneID: paneNow.paneID) }
+        guard paneNow.paneID == pane.paneID else {
+            return Answer(context: .unknown, paneID: paneNow.paneID, paneChangedDuringRead: true)
+        }
         return Answer(context: HerdrSurface.context(program: program, rules: rules), paneID: pane.paneID)
     }
 
