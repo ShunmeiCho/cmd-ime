@@ -125,10 +125,11 @@ struct SetupTryItStep: View {
             : String(localized: "\(names.joined(separator: ", ")) have no matching input source, so their triggers cannot switch yet. Choose a source for each on the slot board.")
     }
 
-    /// "Tap Right Command alone" for the next untried slot, nil once all were tried.
+    /// "Tap Right Command alone" for the next untried slot, nil once all were tried. A slot's own trigger
+    /// comes before the Toggle's in `reachingTriggers`.
     private func nextInstruction(for progress: SetupTryItProgress) -> String? {
         guard let next = progress.nextSlot,
-              let trigger = model.config.slotTriggers.first(where: { $0.slot == next })?.trigger else {
+              let trigger = model.config.reachingTriggers.first(where: { $0.slot == next })?.trigger else {
             return nil
         }
         return SetupTriggerPhrase(trigger: trigger).instruction
@@ -138,7 +139,7 @@ struct SetupTryItStep: View {
         if progress.boundSlots.isEmpty {
             return progress.unmatchedSlots.isEmpty ? String(localized: "No slot has a key yet") : String(localized: "No slot can switch yet")
         }
-        guard let instruction = nextInstruction(for: progress) else {
+        guard !progress.isComplete, let instruction = nextInstruction(for: progress) else {
             return String(localized: "Every slot switched. Type to check, then press Finish.")
         }
         return String(localized: "\(instruction), then type here")
@@ -152,7 +153,7 @@ struct SetupTryItStep: View {
                 : String(localized: "No slot can switch yet. Go back and press Change to choose input sources, or finish now.")
         }
         let count = String(localized: "\(progress.triedSlots.count) of \(progress.boundSlots.count) slots tried")
-        guard let instruction = nextInstruction(for: progress) else {
+        guard !progress.isComplete, let instruction = nextInstruction(for: progress) else {
             return String(localized: "\(count). Setup is done: press Finish.")
         }
         return String(localized: "\(count). Next: \(instruction)")

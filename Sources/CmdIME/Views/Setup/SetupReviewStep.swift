@@ -138,7 +138,8 @@ struct SetupSlotSentenceList: View {
     var triedSlots: Set<InputRole>?
 
     var body: some View {
-        let triggers = model.config.slotTriggers
+        // The Toggle's trigger counts for both of its slots: it is how a Toggle-only slot is reached.
+        let triggers = model.config.reachingTriggers
         VStack(alignment: .leading, spacing: 8) {
             ForEach(model.config.slots) { slot in
                 let slotTriggers = triggers.filter { $0.slot == slot.id }.map(\.trigger)
