@@ -365,6 +365,16 @@ macOS 14 及以上每次输入源变化时，还会在光标下方显示系统�
   登记为“能打开网页链接”的应用，都会被当作浏览器，所以名单里没有的浏览器也能用。已在
   Safari 和 Chrome 中测试，读取地址这一步也在 Aside 上确认过。
   地址变了但标题没变的页面（部分单页应用）要到下一次切换标签页或窗口时才会被发现。
+- **程序规则**：**添加程序…** 可以给终端里的一个程序单独指定槽位，或设为**保持不变**：
+  在 `zsh` 提示符下用英文，进了 `claude` 用中文。填写启动这个程序用的命令名（完全一致，
+  区分大小写）。这个程序在当前聚焦的终端面板里运行时，它的规则优先于终端自己的应用规则、
+  应用记忆和“其他应用”槽位，并且每次面板获得焦点都会重新应用；之后你按下的触发键仍然
+  优先，没有规则的程序不改变任何东西。一个开关可以暂停全部程序规则。为此 CmdIME 只读取
+  终端里正在运行的程序的名称，不读取屏幕上的内容。它能跟随这台 Mac 上
+  [Herdr](https://herdr.dev) 的面板；在其他终端里，可以由 zsh 报告程序，只需在 `.zshrc`
+  里加一行（**Shell 集成…**，或 `keyboardctl shell-integration install`，修改前会先备份）。
+  使用 shell 集成时，切回一个早已在运行程序的标签页不会有任何报告；在你没有看着的标签页里
+  结束的命令仍可能切换输入源。
 - **应用记忆**（默认关闭）：回到某个应用时，选中你上次在那里用的输入源，
   不管当时是怎么选的：触发键、Control+Space、菜单栏或地球仪键。它只保存在内存里：
   CmdIME 退出后就清空，暂停键盘控制也会清空。页面会列出它记住的应用以及各自的输入源，
@@ -400,6 +410,11 @@ keyboardctl website-rule set docs.google.com japanese --exact
 keyboardctl website-rule set localhost keep
 keyboardctl website-rule test https://gist.github.com/
 keyboardctl website-rule remove github.com
+keyboardctl program-rule list
+keyboardctl program-rule set claude chinese
+keyboardctl program-rule set vim keep
+keyboardctl program-rule remove claude
+keyboardctl shell-integration install     # 在 ~/.zshrc 里加一行；uninstall 移除
 ```
 
 </details>

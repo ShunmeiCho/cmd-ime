@@ -404,6 +404,19 @@ apps always wins.
   heard of is read too. Tested in Safari and Chrome; the address read was also checked in
   Aside. A page that changes address without changing its title
   (some single-page apps) is noticed only at the next tab or window change.
+- **Program rules**: **Add Program…** gives a program in the terminal its own slot, or
+  **Keep as is**: English at the `zsh` prompt, Chinese inside `claude`. Type the command the
+  program is started with (exact, upper and lower case count). While that program runs in
+  the terminal pane in focus, its rule beats the terminal's own App Rule, App Memory and
+  the Other apps slot, and it is applied again every time the pane comes into focus; a
+  trigger you press afterwards still wins, and a program without a rule changes nothing.
+  One switch pauses all program rules. For this CmdIME reads only the name of the program
+  running in the terminal, never what is on the screen. It follows panes of a
+  [Herdr](https://herdr.dev) server on this Mac; in other terminals zsh can report the
+  program instead, through one line in `.zshrc` (**Shell Integration…**, or
+  `keyboardctl shell-integration install`, which copies the file first). With shell
+  integration a tab that was already running its program says nothing when you return to
+  it, and a command that ends in a tab you are not looking at can still switch the source.
 - **App Memory** (off by default): coming back to an app selects the input source you last
   used there, however you chose it: a trigger, Control+Space, the menu bar or the Globe
   key. It is kept in memory only: it is empty after CmdIME quits, and pausing keyboard
@@ -443,6 +456,11 @@ keyboardctl website-rule set docs.google.com japanese --exact
 keyboardctl website-rule set localhost keep
 keyboardctl website-rule test https://gist.github.com/
 keyboardctl website-rule remove github.com
+keyboardctl program-rule list
+keyboardctl program-rule set claude chinese
+keyboardctl program-rule set vim keep
+keyboardctl program-rule remove claude
+keyboardctl shell-integration install     # one line in ~/.zshrc; uninstall removes it
 ```
 
 </details>

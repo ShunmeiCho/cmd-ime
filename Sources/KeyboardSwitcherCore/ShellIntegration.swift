@@ -41,8 +41,10 @@ public enum ShellIntegration {
     /// `rc` with the line appended, or nil when a line with the marker is already there.
     public static func installing(line: String, into rc: String) -> String? {
         guard !isInstalled(in: rc) else { return nil }
-        let separator = rc.isEmpty || rc.hasSuffix("\n") ? "" : "\n"
-        return rc + separator + line + "\n"
+        // A file that does not end in a line feed gets none after the line either, so removing the
+        // line gives back the same bytes.
+        guard rc.isEmpty || rc.hasSuffix("\n") else { return rc + "\n" + line }
+        return rc + line + "\n"
     }
 
     /// `rc` without the lines that carry the marker, or nil when there is none. Nothing else changes.

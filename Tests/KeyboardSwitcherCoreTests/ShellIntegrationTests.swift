@@ -35,7 +35,7 @@ struct ShellIntegrationTests {
         let line = ShellIntegration.rcLine(keyboardctlPath: ctl)
 
         #expect(ShellIntegration.installing(line: line, into: "") == line + "\n")
-        #expect(ShellIntegration.installing(line: line, into: "export A=1") == "export A=1\n" + line + "\n")
+        #expect(ShellIntegration.installing(line: line, into: "export A=1") == "export A=1\n" + line)
         let installed = try #require(ShellIntegration.installing(line: line, into: "export A=1\n"))
         #expect(installed == "export A=1\n" + line + "\n")
         #expect(ShellIntegration.installing(line: line, into: installed) == nil)
@@ -49,6 +49,9 @@ struct ShellIntegrationTests {
 
         #expect(ShellIntegration.uninstalling(from: installed) == before)
         #expect(ShellIntegration.uninstalling(from: before) == nil)
+        let unterminated = try #require(ShellIntegration.installing(
+            line: ShellIntegration.rcLine(keyboardctlPath: ctl), into: "export A=1"))
+        #expect(ShellIntegration.uninstalling(from: unterminated) == "export A=1")
     }
 
     @Test("the program of a command line is its first real word, without a directory",
