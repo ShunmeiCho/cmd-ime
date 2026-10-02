@@ -20832,6 +20832,54 @@
           }
         }
       }
+    },
+    "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers. What you type is never stored and never sent anywhere. The only thing saved is your own configuration.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME checks each key event in memory, by key code and modifier state, only to spot your triggers. What you type is never stored and never sent anywhere. The only thing saved is your own configuration."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME 仅在内存中根据键码和修饰键状态检查每个按键事件，以识别触发键。输入内容不会被保存，也不会发送到任何地方。唯一保存的是你自己的配置。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CmdIME はトリガーを見つけるためだけに、各キーイベントのキーコードと修飾キーの状態をメモリ上で確認します。入力内容は保存されず、どこにも送信されません。保存するのは設定だけです。"
+          }
+        }
+      }
+    },
+    "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal.app，以及从支持这项功能的版本起的 Ghostty，能告诉 CmdIME 前台标签页里在运行哪个程序：CmdIME 会去询问它们，macOS 会就每个终端问你一次是否允许。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal.app と、対応したリリース以降の Ghostty は、前面のタブで動いているプログラムを CmdIME に伝えられます。CmdIME はそれらに問い合わせ、macOS は端末ごとに一度、許可するかどうかを確認します。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

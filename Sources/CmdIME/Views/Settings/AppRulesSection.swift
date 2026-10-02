@@ -139,6 +139,10 @@ struct AppRulesSection: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+            Text("Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
