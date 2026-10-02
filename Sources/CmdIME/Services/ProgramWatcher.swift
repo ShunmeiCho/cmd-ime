@@ -5,12 +5,13 @@ import KeyboardSwitcherCore
 /// Asks which program is in front in the terminal's focused pane for Program Rules, off the main
 /// thread, the way `WebsiteWatcher` reads a page.
 ///
-/// The source is the local Herdr server: focus changes are pushed over its socket, the program is
-/// asked for on every new target and then once a second (Herdr pushes nothing when a program
+/// The first source is the local Herdr server: focus changes are pushed over its socket, the program
+/// is asked for on every new target and then once a second (Herdr pushes nothing when a program
 /// starts or ends). Whether the window in front shows Herdr at all is told from the window title's
-/// first word, the only thing read from the terminal itself; the title stays in `read`. Only the
-/// name of a program with a rule, which the user wrote, leaves this class. CmdIME never reads what
-/// is on the terminal's screen.
+/// first word; the title stays in `read`. The second is the terminal itself where it can say which
+/// program runs in its tab in front (`TerminalScriptSource`: Ghostty builds with `pid`, Terminal.app),
+/// asked through `osascript` once per read. Only the name of a program with a rule, which the user
+/// wrote, leaves this class. CmdIME never reads what is on the terminal's screen.
 final class ProgramWatcher: NSObject, @unchecked Sendable {
     /// How often the program is asked for while nothing is pushed.
     private static let pollInterval: TimeInterval = 1
@@ -34,6 +35,8 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
     private var sequence = 0
     private var settleUntil: TimeInterval = 0
     private var focusStream: HerdrFocusStream?
+    /// Per terminal app: whether it is asked at all (an older Ghostty is not, until relaunched).
+    private var scriptAvailability: [String: TerminalScriptSource.Availability] = [:]
 
     init(onReading: @escaping @Sendable (ProgramReading) -> Void, onPaneFocus: @escaping @Sendable (pid_t, String, TimeInterval) -> Void) {
         self.onReading = onReading
@@ -144,17 +147,108 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
 
     private func read() {
         guard let pid else { return }
-        // Without a server there is nothing to ask and nothing to poll for; the next target
-        // (an activation, a change of rules) looks again.
-        guard Self.herdr.exists else {
-            send(.noRule, paneID: nil, pid: pid)
-            return
+        let herdrRunning = Self.herdr.exists
+        if herdrRunning {
+            openFocusStreamIfNeeded()
         }
-        openFocusStreamIfNeeded()
-        let answer = Self.read(pid: pid, rules: rules, localMachine: localMachine)
+        var answer = herdrRunning ? Self.read(pid: pid, rules: rules, localMachine: localMachine) : Answer(context: .noRule)
+        // A window that is not Herdr: ask the terminal itself, where it can say.
+        if answer.context == .noRule, answer.paneID == nil, let scripted = readScripted(pid: pid) {
+            answer = scripted
+        }
         send(answer.context, paneID: answer.paneID, pid: pid)
+        // Nothing to ask (no Herdr, a terminal that cannot say): no polling until the next target
+        // (an activation, a change of rules) looks again.
+        guard herdrRunning || answer.paneID != nil || answer.context == .unknown else { return }
         // A pane that changed during the read is read again at once: its program is not known yet.
         scheduleRead(after: answer.paneChangedDuringRead ? Self.rereadDelay : Self.pollInterval)
+    }
+
+    /// The program in the tab in front, asked of the terminal; nil when this terminal is not asked
+    /// (not one that can say, an older build, or Automation consent refused).
+    private func readScripted(pid: pid_t) -> Answer? {
+        guard let app = NSRunningApplication(processIdentifier: pid), let bundleID = app.bundleIdentifier,
+              let kind = TerminalScriptSource.kind(forBundleID: bundleID),
+              Self.dictionaryOffers(kind, appURL: app.bundleURL) else { return nil }
+        var availability = scriptAvailability[bundleID] ?? TerminalScriptSource.Availability()
+        guard availability.shouldAsk(appPID: pid) else { return nil }
+        defer { scriptAvailability[bundleID] = availability }
+        switch Self.runScript(TerminalScriptSource.script(for: kind)) {
+        case .reply(let reply):
+            guard let found = TerminalScriptSource.answer(kind: kind, reply: reply) else { return Answer(context: .unknown) }
+            availability.answered()
+            switch found {
+            case .process(let paneID, let processID):
+                return Answer(context: HerdrSurface.context(program: TerminalDevice.program(ofPID: processID), rules: rules),
+                              paneID: "terminal:" + paneID)
+            case .device(let paneID, let device):
+                return Answer(context: HerdrSurface.context(program: TerminalDevice.foregroundProgram(ofDevice: device), rules: rules),
+                              paneID: "terminal:" + paneID)
+            }
+        case .failed(let code):
+            availability.failed(errorCode: code, appPID: pid)
+            return availability.shouldAsk(appPID: pid) ? Answer(context: .unknown) : nil
+        case .timedOut:
+            return Answer(context: .unknown)
+        }
+    }
+
+    /// Whether the app's own scripting dictionary has what the script asks for. Read from the
+    /// bundle, so a Ghostty without `pid` (1.3.1) is never sent an Apple Event and never makes macOS
+    /// ask for consent for nothing.
+    private static func dictionaryOffers(_ kind: TerminalScriptSource.Kind, appURL: URL?) -> Bool {
+        guard let resources = appURL?.appendingPathComponent("Contents/Resources"),
+              let names = try? FileManager.default.contentsOfDirectory(atPath: resources.path),
+              let sdef = names.first(where: { $0.hasSuffix(".sdef") }),
+              let text = try? String(contentsOf: resources.appendingPathComponent(sdef), encoding: .utf8) else {
+            // Terminal.app keeps its dictionary elsewhere; its `tty` has been there for years.
+            return kind == .terminalApp
+        }
+        return TerminalScriptSource.dictionaryOffers(kind, sdef: text)
+    }
+
+    private enum ScriptResult {
+        case reply(String)
+        /// The Apple Event error number osascript printed, or 0 when it printed none.
+        case failed(Int)
+        case timedOut
+    }
+
+    /// osascript's own process makes the request, so macOS asks for consent on CmdIME's behalf
+    /// (the responsible process) once per terminal app.
+    private static let scriptBudget: TimeInterval = 1.5
+    private static let scriptPoll: TimeInterval = 0.01
+
+    private static func runScript(_ source: String) -> ScriptResult {
+        dispatchPrecondition(condition: .notOnQueue(.main))
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", source]
+        let output = Pipe()
+        let errors = Pipe()
+        process.standardOutput = output
+        process.standardError = errors
+        guard (try? process.run()) != nil else { return .failed(0) }
+        let deadline = ProcessInfo.processInfo.systemUptime + scriptBudget
+        while process.isRunning {
+            guard ProcessInfo.processInfo.systemUptime < deadline else {
+                process.terminate()
+                return .timedOut
+            }
+            Thread.sleep(forTimeInterval: scriptPoll)
+        }
+        let reply = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+        guard process.terminationStatus == 0 else {
+            let message = String(decoding: errors.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
+            return .failed(errorNumber(in: message))
+        }
+        return .reply(reply)
+    }
+
+    /// osascript ends an error with "(-1728)".
+    private static func errorNumber(in message: String) -> Int {
+        guard let open = message.lastIndex(of: "("), let close = message.lastIndex(of: ")"), open < close else { return 0 }
+        return Int(message[message.index(after: open)..<close]) ?? 0
     }
 
     private static let rereadDelay: TimeInterval = 0.05

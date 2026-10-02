@@ -10,6 +10,14 @@ public enum TerminalScriptSource {
         case terminalApp
     }
 
+    /// Whether a scripting dictionary (the app's `.sdef` text) declares what `script(for:)` asks for.
+    public static func dictionaryOffers(_ kind: Kind, sdef: String) -> Bool {
+        switch kind {
+        case .ghostty: sdef.contains("name=\"pid\"") && sdef.contains("name=\"focused terminal\"")
+        case .terminalApp: sdef.contains("name=\"tty\"")
+        }
+    }
+
     /// What one answer says about the tab in front.
     public enum Answer: Equatable, Sendable {
         /// The pane (a terminal id or a tty) and the foreground process, found one way or the other.
@@ -97,8 +105,9 @@ public enum TerminalScriptSource {
             switch errorCode {
             case Self.notAuthorized:
                 state = .refused
-            case Self.noSuchProperty, Self.cannotGet where state != .available:
-                state = .unsupported(pid: appPID)
+            case Self.noSuchProperty, Self.cannotGet:
+                // Once it has answered, the property exists: a later "can't get" is a closed window.
+                if state != .available { state = .unsupported(pid: appPID) }
             default:
                 break
             }

@@ -60,4 +60,14 @@ struct TerminalScriptSourceTests {
         answered.failed(errorCode: -1712, appPID: 10)
         #expect(answered.shouldAsk(appPID: 10))
     }
+
+    @Test("a Ghostty whose dictionary lacks pid is not asked; one that has it is")
+    func dictionary() {
+        let old = #"<property name="focused terminal" code="x"/><property name="working directory" code="y"/>"#
+        let new = old + #"<property name="pid" code="Gpid" type="integer"/>"#
+
+        #expect(!TerminalScriptSource.dictionaryOffers(.ghostty, sdef: old))
+        #expect(TerminalScriptSource.dictionaryOffers(.ghostty, sdef: new))
+        #expect(TerminalScriptSource.dictionaryOffers(.terminalApp, sdef: #"<property name="tty" code="ttty"/>"#))
+    }
 }
