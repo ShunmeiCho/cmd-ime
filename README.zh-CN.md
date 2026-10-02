@@ -245,6 +245,11 @@ CmdIME 会扫描 macOS 中已经安装的输入源，而不是写死某一种键
 槽位的单击触发键，同时是另一个槽位的双击触发键。许多中文输入法使用 Shift 来切换中英文，
 因此 CmdIME 从不自动分配 Shift。
 
+**轮换键**在槽位列表下面一行，让一个键负责两个槽位：先选两个槽位，再选一个修饰键的单击或
+双击。当前在其中一个槽位时，按下切到另一个；当前是其他输入法时，切到两者中 CmdIME 最近切过的
+那个（还没切过时为第一个槽位）。想用某个槽位已占用的键，先把那个槽位的单击设为**无**。
+要用快捷键，请运行 `keyboardctl bind option+t toggle english chinese`。
+
 单个修饰键的绑定与键盘快捷键被有意分开处理，这样 `Command+C`、`Command+V`、
 `Command+Tab` 以及多修饰键组合就不会被当成一次 Command 单击。单击会立即切换；
 只有当同一个修饰键还绑定了双击时，CmdIME 才会短暂等待。
@@ -586,6 +591,11 @@ swift run keyboardctl listen
   这个触发键，它会把触发键拿过来，并在 stderr 上说明。
   `control+space` 这类 macOS 输入源快捷键会被拒绝。`peek`（不区分大小写）优先于名为
   "peek" 的槽位。要移除它，请用**指示气泡 > 更多气泡 > 速览 > 无**。
+- `keyboardctl bind <trigger> toggle <slot> <slot>`：把这个触发键设为两个不同槽位之间的
+  轮换键（见**触发方式详解**）。轮换键只有一个，所以会替换之前的那个；如果某个槽位或重映射
+  正在用这个触发键，它会把触发键拿过来，并在 stderr 上说明。`toggle`（不区分大小写）优先于
+  名为 "toggle" 的槽位。要移除它，请用**槽位 > 轮换键 > 无**。`keyboardctl slots` 会在
+  两个槽位旁边列出轮换键。
 - `keyboardctl app-rule list|set|remove`：即“应用”页面上的应用规则。`set` 接受一个
   bundle id 或 `--frontmost`（运行时处于前台的应用），然后是一个槽位或 `keep`；加上
   `--remember` 表示规则改为恢复上次的输入源（和 `keep` 一起用会被拒绝）。`list` 输出每条

@@ -265,6 +265,12 @@ trigger ("Show Current Input Source") is shown as used and cannot be picked. The
 can be a single tap for one slot and a double tap for another. Many Chinese input methods
 use Shift to toggle Chinese and English, so CmdIME never assigns Shift automatically.
 
+**Toggle**, the row under the slot list, is one key for two slots: pick the two slots,
+then a single or double tap of a modifier key. Pressed in one of the two slots, it switches
+to the other; pressed anywhere else, it switches to the one of the two CmdIME switched to
+last (the first slot until then). To use a key a slot already has, set that slot's tap to
+**None** first. For a shortcut, run `keyboardctl bind option+t toggle english chinese`.
+
 Single-key modifier bindings and keyboard shortcuts are intentionally separate, so
 `Command+C`, `Command+V`, `Command+Tab` and multi-modifier chords are not treated as
 one-shot Command taps. A single tap switches immediately; CmdIME waits briefly only
@@ -661,6 +667,11 @@ swift run keyboardctl listen
   stderr. macOS input-source shortcuts such as
   `control+space` are refused. `peek` (any case) wins over a slot named "peek". Remove it
   with **Indicator > More bubbles > Peek > None**.
+- `keyboardctl bind <trigger> toggle <slot> <slot>`: makes the trigger the Toggle between
+  two different slots (see **Triggers in detail**). There is one Toggle, so this replaces
+  the previous one; if a slot or a remap had the trigger, it takes it over and says so on
+  stderr. `toggle` (any case) wins over a slot named "toggle". Remove it with **Slots >
+  Toggle > None**. `keyboardctl slots` lists the Toggle trigger beside both slots.
 - `keyboardctl app-rule list|set|remove`: the App Rules from the Apps page. `set` takes a
   bundle id or `--frontmost` (the app in front when you run it), then a slot or `keep`,
   and `--remember` for a rule that restores the last input source instead (refused with

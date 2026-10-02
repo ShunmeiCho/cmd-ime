@@ -68,6 +68,10 @@ _Avoid_: Secure input restore, auto-fix
 A trigger that shows the switch indicator for the current input source without switching. It is a binding action, not a slot.
 _Avoid_: Preview, show current, status
 
+**Toggle** (UI: zh-Hans 轮换键, ja 切り替えキー):
+A trigger that switches between two named slots: from one of them to the other, from any other input source to the one of the two switched to last. It is a binding action, not a slot; at most one exists.
+_Avoid_: Cycle, rotate, switch key
+
 ## Dynamic slots (PR1)
 
 The ordered `config.slots` collection stores stable `InputRole` string IDs,
