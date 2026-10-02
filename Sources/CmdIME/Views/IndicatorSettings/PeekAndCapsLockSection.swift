@@ -20,10 +20,12 @@ struct PeekAndCapsLockSection: View {
                     .font(.caption)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
                     .fixedSize(horizontal: false, vertical: true)
+                    .explanation()
                 capsLockRow
                 Text("A bubble when Caps Lock turns on or off.")
                     .font(.caption)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
+                    .explanation()
             }
         }
     }

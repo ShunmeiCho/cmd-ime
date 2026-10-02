@@ -73,7 +73,11 @@ struct SlotTriggerRecorder: View {
                     if model.commitRecordedTrigger(nil, for: role, category: .shortcut) == nil { onUpdated() }
                 } label: {
                     Image(systemName: "xmark.circle.fill")
+                        .font(DesignTokens.Typography.title)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
+                        // The glyph alone is a 13-point target.
+                        .frame(width: 24, height: DesignTokens.Layout.fieldHeight)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.borderless)
                 .help("Immediately remove this slot’s shortcut")

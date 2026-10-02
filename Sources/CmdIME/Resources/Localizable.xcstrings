@@ -19704,6 +19704,126 @@
           }
         }
       }
+    },
+    "Brief": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brief"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "简略"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "簡潔"
+          }
+        }
+      }
+    },
+    "Detailed": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detailed"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "详细"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詳細"
+          }
+        }
+      }
+    },
+    "Explanations": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explanations"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "说明文字"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "説明"
+          }
+        }
+      }
+    },
+    "Brief shows the settings alone. Detailed adds what each one does.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brief shows the settings alone. Detailed adds what each one does."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“简略”只显示设置本身，“详细”会加上每项设置的说明。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「簡潔」は設定だけを表示し、「詳細」は各設定の説明も表示します。"
+          }
+        }
+      }
+    },
+    "While it is on, CmdIME hides the macOS badge under the cursor. Turn it off to get the badge back.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While it is on, CmdIME hides the macOS badge under the cursor. Turn it off to get the badge back."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启时，CmdIME 会隐藏 macOS 在光标下方显示的图标；关闭后恢复。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンの間、CmdIME は macOS がカーソルの下に表示するバッジを隠します。オフにすると元に戻ります。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
