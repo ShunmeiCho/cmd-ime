@@ -30,6 +30,8 @@ public final class EventTapMonitor: @unchecked Sendable {
             precondition(Thread.isMainThread)
             guard capturingShortcut != newValue else { return }
             capturingShortcut = newValue
+            // Keys pressed while recording can move the caret; the character read before says nothing then.
+            autoSpace.cancel()
             // Neither half of a gesture may cross a recording boundary.
             oneShotState.cancel()
             pendingSingleTapTimer?.invalidate()
@@ -251,6 +253,9 @@ public final class EventTapMonitor: @unchecked Sendable {
             triggerEvidenceEpoch = UUID()
         }
         self.config = config
+        if !config.autoSpaceAfterHan {
+            autoSpace.cancel()
+        }
         refreshResolvedSources()
     }
 
@@ -470,9 +475,6 @@ public final class EventTapMonitor: @unchecked Sendable {
             consumedKeyDowns.remove(keyCode)
             return Unmanaged.passUnretained(event)
         }
-        if autoSpace.phase != .idle, spaceBefore(event) {
-            return nil
-        }
         guard let binding = keyPressBinding(forKeyCode: keyCode, flags: event.flags) else {
             // A repeat of a consumed press stays consumed though the modifiers changed since (the
             // other side was added): its key-up is swallowed, so letting the repeat through would
@@ -480,9 +482,14 @@ public final class EventTapMonitor: @unchecked Sendable {
             if consumedKeyDowns.contains(keyCode), event.getIntegerValueField(.keyboardEventAutorepeat) != 0 {
                 return nil
             }
+            // Only a key no binding answers to can get a space; a bound key (shift+a included) stays a trigger.
+            if autoSpace.phase != .idle, spaceBefore(event) {
+                return nil
+            }
             return Unmanaged.passUnretained(event)
         }
 
+        autoSpace.cancel()
         perform(binding.action, trigger: binding.trigger, evidenceEpoch: triggerEvidenceEpoch)
         consumedKeyDowns.insert(keyCode)
         return nil
@@ -621,6 +628,9 @@ public final class EventTapMonitor: @unchecked Sendable {
     }
 
     private func request(_ target: SwitchTarget, trigger: KeyTrigger?, evidenceEpoch: UUID?) {
+        // A new switch is on its way (a Kana prelude may already be changing the source): the last
+        // switch's chance of a space ends here, not when this one is confirmed.
+        autoSpace.cancel()
         switchGeneration &+= 1
         let generation = switchGeneration
         pendingSwitchDeadline = Date(timeIntervalSinceNow: Self.pendingSwitchBudget)

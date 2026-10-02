@@ -24,7 +24,9 @@ enum CaretCharacterReader {
         guard AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.location > 0, selection.length == 0 else {
             return nil
         }
-        return stringForRange(focused, location: selection.location - 1) ?? valueCharacter(focused, at: selection.location - 1)
+        // Only the character itself is asked for. An element that cannot give one character gets no space
+        // rather than a read of its whole value (review A1: the promise is one character).
+        return stringForRange(focused, location: selection.location - 1)
     }
 
     private static func isTerminal(_ element: AXUIElement) -> Bool {
@@ -57,19 +59,9 @@ enum CaretCharacterReader {
             guard AXUIElementCopyParameterizedAttributeValue(
                 element, kAXStringForRangeParameterizedAttribute as CFString, parameter, &out
             ) == .success, let text = out as? String, !text.isEmpty else { return nil }
-            if text.unicodeScalars.count == 1 { return text }
+            // Half of a surrogate pair comes back as U+FFFD: ask again for the pair.
+            if text.unicodeScalars.count == 1, text != "\u{FFFD}" { return text }
         }
         return nil
-    }
-
-    /// Fallback for elements that only expose their whole value (some web fields).
-    private static func valueCharacter(_ element: AXUIElement, at location: Int) -> String? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &value) == .success,
-              let text = value as? String else { return nil }
-        let units = Array(text.utf16)
-        guard location < units.count else { return nil }
-        let start = location > 0 && UTF16.isTrailSurrogate(units[location]) ? location - 1 : location
-        return String(utf16CodeUnits: Array(units[start...location]), count: location - start + 1)
     }
 }

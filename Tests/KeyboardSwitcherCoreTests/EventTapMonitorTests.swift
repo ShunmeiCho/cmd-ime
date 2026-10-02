@@ -1306,6 +1306,55 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertEqual(posted, 0)
     }
 
+    func testAutoSpaceNeverTakesAKeyABindingAnswersTo() throws {
+        var config = SwitcherConfig.default
+        config.autoSpaceAfterHan = true
+        config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("shift+a"), action: .switchInputSource(.chinese)))
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        monitor.characterBeforeCaret = { "中" }
+        var posted = 0
+        monitor.autoSpaceKeyPoster = { _ in posted += 1 }
+
+        tapLeftCommand(monitor)
+        drainMainQueue()
+        waitForAutoSpaceRead(monitor)
+        let shiftA = makeTypedEvent(keyCode: 0, character: "A")
+        shiftA.flags = [.maskShift]
+        XCTAssertNil(monitor.handleKeyDownForTesting(shiftA), "the trigger is consumed")
+        drainMainQueue()
+
+        XCTAssertEqual(posted, 0)
+        XCTAssertEqual(service.selectedIDs.last, "com.apple.inputmethod.SCIM.ITABC")
+        XCTAssertEqual(monitor.autoSpace.phase, .idle)
+    }
+
+    func testAutoSpaceEndsWhenTheSettingTurnsOffRecordingStartsOrAnotherSwitchIsRequested() {
+        var config = SwitcherConfig.default
+        config.autoSpaceAfterHan = true
+        for interruption in 0..<3 {
+            let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+            monitor.characterBeforeCaret = { "中" }
+            tapLeftCommand(monitor)
+            drainMainQueue()
+            waitForAutoSpaceRead(monitor)
+            XCTAssertEqual(monitor.autoSpace.phase, .spaceBeforeNextKey)
+
+            switch interruption {
+            case 0:
+                var off = config
+                off.autoSpaceAfterHan = false
+                monitor.updateConfig(off)
+            case 1:
+                monitor.isCapturingShortcut = true
+            default:
+                monitor.requestSwitch(to: makeSwitchSources()[1], reportingAs: nil)
+            }
+
+            XCTAssertEqual(monitor.autoSpace.phase, .idle, "interruption \(interruption)")
+        }
+    }
+
     /// The read runs on a global queue and reports on the main queue.
     private func waitForAutoSpaceRead(_ monitor: EventTapMonitor) {
         let deadline = Date(timeIntervalSinceNow: 2)
