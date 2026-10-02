@@ -135,6 +135,10 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// left its pane. The next pane read as having no rule gets it back, whether or not the switch
     /// has landed since; a rule, a trigger or a change of source by hand ends it.
     private var retiredSwitchSourceID: String?
+    /// The pane a read moved focus to while a trigger's first read was still to come. A read
+    /// carries no time, so the trigger was kept; that pane's own notice, when it comes, says
+    /// when focus moved and settles whether the trigger was pressed there.
+    private var paneThatKeptATriggerUnjudged: String?
 
     private struct WebsiteHold: Equatable, Sendable {
         /// What the user arrived with, to compare the decided target against. A pane that came
@@ -288,8 +292,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
         guard !context.isSecureInputInFrontmostApp else { return }
         forced = nil
         beforeForced = nil
-        // A browser's memory holds what was used on pages without a rule only.
-        guard !wasAskedByWebsiteRule, !isOnRuledPage else { return }
+        // A browser's memory holds what was used on pages without a rule only, and a terminal's
+        // nothing from a pane whose program is not known yet.
+        guard !wasAskedByWebsiteRule, !isOnRuledPage, !isProgramUndecided else { return }
         remember(sourceID, for: frontmostAppID)
     }
 
@@ -341,6 +346,10 @@ public struct AppMemoryTracker: Equatable, Sendable {
               before.sourceID != currentSourceID else {
             return .none
         }
+        // Either way the pane's source is decided here: a wait kept through the password field
+        // and a switch retired from the pane before have nothing left to do.
+        websiteHold = nil
+        retiredSwitchSourceID = nil
         if frontSurface?.kind == .terminal, !isWebsiteContextStale, case .slot(let slot)? = currentPageRuleTarget {
             guard slotOfSource(currentSourceID) != slot else { return .none }
             isWebsiteSwitchInFlight = true
@@ -384,7 +393,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
             sourceBeforeRestore = nil
         }
         // Leaving a browser from a page under a website rule records nothing for the browser.
-        if !context.isOwnSwitchPending, !context.isSecureInputInFrontmostApp, !isOnRuledPage,
+        if !context.isOwnSwitchPending, !context.isSecureInputInFrontmostApp, !isOnRuledPage, !isProgramUndecided,
            let currentSourceID, !isForced(currentSourceID, in: frontmostAppID) {
             remember(currentSourceID, for: frontmostAppID)
         }
@@ -483,8 +492,19 @@ public struct AppMemoryTracker: Equatable, Sendable {
     ) {
         guard let watch = programWatch, pid == watch.pid,
               actualFrontmostAppID == nil || actualFrontmostAppID == frontmostAppID,
-              actualTerminalPID == nil || actualTerminalPID == watch.pid,
-              paneID != focusedPaneID else { return }
+              actualTerminalPID == nil || actualTerminalPID == watch.pid else { return }
+        guard paneID != focusedPaneID else {
+            // A read moved focus here first and kept a trigger it could not date. The notice
+            // dates it: one confirmed before focus moved was pressed in the pane before, so this
+            // pane is decided again by its next read.
+            let keptATrigger = paneThatKeptATriggerUnjudged == paneID
+            paneThatKeptATriggerUnjudged = nil
+            guard keptATrigger, lastChoiceAt < time else { return }
+            paneChanged(to: paneID, noticeReceivedAt: time)
+            activationGeneration += 1
+            contextOnlyGeneration = nil
+            return
+        }
         let triggerWasInTheNewPane = contextOnlyGeneration == activationGeneration && lastChoiceAt >= time
         paneChanged(to: paneID, noticeReceivedAt: time)
         activationGeneration += 1
@@ -501,6 +521,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
     /// - A wait that began when the terminal came to the front keeps its fallback.
     private mutating func paneChanged(to paneID: String, noticeReceivedAt: TimeInterval?) {
         focusedPaneID = paneID
+        paneThatKeptATriggerUnjudged = nil
         isWebsiteContextStale = true
         if isWebsiteSwitchInFlight {
             retiredSwitchSourceID = retiredSwitchSourceID ?? sourceBeforeRestore
@@ -537,6 +558,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
                 focusedPaneID = paneID
             } else {
                 paneChanged(to: paneID, noticeReceivedAt: nil)
+                if contextOnlyGeneration == activationGeneration {
+                    paneThatKeptATriggerUnjudged = paneID
+                }
             }
         }
         var page = reading.context
@@ -554,7 +578,13 @@ public struct AppMemoryTracker: Equatable, Sendable {
             if page != .unknown { contextOnlyGeneration = nil }
             return .none
         }
-        guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
+        // A password field in front decides nothing, and takes nothing from what the read was
+        // to decide: the wait stays for the first read after it (or for `secureInputEnded`).
+        guard !context.isSecureInputInFrontmostApp else {
+            websiteHold = hold
+            return .none
+        }
+        guard !context.isTriggerPending else { return .none }
         // The pane is read: a switch retired when focus left the last one is settled now. A pane
         // without a rule gets back what was there before it, landed or not; a rule decides below.
         let retired = retiredSwitchSourceID
@@ -624,10 +654,12 @@ public struct AppMemoryTracker: Equatable, Sendable {
               let appID = frontmostAppID else {
             return .none
         }
+        // Under a password field the wait is kept for the first read after it.
+        guard !context.isSecureInputInFrontmostApp else { return .none }
         websiteHold = nil
         guard actualFrontmostAppID == nil || actualFrontmostAppID == appID,
               actualSurfacePID == nil || actualSurfacePID == frontSurface?.pid else { return .none }
-        guard !context.isTriggerPending, !context.isSecureInputInFrontmostApp else { return .none }
+        guard !context.isTriggerPending else { return .none }
         return websiteRestore(page: .unknown, appID: appID, arrivalSourceID: hold.arrivalSourceID ?? currentSourceID,
                               currentSourceID: currentSourceID, isRestorePending: context.isRestorePending,
                               fallsBackToApp: hold.fallsBackToApp, slotOfSource: slotOfSource)
@@ -682,6 +714,9 @@ public struct AppMemoryTracker: Equatable, Sendable {
         contextOnlyGeneration = nil
         focusedPaneID = nil
         retiredSwitchSourceID = nil
+        paneThatKeptATriggerUnjudged = nil
+        // Each watcher counts its own reads, and a new generation has seen none.
+        lastReadSequence = Int.min
     }
 
     /// The user chose a source in a browser (a trigger, or by hand). That starts a new generation:
@@ -691,6 +726,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         guard frontSurface != nil else { return }
         lastChoiceAt = time
         retiredSwitchSourceID = nil
+        paneThatKeptATriggerUnjudged = nil
         websiteHold = nil
         activationGeneration += 1
         contextOnlyGeneration = activationGeneration

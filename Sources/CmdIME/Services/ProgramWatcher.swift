@@ -106,22 +106,29 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         scheduleRead(after: 0)
     }
 
-    /// A focus event came in on the subscription, read there at `time`. The pane is asked for
-    /// here, since a tab or workspace event does not name it. When it cannot be read, nothing is
-    /// reported: the next read names its pane, and the tracker takes the focus change from that.
-    @objc private func focusPushed(_ time: NSNumber) {
+    /// A focus event for `notice.paneID` came in on the subscription, read there at `notice.time`.
+    /// The pane and the time go to main as they were received: asking again here could name a
+    /// pane focus has moved on to since.
+    @objc private func focusPushed(_ notice: FocusNotice) {
         guard let pid else { return }
         settleUntil = now + Self.focusSettle
-        guard let pane = Self.focusedPane() else {
-            scheduleRead(after: Self.focusSettle)
-            return
-        }
         let send = onPaneFocus
-        let at = time.doubleValue
-        DispatchQueue.main.async { send(pid, pane.paneID, at) }
+        let paneID = notice.paneID
+        let time = notice.time
+        DispatchQueue.main.async { send(pid, paneID, time) }
         // A notice for the pane the tracker already knows changes nothing there, so no new
         // target follows: read anyway, once the change has settled.
         scheduleRead(after: Self.focusSettle)
+    }
+
+    private final class FocusNotice: NSObject {
+        let paneID: String
+        let time: TimeInterval
+
+        init(paneID: String, time: TimeInterval) {
+            self.paneID = paneID
+            self.time = time
+        }
     }
 
     @objc private func focusStreamClosed() {
@@ -172,15 +179,15 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
               let descriptor = Self.herdr.openSubscription(HerdrSurface.focusSubscriptionRequest) else { return }
         focusStream = HerdrFocusStream(
             descriptor: descriptor,
-            onFocus: { [weak self] time in
-                self?.onWatcherThread(#selector(ProgramWatcher.focusPushed(_:)), with: NSNumber(value: time))
+            onFocus: { [weak self] paneID, time in
+                self?.onWatcherThread(#selector(ProgramWatcher.focusPushed(_:)), with: FocusNotice(paneID: paneID, time: time))
             },
             onClose: { [weak self] in self?.onWatcherThread(#selector(ProgramWatcher.focusStreamClosed)) }
         )
     }
 
     /// Called from the stream's queue. `thread` is set once, before any stream exists.
-    private func onWatcherThread(_ selector: Selector, with argument: NSNumber? = nil) {
+    private func onWatcherThread(_ selector: Selector, with argument: NSObject? = nil) {
         guard let thread else { return }
         perform(selector, on: thread, with: argument, waitUntilDone: false)
     }

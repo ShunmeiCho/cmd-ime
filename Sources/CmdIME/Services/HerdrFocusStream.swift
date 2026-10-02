@@ -13,8 +13,9 @@ final class HerdrFocusStream: @unchecked Sendable {
     // Touched only on `queue`.
     private var buffer = Data()
 
-    /// `onFocus` gets the time the event was read here (`ProcessInfo.systemUptime`).
-    init(descriptor: Int32, onFocus: @escaping @Sendable (TimeInterval) -> Void, onClose: @escaping @Sendable () -> Void) {
+    /// `onFocus` gets the pane an event names and the time the event was read here
+    /// (`ProcessInfo.systemUptime`): the two belong together, whenever the caller handles them.
+    init(descriptor: Int32, onFocus: @escaping @Sendable (String, TimeInterval) -> Void, onClose: @escaping @Sendable () -> Void) {
         source = DispatchSource.makeReadSource(fileDescriptor: descriptor, queue: queue)
         source.setEventHandler { [weak self] in
             guard let self else { return }
@@ -26,8 +27,9 @@ final class HerdrFocusStream: @unchecked Sendable {
                 return
             }
             self.buffer.append(contentsOf: chunk[..<count])
-            if self.takeLines().contains(where: Self.isFocusEvent) {
-                onFocus(ProcessInfo.processInfo.systemUptime)
+            let receivedAt = ProcessInfo.processInfo.systemUptime
+            for paneID in self.takeLines().compactMap(Self.focusedPane) {
+                onFocus(paneID, receivedAt)
             }
         }
         source.setCancelHandler { close(descriptor) }
@@ -50,12 +52,10 @@ final class HerdrFocusStream: @unchecked Sendable {
         return lines
     }
 
-    private static func isFocusEvent(_ line: String) -> Bool {
-        switch HerdrReplyParser.event(from: line) {
-        case .paneFocused, .tabFocused, .workspaceFocused:
-            return true
-        case .subscriptionStarted, .unknown:
-            return false
-        }
+    /// The pane a `pane_focused` event names. A tab or workspace switch pushes one too (measured
+    /// 2026-10-02), so the events that name no pane are not needed.
+    private static func focusedPane(_ line: String) -> String? {
+        guard case .paneFocused(let paneID, _) = HerdrReplyParser.event(from: line) else { return nil }
+        return paneID
     }
 }

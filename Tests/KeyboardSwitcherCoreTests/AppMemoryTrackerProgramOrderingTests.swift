@@ -81,16 +81,38 @@ struct AppMemoryTrackerProgramOrderingTests {
         #expect(read(&state, 2, .rule("zsh"), pane: "B", on: japanese) == .selectSlot(.english))
     }
 
-    @Test("R3-1: a read naming the new pane, then its notice with any time, keeps a trigger made there",
-          arguments: [1.0, 3.0])
-    func readThenNoticeForTheSamePane(noticeAt: Double) {
+    @Test("R3-1: a read naming the new pane, then that pane's notice received before the trigger, keeps the trigger")
+    func readThenEarlierNoticeForTheSamePane() {
         var state = onClaudeInA()
         trigger(&state, japanese, at: 2)
 
         #expect(read(&state, 2, .rule("zsh"), pane: "B", on: japanese) == .none)
-        focus(&state, "B", at: noticeAt)
+        focus(&state, "B", at: 1)
 
         #expect(read(&state, 3, .rule("zsh"), pane: "B", on: japanese) == .none)
+    }
+
+    @Test("R4-2: a read naming the new pane cannot keep a trigger of the pane left: the pane's notice dates it",
+          arguments: [ProgramContext.unknown, .rule("zsh")])
+    func readThenLaterNoticeRetiresTheOldTrigger(firstRead: ProgramContext) {
+        var state = onClaudeInA()
+        trigger(&state, japanese, at: 1)
+
+        #expect(read(&state, 2, firstRead, pane: "C", on: japanese) == .none)
+        focus(&state, "C", at: 2)
+
+        #expect(read(&state, 3, .rule("zsh"), pane: "C", on: japanese) == .selectSlot(.english))
+    }
+
+    @Test("R4-1: notices for B and then C, each with its own time, leave a trigger made in B behind")
+    func triggerBetweenTwoNotices() {
+        var state = onClaudeInA()
+        trigger(&state, japanese, at: 2)
+
+        focus(&state, "B", at: 1)
+        focus(&state, "C", at: 3)
+
+        #expect(read(&state, 2, .rule("zsh"), pane: "C", on: japanese) == .selectSlot(.english))
     }
 
     @Test("R3: the latest of several choices stands when the notice was received before or with it",
@@ -275,6 +297,84 @@ struct AppMemoryTrackerProgramOrderingTests {
         focus(&state, "B", at: 1)
 
         #expect(state.secureInputEnded(currentSourceID: abc, context: quiet, slotOfSource: slot) == .select(sourceID: japanese))
+    }
+
+    @Test("R4-3: nothing is remembered for a terminal while its program is not known")
+    func undecidedProgramRemembersNothing() {
+        var byTrigger = tracker()
+        activate(&byTrigger)
+        trigger(&byTrigger, japanese, at: 1)
+        #expect(byTrigger.rememberedSourceID(for: terminal) == nil)
+
+        var byLeaving = tracker()
+        activate(&byLeaving)
+        byLeaving.sourceChanged(to: japanese, context: quiet, at: 1)
+        _ = byLeaving.appActivated("editor", currentSourceID: japanese, context: quiet)
+        #expect(byLeaving.rememberedSourceID(for: terminal) == nil)
+
+        var stale = tracker()
+        activate(&stale)
+        _ = read(&stale, 1, .noRule, on: abc)
+        stale.sourceChanged(to: chinese, context: quiet)
+        focus(&stale, "B", at: 1)
+        stale.sourceChanged(to: japanese, context: quiet, at: 2)
+        _ = stale.appActivated("editor", currentSourceID: japanese, context: quiet)
+        #expect(stale.rememberedSourceID(for: terminal) == chinese)
+    }
+
+    @Test("R4-4: a read under a password field decides nothing and leaves the pane's rule for the read after it")
+    func readUnderAPasswordFieldDefers() {
+        var state = onClaudeInA()
+        state.sourceChanged(to: abc, context: quiet)
+
+        // Already ASCII: the password field of pane B replaces nothing.
+        #expect(read(&state, 2, .rule("claude"), pane: "B", on: abc, context: secure) == .none)
+        #expect(!state.isAwaitingSecureInputEnd)
+        #expect(state.programHoldExpired(generation: state.activationGeneration, currentSourceID: abc,
+                                         context: secure, slotOfSource: slot) == .none)
+
+        #expect(read(&state, 3, .rule("claude"), pane: "B", on: abc) == .selectSlot(.chinese))
+    }
+
+    @Test("R4-5: a password put-back by the pane's rule ends the retired switch")
+    func passwordRuleEndsTheRetiredSwitch() {
+        var state = AppMemoryTracker(ownAppID: "cmdime", frontmostAppID: "editor", settings: AppActivationSettings(
+            restoresAfterPasswordField: true, slotIDs: [.english, .chinese, .japanese],
+            programRules: [ProgramRule(name: "claude", target: .slot(.chinese)),
+                           ProgramRule(name: "vim", target: .slot(.japanese))]))
+        activate(&state)
+        #expect(read(&state, 1, .rule("claude"), on: abc) == .selectSlot(.chinese))
+        focus(&state, "B", at: 1)
+        state.switchConfirmed(sourceID: chinese, context: pending)
+        state.sourceChanged(to: abc, context: secure, at: 2)
+        #expect(read(&state, 2, .rule("vim"), pane: "B", on: abc, context: secure) == .none)
+
+        #expect(state.secureInputEnded(currentSourceID: abc, context: quiet, slotOfSource: slot) == .selectSlot(.japanese))
+        state.switchConfirmed(sourceID: japanese, context: pending)
+
+        // vim exits in B: a program without a rule changes nothing, and pane A's switch is long over.
+        #expect(read(&state, 3, .noRule, pane: "B", on: japanese) == .none)
+    }
+
+    @Test("R4-6: a terminal's reads are not measured against the count of a browser's, nor the other way round")
+    func watchersCountTheirOwnReads() {
+        let browser = "com.google.Chrome"
+        let browserPID: Int32 = 900
+        var state = AppMemoryTracker(ownAppID: "cmdime", frontmostAppID: "editor", settings: AppActivationSettings(
+            slotIDs: [.english, .chinese, .japanese],
+            websiteRules: [WebsiteRule(domain: "example.jp", target: .slot(.japanese))],
+            programRules: [ProgramRule(name: "claude", target: .slot(.chinese))]))
+        _ = state.appActivated(browser, currentSourceID: abc, context: quiet, browserPID: browserPID, slotOfSource: slot)
+        _ = state.websiteRead(WebsiteReading(pid: browserPID, generation: state.activationGeneration, sequence: 50,
+                                             context: .noRule), currentSourceID: abc, context: quiet, slotOfSource: slot)
+
+        activate(&state)
+        #expect(read(&state, 1, .rule("claude"), on: abc) == .selectSlot(.chinese))
+
+        _ = state.appActivated(browser, currentSourceID: chinese, context: quiet, browserPID: browserPID, slotOfSource: slot)
+        #expect(state.websiteRead(WebsiteReading(pid: browserPID, generation: state.activationGeneration, sequence: 51,
+                                                 context: .rule("example.jp")), currentSourceID: chinese, context: quiet,
+                                  slotOfSource: slot) == .selectSlot(.japanese))
     }
 
     @Test("R1-5b: editing only Program Rules cannot reapply an unchanged website over a trigger")
