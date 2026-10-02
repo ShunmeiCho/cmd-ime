@@ -23,6 +23,29 @@ public enum TerminalScriptSource {
         /// The pane (a terminal id or a tty) and the foreground process, found one way or the other.
         case process(paneID: String, pid: Int32)
         case device(paneID: String, device: String)
+
+        public var paneID: String {
+            switch self {
+            case .process(let pane, _), .device(let pane, _): pane
+            }
+        }
+    }
+
+    /// What two reads (terminal answer, then the kernel's program) taken one after the other say.
+    public enum Confirmation: Equatable, Sendable {
+        /// The same tab running the same program both times: that program (nil when the kernel could not name it).
+        case program(paneID: String, name: String?)
+        /// Another tab, or another program in the same tab: nothing is known yet; read again.
+        case changed(paneID: String)
+    }
+
+    /// The program is kept only when the second read names the same tab and the same program, so a program
+    /// that exits (or a tab that changes) between the reads never has its rule applied to what replaced it.
+    public static func confirm(first: Answer, firstProgram: String?, second: Answer, secondProgram: String?) -> Confirmation {
+        guard first.paneID == second.paneID, firstProgram == secondProgram else {
+            return .changed(paneID: second.paneID)
+        }
+        return .program(paneID: first.paneID, name: firstProgram)
     }
 
     private static let fieldSeparator = "\t"
