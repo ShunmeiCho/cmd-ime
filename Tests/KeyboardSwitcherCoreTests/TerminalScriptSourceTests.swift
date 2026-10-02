@@ -37,28 +37,24 @@ struct TerminalScriptSourceTests {
         #expect(TerminalScriptSource.answer(kind: .terminalApp, reply: "missing value") == nil)
     }
 
-    @Test("a terminal without the property is not asked again until it is relaunched")
-    func unsupportedUntilRelaunch() {
+    @Test("a failed query is only 'cannot tell': the terminal is asked again")
+    func failuresDoNotStopTheAsking() {
         var availability = TerminalScriptSource.Availability()
-        #expect(availability.shouldAsk(appPID: 10))
 
         availability.failed(errorCode: -1728, appPID: 10)
+        availability.failed(errorCode: -1712, appPID: 10)
 
-        #expect(!availability.shouldAsk(appPID: 10))
-        #expect(availability.shouldAsk(appPID: 11))
+        #expect(availability.shouldAsk(appPID: 10))
     }
 
-    @Test("a refusal stops the asking; a transient error once it has answered does not")
-    func refusedAndTransient() {
-        var refused = TerminalScriptSource.Availability()
-        refused.failed(errorCode: -1743, appPID: 10)
-        #expect(!refused.shouldAsk(appPID: 11))
+    @Test("a refused consent stops the asking")
+    func refused() {
+        var availability = TerminalScriptSource.Availability()
+        availability.answered()
 
-        var answered = TerminalScriptSource.Availability()
-        answered.answered()
-        answered.failed(errorCode: -1728, appPID: 10)
-        answered.failed(errorCode: -1712, appPID: 10)
-        #expect(answered.shouldAsk(appPID: 10))
+        availability.failed(errorCode: -1743, appPID: 10)
+
+        #expect(!availability.shouldAsk(appPID: 11))
     }
 
     @Test("a Ghostty whose dictionary lacks pid is not asked; one that has it is")

@@ -94,6 +94,8 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$MIN_SYSTEM_VERSION</string>
   <key>NSHumanReadableCopyright</key>
   <string>Copyright © 2026 Shunmei Cho</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>CmdIME asks your terminal which program runs in its tab in front, to apply your program rules. It never asks for what is on the screen.</string>
   <key>NSInputMonitoringUsageDescription</key>
   <string>CmdIME listens for your configured keyboard shortcuts to switch input sources.</string>
   <key>NSPrincipalClass</key>

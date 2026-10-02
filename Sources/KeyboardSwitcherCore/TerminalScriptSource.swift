@@ -70,15 +70,14 @@ public enum TerminalScriptSource {
         }
     }
 
-    /// Whether CmdIME asks a terminal app at all. A script error that says the property does not
-    /// exist (an older Ghostty) or a refusal by Automation consent stops the asking; other errors
-    /// are treated as "cannot tell this time".
+    /// Whether CmdIME asks a terminal app at all. Whether it CAN answer is decided before, from its
+    /// own scripting dictionary (`dictionaryOffers`); a failed query never proves the opposite (a
+    /// window that closed, no window yet, a timeout), so it is only "cannot tell this time". The one
+    /// failure that stops the asking is a refused Automation consent.
     public struct Availability: Equatable, Sendable {
         public enum State: Equatable, Sendable {
             case untried
             case available
-            /// Lacks the property; tried again after the app is relaunched (a new pid).
-            case unsupported(pid: Int32)
             /// The user refused Automation consent; not asked again while CmdIME runs.
             case refused
         }
@@ -87,13 +86,8 @@ public enum TerminalScriptSource {
 
         public init() {}
 
-        /// Ask now? A relaunched app (another pid) is tried once more after `unsupported`.
         public func shouldAsk(appPID: Int32) -> Bool {
-            switch state {
-            case .untried, .available: true
-            case .unsupported(let pid): pid != appPID
-            case .refused: false
-            }
+            state != .refused
         }
 
         public mutating func answered() {
@@ -102,22 +96,12 @@ public enum TerminalScriptSource {
 
         /// The Apple Event error code a failed query returned.
         public mutating func failed(errorCode: Int, appPID: Int32) {
-            switch errorCode {
-            case Self.notAuthorized:
+            if errorCode == Self.notAuthorized {
                 state = .refused
-            case Self.noSuchProperty, Self.cannotGet:
-                // Once it has answered, the property exists: a later "can't get" is a closed window.
-                if state != .available { state = .unsupported(pid: appPID) }
-            default:
-                break
             }
         }
 
         /// errAEEventNotPermitted: Automation consent refused.
         static let notAuthorized = -1743
-        /// errAEUnknownObjectType / errAENoSuchObject-like replies for a property the app's
-        /// dictionary lacks; seen as -1728 ("Can't get") from Ghostty 1.3.1 (measured 2026-10-02).
-        static let cannotGet = -1728
-        static let noSuchProperty = -10000
     }
 }

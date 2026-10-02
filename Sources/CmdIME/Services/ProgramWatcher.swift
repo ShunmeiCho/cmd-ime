@@ -177,16 +177,28 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         case .reply(let reply):
             guard let found = TerminalScriptSource.answer(kind: kind, reply: reply) else { return Answer(context: .unknown) }
             availability.answered()
+            let paneID: String
+            let program: String?
             switch found {
-            case .process(let paneID, let processID):
-                return Answer(context: HerdrSurface.context(program: TerminalDevice.program(ofPID: processID), rules: rules),
-                              paneID: "terminal:" + paneID)
-            case .device(let paneID, let device):
-                return Answer(context: HerdrSurface.context(program: TerminalDevice.foregroundProgram(ofDevice: device), rules: rules),
-                              paneID: "terminal:" + paneID)
+            case .process(let pane, let processID):
+                (paneID, program) = (pane, TerminalDevice.program(ofPID: processID))
+            case .device(let pane, let device):
+                (paneID, program) = (pane, TerminalDevice.foregroundProgram(ofDevice: device))
             }
+            // The terminal vouched for the tab in front when it answered, not now: ask again, as the
+            // Herdr read does, and keep the program only if the same tab is still in front.
+            guard case .reply(let again) = Self.runScript(TerminalScriptSource.script(for: kind)),
+                  let foundAgain = TerminalScriptSource.answer(kind: kind, reply: again) else { return Answer(context: .unknown) }
+            let paneNow: String = switch foundAgain {
+            case .process(let pane, _), .device(let pane, _): pane
+            }
+            guard paneNow == paneID else {
+                return Answer(context: .unknown, paneID: "terminal:" + paneNow, paneChangedDuringRead: true)
+            }
+            return Answer(context: HerdrSurface.context(program: program, rules: rules), paneID: "terminal:" + paneID)
         case .failed(let code):
             availability.failed(errorCode: code, appPID: pid)
+            // A refusal: this terminal is read as one that cannot say. Anything else: cannot tell.
             return availability.shouldAsk(appPID: pid) ? Answer(context: .unknown) : nil
         case .timedOut:
             return Answer(context: .unknown)
