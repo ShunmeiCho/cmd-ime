@@ -46,8 +46,9 @@ struct AppMemoryTrackerProgramOrderingTests {
         state.sourceChanged(to: abc, context: AppMemoryContext())
         state.sourceChanged(to: chinese, context: AppMemoryContext())
         state.triggerConfirmed(sourceID: japanese, actualFrontmostAppID: terminal,
-                               context: AppMemoryContext(isOwnSwitchPending: true), terminalPID: pid)
-        state.paneFocused(pid: pid, actualFrontmostAppID: terminal, actualTerminalPID: pid)
+                               context: AppMemoryContext(isOwnSwitchPending: true), terminalPID: pid, at: 2)
+        // The notice was received before the trigger (at 1) and is handled after it.
+        state.paneFocused(pid: pid, at: 1, actualFrontmostAppID: terminal, actualTerminalPID: pid)
         #expect(read(&state, sequence: 2, program: .rule("zsh"), source: japanese) == .none)
     }
 
@@ -58,7 +59,7 @@ struct AppMemoryTrackerProgramOrderingTests {
                                terminalPID: pid, slotOfSource: slot)
         #expect(read(&state, sequence: 1, program: .rule("claude"), source: abc) == .selectSlot(.chinese))
         // The monitor is awaiting its Kana delay or selection-confirmation retry.
-        state.paneFocused(pid: pid)
+        state.paneFocused(pid: pid, at: 1)
         #expect(read(&state, sequence: 2, program: .noRule, source: abc, pending: true)
                 == .putBack(sourceID: abc))
     }
@@ -72,7 +73,7 @@ struct AppMemoryTrackerProgramOrderingTests {
         state.switchConfirmed(sourceID: chinese,
                               context: AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true))
         #expect(state.rememberedSourceID(for: terminal) == nil)
-        state.paneFocused(pid: pid)
+        state.paneFocused(pid: pid, at: 1)
         #expect(read(&state, sequence: 2, program: .unknown, source: chinese) == .none)
         _ = state.appActivated("editor", currentSourceID: chinese, context: AppMemoryContext())
         #expect(state.rememberedSourceID(for: terminal) == nil)
@@ -88,7 +89,7 @@ struct AppMemoryTrackerProgramOrderingTests {
                               context: AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true))
         state.sourceChanged(to: abc, context: AppMemoryContext())
         // Physical restore happened already; its distributed notification is delivered after focus.
-        state.paneFocused(pid: pid)
+        state.paneFocused(pid: pid, at: 1)
         state.sourceChanged(to: chinese, context: AppMemoryContext())
         #expect(read(&state, sequence: 2, program: .rule("zsh"), source: chinese) == .selectSlot(.english))
         #expect(read(&state, sequence: 3, program: .rule("zsh"), source: chinese) == .none)
@@ -104,9 +105,9 @@ struct AppMemoryTrackerProgramOrderingTests {
                               context: AppMemoryContext(isOwnSwitchPending: true, isRestorePending: true))
         state.sourceChanged(to: abc, context: AppMemoryContext(isSecureInputInFrontmostApp: true))
         #expect(state.isAwaitingSecureInputEnd)
-        state.paneFocused(pid: pid)
+        state.paneFocused(pid: pid, at: 1)
         #expect(read(&state, sequence: 2, program: .rule("zsh"), source: abc) == .none)
-        #expect(state.secureInputEnded(currentSourceID: abc, context: AppMemoryContext()) == .none)
+        #expect(state.secureInputEnded(currentSourceID: abc, context: AppMemoryContext(), slotOfSource: slot) == .none)
     }
 
     @Test("editing only Program Rules cannot reapply an unchanged website over a trigger")

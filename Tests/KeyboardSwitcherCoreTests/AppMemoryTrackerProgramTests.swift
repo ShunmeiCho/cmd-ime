@@ -107,11 +107,11 @@ struct AppMemoryTrackerProgramTests {
         _ = read(&tracker, 1, .rule("claude"), on: abc)
         tracker.switchConfirmed(sourceID: pinyin, context: restorePending)
 
-        tracker.paneFocused(pid: ghosttyPID)
+        tracker.paneFocused(pid: ghosttyPID, at: 1)
         #expect(read(&tracker, 2, .rule("zsh"), on: pinyin) == .selectSlot(.english))
         tracker.switchConfirmed(sourceID: abc, context: restorePending)
 
-        tracker.paneFocused(pid: ghosttyPID)
+        tracker.paneFocused(pid: ghosttyPID, at: 1)
         #expect(read(&tracker, 3, .rule("claude"), on: abc) == .selectSlot(.chinese))
     }
 
@@ -125,7 +125,7 @@ struct AppMemoryTrackerProgramTests {
         // The read that follows the user's choice only records the program.
         #expect(read(&tracker, 2, .rule("claude"), on: abc) == .none)
 
-        tracker.paneFocused(pid: ghosttyPID)
+        tracker.paneFocused(pid: ghosttyPID, at: 1)
 
         #expect(read(&tracker, 3, .rule("claude"), on: abc) == .selectSlot(.chinese))
     }
@@ -152,7 +152,7 @@ struct AppMemoryTrackerProgramTests {
         _ = read(&tracker, 1, .rule("claude"), on: abc)
         tracker.switchConfirmed(sourceID: pinyin, context: restorePending)
 
-        tracker.paneFocused(pid: ghosttyPID)
+        tracker.paneFocused(pid: ghosttyPID, at: 1)
 
         #expect(read(&tracker, 2, .noRule, on: pinyin) == .none)
     }
@@ -179,7 +179,7 @@ struct AppMemoryTrackerProgramTests {
         tracker.sourceChanged(to: abc, context: quiet)
         #expect(read(&tracker, 2, .rule("claude"), on: abc) == .none)
         tracker.sourceChanged(to: pinyin, context: quiet)
-        tracker.paneFocused(pid: ghosttyPID)
+        tracker.paneFocused(pid: ghosttyPID, at: 1)
 
         #expect(read(&tracker, 3, .rule("zsh"), on: pinyin) == .selectSlot(.english))
     }
@@ -191,7 +191,7 @@ struct AppMemoryTrackerProgramTests {
         _ = read(&tracker, 1, .rule("claude"), on: abc)
         let old = ProgramReading(pid: ghosttyPID, generation: tracker.activationGeneration, sequence: 2, context: .rule("zsh"))
 
-        tracker.paneFocused(pid: ghosttyPID)
+        tracker.paneFocused(pid: ghosttyPID, at: 1)
 
         #expect(tracker.programRead(old, currentSourceID: pinyin, context: quiet, slotOfSource: slotOf) == .none)
     }
@@ -202,11 +202,40 @@ struct AppMemoryTrackerProgramTests {
         _ = activateGhostty(&tracker)
         _ = read(&tracker, 1, .rule("claude"), on: abc)
         tracker.switchConfirmed(sourceID: pinyin, context: restorePending)
-        tracker.paneFocused(pid: ghosttyPID)
+        tracker.paneFocused(pid: ghosttyPID, at: 1)
 
         tracker.triggerConfirmed(sourceID: kotoeri, actualFrontmostAppID: ghostty, context: ownPending, terminalPID: ghosttyPID)
 
         #expect(read(&tracker, 2, .rule("zsh"), on: kotoeri) == .none)
+        #expect(read(&tracker, 3, .rule("zsh"), on: kotoeri) == .none)
+    }
+
+    @Test("after a password field, a pane whose program has a rule gets the rule's slot back")
+    func passwordFieldInARuledPane() {
+        var tracker = makeTracker()
+        _ = activateGhostty(&tracker)
+        _ = read(&tracker, 1, .rule("claude"), on: abc)
+        tracker.switchConfirmed(sourceID: pinyin, context: restorePending)
+
+        tracker.sourceChanged(to: abc, context: AppMemoryContext(isSecureInputInFrontmostApp: true))
+
+        #expect(tracker.secureInputEnded(currentSourceID: abc, context: quiet, slotOfSource: slotOf) == .selectSlot(.chinese))
+    }
+
+    @Test("a return to the source an outside change replaced takes that choice back; any other change is a choice")
+    func outsideChangeAndReturn() {
+        var tracker = makeTracker()
+        _ = activateGhostty(&tracker)
+        _ = read(&tracker, 1, .rule("zsh"), on: abc)
+
+        // Away and back before the read of the program that started meanwhile: no choice stands.
+        tracker.sourceChanged(to: kotoeri, context: quiet)
+        tracker.sourceChanged(to: abc, context: quiet)
+        #expect(read(&tracker, 2, .rule("claude"), on: abc) == .selectSlot(.chinese))
+        tracker.switchConfirmed(sourceID: pinyin, context: restorePending)
+
+        // A change that stays is a choice: the next read only records the program.
+        tracker.sourceChanged(to: kotoeri, context: quiet)
         #expect(read(&tracker, 3, .rule("zsh"), on: kotoeri) == .none)
     }
 
@@ -265,8 +294,8 @@ struct AppMemoryTrackerProgramTests {
         _ = activateGhostty(&tracker)
         let generation = tracker.activationGeneration
 
-        tracker.paneFocused(pid: 9)
-        tracker.paneFocused(pid: ghosttyPID, actualFrontmostAppID: wechat)
+        tracker.paneFocused(pid: 9, at: 1)
+        tracker.paneFocused(pid: ghosttyPID, at: 1, actualFrontmostAppID: wechat)
 
         #expect(tracker.activationGeneration == generation)
         let reading = ProgramReading(pid: ghosttyPID, generation: generation, sequence: 1, context: .rule("claude"))
