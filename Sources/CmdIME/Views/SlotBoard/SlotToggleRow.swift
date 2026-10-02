@@ -69,7 +69,7 @@ struct SlotToggleRow: View {
     }
 
     private func keyMenu(pair: [InputRole]) -> some View {
-        ConsoleMenuButton(title: keyValue) {
+        ConsoleMenuButton(title: shortKeyValue) {
             Button("None") { model.commitToggle(nil, slots: pair[0], pair[1]) }
                 .accessibilityValue(trigger == nil ? String(localized: "Selected") : String(localized: "Not selected"))
             ForEach([TriggerGesture.tap, .doubleTap], id: \.self) { gesture in
@@ -102,6 +102,15 @@ struct SlotToggleRow: View {
         guard next != pair else { return }
         draft = next
         if let trigger { model.commitToggle(trigger, slots: next[0], next[1]) }
+    }
+
+    /// Same voice as the slot cards' tap menus: glyph and side ("⌥ Right ×2"), so it fits the row.
+    private var shortKeyValue: String {
+        guard let trigger else { return String(localized: "None") }
+        guard trigger.kind == .oneShotModifier else { return trigger.localizedDisplayName }
+        let cap = LiveKeycap(keyName: trigger.keyName)
+        let side = cap.detail == "L" ? String(localized: "Left") : cap.detail == "R" ? String(localized: "Right") : nil
+        return [cap.label, side, trigger.gesture == .doubleTap ? "×2" : nil].compactMap { $0 }.joined(separator: " ")
     }
 
     private var keyValue: String {

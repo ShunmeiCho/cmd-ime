@@ -277,6 +277,7 @@ private struct CompactLiveKeysStrip: View {
     private static let shiftWidth: CGFloat = 96
     private static let modifierWidth: CGFloat = 58
 
+    @ViewBuilder
     private var chordKeys: some View {
         ForEach(Array(model.config.chordTriggers.enumerated()), id: \.offset) { _, entry in
             LiveStripKey(
@@ -287,6 +288,21 @@ private struct CompactLiveKeysStrip: View {
             )
             .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.localizedDisplayName)")
         }
+        if let toggle = toggleEntry, toggle.trigger.kind == .keyPress {
+            LiveStripKey(Self.symbols(for: toggle.trigger), role: toggle.slot,
+                         detail: [Self.sides(of: toggle.trigger), Self.toggleMark].compactMap { $0 }.joined(),
+                         isActive: toggle.isActive)
+                .accessibilityLabel("\(SwitcherConfig.toggleDisplayName), \(toggle.trigger.localizedDisplayName)")
+        }
+    }
+
+    private static let toggleMark = "⇄"
+
+    /// The Toggle's key lights while either of its slots is in use, in that slot's color.
+    private var toggleEntry: (slot: InputRole, trigger: KeyTrigger, isActive: Bool)? {
+        guard let trigger = model.config.toggleBinding?.trigger, let pair = model.config.toggleSlots else { return nil }
+        let active = model.activeRole.flatMap { $0 == pair.0 || $0 == pair.1 ? $0 : nil }
+        return (active ?? pair.0, trigger, active != nil)
     }
 
     // Physical one-shot modifier keys, ordered like the bottom row of a keyboard.
@@ -302,7 +318,13 @@ private struct CompactLiveKeysStrip: View {
                     && $0.trigger.kind == .oneShotModifier && $0.trigger.keyName == keyName
             }.map { (slot: slot.id, trigger: $0.trigger) }
         }
-        if entries.isEmpty {
+        let toggle = toggleEntry.flatMap { $0.trigger.kind == .oneShotModifier && $0.trigger.keyName == keyName ? $0 : nil }
+        if entries.isEmpty, let toggle {
+            LiveStripKey(keycap.label, role: toggle.slot,
+                         detail: [keycap.detail, toggle.trigger.gesture == .doubleTap ? "×2" : nil, Self.toggleMark].compactMap { $0 }.joined(),
+                         isActive: toggle.isActive, fillsWidth: true)
+                .accessibilityLabel("\(SwitcherConfig.toggleDisplayName), \(toggle.trigger.localizedDisplayName)")
+        } else if entries.isEmpty {
             LiveStripKey(keycap.label, fillsWidth: true)
         } else {
             // Multiple bindings keep the same physical key column. Gesture text
