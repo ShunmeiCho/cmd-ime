@@ -23,9 +23,15 @@ let package = Package(
             name: "keyboardctl",
             dependencies: ["KeyboardSwitcherCore"]
         ),
+        // Test-only: a load-time hook that keeps the test process out of the Dock.
+        .target(
+            name: "TestProcessType",
+            path: "Tests/TestProcessType",
+            linkerSettings: [.linkedFramework("ApplicationServices")]
+        ),
         .testTarget(
             name: "KeyboardSwitcherCoreTests",
-            dependencies: ["KeyboardSwitcherCore"]
+            dependencies: ["KeyboardSwitcherCore", "TestProcessType"]
         ),
     ]
 )
