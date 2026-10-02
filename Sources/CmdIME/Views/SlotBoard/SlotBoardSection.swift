@@ -62,6 +62,7 @@ struct SlotBoardSection: View {
                                    insertionTint: dragTint, onUndo: undo, onDismiss: dismissNotice, onAdd: add) { slot in
                         card(for: slot)
                     }
+                    SlotToggleRow(model: model)
                     Text("Single tap, Double tap and Shortcut are optional. Any one you set switches to its slot.")
                         .font(DesignTokens.Typography.auxiliary)
                         .foregroundStyle(DesignTokens.Colors.textMuted)

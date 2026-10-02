@@ -13,7 +13,7 @@ public enum ToggleBindingError: Error, Equatable, LocalizedError, Sendable {
         case let .reservedByMacOS(trigger): CoreLocalization.text("%@ is reserved by macOS input source switching", String(describing: trigger.displayName))
         case let .conflictingBinding(binding): CoreLocalization.text("The trigger %@ is already assigned.", String(describing: binding.trigger.displayName))
         case .sameSlot: CoreLocalization.text("Toggle needs two different slots.")
-        case let .unknownSlot(id): CoreLocalization.text("No slot named %@.", id.rawValue)
+        case let .unknownSlot(id): CoreLocalization.text("Unknown slot \"%@\".", String(describing: id.rawValue))
         }
     }
 }

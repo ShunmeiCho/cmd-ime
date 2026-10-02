@@ -731,6 +731,27 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Nil on success, else the reason the Toggle was refused. A nil trigger removes it.
+    @discardableResult
+    func commitToggle(_ trigger: KeyTrigger?, slots first: InputRole, _ second: InputRole) -> String? {
+        do {
+            let next = try config.replacingToggleBinding(with: trigger, slots: first, second)
+            if next != config {
+                guard commitShowingWindowFailure(next) else { return statusText }
+            }
+            statusText = trigger.map { String(localized: "\(SwitcherConfig.toggleDisplayName): \($0.localizedDisplayName)") }
+                ?? String(localized: "Removed the \(SwitcherConfig.toggleDisplayName) trigger")
+            return nil
+        } catch .conflictingBinding(let binding) {
+            let reason = String(localized: "\(binding.trigger.localizedDisplayName) is already used by \(config.ownerDescription(of: binding))")
+            statusText = reason
+            return reason
+        } catch {
+            statusText = error.localizedDescription
+            return error.localizedDescription
+        }
+    }
+
     func setRememberInputSourcePerApp(_ enabled: Bool) {
         var next = config
         next.rememberInputSourcePerApp = enabled
