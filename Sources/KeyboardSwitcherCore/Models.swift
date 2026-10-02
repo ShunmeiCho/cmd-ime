@@ -376,6 +376,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var restoreAfterPasswordField: Bool
     /// A bubble when Caps Lock turns on or off. Off unless the user turns it on.
     public var showCapsLockIndicator: Bool
+    /// Auto space (issue #10): a half-width space before the first letter or digit typed after a trigger
+    /// switch into a Latin source, when the character before the caret is Han. Off unless turned on.
+    public var autoSpaceAfterHan: Bool
     public var bindings: [KeyBinding]
     /// How many bindings in the file this build could not read, so the app can say so instead of
     /// letting them disappear quietly. Not persisted: it describes one load, not the config.
@@ -403,6 +406,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         appDefaultSlot: InputRole? = nil,
         restoreAfterPasswordField: Bool = true,
         showCapsLockIndicator: Bool = false,
+        autoSpaceAfterHan: Bool = false,
         bindings: [KeyBinding],
         inputSources: [String: RoleInputSourcePreference]
     ) {
@@ -426,6 +430,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.appDefaultSlot = appDefaultSlot
         self.restoreAfterPasswordField = restoreAfterPasswordField
         self.showCapsLockIndicator = showCapsLockIndicator
+        self.autoSpaceAfterHan = autoSpaceAfterHan
         self.bindings = bindings
         self.inputSources = inputSources
     }
@@ -591,6 +596,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case appDefaultSlot
         case restoreAfterPasswordField
         case showCapsLockIndicator
+        case autoSpaceAfterHan
         case bindings
         case inputSources
     }
@@ -651,6 +657,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         appDefaultSlot = try container.decodeIfPresent(InputRole.self, forKey: .appDefaultSlot)
         restoreAfterPasswordField = try container.decodeIfPresent(Bool.self, forKey: .restoreAfterPasswordField) ?? true
         showCapsLockIndicator = try container.decodeIfPresent(Bool.self, forKey: .showCapsLockIndicator) ?? false
+        autoSpaceAfterHan = try container.decodeIfPresent(Bool.self, forKey: .autoSpaceAfterHan) ?? false
         let decodedBindings = try container.decode([LenientKeyBinding].self, forKey: .bindings)
         bindings = decodedBindings.compactMap(\.binding)
         unreadableBindingCount = decodedBindings.count - bindings.count
@@ -691,6 +698,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         try container.encodeIfPresent(appDefaultSlot, forKey: .appDefaultSlot)
         try container.encode(restoreAfterPasswordField, forKey: .restoreAfterPasswordField)
         try container.encode(showCapsLockIndicator, forKey: .showCapsLockIndicator)
+        try container.encode(autoSpaceAfterHan, forKey: .autoSpaceAfterHan)
         try container.encode(bindings, forKey: .bindings)
         try container.encode(inputSources, forKey: .inputSources)
     }
