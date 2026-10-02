@@ -27,9 +27,10 @@ struct BrowserCatalogTests {
         #expect(BrowserCatalog.isBrowser(bundleID))
     }
 
-    @Test("the catalog holds those 18 and nothing else")
+    @Test("the catalog holds those 18 and Aside, and nothing else")
     func catalogSize() {
-        #expect(BrowserCatalog.bundleIDs.count == 18)
+        #expect(BrowserCatalog.bundleIDs.count == 19)
+        #expect(BrowserCatalog.engine(for: "at.studio.AsideBrowser") == .chromium)
     }
 
     @Test("an app that is not a listed browser is not one", arguments: [
@@ -41,9 +42,10 @@ struct BrowserCatalogTests {
         #expect(!BrowserCatalog.isMeasured(bundleID))
     }
 
-    @Test("only Safari and Chrome are measured")
+    @Test("only Safari, Chrome and Aside are measured")
     func measuredBrowsers() {
-        #expect(Set(BrowserCatalog.bundleIDs.filter(BrowserCatalog.isMeasured)) == ["com.apple.Safari", "com.google.Chrome"])
+        #expect(Set(BrowserCatalog.bundleIDs.filter(BrowserCatalog.isMeasured))
+            == ["com.apple.Safari", "com.google.Chrome", "at.studio.AsideBrowser"])
     }
 }
 

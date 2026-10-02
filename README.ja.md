@@ -376,6 +376,12 @@ CmdIME 専用に登録され、システム全体には何もインストール�
 
 <p align="center"><sub>「アプリ」ページ：アプリのルール、アプリの記憶、その他のアプリのスロット、パスワード欄のスイッチ。</sub></p>
 
+<p align="center">
+  <img src="Assets/readme/website-rules.png" width="560" alt="Web サイトのチップが並ぶルールボード：英語に github.com と stackoverflow.com、中国語に wikipedia.org と zhihu.com、日本語に docs.google.com、「そのままにする」に localhost。">
+</p>
+
+<p align="center"><sub>Web サイトのルール：サイトはアプリと同じレーンに並びます。</sub></p>
+
 「アプリ」ページは、アプリが前面に来たときに何をするかを決めます。ここでの切り替えはすべて
 トリガーと同じ経路を通るため、アプリを切り替えた直後に押したトリガーは常に優先されます。
 

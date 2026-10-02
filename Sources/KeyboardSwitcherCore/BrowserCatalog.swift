@@ -28,11 +28,13 @@ public enum BrowserCatalog {
         "app.zen-browser.zen": .gecko,
         "company.thebrowser.dia": .chromium,
         "net.imput.helium": .chromium,
+        // Not in Input Source Pro's list; added when its owner's read was measured (2026-10-02).
+        "at.studio.AsideBrowser": .chromium,
     ]
 
     /// The browsers the address read was measured on. The rest are listed because they share an
     /// engine with one of these, and nobody has run the read against them yet.
-    private static let measured: Set<String> = ["com.apple.Safari", "com.google.Chrome"]
+    private static let measured: Set<String> = ["com.apple.Safari", "com.google.Chrome", "at.studio.AsideBrowser"]
 
     public static var bundleIDs: Set<String> { Set(engines.keys) }
 

@@ -362,6 +362,12 @@ Peek and the Caps Lock bubble also need keyboard control to be running.
 
 <p align="center"><sub>The Apps page: App Rules, App Memory, a slot for other apps and the password-field switch.</sub></p>
 
+<p align="center">
+  <img src="Assets/readme/website-rules.png" width="560" alt="The rule board with website chips: github.com and stackoverflow.com on English, wikipedia.org and zhihu.com on Chinese, docs.google.com on Japanese, localhost on Keep as is.">
+</p>
+
+<p align="center"><sub>Website rules: sites sit on the same lanes as apps.</sub></p>
+
 The Apps page decides what happens when an app comes to the front. Each switch it makes
 goes through the same path as a trigger, so a trigger you press right after switching
 apps always wins.

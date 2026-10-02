@@ -330,6 +330,12 @@ macOS 14 及以上每次输入源变化时，还会在光标下方显示系统�
 
 <p align="center"><sub>“应用”页：应用规则、应用记忆、其他应用的槽位和密码框切回开关。</sub></p>
 
+<p align="center">
+  <img src="Assets/readme/website-rules.png" width="560" alt="带网站标签的规则面板：github.com 和 stackoverflow.com 在英文栏，wikipedia.org 和 zhihu.com 在中文栏，docs.google.com 在日文栏，localhost 在“保持不变”栏。">
+</p>
+
+<p align="center"><sub>网站规则：网站和应用放在同一组泳道里。</sub></p>
+
 “应用”页面决定某个应用切到前台时发生什么。它做的每次切换都和触发键走同一条路径，所以
 切换应用后马上按下的触发键始终优先。
 
