@@ -31,7 +31,11 @@ struct KeyboardControlFooter: View {
                     showsPermissionDetails.toggle()
                 } label: {
                     HStack(spacing: DesignTokens.Layout.rowGap) {
-                        Label("Keyboard access ready", systemImage: "checkmark.circle.fill")
+                        // No icon: the pill above already carries the check, and with one the
+                        // text wraps in the 200-point sidebar.
+                        Text("Keyboard access ready")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                         Spacer(minLength: 0)
                         Image(systemName: showsPermissionDetails ? "chevron.up" : "chevron.down")
                             .accessibilityHidden(true)
