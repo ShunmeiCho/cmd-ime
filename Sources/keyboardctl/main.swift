@@ -93,6 +93,12 @@ struct CLI {
             try manageWebsiteRule()
         case "program-rule":
             try manageProgramRule()
+        case "program-switch":
+            try switchForProgram()
+        case "shell-init":
+            try printShellHook()
+        case "shell-integration":
+            try manageShellIntegration()
         case "export":
             try exportSettings()
         case "import":
@@ -158,6 +164,15 @@ struct CLI {
         let service = MacInputSourceService()
         let config = try loadConfig()
         let role = try requireSlot(argument(at: 1, name: "slot"), in: config).id
+        try select(role, in: config, service: service)
+        #else
+        throw CLIError.unsupportedPlatform
+        #endif
+    }
+
+    #if os(macOS)
+    /// Selects the source of `role` with the Kana prelude the event tap uses, and confirms it.
+    func select(_ role: InputRole, in config: SwitcherConfig, service: MacInputSourceService) throws {
         let sources = try service.listInputSources()
         guard let source = InputSourceMatcher.bestMatch(for: role, sources: sources, config: config) else {
             throw InputSourceServiceError.notFound(role.rawValue)
@@ -183,10 +198,8 @@ struct CLI {
             exit(1)
         }
         print("Selected \(source.localizedName) for \(role.rawValue)")
-        #else
-        throw CLIError.unsupportedPlatform
-        #endif
     }
+    #endif
 
     private func diagnose(json: Bool) throws {
         #if os(macOS)
@@ -512,7 +525,7 @@ struct CLI {
     /// like an input source id is read as one, so `keyboardctl <id>` works like `im-select <id>`.
     private static let knownCommands: Set<String> = [
         "help", "--help", "-h", "path", "scan", "init", "show", "switch", "source",
-        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "app-rule", "website-rule", "program-rule", "export", "import",
+        "diagnose", "listen", "slots", "slot", "bind", "remap", "quit", "app-rule", "website-rule", "program-rule", "program-switch", "shell-init", "shell-integration", "export", "import",
     ]
 
     /// Reads or sets the input source by id. Editor plugins call this on every mode change,
@@ -724,6 +737,8 @@ struct CLI {
               keyboardctl program-rule list
               keyboardctl program-rule set <name> <slot|keep>
               keyboardctl program-rule remove <name>
+              keyboardctl shell-init zsh
+              keyboardctl shell-integration install | uninstall [--file <rc file>]
               keyboardctl quit
               keyboardctl path
               keyboardctl export <new-folder>
