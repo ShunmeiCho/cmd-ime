@@ -282,6 +282,7 @@ private struct CompactLiveKeysStrip: View {
             LiveStripKey(
                 Self.symbols(for: entry.trigger),
                 role: entry.slot,
+                detail: Self.sides(of: entry.trigger),
                 isActive: model.activeRole == entry.slot
             )
             .accessibilityLabel("\(model.config.displayName(for: entry.slot)), \(entry.trigger.localizedDisplayName)")
@@ -320,6 +321,13 @@ private struct CompactLiveKeysStrip: View {
 
     private static func symbols(for trigger: KeyTrigger) -> String {
         trigger.displayName.split(separator: "+").map { LiveKeycap(keyName: String($0)).label }.joined()
+    }
+
+    /// "L" or "R" for each modifier a chord requires on one side, so `left-option+j` and
+    /// `right-option+j` do not read the same.
+    private static func sides(of trigger: KeyTrigger) -> String? {
+        let sides = trigger.modifierKeyNames.compactMap { LiveKeycap(keyName: $0).detail }
+        return sides.isEmpty ? nil : sides.joined()
     }
 }
 

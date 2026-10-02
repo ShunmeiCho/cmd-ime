@@ -241,6 +241,16 @@ struct WebsiteRuleMatcherTests {
     }
 }
 
+struct WebsiteHostDisplayTests {
+    @Test("an international domain is shown in its own script where Foundation decodes it, a plain one as stored")
+    func displayName() {
+        // Older Foundation leaves punycode as it is; either reading names the same domain.
+        #expect(["例え.jp", "xn--r8jz45g.jp"].contains(WebsiteHost.displayName(ofDomain: "xn--r8jz45g.jp")))
+        #expect(WebsiteHost.displayName(ofDomain: "github.com") == "github.com")
+        #expect(WebsiteHost.displayName(ofDomain: "127.0.0.1") == "127.0.0.1")
+    }
+}
+
 struct WebsiteHostIPv6Tests {
     @Test("an IPv6 address has one spelling, typed or read from a page")
     func canonicalSpelling() throws {

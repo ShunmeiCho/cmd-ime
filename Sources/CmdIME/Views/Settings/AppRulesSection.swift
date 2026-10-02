@@ -23,7 +23,7 @@ struct AppRulesSection: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .explanation()
             if model.config.appRules.isEmpty, model.config.websiteRules.isEmpty {
-                Text("Drag an app from the list onto a slot, or use Add App.")
+                Text("Drag an app from the list onto a slot, or use Add App or Add Website.")
                     .font(DesignTokens.Typography.auxiliary)
                     .foregroundStyle(DesignTokens.Colors.textSecondary)
             }
@@ -47,7 +47,7 @@ struct AppRulesSection: View {
                     .fixedSize()
                     .accessibilityLabel("Add a rule for a website")
             }
-            Text("For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It works in Safari and Chrome and should work in other browsers built on the same engines; a browser set to Keep as is is never read.")
+            Text("For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)

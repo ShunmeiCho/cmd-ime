@@ -29,6 +29,12 @@ public enum WebsiteHost {
         return String(cString: text)
     }
 
+    /// A stored domain as the user reads it: an international name in its own script instead of
+    /// punycode (`例え.jp` for `xn--r8jz45g.jp`). Where Foundation does not decode it, the stored form.
+    public static func displayName(ofDomain domain: String) -> String {
+        URLComponents(string: assumedScheme + domain)?.host ?? domain
+    }
+
     /// What a rule stores for a domain the user typed: `example.com`, `*.example.com` or a pasted
     /// address, reduced to its host. `www.` is kept as typed. An international name is stored as
     /// the punycode host `URL(string:)` gives; where that gives no ASCII host the input is refused,

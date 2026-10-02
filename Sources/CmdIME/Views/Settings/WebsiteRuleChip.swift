@@ -61,7 +61,7 @@ struct WebsiteRuleChip: View {
                     Text(verbatim: Self.subdomainMark)
                         .foregroundStyle(DesignTokens.Colors.textMuted)
                 }
-                Text(verbatim: rule.domain)
+                Text(verbatim: WebsiteHost.displayName(ofDomain: rule.domain))
             }
             .lineLimit(1)
         }

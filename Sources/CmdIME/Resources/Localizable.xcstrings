@@ -6073,30 +6073,6 @@
         }
       }
     },
-    "Drag an app from the list onto a slot, or use Add App.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Drag an app from the list onto a slot, or use Add App."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将列表中的应用拖到槽位上，或使用“添加应用”。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リストからスロットにアプリをドラッグするか、「アプリを追加」を使ってください。"
-          }
-        }
-      }
-    },
     "Drag onto a slot to give %@ a rule": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -19657,30 +19633,6 @@
         }
       }
     },
-    "For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It works in Safari and Chrome and should work in other browsers built on the same engines; a browser set to Keep as is is never read.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It works in Safari and Chrome and should work in other browsers built on the same engines; a browser set to Keep as is is never read."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "对于网站规则，CmdIME 只读取前台页面的网站地址，且不会保留。它适用于 Safari 和 Chrome，使用相同引擎的其他浏览器应该也可以使用；设为“保持不变”的浏览器永远不会被读取。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Web サイトのルールでは、CmdIME は前面にあるページのサイトアドレスだけを読み取り、何も保存しません。Safari と Chrome で動作し、同じエンジンを使うほかのブラウザでも動作するはずです。「そのままにする」に設定したブラウザは読み取りません。"
-          }
-        }
-      }
-    },
     "Only the left or right key I pressed": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -19821,6 +19773,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "オンの間、CmdIME は macOS がカーソルの下に表示するバッジを隠します。オフにすると元に戻ります。"
+          }
+        }
+      }
+    },
+    "Drag an app from the list onto a slot, or use Add App or Add Website.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag an app from the list onto a slot, or use Add App or Add Website."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将列表中的应用拖到槽位上，或使用“添加应用”“添加网站”。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リストからスロットにアプリをドラッグするか、「アプリを追加」「Web サイトを追加」を使ってください。"
+          }
+        }
+      }
+    },
+    "For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "对于网站规则，CmdIME 只读取前台页面的网站地址，且不会保留。已在 Safari 和 Chrome 中测试，其他浏览器尚未测试。设为“保持不变”的浏览器永远不会被读取。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web サイトのルールでは、CmdIME は前面にあるページのサイトアドレスだけを読み取り、何も保存しません。Safari と Chrome でテスト済みで、ほかのブラウザはまだテストしていません。「そのままにする」に設定したブラウザは読み取りません。"
+          }
+        }
+      }
+    },
+    "New in 0.14: an input source per website on the Apps page, and shortcuts that tell the left modifier key from the right.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.14: an input source per website on the Apps page, and shortcuts that tell the left modifier key from the right."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.14 新增：在“应用”页为每个网站设定输入源；快捷键可以区分左右修饰键。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.14 の新機能：「アプリ」ページで Web サイトごとに入力ソースを設定できます。ショートカットで左右の修飾キーを区別できます。"
           }
         }
       }
