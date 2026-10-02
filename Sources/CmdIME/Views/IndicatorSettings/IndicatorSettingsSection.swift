@@ -77,16 +77,33 @@ struct IndicatorSettingsSection: View {
 
     var body: some View {
         CompactSection(title: String(localized: "Switch indicator")) {
-            VStack(alignment: .leading, spacing: 10) {
+            // The preview is a pinned header: it stays at the top of the page while the theme,
+            // size, colour and typography rows scroll under it, so a change far down the page is
+            // still seen in the preview.
+            LazyVStack(alignment: .leading, spacing: 10, pinnedViews: [.sectionHeaders]) {
                 enabledRow
-                IndicatorPreviewRow(
-                    model: model,
-                    library: library,
-                    isAdjusting: isAdjusting,
-                    sizeDraft: sizeDraft,
-                    textScaleDraft: textScaleDraft
-                )
+                Section {
+                    settingsRows
+                } header: {
+                    IndicatorPreviewRow(
+                        model: model,
+                        library: library,
+                        isAdjusting: isAdjusting,
+                        sizeDraft: sizeDraft,
+                        textScaleDraft: textScaleDraft
+                    )
                     .opacity(model.config.showSwitchIndicator ? 1 : 0.45)
+                    .padding(.vertical, DesignTokens.Layout.rowGap / 2)
+                    // Opaque, so the rows do not show through the pinned preview: the card's own
+                    // surface is translucent, so the window colour goes under it.
+                    .background(DesignTokens.Colors.surfaceRaised)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var settingsRows: some View {
                 Text("Appears near the focused caret after each switch.")
                     .font(.caption)
                     .foregroundStyle(DesignTokens.Colors.textMuted)
@@ -124,8 +141,6 @@ struct IndicatorSettingsSection: View {
                 if let message = library.message {
                     IndicatorNotice(text: message)
                 }
-            }
-        }
     }
 
     private var enabledRow: some View {
