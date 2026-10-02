@@ -355,6 +355,33 @@ struct AppMemoryTrackerProgramOrderingTests {
         #expect(read(&focused, 3, .rule("claude"), pane: "B", on: abc) == .selectSlot(.chinese))
     }
 
+    @Test("R6: a choice made after the password field ends the decision deferred through it, in a terminal and in a browser")
+    func choiceEndsADeferredDecision() {
+        var state = tracker()
+        activate(&state)
+        _ = read(&state, 1, .noRule, on: abc)
+        #expect(read(&state, 2, .rule("claude"), on: abc, context: secure) == .none)
+        trigger(&state, japanese, at: 1)
+        #expect(read(&state, 3, .rule("claude"), on: japanese) == .none)
+        #expect(read(&state, 4, .rule("claude"), on: japanese) == .none)
+
+        let browser = "com.google.Chrome"
+        let browserPID: Int32 = 900
+        var web = AppMemoryTracker(ownAppID: "cmdime", frontmostAppID: "editor", settings: AppActivationSettings(
+            slotIDs: [.english, .chinese, .japanese],
+            websiteRules: [WebsiteRule(domain: "example.cn", target: .slot(.chinese))]))
+        _ = web.appActivated(browser, currentSourceID: abc, context: quiet, browserPID: browserPID, slotOfSource: slot)
+        func page(_ sequence: Int, _ context: WebsiteContext, _ source: String, _ c: AppMemoryContext) -> AppMemoryTracker.Restore {
+            web.websiteRead(WebsiteReading(pid: browserPID, generation: web.activationGeneration, sequence: sequence, context: context),
+                            currentSourceID: source, context: c, slotOfSource: slot)
+        }
+        _ = page(1, .noRule, abc, quiet)
+        #expect(page(2, .rule("example.cn"), abc, secure) == .none)
+        web.sourceChanged(to: japanese, context: quiet)
+        #expect(page(3, .rule("example.cn"), japanese, quiet) == .none)
+        #expect(page(4, .rule("example.cn"), japanese, quiet) == .none)
+    }
+
     @Test("R4-5: a password put-back by the pane's rule ends the retired switch")
     func passwordRuleEndsTheRetiredSwitch() {
         var state = AppMemoryTracker(ownAppID: "cmdime", frontmostAppID: "editor", settings: AppActivationSettings(

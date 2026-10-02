@@ -512,6 +512,8 @@ public struct AppMemoryTracker: Equatable, Sendable {
         lastChoiceAt = time
         retiredSwitchSourceID = nil
         paneThatKeptATriggerUnjudged = nil
+        // The choice is the decision: one deferred through a password field has nothing left to do.
+        isDecisionDeferred = false
         websiteHold = nil
         activationGeneration += 1
         contextOnlyGeneration = activationGeneration

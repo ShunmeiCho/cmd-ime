@@ -85,6 +85,7 @@ extension AppMemoryTracker {
     mutating func paneChanged(to paneID: String, noticeReceivedAt: TimeInterval?) {
         focusedPaneID = paneID
         paneThatKeptATriggerUnjudged = nil
+        isDecisionDeferred = false
         isWebsiteContextStale = true
         if isWebsiteSwitchInFlight {
             retiredSwitchSourceID = retiredSwitchSourceID ?? sourceBeforeRestore
