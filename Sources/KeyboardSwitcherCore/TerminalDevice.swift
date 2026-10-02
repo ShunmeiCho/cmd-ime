@@ -19,6 +19,17 @@ public enum TerminalDevice {
         #endif
     }
 
+    /// The name a Program Rule matches for process `pid` (Ghostty reports its foreground process
+    /// by pid). Only argv0 is kept from the argument buffer the kernel returns.
+    public static func program(ofPID pid: Int32) -> String? {
+        #if canImport(Darwin)
+        guard pid > 0 else { return nil }
+        return argv0(of: pid).flatMap(programName(fromArgv0:))
+        #else
+        return nil
+        #endif
+    }
+
     /// `/usr/local/bin/claude` -> `claude`, `-zsh` -> `zsh`; nil for an empty name.
     public static func programName(fromArgv0 argv0: String) -> String? {
         var name = argv0.split(separator: "/").last.map(String.init) ?? argv0
@@ -43,6 +54,7 @@ public enum TerminalDevice {
     }
 
     /// argv[0] from `KERN_PROCARGS2`: an argument count, the executable path, padding, then argv.
+    /// The rest of the buffer (other arguments, the environment) is not looked at.
     private static func argv0(of pid: pid_t) -> String? {
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
         var size = 0

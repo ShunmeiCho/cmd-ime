@@ -15,4 +15,10 @@ struct TerminalDeviceTests {
         #expect(TerminalDevice.foregroundProgram(ofDevice: "ttys999") == nil)
         #expect(TerminalDevice.programName(fromArgv0: "") == nil)
     }
+
+    @Test("a process is named by its argv0; this test process has one")
+    func programOfPID() {
+        #expect(TerminalDevice.program(ofPID: getpid()) != nil)
+        #expect(TerminalDevice.program(ofPID: 0) == nil)
+    }
 }
