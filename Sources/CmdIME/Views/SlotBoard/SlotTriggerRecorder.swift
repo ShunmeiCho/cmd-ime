@@ -154,7 +154,10 @@ private struct TriggerRecorderPopover: View {
                 .font(DesignTokens.Typography.body)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
             Toggle("Only the left or right key I pressed",
-                   isOn: Binding(get: { session.matchesSide && !session.pressedSides.isEmpty }, set: session.setMatchesSide))
+                   // A closure, not the method itself: Swift 6.3.3 (the CI toolchain) crashes emitting the
+                   // thunk for a main-actor method used as a Binding setter.
+                   isOn: Binding(get: { session.matchesSide && !session.pressedSides.isEmpty },
+                                 set: { session.setMatchesSide($0) }))
                 .toggleStyle(.checkbox)
                 .font(DesignTokens.Typography.body)
                 .disabled(session.pressedSides.isEmpty)
