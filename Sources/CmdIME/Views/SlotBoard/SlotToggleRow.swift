@@ -49,7 +49,8 @@ struct SlotToggleRow: View {
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
-                .explanation()
+                // New in 0.16: shown in Brief too until users know the Toggle (owner rule, issue #7).
+                // A later release adds .explanation().
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(SwitcherConfig.toggleDisplayName)
