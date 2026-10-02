@@ -336,6 +336,25 @@ struct AppMemoryTrackerProgramOrderingTests {
         #expect(read(&state, 3, .rule("claude"), pane: "B", on: abc) == .selectSlot(.chinese))
     }
 
+    @Test("R5: a rule first read under a password field is decided by the first read after it, wait or no wait")
+    func ruleReadUnderAPasswordFieldIsDecidedLater() {
+        // A program that starts in the pane in focus while its password field is up: no wait exists.
+        var started = tracker()
+        activate(&started)
+        _ = read(&started, 1, .noRule, on: abc)
+        #expect(read(&started, 2, .rule("claude"), on: abc, context: secure) == .none)
+        #expect(read(&started, 3, .rule("claude"), on: abc) == .selectSlot(.chinese))
+        #expect(read(&started, 4, .rule("claude"), on: abc) == .none)
+
+        // A pane focus whose wait expires after the password field ended and before the next read.
+        var focused = onClaudeInA()
+        focused.sourceChanged(to: abc, context: quiet)
+        #expect(read(&focused, 2, .rule("claude"), pane: "B", on: abc, context: secure) == .none)
+        #expect(focused.programHoldExpired(generation: focused.activationGeneration, currentSourceID: abc,
+                                           context: quiet, slotOfSource: slot) == .none)
+        #expect(read(&focused, 3, .rule("claude"), pane: "B", on: abc) == .selectSlot(.chinese))
+    }
+
     @Test("R4-5: a password put-back by the pane's rule ends the retired switch")
     func passwordRuleEndsTheRetiredSwitch() {
         var state = AppMemoryTracker(ownAppID: "cmdime", frontmostAppID: "editor", settings: AppActivationSettings(

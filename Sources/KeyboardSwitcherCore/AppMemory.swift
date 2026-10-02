@@ -96,6 +96,10 @@ public struct AppMemoryTracker: Equatable, Sendable {
     var isWebsiteContextStale = false
     /// The switch on its way was asked for by a website rule and must not become the browser's memory.
     var isWebsiteSwitchInFlight = false
+    /// The page or program in front was read under a password field, where nothing is decided:
+    /// it is known (for what gets remembered, and for `secureInputEnded`), and the first read
+    /// after the password field still decides on it, with or without a wait.
+    var isDecisionDeferred = false
 
     enum SurfaceKind: Equatable, Sendable {
         case browser
@@ -349,10 +353,11 @@ public struct AppMemoryTracker: Equatable, Sendable {
               before.sourceID != currentSourceID else {
             return .none
         }
-        // Either way the pane's source is decided here: a wait kept through the password field
-        // and a switch retired from the pane before have nothing left to do.
+        // Either way the pane's source is decided here: a wait or a decision kept through the
+        // password field and a switch retired from the pane before have nothing left to do.
         websiteHold = nil
         retiredSwitchSourceID = nil
+        isDecisionDeferred = false
         if frontSurface?.kind == .terminal, !isWebsiteContextStale, case .slot(let slot)? = currentPageRuleTarget {
             guard slotOfSource(currentSourceID) != slot else { return .none }
             isWebsiteSwitchInFlight = true
@@ -494,6 +499,7 @@ public struct AppMemoryTracker: Equatable, Sendable {
         focusedPaneID = nil
         retiredSwitchSourceID = nil
         paneThatKeptATriggerUnjudged = nil
+        isDecisionDeferred = false
         // Each watcher counts its own reads, and a new generation has seen none.
         lastReadSequence = Int.min
     }

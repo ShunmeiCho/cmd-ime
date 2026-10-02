@@ -130,7 +130,8 @@ extension AppMemoryTracker {
         if case .rule(let key) = page, ruleTarget(for: key) == nil {
             page = .noRule
         }
-        let previous = isWebsiteContextStale ? nil : websiteContext
+        // A page or program first seen under a password field is known but not decided on yet.
+        let previous = isWebsiteContextStale || isDecisionDeferred ? nil : websiteContext
         let hold = websiteHold
         websiteHold = nil
         if page != .unknown {
@@ -142,10 +143,17 @@ extension AppMemoryTracker {
             return .none
         }
         // A password field in front decides nothing, and takes nothing from what the read was
-        // to decide: the wait stays for the first read after it (or for `secureInputEnded`).
+        // to decide: the wait stays, and with or without one the first read after the password
+        // field decides as if nothing had been read (unless `secureInputEnded` decides first).
         guard !context.isSecureInputInFrontmostApp else {
             websiteHold = hold
+            if page != .unknown, page != previous {
+                isDecisionDeferred = true
+            }
             return .none
+        }
+        if page != .unknown {
+            isDecisionDeferred = false
         }
         guard !context.isTriggerPending else { return .none }
         // The pane is read: a switch retired when focus left the last one is settled now. A pane
