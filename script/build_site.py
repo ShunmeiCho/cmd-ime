@@ -24,30 +24,30 @@ LANGS = {
     "en": {
         "dir": "",
         "class": "i-en",
-        "title": "CmdIME 0.13.5 by ShunmeiCho - input sources per app on macOS",
+        "title": "CmdIME 0.14.0 by ShunmeiCho - input sources per app on macOS",
         "description": "One key per input source, App Rules, App Memory, Adaptive themes and portable settings, in English, Chinese or Japanese. "
-        "CmdIME 0.13.5 for Apple silicon, macOS 13+. Preview: signed, not notarized.",
-        "og_title": "CmdIME 0.13.5 - one key per input source, a slot for each app",
+        "CmdIME 0.14.0 for Apple silicon, macOS 13+. Preview: signed, not notarized.",
+        "og_title": "CmdIME 0.14.0 - one key per input source, a slot for each app",
         "og_description": "Drag apps onto slots, restore your input source after password fields, and see a "
         "bubble for every switch. Adaptive themes and portable settings. Apple silicon only.",
     },
     "zh-CN": {
         "dir": "zh-cn/",
         "class": "i-zh",
-        "title": "CmdIME 0.13.5 by ShunmeiCho - macOS 按应用设定输入源",
+        "title": "CmdIME 0.14.0 by ShunmeiCho - macOS 按应用设定输入源",
         "description": "每个输入源一个专属键，支持应用规则、应用记忆、自适应主题和设置迁移，界面支持中文、英文和日文。"
-        "CmdIME 0.13.5 仅支持 Apple 芯片，需 macOS 13 或更高版本。预览版：已签名，未公证。",
-        "og_title": "CmdIME 0.13.5 - 每个输入源一个专属键，按应用设定槽位",
+        "CmdIME 0.14.0 仅支持 Apple 芯片，需 macOS 13 或更高版本。预览版：已签名，未公证。",
+        "og_title": "CmdIME 0.14.0 - 每个输入源一个专属键，按应用设定槽位",
         "og_description": "把应用拖到槽位上，离开密码框后切回输入源，任何切换都有气泡提示。"
         "支持自适应主题和设置迁移，仅支持 Apple 芯片。",
     },
     "ja": {
         "dir": "ja/",
         "class": "i-ja",
-        "title": "CmdIME 0.13.5 by ShunmeiCho - macOS のアプリごとの入力ソース",
+        "title": "CmdIME 0.14.0 by ShunmeiCho - macOS のアプリごとの入力ソース",
         "description": "入力ソースごとの専用キー、アプリのルール、アプリの記憶、アダプティブテーマ、持ち運べる設定。設定画面は日本語・英語・中国語に対応。"
-        "CmdIME 0.13.5 は Apple シリコン専用、macOS 13 以降。プレビュー版：署名済み、公証なし。",
-        "og_title": "CmdIME 0.13.5 - 入力ソースごとに専用キー、アプリごとにスロット",
+        "CmdIME 0.14.0 は Apple シリコン専用、macOS 13 以降。プレビュー版：署名済み、公証なし。",
+        "og_title": "CmdIME 0.14.0 - 入力ソースごとに専用キー、アプリごとにスロット",
         "og_description": "アプリをスロットにドラッグ。パスワード欄のあと元の入力ソースへ戻り、切り替えにはバブルを表示。"
         "アダプティブテーマと持ち運べる設定。Apple シリコン専用。",
     },
