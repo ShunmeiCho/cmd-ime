@@ -215,4 +215,16 @@ struct ToggleBindingTests {
         #expect(restored.toggleBinding?.trigger == (try trigger("right-shift")))
         #expect(restored.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
     }
+
+    @Test("a disabled key the CLI takes is not remembered, so clearing never turns it on")
+    func cliDisabledKey() throws {
+        var config = SwitcherConfig.default
+        let optionJ = try trigger("option+j")
+        config.bindings = config.bindings.map { var b = $0; if b.trigger == optionJ { b.enabled = false }; return b }
+
+        _ = try config.upsertToggleBinding(trigger: optionJ, slots: .english, .chinese)
+        #expect(config.toggleBinding?.action.takenFrom == nil)
+        let cleared = try config.replacingToggleBinding(with: nil, slots: .english, .chinese)
+        #expect(!cleared.bindings.contains { $0.trigger == optionJ && $0.enabled })
+    }
 }
