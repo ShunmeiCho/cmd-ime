@@ -30,4 +30,11 @@ struct CaretNeighborTests {
         #expect(CaretNeighbor.caret(before: .found(.init(rect: character, text: nil)), after: .none) == nil)
         #expect(CaretNeighbor.caret(before: .none, after: .none) == nil)
     }
+
+    @Test("an empty short field puts the caret at its leading edge, centred; a tall editor gives none")
+    func field() {
+        #expect(CaretNeighbor.caret(inField: .init(x: 300, y: 330, width: 600, height: 50)) == .init(x: 306, y: 346, width: 0, height: 18))
+        #expect(CaretNeighbor.caret(inField: .init(x: 0, y: 0, width: 800, height: 600)) == nil)
+        #expect(CaretNeighbor.caret(inField: .init(x: 0, y: 0, width: 0, height: 0)) == nil)
+    }
 }

@@ -69,6 +69,18 @@ public enum CaretNeighbor {
         }
     }
 
+    /// A field taller than this is a multi-line editor: its leading edge says nothing about where the caret is.
+    public static let maxFieldHeight = 120.0
+    private static let fieldInset = 6.0
+    private static let fieldLineHeight = 18.0
+
+    /// A caret at the field's leading edge, centred on a line height; nil for a field too tall or empty in size.
+    public static func caret(inField field: Rect) -> Rect? {
+        guard field.width > 0, field.height > 0, field.height <= maxFieldHeight else { return nil }
+        let height = min(field.height, fieldLineHeight)
+        return Rect(x: field.x + min(fieldInset, field.width / 2), y: field.y + (field.height - height) / 2, width: 0, height: height)
+    }
+
     /// Known text that is not right-to-left. Unknown text is not taken as left-to-right.
     static func isLeftToRight(_ neighbor: Neighbor) -> Bool {
         neighbor.text?.isEmpty == false && !isRightToLeft(neighbor)

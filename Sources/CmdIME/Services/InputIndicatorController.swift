@@ -557,7 +557,7 @@ final class InputIndicatorController {
         guard withRemainingBudget(focusedElement),
               AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
               let rangeValue else {
-            return nil
+            return fieldCaret(focusedElement, budget: withRemainingBudget)
         }
 
         if let rect = bounds(of: rangeValue, in: focusedElement, budget: withRemainingBudget) {
@@ -567,7 +567,9 @@ final class InputIndicatorController {
         // caret has a real rect: its trailing edge (before the caret) or leading edge (after it) is the caret.
         var selection = CFRange()
         guard CFGetTypeID(rangeValue) == AXValueGetTypeID(),
-              AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.length == 0 else { return nil }
+              AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.length == 0 else {
+            return fieldCaret(focusedElement, budget: withRemainingBudget)
+        }
         // The length says whether a side has no character (start or end of the text) or just did not answer.
         var lengthValue: CFTypeRef?
         let length = withRemainingBudget(focusedElement)
@@ -599,7 +601,28 @@ final class InputIndicatorController {
             found[candidate.side] = .found(.init(rect: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
                                                  text: text as? String))
         }
-        guard let caret = CaretNeighbor.caret(before: found[.before] ?? .unknown, after: found[.after] ?? .unknown) else { return nil }
+        guard let caret = CaretNeighbor.caret(before: found[.before] ?? .unknown, after: found[.after] ?? .unknown) else {
+            return fieldCaret(focusedElement, budget: withRemainingBudget)
+        }
+        return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
+    }
+
+    /// Last resort before the pointer: the text field itself (an empty web field has no character to measure),
+    /// when it is short enough that its leading edge is where typing starts.
+    private nonisolated static func fieldCaret(_ element: AXUIElement, budget: (AXUIElement) -> Bool) -> CGRect? {
+        var positionValue: CFTypeRef?, sizeValue: CFTypeRef?
+        guard budget(element),
+              AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue) == .success,
+              budget(element),
+              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeValue) == .success,
+              let positionValue, let sizeValue,
+              CFGetTypeID(positionValue) == AXValueGetTypeID(), CFGetTypeID(sizeValue) == AXValueGetTypeID() else { return nil }
+        var origin = CGPoint.zero, size = CGSize.zero
+        guard AXValueGetValue(positionValue as! AXValue, .cgPoint, &origin),
+              AXValueGetValue(sizeValue as! AXValue, .cgSize, &size),
+              let caret = CaretNeighbor.caret(inField: .init(x: origin.x, y: origin.y, width: size.width, height: size.height)) else {
+            return nil
+        }
         return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
     }
 
