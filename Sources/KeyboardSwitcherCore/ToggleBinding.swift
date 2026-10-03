@@ -94,7 +94,8 @@ extension SwitcherConfig {
         let displaced = bindings.filter { $0.trigger == trigger && $0.action.type != .toggleSlots }
         // The CLI may take a key from any slot; whichever slot had it gets it back later, and a key the old
         // Toggle took goes back now.
-        let takenFrom = displaced.first { $0.action.type == .switchInputSource }?.action.role
+        // Only an enabled key is remembered: giving a disabled one back would turn it on (review A3).
+        let takenFrom = displaced.first { $0.enabled && $0.action.type == .switchInputSource }?.action.role
             ?? (previous?.trigger == trigger ? previous?.action.takenFrom : nil)
         bindings.removeAll { $0.trigger == trigger || $0.action.type == .toggleSlots }
         if previous?.trigger != trigger {
