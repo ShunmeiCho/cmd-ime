@@ -53,10 +53,12 @@ struct AppRulesSection: View {
                     .fixedSize()
                     .accessibilityLabel("Add a rule for a program in the terminal")
             }
+            // New in 0.14; in Detailed only from 0.16 on (owner rule, issue #7).
             Text("For a website rule CmdIME reads only the site address of the page in front and keeps none of it. It is tested in Safari and Chrome; other browsers are not tested yet. A browser set to Keep as is is never read.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
             programRulesRow
         }
         .sheet(isPresented: $isAddingWebsite) {
@@ -129,20 +131,23 @@ struct AppRulesSection: View {
                 .tint(DesignTokens.Colors.success)
                 .controlSize(.small)
             }
-            // Where it works fully and where it does not: said in Brief too, in the primary text
-            // colour, because a rule that seems to do nothing in a plain tab reads as a fault.
-            Label("Works best in Herdr: every pane is followed, also one you come back to. In other terminals, with shell integration, it switches only when a program starts or exits.", systemImage: "info.circle")
+            // Where it works fully: said in Brief too, in the primary text colour, because a rule that
+            // seems to do nothing in a plain tab reads as a fault. One line; the details are in Detailed.
+            Label("Works best in Herdr and Terminal.app: every tab or pane is followed.", systemImage: "info.circle")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen.")
+            // New in 0.15; in Detailed only from 0.16 on (owner rule, issue #7).
+            Text("A program with a rule gets its slot while it runs in the terminal pane in focus. CmdIME reads only the name of the program running in the terminal, never what is on the screen. In other terminals, with shell integration, it switches only when a program starts or exits.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
             Text("Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may. If you said no, allow CmdIME in System Settings > Privacy & Security > Automation, then quit and reopen CmdIME.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
+                .explanation()
         }
     }
 
