@@ -736,12 +736,16 @@ final class AppModel: ObservableObject {
     func commitToggle(_ trigger: KeyTrigger?, slots first: InputRole, _ second: InputRole) -> String? {
         do {
             let taken = trigger.flatMap { config.toggleTakeover(of: $0, slots: first, second) }
+            let previous = config.toggleBinding
+            let givenBack = previous?.trigger == trigger ? nil : config.toggleGiveBack(of: previous)
             let next = try config.replacingToggleBinding(with: trigger, slots: first, second)
             if next != config {
                 guard commitShowingWindowFailure(next) else { return statusText }
             }
             if let trigger, let role = taken?.action.role {
                 statusText = String(localized: "\(SwitcherConfig.toggleDisplayName): \(trigger.localizedDisplayName), moved from \(config.displayName(for: role))")
+            } else if trigger == nil, let givenBack {
+                statusText = String(localized: "Removed the \(SwitcherConfig.toggleDisplayName) trigger; \(givenBack.trigger.localizedDisplayName) is back on \(config.displayName(for: givenBack.slot))")
             } else {
                 statusText = trigger.map { String(localized: "\(SwitcherConfig.toggleDisplayName): \($0.localizedDisplayName)") }
                     ?? String(localized: "Removed the \(SwitcherConfig.toggleDisplayName) trigger")

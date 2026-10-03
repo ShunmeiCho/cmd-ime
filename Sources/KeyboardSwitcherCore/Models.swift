@@ -172,16 +172,20 @@ public struct BindingAction: Codable, Equatable, Sendable {
     public var output: KeyTrigger?
     /// The two slots of a `toggleSlots` action. Optional so older files decode unchanged.
     public var roles: [InputRole]?
+    /// For `toggleSlots`: the slot its trigger was taken from, which gets it back when the Toggle lets go of it.
+    public var takenFrom: InputRole?
 
-    public init(type: BindingActionType, role: InputRole? = nil, output: KeyTrigger? = nil, roles: [InputRole]? = nil) {
+    public init(type: BindingActionType, role: InputRole? = nil, output: KeyTrigger? = nil, roles: [InputRole]? = nil,
+                takenFrom: InputRole? = nil) {
         self.type = type
         self.role = role
         self.output = output
         self.roles = roles
+        self.takenFrom = takenFrom
     }
 
-    public static func toggleSlots(_ first: InputRole, _ second: InputRole) -> BindingAction {
-        BindingAction(type: .toggleSlots, roles: [first, second])
+    public static func toggleSlots(_ first: InputRole, _ second: InputRole, takenFrom: InputRole? = nil) -> BindingAction {
+        BindingAction(type: .toggleSlots, roles: [first, second], takenFrom: takenFrom)
     }
 
     /// Whether removing the slot `id` leaves this action pointing at nothing.
