@@ -153,7 +153,7 @@ private struct TriggerRecorderPopover: View {
             Text("Press a modifier together with an ordinary key.\nReturn saves · Esc cancels · Delete clears the draft.\nTab moves to buttons; Space or Return activates the focused button.")
                 .font(DesignTokens.Typography.body)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
-            Toggle("Only the left or right key I pressed",
+            Toggle(sideLabel,
                    // A closure, not the method itself: Swift 6.3.3 (the CI toolchain) crashes emitting the
                    // thunk for a main-actor method used as a Binding setter.
                    isOn: Binding(get: { session.matchesSide && !session.pressedSides.isEmpty },
@@ -162,6 +162,15 @@ private struct TriggerRecorderPopover: View {
                 .font(DesignTokens.Typography.body)
                 .disabled(session.pressedSides.isEmpty)
                 .focused($focusedControl, equals: .side)
+            // A shortcut saved without a side (or none recorded yet) does not say which key was held:
+            // the box can be ticked only after the shortcut is pressed here. Once pressed, the label
+            // names the key ("Only Left Option"), so the side is visible before the box is ticked.
+            if session.pressedSides.isEmpty {
+                Text("Press the shortcut once to choose the left or right key.")
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let warning = session.warning {
                 Label(warning, systemImage: "exclamationmark.triangle.fill")
                     .font(DesignTokens.Typography.body)
@@ -215,6 +224,22 @@ private struct TriggerRecorderPopover: View {
             }
         }
     }
+
+    /// "Only Left Option" once the shortcut was pressed here, naming the keys held; the generic text before that.
+    private var sideLabel: String {
+        let names = session.pressedSides.sorted { $0.key < $1.key }.map { modifier, side in
+            Self.sideNames["\(side.rawValue)-\(modifier.rawValue)"] ?? "\(side.rawValue) \(modifier.rawValue)"
+        }
+        guard !names.isEmpty else { return String(localized: "Only the left or right key I pressed") }
+        return String(localized: "Only \(names.joined(separator: " + "))")
+    }
+
+    private static let sideNames = [
+        "left-command": String(localized: "Left Command"), "right-command": String(localized: "Right Command"),
+        "left-option": String(localized: "Left Option"), "right-option": String(localized: "Right Option"),
+        "left-control": String(localized: "Left Control"), "right-control": String(localized: "Right Control"),
+        "left-shift": String(localized: "Left Shift"), "right-shift": String(localized: "Right Shift"),
+    ]
 }
 
 enum TriggerKeycapText {
