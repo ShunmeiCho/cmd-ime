@@ -568,15 +568,22 @@ final class InputIndicatorController {
         var selection = CFRange()
         guard CFGetTypeID(rangeValue) == AXValueGetTypeID(),
               AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.length == 0 else { return nil }
-        for neighbor in CaretNeighbor.candidates(caretLocation: selection.location) {
-            var range = CFRange(location: neighbor.location, length: 1)
+        var found: [CaretNeighbor.Side: CaretNeighbor.Neighbor] = [:]
+        for candidate in CaretNeighbor.candidates(caretLocation: selection.location) {
+            var range = CFRange(location: candidate.location, length: 1)
             guard let parameter = AXValueCreate(.cfRange, &range),
                   let rect = bounds(of: parameter, in: focusedElement, budget: withRemainingBudget) else { continue }
-            let caret = CaretNeighbor.caret(fromCharacter: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
-                                            side: neighbor.side)
-            return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
+            // The character itself only says which way the text runs; it is not kept.
+            var text: CFTypeRef?
+            if withRemainingBudget(focusedElement) {
+                _ = AXUIElementCopyParameterizedAttributeValue(
+                    focusedElement, kAXStringForRangeParameterizedAttribute as CFString, parameter, &text)
+            }
+            found[candidate.side] = .init(rect: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
+                                          text: text as? String)
         }
-        return nil
+        guard let caret = CaretNeighbor.caret(before: found[.before], after: found[.after]) else { return nil }
+        return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
     }
 
     /// The screen rect the element gives for a range, when it gives a real one. An insertion point is a
