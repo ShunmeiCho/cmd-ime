@@ -79,7 +79,7 @@ extension SwitcherConfig {
         return (slot, binding.trigger)
     }
 
-    private func givingBack(_ previous: KeyBinding?) -> SwitcherConfig {
+    func givingBack(_ previous: KeyBinding?) -> SwitcherConfig {
         guard let (slot, trigger) = toggleGiveBack(of: previous) else { return self }
         var result = self
         result.bindings.append(KeyBinding(trigger: trigger, action: .switchInputSource(slot)))
@@ -90,9 +90,16 @@ extension SwitcherConfig {
     /// whatever had it. Returns the bindings it displaced so the caller can say so.
     public mutating func upsertToggleBinding(trigger: KeyTrigger, slots first: InputRole, _ second: InputRole) throws(ToggleBindingError) -> [KeyBinding] {
         try validateToggle(first, second)
+        let previous = toggleBinding
         let displaced = bindings.filter { $0.trigger == trigger && $0.action.type != .toggleSlots }
+        // As in Settings: a key one of the two slots had is remembered, and a key the old Toggle took goes back.
+        let takenFrom = displaced.first { $0.action.type == .switchInputSource && ($0.action.role == first || $0.action.role == second) }?
+            .action.role ?? (previous?.trigger == trigger ? previous?.action.takenFrom : nil)
         bindings.removeAll { $0.trigger == trigger || $0.action.type == .toggleSlots }
-        bindings.append(KeyBinding(trigger: trigger, action: .toggleSlots(first, second)))
+        if previous?.trigger != trigger {
+            self = givingBack(previous)
+        }
+        bindings.append(KeyBinding(trigger: trigger, action: .toggleSlots(first, second, takenFrom: takenFrom)))
         return displaced
     }
 
