@@ -557,7 +557,7 @@ final class InputIndicatorController {
         guard withRemainingBudget(focusedElement),
               AXUIElementCopyAttributeValue(focusedElement, kAXSelectedTextRangeAttribute as CFString, &rangeValue) == .success,
               let rangeValue else {
-            return fieldCaret(focusedElement, budget: withRemainingBudget)
+            return nil
         }
 
         if let rect = bounds(of: rangeValue, in: focusedElement, budget: withRemainingBudget) {
@@ -567,9 +567,7 @@ final class InputIndicatorController {
         // caret has a real rect: its trailing edge (before the caret) or leading edge (after it) is the caret.
         var selection = CFRange()
         guard CFGetTypeID(rangeValue) == AXValueGetTypeID(),
-              AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.length == 0 else {
-            return fieldCaret(focusedElement, budget: withRemainingBudget)
-        }
+              AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.length == 0 else { return nil }
         // The length says whether a side has no character (start or end of the text) or just did not answer.
         var lengthValue: CFTypeRef?
         let length = withRemainingBudget(focusedElement)
@@ -589,7 +587,8 @@ final class InputIndicatorController {
             guard error == .success, let rect = Self.realRect(boundsValue) else {
                 // An answer that there is nothing there (a range past the end) means no character on that side;
                 // a timeout or a failure says nothing, and stays unknown.
-                if [.illegalArgument, .noValue].contains(error) { found[candidate.side] = CaretNeighbor.Lookup.none }
+                // Only without a known length: with one, the character exists and its missing rect stays unknown.
+                if length == nil, [.illegalArgument, .noValue].contains(error) { found[candidate.side] = CaretNeighbor.Lookup.none }
                 continue
             }
             // The character itself only says which way the text runs; it is not kept.
@@ -601,14 +600,21 @@ final class InputIndicatorController {
             found[candidate.side] = .found(.init(rect: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
                                                  text: text as? String))
         }
-        guard let caret = CaretNeighbor.caret(before: found[.before] ?? .unknown, after: found[.after] ?? .unknown) else {
+        // An empty field has no character to measure: its leading edge is where typing starts. A field with text
+        // whose caret cannot be told is left to the pointer (review A3: wrapped, right-to-left or partial evidence).
+        // Without a length, an empty field shows as nothing before the start and nothing after it.
+        let isEmpty = length == 0 || (length == nil && selection.location == 0 && found[.after] == CaretNeighbor.Lookup.none)
+        if isEmpty {
             return fieldCaret(focusedElement, budget: withRemainingBudget)
+        }
+        guard let caret = CaretNeighbor.caret(before: found[.before] ?? .unknown, after: found[.after] ?? .unknown) else {
+            return nil
         }
         return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
     }
 
-    /// Last resort before the pointer: the text field itself (an empty web field has no character to measure),
-    /// when it is short enough that its leading edge is where typing starts.
+    /// For an empty field only: the field itself, when it is short enough that its leading edge is where typing
+    /// starts. Assumes left-to-right; a field scrolled out of its viewport is not detected (accepted, rare).
     private nonisolated static func fieldCaret(_ element: AXUIElement, budget: (AXUIElement) -> Bool) -> CGRect? {
         var positionValue: CFTypeRef?, sizeValue: CFTypeRef?
         guard budget(element),
