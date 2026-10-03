@@ -358,11 +358,13 @@ extension SwitcherConfig {
         }
 
         var result = self
-        // The key the Toggle handed back belongs to the Toggle again.
-        if let givenBack = removed.givenBack, let at = result.bindings.firstIndex(of: givenBack) {
+        result.slots.insert(removed.slot, at: min(max(removed.index, 0), result.slots.count))
+        // The key the Toggle handed back belongs to the Toggle again, but only when that Toggle comes back;
+        // a Toggle made since keeps its place and the slot keeps the key.
+        if let givenBack = removed.givenBack, let toggle = removed.bindings.first(where: { $0.binding.action.type == .toggleSlots }),
+           result.canRestoreToggle(toggle.binding), let at = result.bindings.firstIndex(of: givenBack) {
             result.bindings.remove(at: at)
         }
-        result.slots.insert(removed.slot, at: min(max(removed.index, 0), result.slots.count))
         result.inputSources[id.rawValue] = removed.preference
         result.switchIndicatorCustomRoleColorHexes[id.rawValue] = removed.customIndicatorColorHex
         var skipped: [RemovedSlot.BindingEntry] = []

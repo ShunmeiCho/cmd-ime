@@ -92,9 +92,10 @@ extension SwitcherConfig {
         try validateToggle(first, second)
         let previous = toggleBinding
         let displaced = bindings.filter { $0.trigger == trigger && $0.action.type != .toggleSlots }
-        // As in Settings: a key one of the two slots had is remembered, and a key the old Toggle took goes back.
-        let takenFrom = displaced.first { $0.action.type == .switchInputSource && ($0.action.role == first || $0.action.role == second) }?
-            .action.role ?? (previous?.trigger == trigger ? previous?.action.takenFrom : nil)
+        // The CLI may take a key from any slot; whichever slot had it gets it back later, and a key the old
+        // Toggle took goes back now.
+        let takenFrom = displaced.first { $0.action.type == .switchInputSource }?.action.role
+            ?? (previous?.trigger == trigger ? previous?.action.takenFrom : nil)
         bindings.removeAll { $0.trigger == trigger || $0.action.type == .toggleSlots }
         if previous?.trigger != trigger {
             self = givingBack(previous)
