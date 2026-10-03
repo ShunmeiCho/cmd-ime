@@ -162,4 +162,32 @@ struct ToggleBindingTests {
         let older = #"{"type":"toggleSlots","roles":["english","chinese"]}"#
         #expect(try JSONDecoder().decode(BindingAction.self, from: Data(older.utf8)) == .toggleSlots(.english, .chinese))
     }
+
+    @Test("removing the other slot of the pair gives the key back, and undo takes it back for the toggle")
+    func slotRemovalGivesBack() throws {
+        let leftCommand = try trigger("left-command")
+        let toggled = try SwitcherConfig.default.replacingToggleBinding(with: leftCommand, slots: .english, .chinese)
+
+        let (removed, receipt) = try toggled.removingSlotWithReceipt(.chinese)
+        #expect(removed.toggleBinding == nil)
+        #expect(removed.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
+
+        let (restored, skipped) = try removed.restoringSlot(receipt)
+        #expect(skipped.isEmpty)
+        #expect(restored.toggleBinding?.trigger == leftCommand)
+        #expect(!restored.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
+    }
+
+    @Test("the CLI records where the key came from and gives the old one back")
+    func cliGivesBack() throws {
+        let leftCommand = try trigger("left-command")
+        var config = SwitcherConfig.default
+        _ = try config.upsertToggleBinding(trigger: leftCommand, slots: .english, .chinese)
+        #expect(config.toggleBinding?.action.takenFrom == .english)
+
+        _ = try config.upsertToggleBinding(trigger: trigger("option+t"), slots: .english, .chinese)
+
+        #expect(config.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
+        #expect(config.toggleBinding?.action.takenFrom == nil)
+    }
 }

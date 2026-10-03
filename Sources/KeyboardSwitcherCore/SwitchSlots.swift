@@ -65,6 +65,8 @@ public struct RemovedSlot: Equatable, Sendable {
     public let bindings: [BindingEntry]
     public let preference: RoleInputSourcePreference?
     public let customIndicatorColorHex: String?
+    /// The key a removed Toggle handed back to the slot it came from; undo takes it away again.
+    public var givenBack: KeyBinding? = nil
 }
 
 /// Validation failures for pure slot edits. Unknown IDs never silently create slots.
@@ -309,17 +311,27 @@ extension SwitcherConfig {
     public func removingSlot(_ id: InputRole) throws(SlotError) -> SwitcherConfig {
         guard slot(id) != nil else { throw .unknownSlot(id) }
         guard Set(slots.map(\.id)).count > 1 else { throw .lastSlot }
+        return removingSlotAndGivingBack(id).config
+    }
+
+    /// Removes the slot; a Toggle naming it goes too, and hands its key back to the slot it came from.
+    private func removingSlotAndGivingBack(_ id: InputRole) -> (config: SwitcherConfig, givenBack: KeyBinding?) {
+        let toggle = toggleBinding.flatMap { $0.action.names(slot: id) ? $0 : nil }
         var result = self
         result.slots.removeAll { $0.id == id }
         result.bindings.removeAll { $0.action.names(slot: id) }
         result.inputSources.removeValue(forKey: id.rawValue)
         result.switchIndicatorCustomRoleColorHexes.removeValue(forKey: id.rawValue)
-        return result
+        let before = result.bindings.count
+        result = result.givingBack(toggle)
+        return (result, result.bindings.count > before ? result.bindings.last : nil)
     }
 
     public func removingSlotWithReceipt(_ id: InputRole) throws(SlotError) -> (config: SwitcherConfig, removed: RemovedSlot) {
         guard let index = slots.firstIndex(where: { $0.id == id }) else { throw .unknownSlot(id) }
-        let removed = RemovedSlot(
+        guard Set(slots.map(\.id)).count > 1 else { throw .lastSlot }
+        let (config, givenBack) = removingSlotAndGivingBack(id)
+        var removed = RemovedSlot(
             slot: slots[index],
             index: index,
             bindings: bindings.enumerated().compactMap { offset, binding in
@@ -329,7 +341,8 @@ extension SwitcherConfig {
             preference: inputSources[id.rawValue],
             customIndicatorColorHex: switchIndicatorCustomRoleColorHexes[id.rawValue]
         )
-        return (try removingSlot(id), removed)
+        removed.givenBack = givenBack
+        return (config, removed)
     }
 
     /// Restores slot-owned data at its saved positions, clamping after intervening edits.
@@ -345,6 +358,10 @@ extension SwitcherConfig {
         }
 
         var result = self
+        // The key the Toggle handed back belongs to the Toggle again.
+        if let givenBack = removed.givenBack, let at = result.bindings.firstIndex(of: givenBack) {
+            result.bindings.remove(at: at)
+        }
         result.slots.insert(removed.slot, at: min(max(removed.index, 0), result.slots.count))
         result.inputSources[id.rawValue] = removed.preference
         result.switchIndicatorCustomRoleColorHexes[id.rawValue] = removed.customIndicatorColorHex
