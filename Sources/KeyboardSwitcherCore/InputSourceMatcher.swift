@@ -119,10 +119,16 @@ public enum InputSourceMatcher {
         return selectableSources(from: current).filter { !previousIDs.contains($0.id) }
     }
 
+    /// macOS Dictation registers as a selectable English source under its code name, with a localized name
+    /// ("听写" in Chinese) that the name checks below miss. It types nothing, and must never be an English
+    /// slot's fallback.
+    private static let dictationID = "com.apple.inputmethod.ironwood"
+
     public static func isAuxiliaryInputSource(_ source: InputSourceInfo) -> Bool {
         let id = source.id.lowercased()
         let name = source.localizedName.lowercased()
-        return id.contains("palette")
+        return id == dictationID
+            || id.contains("palette")
             || id.contains("pressandhold")
             || id.contains("dictation")
             || name.contains("palette")

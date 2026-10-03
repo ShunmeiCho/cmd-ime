@@ -684,4 +684,13 @@ final class SwitchSlotsTests: XCTestCase {
         XCTAssertEqual(config.sourceStatus(for: .japanese, sources: [abc, azooKey]), .duplicate)
         XCTAssertEqual(config.sourceStatus(for: googleSlot, sources: [abc, azooKey]), .duplicate)
     }
+
+    func testDictationUnderItsCodeNameIsNeverAListedSourceOrAFallback() {
+        let dictation = InputSourceInfo(id: "com.apple.inputmethod.ironwood", localizedName: "听写", languages: ["en"], isSelectCapable: true)
+        let pinyin = InputSourceInfo(id: "com.apple.inputmethod.SCIM.ITABC", localizedName: "Pinyin", languages: ["zh-Hans"], isSelectCapable: true)
+
+        XCTAssertEqual(InputSourceMatcher.selectableSources(from: [dictation, pinyin]).map(\.id), [pinyin.id])
+        // English's ABC is gone: the language fallback must not land on Dictation.
+        XCTAssertNil(InputSourceMatcher.bestMatch(for: .english, sources: [dictation, pinyin], config: .default))
+    }
 }
