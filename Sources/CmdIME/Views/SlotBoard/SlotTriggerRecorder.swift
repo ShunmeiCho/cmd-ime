@@ -162,6 +162,14 @@ private struct TriggerRecorderPopover: View {
                 .font(DesignTokens.Typography.body)
                 .disabled(session.pressedSides.isEmpty)
                 .focused($focusedControl, equals: .side)
+            // A shortcut saved without a side (or none recorded yet) does not say which key was held:
+            // the box can be ticked only after the shortcut is pressed here.
+            if session.pressedSides.isEmpty {
+                Text("Press the shortcut once to choose the left or right key.")
+                    .font(DesignTokens.Typography.auxiliary)
+                    .foregroundStyle(DesignTokens.Colors.textMuted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let warning = session.warning {
                 Label(warning, systemImage: "exclamationmark.triangle.fill")
                     .font(DesignTokens.Typography.body)

@@ -20520,6 +20520,30 @@
           }
         }
       }
+    },
+    "Press the shortcut once to choose the left or right key.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press the shortcut once to choose the left or right key."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先按一次快捷键，才能选择只认左边或右边。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左右どちらのキーにするかは、ショートカットを一度押すと選べます。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
