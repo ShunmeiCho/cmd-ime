@@ -190,4 +190,29 @@ struct ToggleBindingTests {
         #expect(config.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
         #expect(config.toggleBinding?.action.takenFrom == nil)
     }
+
+    @Test("the CLI remembers a key taken from a third slot and gives it back on clear")
+    func cliThirdSlot() throws {
+        var config = SwitcherConfig.default
+        let optionJ = try trigger("option+j")  // Japanese in the legacy defaults
+        _ = try config.upsertToggleBinding(trigger: optionJ, slots: .english, .chinese)
+        #expect(config.toggleBinding?.action.takenFrom == .japanese)
+
+        let cleared = try config.replacingToggleBinding(with: nil, slots: .english, .chinese)
+        #expect(cleared.bindings.contains { $0.trigger == optionJ && $0.action == .switchInputSource(.japanese) })
+    }
+
+    @Test("undo keeps the given-back key when a newer toggle took the old one's place")
+    func undoAfterNewerToggle() throws {
+        let leftCommand = try trigger("left-command")
+        let toggled = try SwitcherConfig.default.replacingToggleBinding(with: leftCommand, slots: .english, .chinese)
+        let (removed, receipt) = try toggled.removingSlotWithReceipt(.chinese)
+        let newer = try removed.replacingToggleBinding(with: trigger("right-shift"), slots: .english, .japanese)
+
+        let (restored, skipped) = try newer.restoringSlot(receipt)
+
+        #expect(skipped.map(\.binding.action.type) == [.toggleSlots])
+        #expect(restored.toggleBinding?.trigger == (try trigger("right-shift")))
+        #expect(restored.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
+    }
 }
