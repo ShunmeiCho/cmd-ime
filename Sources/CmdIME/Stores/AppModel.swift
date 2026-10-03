@@ -709,9 +709,9 @@ final class AppModel: ObservableObject {
         statusText = visible ? String(localized: "Caps Lock indicator enabled") : String(localized: "Caps Lock indicator disabled")
     }
 
-    func setAutoSpaceAfterHan(_ enabled: Bool) {
+    func setAutoSpaceBetweenChineseAndEnglish(_ enabled: Bool) {
         var next = config
-        next.autoSpaceAfterHan = enabled
+        next.autoSpaceBetweenChineseAndEnglish = enabled
         guard commitShowingWindowFailure(next) else { return }
         statusText = enabled ? String(localized: "Space between Chinese and English turned on") : String(localized: "Space between Chinese and English turned off")
     }

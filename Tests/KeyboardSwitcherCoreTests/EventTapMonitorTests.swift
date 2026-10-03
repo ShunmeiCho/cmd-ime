@@ -1251,7 +1251,7 @@ final class EventTapMonitorTests: XCTestCase {
 
     func testAutoSpacePostsASpaceBeforeTheFirstLetterAfterHan() {
         var config = SwitcherConfig.default
-        config.autoSpaceAfterHan = true
+        config.autoSpaceBetweenChineseAndEnglish = true
         let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
         monitor.characterBeforeCaret = { "中" }
         var posted: [(keyCode: Int64, down: Bool)] = []
@@ -1269,10 +1269,28 @@ final class EventTapMonitorTests: XCTestCase {
         XCTAssertTrue(monitor.handleKeyDownForTesting(second)?.takeUnretainedValue() === second, "only the first key gets a space")
     }
 
+    func testAutoSpaceGoingIntoChinesePostsASpaceBeforeTheFirstPinyinLetterAfterEnglish() {
+        var config = SwitcherConfig.default
+        config.autoSpaceBetweenChineseAndEnglish = true
+        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        monitor.characterBeforeCaret = { "s" }
+        var posted: [Int64] = []
+        monitor.autoSpaceKeyPoster = { posted.append($0.getIntegerValueField(.keyboardEventKeycode)) }
+
+        // Right Command is the Chinese slot (Pinyin) in the legacy defaults.
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54, flags: [.maskCommand]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54))
+        drainMainQueue()
+        waitForAutoSpaceRead(monitor)
+
+        XCTAssertNil(monitor.handleKeyDownForTesting(makeTypedEvent(keyCode: 45, character: "n")))
+        XCTAssertEqual(posted, [49, 49, 45])
+    }
+
     func testAutoSpaceStaysOffWhenTheSettingIsOffOrTheCaretFollowsNoHan() {
         for (enabled, before) in [(false, "中"), (true, "a"), (true, "，")] {
             var config = SwitcherConfig.default
-            config.autoSpaceAfterHan = enabled
+            config.autoSpaceBetweenChineseAndEnglish = enabled
             let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
             monitor.characterBeforeCaret = { before }
             var posted = 0
@@ -1290,7 +1308,7 @@ final class EventTapMonitorTests: XCTestCase {
 
     func testAutoSpaceIsDroppedByAClickOrAnAppSwitch() {
         var config = SwitcherConfig.default
-        config.autoSpaceAfterHan = true
+        config.autoSpaceBetweenChineseAndEnglish = true
         let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
         monitor.characterBeforeCaret = { "中" }
         var posted = 0
@@ -1308,7 +1326,7 @@ final class EventTapMonitorTests: XCTestCase {
 
     func testAutoSpaceNeverTakesAKeyABindingAnswersTo() throws {
         var config = SwitcherConfig.default
-        config.autoSpaceAfterHan = true
+        config.autoSpaceBetweenChineseAndEnglish = true
         config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("shift+a"), action: .switchInputSource(.chinese)))
         let service = StubInputSourceService(sources: makeSwitchSources())
         let monitor = EventTapMonitor(config: config, inputSources: service)
@@ -1326,24 +1344,25 @@ final class EventTapMonitorTests: XCTestCase {
 
         XCTAssertEqual(posted, 0)
         XCTAssertEqual(service.selectedIDs.last, "com.apple.inputmethod.SCIM.ITABC")
-        XCTAssertEqual(monitor.autoSpace.phase, .idle)
+        // The English switch's space is gone; the Chinese switch the binding made arms its own side.
+        XCTAssertNotEqual(monitor.autoSpace.phase, .spaceBeforeNextKey(.intoLatin))
     }
 
     func testAutoSpaceEndsWhenTheSettingTurnsOffRecordingStartsOrAnotherSwitchIsRequested() {
         var config = SwitcherConfig.default
-        config.autoSpaceAfterHan = true
+        config.autoSpaceBetweenChineseAndEnglish = true
         for interruption in 0..<3 {
             let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
             monitor.characterBeforeCaret = { "中" }
             tapLeftCommand(monitor)
             drainMainQueue()
             waitForAutoSpaceRead(monitor)
-            XCTAssertEqual(monitor.autoSpace.phase, .spaceBeforeNextKey)
+            XCTAssertEqual(monitor.autoSpace.phase, .spaceBeforeNextKey(.intoLatin))
 
             switch interruption {
             case 0:
                 var off = config
-                off.autoSpaceAfterHan = false
+                off.autoSpaceBetweenChineseAndEnglish = false
                 monitor.updateConfig(off)
             case 1:
                 monitor.isCapturingShortcut = true
