@@ -43,22 +43,46 @@ extension SwitcherConfig {
 
     /// Replaces the Toggle, or removes it when `trigger` is nil. A trigger one of its two slots has is
     /// taken from that slot (the Toggle reaches it anyway); a trigger anything else answers to is
-    /// refused, with the rule Peek uses.
+    /// refused, with the rule Peek uses. A trigger the old Toggle took goes back to its slot once the
+    /// Toggle no longer uses it, when that slot still exists and nothing else has taken the key.
     public func replacingToggleBinding(with trigger: KeyTrigger?, slots first: InputRole, _ second: InputRole) throws(ToggleBindingError) -> SwitcherConfig {
         var result = self
+        let previous = toggleBinding
         result.bindings.removeAll { $0.action.type == .toggleSlots }
-        guard let trigger else { return result }
+        guard let trigger else { return result.givingBack(previous) }
         try validateToggle(first, second)
         if trigger.isReservedMacInputSourceShortcut {
             throw .reservedByMacOS(trigger)
         }
+        // The same key as before keeps the slot it came from; a key taken now records its slot.
+        var takenFrom = previous?.trigger == trigger ? previous?.action.takenFrom : nil
         while let taken = result.toggleTakeover(of: trigger, slots: first, second) {
+            takenFrom = takenFrom ?? taken.action.role
             result.bindings.removeAll { $0 == taken }
         }
         if let occupant = result.bindings.first(where: { $0.enabled && Self.triggers($0.trigger, collideWith: trigger) }) {
             throw .conflictingBinding(occupant)
         }
-        result.bindings.append(KeyBinding(trigger: trigger, action: .toggleSlots(first, second)))
+        if previous?.trigger != trigger {
+            result = result.givingBack(previous)
+        }
+        result.bindings.append(KeyBinding(trigger: trigger, action: .toggleSlots(first, second, takenFrom: takenFrom)))
+        return result
+    }
+
+    /// The slot and trigger a Toggle would hand back if it let go of its key now, for the status line.
+    public func toggleGiveBack(of binding: KeyBinding?) -> (slot: InputRole, trigger: KeyTrigger)? {
+        guard let binding, let slot = binding.action.takenFrom, self.slot(slot) != nil,
+              !bindings.contains(where: { $0.enabled && $0 != binding && Self.triggers($0.trigger, collideWith: binding.trigger) }) else {
+            return nil
+        }
+        return (slot, binding.trigger)
+    }
+
+    private func givingBack(_ previous: KeyBinding?) -> SwitcherConfig {
+        guard let (slot, trigger) = toggleGiveBack(of: previous) else { return self }
+        var result = self
+        result.bindings.append(KeyBinding(trigger: trigger, action: .switchInputSource(slot)))
         return result
     }
 

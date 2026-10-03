@@ -126,4 +126,40 @@ struct ToggleBindingTests {
         #expect(pick(nil, [.english]) == .english)
         #expect(pick(.japanese, []) == .english)
     }
+
+    @Test("clearing the toggle gives a taken key back to its slot")
+    func clearGivesBack() throws {
+        let leftCommand = try trigger("left-command")
+        let toggled = try SwitcherConfig.default.replacingToggleBinding(with: leftCommand, slots: .english, .chinese)
+        #expect(toggled.toggleBinding?.action.takenFrom == .english)
+        #expect(toggled.toggleGiveBack(of: toggled.toggleBinding).map { [$0.slot] } == [.english])
+
+        let cleared = try toggled.replacingToggleBinding(with: nil, slots: .english, .chinese)
+
+        #expect(cleared.toggleBinding == nil)
+        #expect(cleared.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
+    }
+
+    @Test("changing the pair keeps the key and where it came from; moving to another key gives it back")
+    func pairChangeAndKeyChange() throws {
+        let leftCommand = try trigger("left-command")
+        let toggled = try SwitcherConfig.default.replacingToggleBinding(with: leftCommand, slots: .english, .chinese)
+
+        let otherPair = try toggled.replacingToggleBinding(with: leftCommand, slots: .chinese, .japanese)
+        #expect(otherPair.toggleBinding?.action.takenFrom == .english)
+
+        let otherKey = try otherPair.replacingToggleBinding(with: trigger("option+t"), slots: .chinese, .japanese)
+        #expect(otherKey.bindings.contains { $0.trigger == leftCommand && $0.action == .switchInputSource(.english) })
+        #expect(otherKey.toggleBinding?.action.takenFrom == nil)
+    }
+
+    @Test("a key that was free comes back to nobody, and an older toggle without takenFrom decodes")
+    func noGiveBack() throws {
+        let toggled = try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, .chinese)
+        let cleared = try toggled.replacingToggleBinding(with: nil, slots: .english, .chinese)
+        #expect(cleared.bindings == SwitcherConfig.default.bindings)
+
+        let older = #"{"type":"toggleSlots","roles":["english","chinese"]}"#
+        #expect(try JSONDecoder().decode(BindingAction.self, from: Data(older.utf8)) == .toggleSlots(.english, .chinese))
+    }
 }

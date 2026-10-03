@@ -39,6 +39,17 @@ struct SlotToggleRow: View {
                         .accessibilityHidden(true)
                     slotMenu(at: 1, pair: pair)
                     keyMenu(pair: pair)
+                    if trigger != nil {
+                        Button {
+                            model.commitToggle(nil, slots: pair[0], pair[1])
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(DesignTokens.Colors.textMuted)
+                        .help(String(localized: "Clear the Toggle"))
+                        .accessibilityLabel(String(localized: "Clear the Toggle"))
+                    }
                 } else {
                     Text("Toggle needs two slots.")
                         .font(DesignTokens.Typography.auxiliary)

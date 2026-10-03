@@ -20904,6 +20904,54 @@
           }
         }
       }
+    },
+    "Clear the Toggle": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the Toggle"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除轮换键"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切り替えキーを解除"
+          }
+        }
+      }
+    },
+    "Removed the %@ trigger; %@ is back on %@": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removed the %@ trigger; %@ is back on %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已移除%1$@；%2$@ 已还给 %3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ を外しました。%2$@ は %3$@ に戻りました"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

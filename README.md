@@ -269,7 +269,8 @@ use Shift to toggle Chinese and English, so CmdIME never assigns Shift automatic
 then a single or double tap of a modifier key. Pressed in one of the two slots, it switches
 to the other; pressed anywhere else, it switches to the one of the two CmdIME switched to
 last (the first slot until then). A key one of the two slots already has moves to the
-Toggle ("moves from …" in the menu); a key another slot has is shown as used. For a shortcut, run `keyboardctl bind option+t toggle english chinese`.
+Toggle ("moves from …" in the menu) and goes back to that slot when you clear the Toggle (the ×
+button) or give it another key; a key another slot has is shown as used. For a shortcut, run `keyboardctl bind option+t toggle english chinese`.
 
 Single-key modifier bindings and keyboard shortcuts are intentionally separate, so
 `Command+C`, `Command+V`, `Command+Tab` and multi-modifier chords are not treated as
