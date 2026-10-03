@@ -568,35 +568,57 @@ final class InputIndicatorController {
         var selection = CFRange()
         guard CFGetTypeID(rangeValue) == AXValueGetTypeID(),
               AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.length == 0 else { return nil }
-        var found: [CaretNeighbor.Side: CaretNeighbor.Neighbor] = [:]
-        for candidate in CaretNeighbor.candidates(caretLocation: selection.location) {
+        // The length says whether a side has no character (start or end of the text) or just did not answer.
+        var lengthValue: CFTypeRef?
+        let length = withRemainingBudget(focusedElement)
+            && AXUIElementCopyAttributeValue(focusedElement, kAXNumberOfCharactersAttribute as CFString, &lengthValue) == .success
+            ? (lengthValue as? Int) : nil
+        var found: [CaretNeighbor.Side: CaretNeighbor.Lookup] = [
+            .before: selection.location == 0 ? .none : .unknown,
+            .after: length.map { selection.location >= $0 } == true ? .none : .unknown,
+        ]
+        for candidate in CaretNeighbor.candidates(caretLocation: selection.location) where found[candidate.side] == .unknown {
             var range = CFRange(location: candidate.location, length: 1)
-            guard let parameter = AXValueCreate(.cfRange, &range),
-                  let rect = bounds(of: parameter, in: focusedElement, budget: withRemainingBudget) else { continue }
+            guard let parameter = AXValueCreate(.cfRange, &range) else { continue }
+            var boundsValue: CFTypeRef?
+            guard withRemainingBudget(focusedElement) else { break }
+            let error = AXUIElementCopyParameterizedAttributeValue(
+                focusedElement, kAXBoundsForRangeParameterizedAttribute as CFString, parameter, &boundsValue)
+            guard error == .success, let rect = Self.realRect(boundsValue) else {
+                // An answer that there is nothing there (a range past the end) means no character on that side;
+                // a timeout or a failure says nothing, and stays unknown.
+                if [.illegalArgument, .noValue].contains(error) { found[candidate.side] = CaretNeighbor.Lookup.none }
+                continue
+            }
             // The character itself only says which way the text runs; it is not kept.
             var text: CFTypeRef?
             if withRemainingBudget(focusedElement) {
                 _ = AXUIElementCopyParameterizedAttributeValue(
                     focusedElement, kAXStringForRangeParameterizedAttribute as CFString, parameter, &text)
             }
-            found[candidate.side] = .init(rect: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
-                                          text: text as? String)
+            found[candidate.side] = .found(.init(rect: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
+                                                 text: text as? String))
         }
-        guard let caret = CaretNeighbor.caret(before: found[.before], after: found[.after]) else { return nil }
+        guard let caret = CaretNeighbor.caret(before: found[.before] ?? .unknown, after: found[.after] ?? .unknown) else { return nil }
         return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
     }
 
-    /// The screen rect the element gives for a range, when it gives a real one. An insertion point is a
-    /// zero-width rect, which `isEmpty` would throw away: only the height says whether it is real.
+    /// The screen rect the element gives for a range, when it gives a real one.
     private nonisolated static func bounds(of range: CFTypeRef, in element: AXUIElement, budget: (AXUIElement) -> Bool) -> CGRect? {
         var boundsValue: CFTypeRef?
         guard budget(element),
               AXUIElementCopyParameterizedAttributeValue(
                   element, kAXBoundsForRangeParameterizedAttribute as CFString, range, &boundsValue
-              ) == .success,
-              let boundsValue, CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
+              ) == .success else {
             return nil
         }
+        return realRect(boundsValue)
+    }
+
+    /// An insertion point is a zero-width rect, which `isEmpty` would throw away: only the height says
+    /// whether the app reported a real one.
+    private nonisolated static func realRect(_ boundsValue: CFTypeRef?) -> CGRect? {
+        guard let boundsValue, CFGetTypeID(boundsValue) == AXValueGetTypeID() else { return nil }
         let bounds = boundsValue as! AXValue
         var rect = CGRect.zero
         guard AXValueGetType(bounds) == .cgRect, AXValueGetValue(bounds, .cgRect, &rect), rect.height > 0 else {
