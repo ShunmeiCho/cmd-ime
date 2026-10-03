@@ -73,7 +73,7 @@ A trigger that switches between two named slots: from one of them to the other, 
 _Avoid_: Cycle, rotate, switch key
 
 **Auto space** (UI: "Space between Chinese and English"; zh-Hans 中英文之间加空格, ja 中国語と英語の間にスペース):
-An optional half-width space CmdIME types before the first letter or digit after a trigger switch into an English input source, when the character before the caret is Han. Off by default.
+An optional half-width space CmdIME types at the Chinese and English boundary a trigger switch creates: into English after Han (before the first letter or digit), into Chinese after an ASCII letter or digit (before the first pinyin letter). Off by default.
 _Avoid_: Pangu spacing, smart space
 
 ## Dynamic slots (PR1)

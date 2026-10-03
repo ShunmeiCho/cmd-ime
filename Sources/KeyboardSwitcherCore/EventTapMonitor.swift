@@ -253,7 +253,7 @@ public final class EventTapMonitor: @unchecked Sendable {
             triggerEvidenceEpoch = UUID()
         }
         self.config = config
-        if !config.autoSpaceAfterHan {
+        if !config.autoSpaceBetweenChineseAndEnglish {
             autoSpace.cancel()
         }
         refreshResolvedSources()
@@ -829,14 +829,15 @@ public final class EventTapMonitor: @unchecked Sendable {
         }
     }
 
-    /// A trigger switch into a Latin source: read the character before the caret off the main thread and
-    /// keep only whether the next key needs a space. The tap never waits on the read.
+    /// A trigger switch into an English or a Chinese source: read the character before the caret off the main
+    /// thread and keep only whether the next key needs a space. The tap never waits on the read.
     private func armAutoSpace(switchingTo source: InputSourceInfo) {
-        guard config.autoSpaceAfterHan, let reader = characterBeforeCaret, AutoSpace.arms(switchingTo: source) else {
+        guard config.autoSpaceBetweenChineseAndEnglish, let reader = characterBeforeCaret,
+              let direction = AutoSpace.direction(switchingTo: source) else {
             autoSpace.cancel()
             return
         }
-        let generation = autoSpace.armed()
+        let generation = autoSpace.armed(direction)
         let monitor = WeakMonitor(self)
         DispatchQueue.global(qos: .userInitiated).async {
             let before = AutoSpace.classify(reader())

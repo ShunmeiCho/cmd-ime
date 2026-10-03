@@ -20737,30 +20737,6 @@
         }
       }
     },
-    "After a trigger switches to an English input source, CmdIME reads the one character before the caret. If it is Chinese, CmdIME types a space before your first letter or digit. The character is not stored. Terminals and password fields are left alone.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After a trigger switches to an English input source, CmdIME reads the one character before the caret. If it is Chinese, CmdIME types a space before your first letter or digit. The character is not stored. Terminals and password fields are left alone."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用触发键切到英文输入法后，CmdIME 会读取光标前的一个字符。如果它是汉字，CmdIME 会在你打的第一个字母或数字前补一个半角空格。这个字符不会被保存。终端和密码框不处理。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "トリガーで英語の入力ソースに切り替えると、CmdIME はカーソルの直前の 1 文字を読み取ります。それが漢字なら、最初に入力する英字か数字の前に半角スペースを入れます。読み取った文字は保存しません。ターミナルとパスワード欄では何もしません。"
-          }
-        }
-      }
-    },
     "Space between Chinese and English turned on": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -20901,6 +20877,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Terminal.app と、対応したリリース以降の Ghostty は、前面のタブで動いているプログラムを CmdIME に伝えられます。CmdIME はそれらに問い合わせ、macOS は端末ごとに一度、許可するかどうかを確認します。許可しなかった場合は、「システム設定 > プライバシーとセキュリティ > オートメーション」で CmdIME を許可してから、CmdIME を終了してもう一度開いてください。"
+          }
+        }
+      }
+    },
+    "After a trigger switches input source, CmdIME reads the one character before the caret. Into English after Chinese, it types a space before your first letter or digit; into Chinese after English or a digit, before your first pinyin letter. The character is not stored. Terminals and password fields are left alone.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After a trigger switches input source, CmdIME reads the one character before the caret. Into English after Chinese, it types a space before your first letter or digit; into Chinese after English or a digit, before your first pinyin letter. The character is not stored. Terminals and password fields are left alone."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用触发键切换输入法后，CmdIME 会读取光标前的一个字符。在中文后切到英文时，在你打的第一个字母或数字前补一个半角空格；在英文或数字后切到中文时，在你打的第一个拼音字母前补一个。这个字符不会被保存。终端和密码框不处理。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トリガーで入力ソースを切り替えると、CmdIME はカーソル直前の 1 文字を読み取ります。中国語のあとで英語に切り替えたときは最初の英字か数字の前に、英語か数字のあとで中国語に切り替えたときは最初のピンインの文字の前に、半角スペースを入れます。読み取った文字は保存しません。ターミナルとパスワード欄では何もしません。"
           }
         }
       }

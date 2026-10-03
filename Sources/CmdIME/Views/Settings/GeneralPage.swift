@@ -31,7 +31,7 @@ struct GeneralPage: View {
                 Text("Space between Chinese and English")
                 Spacer(minLength: DesignTokens.Layout.rowGap)
                 Toggle("Space between Chinese and English", isOn: Binding(
-                    get: { model.config.autoSpaceAfterHan }, set: { model.setAutoSpaceAfterHan($0) }
+                    get: { model.config.autoSpaceBetweenChineseAndEnglish }, set: { model.setAutoSpaceBetweenChineseAndEnglish($0) }
                 ))
                 .labelsHidden()
                 .toggleStyle(.switch)
@@ -40,7 +40,7 @@ struct GeneralPage: View {
             }
             // New in 0.16: shown in Brief too while the feature is new (owner rule, issue #7). It also
             // says what is read, which the user must know before turning it on.
-            Text("After a trigger switches to an English input source, CmdIME reads the one character before the caret. If it is Chinese, CmdIME types a space before your first letter or digit. The character is not stored. Terminals and password fields are left alone.")
+            Text("After a trigger switches input source, CmdIME reads the one character before the caret. Into English after Chinese, it types a space before your first letter or digit; into Chinese after English or a digit, before your first pinyin letter. The character is not stored. Terminals and password fields are left alone.")
                 .font(DesignTokens.Typography.auxiliary)
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)

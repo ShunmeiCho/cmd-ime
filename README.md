@@ -531,11 +531,15 @@ such as WeChat Input add a space between Chinese and Latin text they type themse
 before English typed in another input source, so `中文English` loses its space when a trigger
 switches to ABC. With the setting on:
 
-- After a trigger (or the Toggle) switches to an English input source, CmdIME reads the one
-  character before the caret, off the main thread, through Accessibility.
+- After a trigger (or the Toggle) switches to an English or a Chinese input source, CmdIME reads
+  the one character before the caret, off the main thread, through Accessibility.
 - If that character is Chinese (Han), CmdIME types a half-width space before your first letter
   or digit. A space, full-width punctuation such as `，` or `。`, or any other character before the
   caret means no space, so a space your input method already added is never doubled.
+- The other side works the same way: after a trigger switches to a Chinese input method, if the
+  character before the caret is an English letter or a digit, CmdIME types a half-width space before
+  your first pinyin letter. Chinese input methods such as Doubao or WeChat Input cannot see English
+  typed in ABC, so they do not add this one. Japanese and Korean input sources are left alone.
 - Any other first key (space, delete, arrows, return, punctuation, a shortcut), a click or another
   app in front drops it for that switch. Switches made by App Rules, websites or programs do not
   add a space.
