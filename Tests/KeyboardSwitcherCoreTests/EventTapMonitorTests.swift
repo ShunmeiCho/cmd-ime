@@ -1252,7 +1252,9 @@ final class EventTapMonitorTests: XCTestCase {
     func testAutoSpacePostsASpaceBeforeTheFirstLetterAfterHan() {
         var config = SwitcherConfig.default
         config.autoSpaceBetweenChineseAndEnglish = true
-        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        try? service.selectInputSource(id: "com.apple.inputmethod.SCIM.ITABC")  // the switch leaves another kind of source
+        let monitor = EventTapMonitor(config: config, inputSources: service)
         monitor.characterBeforeCaret = { "中" }
         var posted: [(keyCode: Int64, down: Bool)] = []
         monitor.autoSpaceKeyPoster = { posted.append(($0.getIntegerValueField(.keyboardEventKeycode), $0.type == .keyDown)) }
@@ -1272,7 +1274,9 @@ final class EventTapMonitorTests: XCTestCase {
     func testAutoSpaceGoingIntoChinesePostsASpaceBeforeTheFirstPinyinLetterAfterEnglish() {
         var config = SwitcherConfig.default
         config.autoSpaceBetweenChineseAndEnglish = true
-        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        try? service.selectInputSource(id: "com.apple.keylayout.ABC")  // the switch leaves another kind of source
+        let monitor = EventTapMonitor(config: config, inputSources: service)
         monitor.characterBeforeCaret = { "s" }
         var posted: [Int64] = []
         monitor.autoSpaceKeyPoster = { posted.append($0.getIntegerValueField(.keyboardEventKeycode)) }
@@ -1291,7 +1295,9 @@ final class EventTapMonitorTests: XCTestCase {
         for (enabled, before) in [(false, "中"), (true, "a"), (true, "，")] {
             var config = SwitcherConfig.default
             config.autoSpaceBetweenChineseAndEnglish = enabled
-            let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+            let service = StubInputSourceService(sources: makeSwitchSources())
+        try? service.selectInputSource(id: "com.apple.inputmethod.SCIM.ITABC")  // the switch leaves another kind of source
+        let monitor = EventTapMonitor(config: config, inputSources: service)
             monitor.characterBeforeCaret = { before }
             var posted = 0
             monitor.autoSpaceKeyPoster = { _ in posted += 1 }
@@ -1309,7 +1315,9 @@ final class EventTapMonitorTests: XCTestCase {
     func testAutoSpaceIsDroppedByAClickOrAnAppSwitch() {
         var config = SwitcherConfig.default
         config.autoSpaceBetweenChineseAndEnglish = true
-        let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        try? service.selectInputSource(id: "com.apple.inputmethod.SCIM.ITABC")  // the switch leaves another kind of source
+        let monitor = EventTapMonitor(config: config, inputSources: service)
         monitor.characterBeforeCaret = { "中" }
         var posted = 0
         monitor.autoSpaceKeyPoster = { _ in posted += 1 }
@@ -1329,6 +1337,7 @@ final class EventTapMonitorTests: XCTestCase {
         config.autoSpaceBetweenChineseAndEnglish = true
         config.bindings.append(KeyBinding(trigger: try ShortcutParser.parse("shift+a"), action: .switchInputSource(.chinese)))
         let service = StubInputSourceService(sources: makeSwitchSources())
+        try? service.selectInputSource(id: "com.apple.inputmethod.SCIM.ITABC")
         let monitor = EventTapMonitor(config: config, inputSources: service)
         monitor.characterBeforeCaret = { "中" }
         var posted = 0
@@ -1352,7 +1361,9 @@ final class EventTapMonitorTests: XCTestCase {
         var config = SwitcherConfig.default
         config.autoSpaceBetweenChineseAndEnglish = true
         for interruption in 0..<3 {
-            let monitor = EventTapMonitor(config: config, inputSources: StubInputSourceService(sources: makeSwitchSources()))
+            let service = StubInputSourceService(sources: makeSwitchSources())
+        try? service.selectInputSource(id: "com.apple.inputmethod.SCIM.ITABC")  // the switch leaves another kind of source
+        let monitor = EventTapMonitor(config: config, inputSources: service)
             monitor.characterBeforeCaret = { "中" }
             tapLeftCommand(monitor)
             drainMainQueue()
@@ -1372,6 +1383,28 @@ final class EventTapMonitorTests: XCTestCase {
 
             XCTAssertEqual(monitor.autoSpace.phase, .idle, "interruption \(interruption)")
         }
+    }
+
+    func testAutoSpaceDoesNotArmWhenTheTriggerReselectsTheSourceInFront() {
+        // A Chinese trigger pressed while Chinese is in front: the character before the caret can be marked
+        // pinyin, and a space would commit its candidate (review A2).
+        var config = SwitcherConfig.default
+        config.autoSpaceBetweenChineseAndEnglish = true
+        let service = StubInputSourceService(sources: makeSwitchSources())
+        try? service.selectInputSource(id: "com.apple.inputmethod.SCIM.ITABC")
+        let monitor = EventTapMonitor(config: config, inputSources: service)
+        monitor.characterBeforeCaret = { "i" }
+        var posted = 0
+        monitor.autoSpaceKeyPoster = { _ in posted += 1 }
+
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54, flags: [.maskCommand]))
+        monitor.handleFlagsChangedForTesting(makeKeyboardEvent(keyCode: 54))
+        drainMainQueue()
+        waitForAutoSpaceRead(monitor)
+        let key = makeTypedEvent(keyCode: 4, character: "h")
+
+        XCTAssertTrue(monitor.handleKeyDownForTesting(key)?.takeUnretainedValue() === key)
+        XCTAssertEqual(posted, 0)
     }
 
     /// The read runs on a global queue and reports on the main queue.

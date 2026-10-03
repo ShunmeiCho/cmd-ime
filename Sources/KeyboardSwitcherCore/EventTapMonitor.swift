@@ -271,6 +271,8 @@ public final class EventTapMonitor: @unchecked Sendable {
     private(set) var recentSlots: [InputRole] = []
 
     private(set) var autoSpace = AutoSpaceState()
+    /// The source in front when the current switch began, read only while auto space is on.
+    private var sourceBeforeSwitch: InputSourceInfo?
 
     /// Set by tests to observe the space and the re-posted key without posting real events.
     var autoSpaceKeyPoster: ((CGEvent) -> Void)?
@@ -660,6 +662,8 @@ public final class EventTapMonitor: @unchecked Sendable {
             return
         }
         let target = decidingToggle(requested)
+        // Auto space arms only for a switch that leaves another kind of source; read before anything selects.
+        sourceBeforeSwitch = config.autoSpaceBetweenChineseAndEnglish ? (try? inputSources.currentInputSource()) : nil
         guard let source = resolvedSource(for: target) else {
             onMessage?(CoreLocalization.text("No input method matched this switch slot."))
             endSwitch(generation)
@@ -833,7 +837,7 @@ public final class EventTapMonitor: @unchecked Sendable {
     /// thread and keep only whether the next key needs a space. The tap never waits on the read.
     private func armAutoSpace(switchingTo source: InputSourceInfo) {
         guard config.autoSpaceBetweenChineseAndEnglish, let reader = characterBeforeCaret,
-              let direction = AutoSpace.direction(switchingTo: source) else {
+              let direction = AutoSpace.crossing(from: sourceBeforeSwitch, to: source) else {
             autoSpace.cancel()
             return
         }

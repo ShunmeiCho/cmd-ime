@@ -130,4 +130,19 @@ struct AutoSpaceTests {
         let decoded = try JSONDecoder().decode(SwitcherConfig.self, from: JSONEncoder().encode(config))
         #expect(decoded.autoSpaceBetweenChineseAndEnglish)
     }
+
+    @Test("only a switch that leaves another kind of source crosses a boundary")
+    func crossing() {
+        func source(_ id: String, _ language: String) -> InputSourceInfo {
+            InputSourceInfo(id: id, localizedName: id, languages: [language], isSelectCapable: true)
+        }
+        let abc = source("abc", "en"), pinyin = source("pinyin", "zh-Hans"), doubao = source("doubao", "zh-Hans"), kana = source("kana", "ja")
+        #expect(AutoSpace.crossing(from: pinyin, to: abc) == .intoLatin)
+        #expect(AutoSpace.crossing(from: abc, to: pinyin) == .intoChinese)
+        #expect(AutoSpace.crossing(from: kana, to: pinyin) == .intoChinese)
+        #expect(AutoSpace.crossing(from: pinyin, to: pinyin) == nil)
+        #expect(AutoSpace.crossing(from: doubao, to: pinyin) == nil)
+        #expect(AutoSpace.crossing(from: nil, to: abc) == nil)
+        #expect(AutoSpace.crossing(from: abc, to: kana) == nil)
+    }
 }

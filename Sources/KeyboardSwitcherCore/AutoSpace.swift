@@ -63,6 +63,16 @@ public enum AutoSpace {
         return .intoLatin
     }
 
+    /// The boundary a switch from `previous` to `target` really crosses, or nil. Re-selecting the source already
+    /// in front (a trigger pressed twice) crosses nothing: the character before the caret can then be the
+    /// marked pinyin of a composition still open, and a space would commit its candidate (review A2). An
+    /// unknown previous source crosses nothing either.
+    public static func crossing(from previous: InputSourceInfo?, to target: InputSourceInfo) -> Direction? {
+        guard let direction = direction(switchingTo: target), let previous, previous.id != target.id,
+              self.direction(switchingTo: previous) != direction else { return nil }
+        return direction
+    }
+
     /// Whether the character before the caret asks for a space on this side of the boundary.
     public static func needsSpace(_ direction: Direction, before: Before) -> Bool {
         switch direction {
