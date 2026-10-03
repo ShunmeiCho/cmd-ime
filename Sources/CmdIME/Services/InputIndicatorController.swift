@@ -560,22 +560,38 @@ final class InputIndicatorController {
             return nil
         }
 
+        if let rect = bounds(of: rangeValue, in: focusedElement, budget: withRemainingBudget) {
+            return rect
+        }
+        // Many web fields (Chromium) answer an empty rect for a zero-length range. The character next to the
+        // caret has a real rect: its trailing edge (before the caret) or leading edge (after it) is the caret.
+        var selection = CFRange()
+        guard CFGetTypeID(rangeValue) == AXValueGetTypeID(),
+              AXValueGetValue(rangeValue as! AXValue, .cfRange, &selection), selection.length == 0 else { return nil }
+        for neighbor in CaretNeighbor.candidates(caretLocation: selection.location) {
+            var range = CFRange(location: neighbor.location, length: 1)
+            guard let parameter = AXValueCreate(.cfRange, &range),
+                  let rect = bounds(of: parameter, in: focusedElement, budget: withRemainingBudget) else { continue }
+            let caret = CaretNeighbor.caret(fromCharacter: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
+                                            side: neighbor.side)
+            return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
+        }
+        return nil
+    }
+
+    /// The screen rect the element gives for a range, when it gives a real one. An insertion point is a
+    /// zero-width rect, which `isEmpty` would throw away: only the height says whether it is real.
+    private nonisolated static func bounds(of range: CFTypeRef, in element: AXUIElement, budget: (AXUIElement) -> Bool) -> CGRect? {
         var boundsValue: CFTypeRef?
-        guard withRemainingBudget(focusedElement),
+        guard budget(element),
               AXUIElementCopyParameterizedAttributeValue(
-                  focusedElement,
-                  kAXBoundsForRangeParameterizedAttribute as CFString,
-                  rangeValue,
-                  &boundsValue
+                  element, kAXBoundsForRangeParameterizedAttribute as CFString, range, &boundsValue
               ) == .success,
               let boundsValue, CFGetTypeID(boundsValue) == AXValueGetTypeID() else {
             return nil
         }
-
         let bounds = boundsValue as! AXValue
         var rect = CGRect.zero
-        // An insertion point is a zero-width rect, which `isEmpty` would throw away: only the
-        // height says whether the app reported a real caret.
         guard AXValueGetType(bounds) == .cgRect, AXValueGetValue(bounds, .cgRect, &rect), rect.height > 0 else {
             return nil
         }
