@@ -10,6 +10,7 @@ final class HerdrForwardConnection {
     var lastUsed: TimeInterval
     private let process: Process
     private let pidFile: String
+    private let configFile: String
 
     private static let ssh = "/usr/bin/ssh"
     private static let socketPoll: TimeInterval = 0.02
@@ -17,10 +18,11 @@ final class HerdrForwardConnection {
 
     var isAlive: Bool { process.isRunning }
 
-    private init(process: Process, socketPath: String, pidFile: String, now: TimeInterval) {
+    private init(process: Process, socketPath: String, pidFile: String, configFile: String, now: TimeInterval) {
         self.process = process
         socket = HerdrSocket(path: socketPath)
         self.pidFile = pidFile
+        self.configFile = configFile
         lastUsed = now
     }
 
@@ -30,11 +32,17 @@ final class HerdrForwardConnection {
         dispatchPrecondition(condition: .notOnQueue(.main))
         guard let directory = socketDirectory(),
               let socketPath = HerdrForward.localSocketPath(directory: directory, machineID: machine.id),
-              let user = resolvedUser(target: machine.target) else { return nil }
+              let resolved = resolvedConfig(target: machine.target),
+              let user = HerdrForward.user(inResolvedConfig: resolved) else { return nil }
         let pidFile = socketPath + ".pid"
+        let configFile = socketPath + ".conf"
         endLeftover(pidFile: pidFile)
+        let config = Data(HerdrForward.privateConfig(fromResolved: resolved).utf8)
         for remote in HerdrForward.remoteSocketCandidates(user: user) {
-            guard let connection = start(target: machine.target, socketPath: socketPath, remoteSocket: remote, pidFile: pidFile) else {
+            // Written for every try: closing a failed one removes it.
+            guard FileManager.default.createFile(atPath: configFile, contents: config, attributes: [.posixPermissions: 0o600]),
+                  let connection = start(target: machine.target, socketPath: socketPath, remoteSocket: remote,
+                                         pidFile: pidFile, configFile: configFile) else {
                 continue
             }
             if connection.socket.reply(to: HerdrSurface.paneListRequest, budget: HerdrForward.requestBudget)
@@ -51,6 +59,7 @@ final class HerdrForwardConnection {
         Self.running.remove(process.processIdentifier)
         try? FileManager.default.removeItem(atPath: socket.path)
         try? FileManager.default.removeItem(atPath: pidFile)
+        try? FileManager.default.removeItem(atPath: configFile)
     }
 
     /// Ends every forward. Called when CmdIME quits, on main: an ssh with `-N` would otherwise
@@ -59,11 +68,14 @@ final class HerdrForwardConnection {
         running.endAll()
     }
 
-    private static func start(target: String, socketPath: String, remoteSocket: String, pidFile: String) -> HerdrForwardConnection? {
+    private static func start(
+        target: String, socketPath: String, remoteSocket: String, pidFile: String, configFile: String
+    ) -> HerdrForwardConnection? {
         try? FileManager.default.removeItem(atPath: socketPath)
         let process = Process()
         process.executableURL = URL(fileURLWithPath: ssh)
-        process.arguments = HerdrForward.sshArguments(target: target, localSocket: socketPath, remoteSocket: remoteSocket)
+        process.arguments = HerdrForward.sshArguments(
+            target: target, configFile: configFile, localSocket: socketPath, remoteSocket: remoteSocket)
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
@@ -71,7 +83,8 @@ final class HerdrForwardConnection {
         running.add(process.processIdentifier)
         try? String(process.processIdentifier).write(toFile: pidFile, atomically: true, encoding: .utf8)
         let now = ProcessInfo.processInfo.systemUptime
-        let connection = HerdrForwardConnection(process: process, socketPath: socketPath, pidFile: pidFile, now: now)
+        let connection = HerdrForwardConnection(
+            process: process, socketPath: socketPath, pidFile: pidFile, configFile: configFile, now: now)
         let deadline = now + HerdrForward.connectBudget
         while !FileManager.default.fileExists(atPath: socketPath) {
             guard process.isRunning, ProcessInfo.processInfo.systemUptime < deadline else {
@@ -83,8 +96,8 @@ final class HerdrForwardConnection {
         return connection
     }
 
-    /// The login user ssh would use for `target`, from the user's ssh config, without connecting.
-    private static func resolvedUser(target: String) -> String? {
+    /// The user's ssh settings for `target` as ssh resolves them (`ssh -G`), without connecting.
+    private static func resolvedConfig(target: String) -> String? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: ssh)
         process.arguments = HerdrForward.resolveArguments(target: target)
@@ -97,7 +110,7 @@ final class HerdrForwardConnection {
         let data = output.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else { return nil }
-        return HerdrForward.user(inResolvedConfig: String(decoding: data, as: UTF8.self))
+        return String(decoding: data, as: UTF8.self)
     }
 
     /// A short private directory: a Unix socket path must fit in 104 bytes.

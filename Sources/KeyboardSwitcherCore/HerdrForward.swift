@@ -22,17 +22,38 @@ public enum HerdrForward {
     static let maxSocketPathBytes = 103
     private static let socketPathSuffix = "/.config/herdr/herdr.sock"
 
+    /// Options in `ssh -G` output that CmdIME's connection must not take over: the forwards the
+    /// user set up for their own sessions (a `RemoteForward` for another tool would be held, and
+    /// dropped on idle, by CmdIME), connection sharing, and anything that runs a command.
+    /// `ClearAllForwardings` cannot do this: it drops CmdIME's own `-L` too (measured 2026-10-04).
+    private static let droppedOptions: Set<String> = [
+        "localforward", "remoteforward", "dynamicforward", "clearallforwardings", "exitonforwardfailure",
+        "controlmaster", "controlpath", "controlpersist", "permitlocalcommand", "localcommand",
+        "remotecommand", "requesttty", "sessiontype", "stdinnull", "forkafterauthentication",
+    ]
+
+    /// The user's ssh settings for one host as `ssh -G` resolved them, without the options in
+    /// `droppedOptions`: the private config CmdIME's ssh runs with (`-F`), so it reaches the host the
+    /// way the user's own ssh does and opens nothing but its own forward.
+    public static func privateConfig(fromResolved output: String) -> String {
+        output.split(whereSeparator: \.isNewline)
+            .filter { line in
+                let key = line.split(separator: " ", maxSplits: 1).first.map { $0.lowercased() } ?? ""
+                return !key.isEmpty && !droppedOptions.contains(key)
+            }
+            .joined(separator: "\n") + "\n"
+    }
+
     /// ssh arguments that forward `remoteSocket` on the machine to `localSocket` here and run
-    /// nothing there. Never asks anything (`BatchMode`): a machine that needs a password or has an
-    /// unknown host key fails, and the CLI is used. A forward the user's ssh config adds for that
-    /// host (a `RemoteForward` another session already holds) must not end this one, so
-    /// `ExitOnForwardFailure` is off; whether this forward works is told by the socket answering.
-    /// `ClearAllForwardings` cannot drop the config's forwards alone: it drops `-L` too (measured).
-    public static func sshArguments(target: String, localSocket: String, remoteSocket: String) -> [String] {
+    /// nothing there, with `configFile` from `privateConfig(fromResolved:)`. Never asks anything
+    /// (`BatchMode`): a machine that needs a password or has an unknown host key fails, and the CLI
+    /// is used.
+    public static func sshArguments(target: String, configFile: String, localSocket: String, remoteSocket: String) -> [String] {
         [
+            "-F", configFile,
             "-N", "-T",
             "-o", "BatchMode=yes",
-            "-o", "ExitOnForwardFailure=no",
+            "-o", "ExitOnForwardFailure=yes",
             "-o", "StreamLocalBindUnlink=yes",
             "-o", "ConnectTimeout=5",
             "-o", "ServerAliveInterval=15",

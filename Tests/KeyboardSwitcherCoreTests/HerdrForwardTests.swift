@@ -3,14 +3,15 @@ import Testing
 @testable import KeyboardSwitcherCore
 
 struct HerdrForwardTests {
-    @Test("ssh forwards the remote socket, runs nothing there, never asks, and survives a config forward that fails")
+    @Test("ssh runs with the private config, forwards the remote socket, runs nothing there and never asks")
     func sshArguments() {
         let arguments = HerdrForward.sshArguments(
-            target: "venus", localSocket: "/l/a.sock", remoteSocket: "/home/me/.config/herdr/herdr.sock")
+            target: "venus", configFile: "/l/a.conf", localSocket: "/l/a.sock", remoteSocket: "/home/me/.config/herdr/herdr.sock")
 
+        #expect(arguments.prefix(2) == ["-F", "/l/a.conf"])
         #expect(arguments.contains("-N"))
         #expect(arguments.contains("BatchMode=yes"))
-        #expect(arguments.contains("ExitOnForwardFailure=no"))
+        #expect(arguments.contains("ExitOnForwardFailure=yes"))
         #expect(arguments.suffix(4) == ["-L", "/l/a.sock:/home/me/.config/herdr/herdr.sock", "--", "venus"])
     }
 
@@ -35,6 +36,36 @@ struct HerdrForwardTests {
         #expect(HerdrForward.user(inResolvedConfig: output) == "junming")
         #expect(HerdrForward.user(inResolvedConfig: "hostname x\n") == nil)
         #expect(HerdrForward.user(inResolvedConfig: "username x\n") == nil)
+    }
+
+    @Test("the private config keeps how to reach the host and drops the user's forwards, sharing and commands")
+    func privateConfig() {
+        let resolved = """
+        user junming
+        hostname 10.209.1.11
+        port 20330
+        identityfile ~/.ssh/id_rsa
+        remoteforward 18339 [127.0.0.1]:18339
+        LocalForward 8080 localhost:80
+        dynamicforward 1080
+        exitonforwardfailure no
+        controlmaster false
+        controlpath /tmp/x
+        permitlocalcommand yes
+        localcommand echo hi
+        remotecommand uptime
+        requesttty auto
+        proxyjump bastion
+        """
+
+        #expect(HerdrForward.privateConfig(fromResolved: resolved) == """
+        user junming
+        hostname 10.209.1.11
+        port 20330
+        identityfile ~/.ssh/id_rsa
+        proxyjump bastion
+
+        """)
     }
 
     @Test("the remote socket is looked for in the usual homes, Linux first")
