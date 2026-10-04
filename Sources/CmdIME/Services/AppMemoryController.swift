@@ -32,6 +32,9 @@ final class AppMemoryController {
         },
         onPaneFocus: { [weak self] pid, paneID, time in
             MainActor.assumeIsolated { self?.paneDidFocus(pid: pid, paneID: paneID, at: time) }
+        },
+        onSlowRead: { [weak self] _, generation in
+            MainActor.assumeIsolated { self?.extendHold(generation: generation) }
         }
     )
     private var programTarget: ProgramTarget?
@@ -43,6 +46,8 @@ final class AppMemoryController {
     private var launcherInFront: NSRunningApplication?
     /// The generation whose wait for the page already has its expiry scheduled.
     private var heldGeneration: Int?
+    /// Which expiry ends a wait that a read of another machine's panes asked to extend.
+    private var holdExtension = SurfaceHoldExtension()
     /// Where a tracker built by the next `start()` begins counting.
     private var nextGenerationBase = 0
 
@@ -274,8 +279,8 @@ final class AppMemoryController {
     }
 
     /// The browser's own target waited for its page and no read came in time.
-    private func websiteHoldDidExpire(generation: Int) {
-        guard isActive, isPermitted else { return }
+    private func websiteHoldDidExpire(generation: Int, isExtended: Bool = false) {
+        guard isActive, isPermitted, holdExtension.counts(generation: generation, isExtended: isExtended) else { return }
         let actual = actualFrontmostApp()
         let context = context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
         // The wait belongs to a browser or to a terminal; the tracker ignores the other's expiry.
@@ -325,6 +330,17 @@ final class AppMemoryController {
 
     /// How long a browser's own target waits for the first read of its page.
     private static let websiteHoldBudget: TimeInterval = 0.25
+
+    /// The watcher is reading another machine's panes for `generation`: a terminal's own target
+    /// still waiting for that read waits `HerdrRemote.holdBudget` instead, counted from now.
+    private func extendHold(generation: Int) {
+        let waiting = isActive && tracker.isWebsiteHoldWaiting && heldGeneration == tracker.activationGeneration
+            ? tracker.activationGeneration : nil
+        guard holdExtension.extend(generation: generation, waitingGeneration: waiting) else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + HerdrRemote.holdBudget) { [weak self] in
+            self?.websiteHoldDidExpire(generation: generation, isExtended: true)
+        }
+    }
 
     private func perform(_ restore: AppMemoryTracker.Restore) {
         guard let monitor = monitor() else { return }

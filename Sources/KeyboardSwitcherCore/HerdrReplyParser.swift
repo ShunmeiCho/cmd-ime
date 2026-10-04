@@ -73,6 +73,16 @@ public enum HerdrReplyParser {
               !machine.label.isEmpty, !machine.target.isEmpty else { return nil }
         return SelectedMachine(label: machine.label, target: machine.target)
     }
+
+    /// Every saved machine in a `machine list --json` reply, enabled or not; nil for a malformed reply.
+    public static func machines(from data: Data) -> [HerdrMachine]? {
+        guard let machines = try? JSONDecoder().decode([Machine].self, from: data) else { return nil }
+        return machines.compactMap { machine in
+            guard let id = machine.id, !id.isEmpty, !machine.label.isEmpty else { return nil }
+            return HerdrMachine(id: id, label: machine.label, target: machine.target,
+                                isEnabled: machine.enabled ?? true, isSelected: machine.selected)
+        }
+    }
 }
 
 private extension HerdrReplyParser {
@@ -155,6 +165,8 @@ private extension HerdrReplyParser {
     }
 
     struct Machine: Decodable {
+        let id: String?
+        let enabled: Bool?
         let selected: Bool
         let label: String
         let target: String
