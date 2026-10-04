@@ -28,6 +28,9 @@ final class HerdrForwardConnection {
 
     /// Starts ssh for `machine` and returns the connection once Herdr answers through it, trying
     /// each place its socket can be; nil when ssh cannot connect without asking, or nothing answers.
+    /// A forwarded socket appears only once ssh is connected, so an ssh that never puts it in place
+    /// failed before any remote path mattered: the other paths are not tried (each try can take
+    /// `connectBudget` on the watcher thread).
     static func open(machine: HerdrMachine) -> HerdrForwardConnection? {
         dispatchPrecondition(condition: .notOnQueue(.main))
         guard let directory = socketDirectory(),
@@ -36,14 +39,14 @@ final class HerdrForwardConnection {
               let user = HerdrForward.user(inResolvedConfig: resolved) else { return nil }
         let pidFile = socketPath + ".pid"
         let configFile = socketPath + ".conf"
-        endLeftover(pidFile: pidFile)
+        endLeftover(pidFile: pidFile, socketPath: socketPath)
         let config = Data(HerdrForward.privateConfig(fromResolved: resolved).utf8)
         for remote in HerdrForward.remoteSocketCandidates(user: user) {
             // Written for every try: closing a failed one removes it.
             guard FileManager.default.createFile(atPath: configFile, contents: config, attributes: [.posixPermissions: 0o600]),
                   let connection = start(target: machine.target, socketPath: socketPath, remoteSocket: remote,
                                          pidFile: pidFile, configFile: configFile) else {
-                continue
+                return nil
             }
             if connection.socket.reply(to: HerdrSurface.paneListRequest, budget: HerdrForward.requestBudget)
                 .flatMap(HerdrReplyParser.focusedPane(from:)) != nil {
@@ -79,6 +82,10 @@ final class HerdrForwardConnection {
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
+        // An ssh that ends on its own leaves the set at once, so quitting never signals a pid
+        // another process has taken since.
+        let running = running
+        process.terminationHandler = { ended in running.remove(ended.processIdentifier) }
         guard (try? process.run()) != nil else { return nil }
         running.add(process.processIdentifier)
         try? String(process.processIdentifier).write(toFile: pidFile, atomically: true, encoding: .utf8)
@@ -126,16 +133,29 @@ final class HerdrForwardConnection {
     }
 
     /// An ssh left running by a CmdIME that did not quit cleanly (a crash, `pkill`) is ended, if
-    /// the pid in the file is still that ssh and not a process that took the number since.
-    private static func endLeftover(pidFile: String) {
+    /// the pid in the file is still that ssh: /usr/bin/ssh with this forward's socket among its
+    /// arguments. A pid taken since by another process, the user's own ssh included, is left alone.
+    private static func endLeftover(pidFile: String, socketPath: String) {
+        defer { try? FileManager.default.removeItem(atPath: pidFile) }
         guard let text = try? String(contentsOfFile: pidFile, encoding: .utf8),
               let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 0 else { return }
         var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
-        if proc_pidpath(pid, &path, UInt32(path.count)) > 0,
-           String(decoding: path.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self) == ssh {
-            kill(pid, SIGTERM)
-        }
-        try? FileManager.default.removeItem(atPath: pidFile)
+        guard proc_pidpath(pid, &path, UInt32(path.count)) > 0,
+              String(decoding: path.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self) == ssh,
+              let arguments = processArguments(pid: pid),
+              arguments.range(of: Data(socketPath.utf8)) != nil else { return }
+        kill(pid, SIGTERM)
+    }
+
+    /// The raw argument area of a process (`KERN_PROCARGS2`): executable path, argv and env,
+    /// NUL-separated. Readable for this user's own processes only.
+    private static func processArguments(pid: pid_t) -> Data? {
+        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
+        var size = 0
+        guard sysctl(&mib, UInt32(mib.count), nil, &size, nil, 0) == 0, size > 0 else { return nil }
+        var buffer = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, UInt32(mib.count), &buffer, &size, nil, 0) == 0 else { return nil }
+        return Data(buffer.prefix(size))
     }
 
     private final class RunningProcesses: @unchecked Sendable {

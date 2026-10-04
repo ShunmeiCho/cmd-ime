@@ -58,6 +58,8 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
     private var shownMachineID: String?
     private var remoteFocusStream: HerdrFocusStream?
     private var remoteStreamMachineID: String?
+    /// Closes idle forwards while no terminal is in front, when no read runs to do it.
+    private var idleTimer: Timer?
 
     init(
         onReading: @escaping @Sendable (ProgramReading) -> Void,
@@ -130,9 +132,12 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         if !readsOverSSH {
             closeForwards()
         }
+        idleTimer?.invalidate()
+        idleTimer = nil
         guard target.pid != nil else {
             focusStream?.cancel()
             focusStream = nil
+            scheduleIdleClose()
             return
         }
         // A new generation is read at once (the tracker may be waiting for it), but not before a
@@ -220,7 +225,7 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         // Another machine that did not answer is asked again later and later.
         if answer.paneChangedDuringRead {
             scheduleRead(after: Self.rereadDelay)
-        } else if answer.isRemote, answer.context == .unknown {
+        } else if answer.isRemote, !answer.isForwarded, answer.context == .unknown {
             scheduleRead(after: remoteBackoff.failed())
         } else {
             if answer.isRemote { remoteBackoff.succeeded() }
@@ -248,9 +253,12 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         }
         isRemoteShown = true
         shownMachineID = machine.id
-        let send = onSlowRead
-        let generation = generation
-        DispatchQueue.main.async { send(pid, generation) }
+        // Only a read through the CLI, or one that has to open a forward first, is slow.
+        if !(readsOverSSH && forwards[machine.id]?.isAlive == true) {
+            let send = onSlowRead
+            let generation = generation
+            DispatchQueue.main.async { send(pid, generation) }
+        }
         var answer = readForwarded(machine: machine) ?? Self.readRemote(binary: binary, machineID: machine.id, rules: rules)
         answer.isRemote = true
         return answer
@@ -284,8 +292,10 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
             trackerPaneID: { HerdrRemote.paneID(machineID: machine.id, paneID: $0) },
             usesAgent: true
         )
-        // A forward that cannot tell is given up: the CLI answers this read and the next minute.
-        guard answer.context != .unknown || answer.paneChangedDuringRead else {
+        // A forward that does not answer is given up: the CLI answers this read and the next
+        // minute. One that answers but cannot name the program (a pane between fork and exec) is
+        // working, and is asked again on the next read.
+        guard answer.context != .unknown || answer.paneID != nil else {
             closeForward(machine.id)
             forwardFailures[machine.id] = now
             return nil
@@ -325,6 +335,17 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         for machineID in Array(forwards.keys) {
             closeForward(machineID)
         }
+    }
+
+    /// While no terminal is in front no read runs, so idle forwards are closed on a timer.
+    private func scheduleIdleClose() {
+        guard !forwards.isEmpty else { return }
+        let timer = Timer(timeInterval: HerdrForward.idleTimeout, repeats: false) { [weak self] _ in
+            self?.closeIdleForwards()
+            self?.scheduleIdleClose()
+        }
+        RunLoop.current.add(timer, forMode: .default)
+        idleTimer = timer
     }
 
     private func closeIdleForwards() {
