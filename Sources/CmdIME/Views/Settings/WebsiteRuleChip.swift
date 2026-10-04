@@ -78,7 +78,9 @@ struct WebsiteRuleChip: View {
     @ViewBuilder
     private var actions: some View {
         let look = AppRuleLaneLook(config: model.config)
-        Menu("Move To") {
+        // A section, not a submenu: on macOS 27 the "Move To" submenu closed as the pointer moved
+        // onto it, so none of its lanes could be chosen (owner, 0.18.0).
+        Section("Move To") {
             ForEach(lanes.filter { $0.target != rule.target }, id: \.target) { lane in
                 Button(look.title(lane)) { model.dropWebsite(domain: rule.domain, on: lane.target) }
             }
