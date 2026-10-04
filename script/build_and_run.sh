@@ -55,9 +55,15 @@ fi
 # SwiftUI's default localization lookup uses Bundle.main, not Bundle.module.
 # Compile catalogs into the assembled app before signing (also works with SwiftPM
 # versions that merely copy .xcstrings into their resource bundle).
+# xcstringstool writes into a scratch directory and cp moves the result in: once a build of the
+# bundle has run, macOS refuses xcstringstool's own writes inside dist/CmdIME.app ("You don't have
+# permission to save the file"), while cp from the same shell still works (2026-10-04).
+STRINGS_OUT="$(mktemp -d)"
 for catalog in "$ROOT_DIR"/Sources/CmdIME/Resources/*.xcstrings; do
-  xcrun xcstringstool compile "$catalog" --output-directory "$APP_RESOURCES"
+  xcrun xcstringstool compile "$catalog" --output-directory "$STRINGS_OUT"
 done
+cp -R "$STRINGS_OUT"/. "$APP_RESOURCES"/
+rm -rf "$STRINGS_OUT"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
