@@ -84,7 +84,7 @@ macOS 13 以降の Apple シリコン搭載 Mac が必要です(Intel Mac には
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.15.0 CMDIME_SHA256=0fc1a228c1e8104fb6a3e58cb40fa9c3a9375e1f52f2aa2f27409735792eb321 bash
+  CMDIME_VERSION=0.17.0 CMDIME_SHA256=16df5e82e93017d5534b7b6b0f1be2193e189d68c82b1ed2b9ee33181dc8f1c9 bash
 ```
 
 ソースからビルドするには:
