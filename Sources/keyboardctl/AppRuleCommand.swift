@@ -9,11 +9,13 @@ import AppKit
 /// here, the running app picks the change up only after a relaunch.
 extension CLI {
     static let keepWord = "keep"
-    private static let appRuleUsage = "Usage: keyboardctl app-rule list | set <bundle-id|--frontmost> <slot|keep> [--remember] | remove <bundle-id>"
+    private static let appRuleUsage = "Usage: keyboardctl app-rule list | set <bundle-id|--frontmost> <slot|keep> [--remember] | remove <bundle-id> | launcher-default [english|apps|<slot>]"
+    private static let englishWord = "english"
+    private static let sameAsAppsWord = "apps"
 
     func manageAppRule() throws {
         let store = ConfigStore(url: configURL)
-        switch try argument(at: 1, name: "list, set or remove") {
+        switch try argument(at: 1, name: "list, set, remove or launcher-default") {
         case "list":
             guard args.count == 2 else { throw CLIError.invalidArgument(Self.appRuleUsage) }
             printAppRules(try loadConfig(from: store))
@@ -28,6 +30,8 @@ extension CLI {
             }
             try save(config.removingAppRule(for: appID), to: store)
             print("Removed the rule for \(appID)")
+        case "launcher-default":
+            try setLauncherDefault(store: store)
         case let operation:
             throw CLIError.unknownCommand("app-rule \(operation)")
         }
@@ -62,6 +66,36 @@ extension CLI {
         print("\(app.name ?? app.id): \(targetDescription(target, in: config))\(remember ? ", remember instead" : "")")
     }
 
+    /// With no value, prints what launchers open in. "english" and "apps" are words, not slot
+    /// queries, so they win over a slot whose name starts with them.
+    private func setLauncherDefault(store: ConfigStore) throws {
+        guard args.count <= 3 else { throw CLIError.invalidArgument(Self.appRuleUsage) }
+        let config = try loadConfig(from: store)
+        guard args.count == 3 else {
+            print("Launchers without a rule or memory: \(launcherDefaultDescription(config.launcherDefault, in: config))")
+            return
+        }
+        let query = try argument(at: 2, name: "english, apps or a slot")
+        let value: LauncherDefault = switch query {
+        case Self.englishWord: .english
+        case Self.sameAsAppsWord: .sameAsOtherApps
+        default: .slot(try requireSlot(query, in: config).id)
+        }
+        var next = config
+        next.launcherDefault = value
+        try save(next, to: store)
+        print("Launchers without a rule or memory: \(launcherDefaultDescription(value, in: next))")
+    }
+
+    func launcherDefaultDescription(_ value: LauncherDefault, in config: SwitcherConfig) -> String {
+        switch value {
+        case .english: "english"
+        case .slot(let slot) where config.slot(slot) == nil: "\(slot.rawValue) (slot deleted, english)"
+        case .slot(let slot): "slot \(config.displayName(for: slot))"
+        case .sameAsOtherApps: "same as other apps"
+        }
+    }
+
     private func printAppRules(_ config: SwitcherConfig) {
         if config.appRules.isEmpty {
             print("No app rules. Add one with \"keyboardctl app-rule set <bundle-id> <slot|keep>\".")
@@ -74,6 +108,7 @@ extension CLI {
         }
         let fallback = config.appDefaultSlot.map { "slot \(config.displayName(for: $0))" } ?? "keep as is"
         print("Apps without a rule or memory: \(fallback)")
+        print("Launchers without a rule or memory: \(launcherDefaultDescription(config.launcherDefault, in: config))")
     }
 
     func targetDescription(_ target: AppRuleTarget, in config: SwitcherConfig) -> String {

@@ -148,7 +148,7 @@ public struct AppActivationSettings: Equatable, Sendable {
             websiteRules: config.websiteRules,
             programRules: config.programRules,
             programRulesPaused: config.programRulesPaused,
-            launcherSlot: config.englishSlot
+            launcherSlot: config.launcherSlot
         )
     }
 
@@ -220,6 +220,15 @@ public struct AppActivationSettings: Equatable, Sendable {
 }
 
 extension SwitcherConfig {
+    /// The slot a launcher with no rule and nothing remembered opens in; nil leaves it to the default slot.
+    var launcherSlot: InputRole? {
+        switch launcherDefault {
+        case .english: englishSlot
+        case .slot(let slot): self.slot(slot) == nil ? englishSlot : slot
+        case .sameAsOtherApps: nil
+        }
+    }
+
     /// The first slot, in slot order, whose language is English: its same-language fallback (a
     /// detected slot) or one of its language prefixes (the legacy default) is English.
     var englishSlot: InputRole? {

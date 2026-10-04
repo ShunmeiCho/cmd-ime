@@ -17,7 +17,7 @@ public enum WhatsNewNotice {
     /// so a line written for an older release never comes back after a later upgrade.
     static let messages: [String: String] = [
         "0.12": "New in 0.12: App Rules on the Apps page, a bubble for every switch, Peek, and settings export and import.",
-        "0.17": "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you give it a rule.",
+        "0.17": "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you choose otherwise on the Apps page.",
         "0.16": "New in 0.16: Toggle, one key between two slots; an optional space between Chinese and English; Terminal.app tabs followed by program rules.",
         "0.15": "New in 0.15: an input source per program in the terminal on the Apps page: English at the shell prompt, another slot inside an agent CLI.",
         "0.14": "New in 0.14: an input source per website on the Apps page, and shortcuts that tell the left modifier key from the right.",

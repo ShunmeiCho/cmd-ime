@@ -18,14 +18,15 @@ struct InstalledApp: Identifiable, Hashable {
     /// `fallbackName` is what was stored with a rule, for an app that has since been removed.
     init(id: String, fallbackName: String? = nil) {
         self.id = id
-        name = AppMetadataCache.shared.entry(for: id).displayName
+        name = LauncherCatalog.displayName(for: id)
+            ?? AppMetadataCache.shared.entry(for: id).displayName
             ?? fallbackName
             ?? (id.hasPrefix("/") ? URL(fileURLWithPath: id).lastPathComponent : id)
     }
 
     init(id: String, name: String) {
         self.id = id
-        self.name = name
+        self.name = LauncherCatalog.displayName(for: id) ?? name
     }
 
     /// The app an .app bundle on disk stands for; nil for anything that is not one.

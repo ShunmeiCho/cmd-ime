@@ -20809,30 +20809,6 @@
         }
       }
     },
-    "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you give it a rule.": {
-      "extractionState": "manual",
-      "generatesSymbol": false,
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you give it a rule."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "0.17 新增：Raycast、Spotlight、Alfred 会被当作应用；没有规则时，启动器打开即为英文。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "0.17 の新機能：Raycast、Spotlight、Alfred をアプリとして扱い、ルールがなければランチャーは英語で開きます。"
-          }
-        }
-      }
-    },
     "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may. If you said no, allow CmdIME in System Settings > Privacy & Security > Automation, then quit and reopen CmdIME.": {
       "extractionState": "manual",
       "generatesSymbol": false,
@@ -21021,6 +20997,174 @@
           "stringUnit": {
             "state": "translated",
             "value": "ルールのあるプログラムが、フォーカスのあるターミナルのペインで動いている間、そのスロットに切り替わります。CmdIME が読み取るのはターミナルで動いているプログラムの名前だけで、画面の内容は読み取りません。ほかのターミナルでは(シェル連携が必要)、プログラムの起動時と終了時にだけ切り替えます。"
+          }
+        }
+      }
+    },
+    "Launchers without a rule or memory": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launchers without a rule or memory"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有规则或记忆的启动器"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールも記憶もないランチャー"
+          }
+        }
+      }
+    },
+    "Same as other apps": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as other apps"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与其他应用相同"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他のアプリと同じ"
+          }
+        }
+      }
+    },
+    "Raycast, Spotlight and Alfred panels. A rule for one of them on this page wins.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raycast, Spotlight and Alfred panels. A rule for one of them on this page wins."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指 Raycast、Spotlight、Alfred 的面板。在本页为其中某个设了规则时，以规则为准。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raycast、Spotlight、Alfred のパネルです。このページでいずれかにルールを付けると、ルールが優先されます。"
+          }
+        }
+      }
+    },
+    "Launchers without a rule start in English": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launchers without a rule start in English"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无规则的启动器打开时使用英文"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールのないランチャーは英語で開きます"
+          }
+        }
+      }
+    },
+    "Launchers without a rule start in %@": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launchers without a rule start in %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无规则的启动器打开时使用 %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールのないランチャーは %@ で開きます"
+          }
+        }
+      }
+    },
+    "Launchers without a rule follow other apps": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launchers without a rule follow other apps"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无规则的启动器与其他应用相同"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールのないランチャーはその他のアプリに従います"
+          }
+        }
+      }
+    },
+    "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you choose otherwise on the Apps page.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you choose otherwise on the Apps page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.17 新增：Raycast、Spotlight、Alfred 会被当作应用；启动器默认以英文打开，可在「应用」页更改。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.17 の新機能：Raycast、Spotlight、Alfred をアプリとして扱い、ランチャーは英語で開きます（「アプリ」ページで変更できます）。"
           }
         }
       }

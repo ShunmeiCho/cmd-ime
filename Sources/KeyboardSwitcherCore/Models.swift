@@ -376,6 +376,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     /// The slot an app with no rule and nothing remembered gets when it comes to the front;
     /// nil leaves the input source unchanged.
     public var appDefaultSlot: InputRole?
+    /// What a launcher panel with no rule and nothing remembered opens in.
+    public var launcherDefault: LauncherDefault
     /// After a password field, put back the source macOS replaced with an ASCII one.
     public var restoreAfterPasswordField: Bool
     /// A bubble when Caps Lock turns on or off. Off unless the user turns it on.
@@ -408,6 +410,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         programRules: [ProgramRule] = [],
         programRulesPaused: Bool = false,
         appDefaultSlot: InputRole? = nil,
+        launcherDefault: LauncherDefault = .english,
         restoreAfterPasswordField: Bool = true,
         showCapsLockIndicator: Bool = false,
         autoSpaceBetweenChineseAndEnglish: Bool = false,
@@ -432,6 +435,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.programRules = programRules
         self.programRulesPaused = programRulesPaused
         self.appDefaultSlot = appDefaultSlot
+        self.launcherDefault = launcherDefault
         self.restoreAfterPasswordField = restoreAfterPasswordField
         self.showCapsLockIndicator = showCapsLockIndicator
         self.autoSpaceBetweenChineseAndEnglish = autoSpaceBetweenChineseAndEnglish
@@ -598,6 +602,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case programRules
         case programRulesPaused
         case appDefaultSlot
+        case launcherDefault
         case restoreAfterPasswordField
         case showCapsLockIndicator
         case autoSpaceBetweenChineseAndEnglish
@@ -659,6 +664,8 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             .uniquedByName()
         programRulesPaused = try container.decodeIfPresent(Bool.self, forKey: .programRulesPaused) ?? false
         appDefaultSlot = try container.decodeIfPresent(InputRole.self, forKey: .appDefaultSlot)
+        // A kind from a newer build reads as English rather than costing every setting.
+        launcherDefault = (try? container.decodeIfPresent(LauncherDefault.self, forKey: .launcherDefault)) ?? .english
         restoreAfterPasswordField = try container.decodeIfPresent(Bool.self, forKey: .restoreAfterPasswordField) ?? true
         showCapsLockIndicator = try container.decodeIfPresent(Bool.self, forKey: .showCapsLockIndicator) ?? false
         autoSpaceBetweenChineseAndEnglish = try container.decodeIfPresent(Bool.self, forKey: .autoSpaceBetweenChineseAndEnglish) ?? false
@@ -700,6 +707,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             try container.encode(programRulesPaused, forKey: .programRulesPaused)
         }
         try container.encodeIfPresent(appDefaultSlot, forKey: .appDefaultSlot)
+        // Written only when changed, so a file that never had it reads back byte for byte.
+        if launcherDefault != .english {
+            try container.encode(launcherDefault, forKey: .launcherDefault)
+        }
         try container.encode(restoreAfterPasswordField, forKey: .restoreAfterPasswordField)
         try container.encode(showCapsLockIndicator, forKey: .showCapsLockIndicator)
         // Written only when on, so a file that never had it reads back byte for byte.

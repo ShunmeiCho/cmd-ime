@@ -115,6 +115,35 @@ struct AppsPage: View {
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .explanation()
+            launcherDefaultRow
+            // Shown in Brief too for 0.17.1, the release that introduces it (issue #7 rule).
+            Text("Raycast, Spotlight and Alfred panels. A rule for one of them on this page wins.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var launcherDefaultRow: some View {
+        HStack {
+            Text("Launchers without a rule or memory")
+            Spacer(minLength: DesignTokens.Layout.rowGap)
+            Picker("Launchers without a rule or memory", selection: Binding(
+                get: { model.config.launcherDefault }, set: { model.setLauncherDefault($0) }
+            )) {
+                Text("English").tag(LauncherDefault.english)
+                Divider()
+                ForEach(model.config.slots, id: \.id) { slot in
+                    Text(model.config.displayName(for: slot.id)).tag(LauncherDefault.slot(slot.id))
+                }
+                if case .slot(let slot) = model.config.launcherDefault, model.config.slot(slot) == nil {
+                    Text("Slot deleted").tag(LauncherDefault.slot(slot))
+                }
+                Divider()
+                Text("Same as other apps").tag(LauncherDefault.sameAsOtherApps)
+            }
+            .labelsHidden()
+            .fixedSize()
         }
     }
 

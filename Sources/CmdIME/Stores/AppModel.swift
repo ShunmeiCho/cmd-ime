@@ -875,6 +875,20 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func setLauncherDefault(_ value: LauncherDefault) {
+        var next = config
+        next.launcherDefault = value
+        guard commitFromAppsPage(next) else { return }
+        switch value {
+        case .english:
+            statusText = String(localized: "Launchers without a rule start in English")
+        case .slot(let slot):
+            statusText = String(localized: "Launchers without a rule start in \(config.displayName(for: slot))")
+        case .sameAsOtherApps:
+            statusText = String(localized: "Launchers without a rule follow other apps")
+        }
+    }
+
     /// Clears the Apps page notice; with `notice`, only while it is still the one shown, so an
     /// expired confirmation never clears a newer message.
     func dismissAppRuleNotice(_ notice: AppRuleNotice? = nil) {

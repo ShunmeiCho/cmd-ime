@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import KeyboardSwitcherCore
 
@@ -66,5 +67,69 @@ struct LauncherPresenceTests {
         let replaced = presence.record(.launcher(719))
         #expect(replaced)
         #expect(presence.launcherPID == 719)
+    }
+}
+
+struct LauncherDefaultTests {
+    private func roundTrip(_ config: SwitcherConfig) throws -> (SwitcherConfig, String) {
+        let data = try JSONEncoder().encode(config)
+        return (try JSONDecoder().decode(SwitcherConfig.self, from: data), String(decoding: data, as: UTF8.self))
+    }
+
+    @Test("a config without the key opens launchers in English, and English is never written")
+    func missingKeyIsEnglish() throws {
+        let (decoded, json) = try roundTrip(.default)
+
+        #expect(decoded.launcherDefault == .english)
+        #expect(!json.contains("launcherDefault"))
+    }
+
+    @Test("a slot or Same as other apps survives a save")
+    func roundTrips() throws {
+        for value in [LauncherDefault.slot(.chinese), .sameAsOtherApps] {
+            var config = SwitcherConfig.default
+            config.launcherDefault = value
+            #expect(try roundTrip(config).0.launcherDefault == value)
+        }
+    }
+
+    @Test("a kind from a newer build reads as English instead of failing the file")
+    func unknownKindIsEnglish() throws {
+        var config = SwitcherConfig.default
+        config.launcherDefault = .sameAsOtherApps
+        let json = String(decoding: try JSONEncoder().encode(config), as: UTF8.self)
+            .replacingOccurrences(of: "\"apps\"", with: "\"future\"")
+
+        let decoded = try JSONDecoder().decode(SwitcherConfig.self, from: Data(json.utf8))
+        #expect(decoded.launcherDefault == .english)
+    }
+
+    @Test("the launcher slot follows the choice; a deleted slot falls back to English")
+    func resolvesTheSlot() {
+        var config = SwitcherConfig.default
+        config.launcherDefault = .slot(.japanese)
+        #expect(AppActivationSettings(config: config).launcherSlot == .japanese)
+
+        config.launcherDefault = .slot(InputRole(rawValue: "gone"))
+        #expect(AppActivationSettings(config: config).launcherSlot == .english)
+
+        config.launcherDefault = .sameAsOtherApps
+        #expect(AppActivationSettings(config: config).launcherSlot == nil)
+    }
+
+    @Test("Same as other apps gives a launcher the default slot")
+    func sameAsOtherAppsUsesDefaultSlot() {
+        var config = SwitcherConfig.default
+        config.launcherDefault = .sameAsOtherApps
+        config.appDefaultSlot = .chinese
+        let settings = AppActivationSettings(config: config)
+
+        #expect(settings.target(for: "com.raycast.macos", rememberedSourceID: nil) == .slot(.chinese))
+    }
+
+    @Test("Spotlight on macOS 27 is shown under its own name")
+    func spotlightDisplayName() {
+        #expect(LauncherCatalog.displayName(for: "com.apple.campo") == "Spotlight (Siri AI)")
+        #expect(LauncherCatalog.displayName(for: "com.raycast.macos") == nil)
     }
 }

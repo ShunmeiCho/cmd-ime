@@ -436,6 +436,8 @@ apps always wins.
   field is never remembered, and neither is CmdIME's own settings window.
 - **Other apps**: a slot for apps with no rule and nothing remembered, or **Keep as is**
   (the default). With App Memory on, the slot is used only on an app's first visit.
+  Below it, **Launchers without a rule or memory** sets what a Raycast, Spotlight or
+  Alfred panel opens in: **English** (the default), any slot, or **Same as other apps**.
 - **Password fields** (on by default): in a password field macOS switches to an ASCII
   input source such as ABC and leaves it there afterwards. When the field is done and the
   same app is still in front, CmdIME puts back the input source you had. Switching apps
@@ -452,7 +454,8 @@ Sources) is on, App Memory warns about it: macOS then selects its remembered sou
 every window change, which fights the per-app switching. The panels of Raycast, Spotlight
 and Alfred count as apps: give one a rule, and closing the panel gives the app underneath
 its own source back. A launcher with no rule and nothing remembered opens in your English
-slot. On macOS 27 Spotlight is listed as Siri AI. Alfred has not been tested yet. Menu bar
+slot; Apps > Other apps changes that to another slot or to what other apps get. On macOS 27
+Spotlight is the Siri AI app, listed as Spotlight (Siri AI). Alfred has not been tested yet. Menu bar
 apps and system alerts are not seen as apps: a switch made in one counts for the app
 underneath, and a rule for one never applies.
 
@@ -705,8 +708,9 @@ swift run keyboardctl listen
   bundle id or `--frontmost` (the app in front when you run it), then a slot or `keep`,
   and `--remember` for a rule that restores the last input source instead (refused with
   `keep`). `list` prints each rule, marks one whose slot was deleted, and ends with the
-  Other apps slot. `remove` takes a bundle id. A running CmdIME applies the change at
-  once. See **Per-app input sources** above.
+  Other apps slot and the launcher default. `remove` takes a bundle id.
+  `launcher-default english|apps|<slot>` sets what launchers open in (no value prints it).
+  A running CmdIME applies the change at once. See **Per-app input sources** above.
 - `keyboardctl export <new-folder>` / `keyboardctl import <folder>`: see Moving settings
   below.
 - `keyboardctl slots`: lists ordered slot IDs, names, triggers and matches, marking

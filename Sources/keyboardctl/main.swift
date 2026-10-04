@@ -755,6 +755,7 @@ struct CLI {
               keyboardctl app-rule list
               keyboardctl app-rule set <bundle-id|--frontmost> <slot|keep> [--remember]
               keyboardctl app-rule remove <bundle-id>
+              keyboardctl app-rule launcher-default [english|apps|<slot>]
               keyboardctl website-rule list
               keyboardctl website-rule set <domain> <slot|keep> [--exact]
               keyboardctl website-rule remove <domain>
