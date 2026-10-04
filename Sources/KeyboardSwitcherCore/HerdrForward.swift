@@ -24,12 +24,15 @@ public enum HerdrForward {
 
     /// ssh arguments that forward `remoteSocket` on the machine to `localSocket` here and run
     /// nothing there. Never asks anything (`BatchMode`): a machine that needs a password or has an
-    /// unknown host key fails, and the CLI is used.
+    /// unknown host key fails, and the CLI is used. A forward the user's ssh config adds for that
+    /// host (a `RemoteForward` another session already holds) must not end this one, so
+    /// `ExitOnForwardFailure` is off; whether this forward works is told by the socket answering.
+    /// `ClearAllForwardings` cannot drop the config's forwards alone: it drops `-L` too (measured).
     public static func sshArguments(target: String, localSocket: String, remoteSocket: String) -> [String] {
         [
             "-N", "-T",
             "-o", "BatchMode=yes",
-            "-o", "ExitOnForwardFailure=yes",
+            "-o", "ExitOnForwardFailure=no",
             "-o", "StreamLocalBindUnlink=yes",
             "-o", "ConnectTimeout=5",
             "-o", "ServerAliveInterval=15",

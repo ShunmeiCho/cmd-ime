@@ -3,14 +3,14 @@ import Testing
 @testable import KeyboardSwitcherCore
 
 struct HerdrForwardTests {
-    @Test("ssh forwards the remote socket, runs nothing there and never asks")
+    @Test("ssh forwards the remote socket, runs nothing there, never asks, and survives a config forward that fails")
     func sshArguments() {
         let arguments = HerdrForward.sshArguments(
             target: "venus", localSocket: "/l/a.sock", remoteSocket: "/home/me/.config/herdr/herdr.sock")
 
         #expect(arguments.contains("-N"))
         #expect(arguments.contains("BatchMode=yes"))
-        #expect(arguments.contains("ExitOnForwardFailure=yes"))
+        #expect(arguments.contains("ExitOnForwardFailure=no"))
         #expect(arguments.suffix(4) == ["-L", "/l/a.sock:/home/me/.config/herdr/herdr.sock", "--", "venus"])
     }
 
