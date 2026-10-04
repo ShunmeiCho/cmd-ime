@@ -56,11 +56,11 @@ struct InstalledApp: Identifiable, Hashable {
         FileManager.default.displayName(atPath: url.path).replacingOccurrences(of: ".app", with: "")
     }
 
-    /// Regular apps running now, CmdIME excluded, by name: suggestions for a new rule.
+    /// Regular apps and launchers running now, CmdIME excluded, by name: suggestions for a new rule.
     static func running() -> [InstalledApp] {
         let own = Bundle.main.bundleIdentifier
         let apps = NSWorkspace.shared.runningApplications.compactMap { app -> InstalledApp? in
-            guard app.activationPolicy == .regular,
+            guard LauncherCatalog.countsAsApp(bundleID: app.bundleIdentifier, isRegularApp: app.activationPolicy == .regular),
                   let id = app.cmdIMEAppID,
                   id != own else { return nil }
             return InstalledApp(id: id, name: app.localizedName ?? InstalledApp(id: id).name)

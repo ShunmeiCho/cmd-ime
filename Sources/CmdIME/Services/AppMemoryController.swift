@@ -35,6 +35,12 @@ final class AppMemoryController {
         }
     )
     private var programTarget: ProgramTarget?
+    /// Notices a launcher panel taking the keyboard, on its own thread.
+    private lazy var launchers = LauncherWatcher { [weak self] pid in
+        MainActor.assumeIsolated { self?.launcherDidChange(pid: pid) }
+    }
+    /// The launcher whose panel has the keyboard, as the watcher last said; it counts as the app in front.
+    private var launcherInFront: NSRunningApplication?
     /// The generation whose wait for the page already has its expiry scheduled.
     private var heldGeneration: Int?
     /// Where a tracker built by the next `start()` begins counting.
@@ -107,11 +113,11 @@ final class AppMemoryController {
         let frontmost = NSWorkspace.shared.frontmostApplication
         let context = context(frontmostPID: frontmost?.processIdentifier)
         if context.isTriggerPending {
-            let actual = Self.actualFrontmostApp()
+            let actual = actualFrontmostApp()
             tracker.triggerConfirmed(
                 sourceID: sourceID,
                 actualFrontmostAppID: Self.appID(of: actual),
-                isRegularApp: actual?.activationPolicy == .regular,
+                isRegularApp: Self.countsAsApp(actual),
                 context: context,
                 browserPID: Self.browserPID(of: actual),
                 terminalPID: Self.terminalPID(of: actual),
@@ -136,9 +142,9 @@ final class AppMemoryController {
     private func start() {
         tracker = AppMemoryTracker(
             ownAppID: Self.ownAppID,
-            frontmostAppID: Self.trackedAppID(of: Self.actualFrontmostApp()),
-            frontBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
-            frontTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp()),
+            frontmostAppID: Self.trackedAppID(of: actualFrontmostApp()),
+            frontBrowserPID: Self.browserPID(of: actualFrontmostApp()),
+            frontTerminalPID: Self.terminalPID(of: actualFrontmostApp()),
             // Never a number an earlier run used: a read or an expiry left over from it stays stale.
             activationGeneration: nextGenerationBase,
             settings: settings
@@ -154,6 +160,7 @@ final class AppMemoryController {
             MainActor.assumeIsolated { self?.appDidActivate(app) }
         }
         isActive = true
+        launchers.setRunning(true)
         sourceDidChange()
     }
 
@@ -162,6 +169,8 @@ final class AppMemoryController {
             NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
         }
         activationObserver = nil
+        launchers.setRunning(false)
+        launcherInFront = nil
         nextGenerationBase = tracker.activationGeneration + 1
         heldGeneration = nil
         tracker.forgetAll()
@@ -177,10 +186,10 @@ final class AppMemoryController {
             return
         }
         // Reconcile to what is in front now; the notice may be stale (see AppMemoryTracker.appActivated).
-        let actual = Self.actualFrontmostApp() ?? app
+        let actual = actualFrontmostApp() ?? app
         let restore = tracker.appActivated(
             noticedID,
-            isRegularApp: actual.activationPolicy == .regular,
+            isRegularApp: Self.countsAsApp(actual),
             currentSourceID: currentSourceID(),
             // Secure input belongs to the process in front, which a system alert can be; identity comes from `actual`.
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
@@ -203,6 +212,14 @@ final class AppMemoryController {
         perform(restore)
     }
 
+    /// A launcher panel took the keyboard (`pid`) or gave it back (nil). macOS posts no activation
+    /// for either, so this is one: of the launcher, or of the app underneath when the panel hides.
+    private func launcherDidChange(pid: pid_t?) {
+        guard isActive else { return }
+        launcherInFront = pid.flatMap { NSRunningApplication(processIdentifier: $0) }
+        appDidActivate(actualFrontmostApp())
+    }
+
     /// A read of the program in the terminal's focused pane came back from the watcher thread:
     /// a prompt to look, like a read of a page.
     private func programDidRead(_ reading: ProgramReading) {
@@ -212,8 +229,8 @@ final class AppMemoryController {
         }
         let restore = tracker.programRead(
             reading,
-            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
-            actualTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp()),
+            actualFrontmostAppID: Self.appID(of: actualFrontmostApp()),
+            actualTerminalPID: Self.terminalPID(of: actualFrontmostApp()),
             currentSourceID: currentSourceID(),
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             slotOfSource: slotForSourceID
@@ -231,8 +248,8 @@ final class AppMemoryController {
             pid: pid,
             paneID: paneID,
             at: time,
-            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
-            actualTerminalPID: Self.terminalPID(of: Self.actualFrontmostApp())
+            actualFrontmostAppID: Self.appID(of: actualFrontmostApp()),
+            actualTerminalPID: Self.terminalPID(of: actualFrontmostApp())
         )
         afterTrackerChange()
     }
@@ -246,8 +263,8 @@ final class AppMemoryController {
         }
         let restore = tracker.websiteRead(
             reading,
-            actualFrontmostAppID: Self.appID(of: Self.actualFrontmostApp()),
-            actualBrowserPID: Self.browserPID(of: Self.actualFrontmostApp()),
+            actualFrontmostAppID: Self.appID(of: actualFrontmostApp()),
+            actualBrowserPID: Self.browserPID(of: actualFrontmostApp()),
             currentSourceID: currentSourceID(),
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
             slotOfSource: slotForSourceID
@@ -259,7 +276,7 @@ final class AppMemoryController {
     /// The browser's own target waited for its page and no read came in time.
     private func websiteHoldDidExpire(generation: Int) {
         guard isActive, isPermitted else { return }
-        let actual = Self.actualFrontmostApp()
+        let actual = actualFrontmostApp()
         let context = context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
         // The wait belongs to a browser or to a terminal; the tracker ignores the other's expiry.
         let restore = tracker.programWatch == nil
@@ -361,7 +378,7 @@ final class AppMemoryController {
         guard !Self.isSecureInputHeld(byPID: frontmost?.processIdentifier) else { return }
         secureInputEndPoll?.invalidate()
         secureInputEndPoll = nil
-        guard isActive, isPermitted, Self.appID(of: Self.actualFrontmostApp()) == tracker.frontmostAppID else {
+        guard isActive, isPermitted, Self.appID(of: actualFrontmostApp()) == tracker.frontmostAppID else {
             _ = tracker.secureInputEnded(currentSourceID: nil, context: AppMemoryContext())
             return
         }
@@ -429,11 +446,20 @@ final class AppMemoryController {
     private static let ownAppID = appID(of: .current)
 
     /// Bundle id, or the executable path for an app without one.
-    /// The app the user is in: the menu bar owner, which a system alert or menu bar agent in
-    /// front does not take over, so it is the last regular app underneath. Falls back to the
-    /// frontmost app when nothing owns the menu bar.
-    private static func actualFrontmostApp() -> NSRunningApplication? {
-        NSWorkspace.shared.menuBarOwningApplication ?? NSWorkspace.shared.frontmostApplication
+    /// The app the user is in: a launcher whose panel has the keyboard, else the menu bar owner,
+    /// which a system alert or menu bar agent in front does not take over, so it is the last
+    /// regular app underneath. Falls back to the frontmost app when nothing owns the menu bar.
+    private func actualFrontmostApp() -> NSRunningApplication? {
+        if let launcherInFront, !launcherInFront.isTerminated {
+            return launcherInFront
+        }
+        return NSWorkspace.shared.menuBarOwningApplication ?? NSWorkspace.shared.frontmostApplication
+    }
+
+    /// A regular app, or a launcher (an accessory app with a text field of its own).
+    private static func countsAsApp(_ app: NSRunningApplication?) -> Bool {
+        guard let app else { return false }
+        return LauncherCatalog.countsAsApp(bundleID: app.bundleIdentifier, isRegularApp: app.activationPolicy == .regular)
     }
 
     private static func appID(of app: NSRunningApplication?) -> String? {
@@ -469,6 +495,6 @@ final class AppMemoryController {
     /// `AppMemoryTracker.appActivated`): a regular app, or CmdIME.
     private static func trackedAppID(of app: NSRunningApplication?) -> String? {
         guard let app, let id = appID(of: app) else { return nil }
-        return app.activationPolicy == .regular || id == ownAppID ? id : nil
+        return countsAsApp(app) || id == ownAppID ? id : nil
     }
 }
