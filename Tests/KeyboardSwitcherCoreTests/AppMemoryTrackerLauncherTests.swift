@@ -37,6 +37,19 @@ struct AppMemoryTrackerLauncherTests {
         #expect(tracker.frontmostAppID == raycast)
     }
 
+    @Test("Keep as is on a launcher switches nothing on show, and the hide still restores the app underneath")
+    func keepAsIsLauncher() {
+        var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat, settings: AppActivationSettings(
+            remembersPerApp: true, rules: [AppRule(appID: raycast, target: .keepAsIs)]
+        ))
+        tracker.sourceChanged(to: pinyin, context: quiet)
+
+        #expect(tracker.appActivated(raycast, isRegularApp: launcherCounts, currentSourceID: pinyin, context: quiet) == .none)
+        tracker.sourceChanged(to: abc, context: quiet)
+
+        #expect(tracker.appActivated(wechat, currentSourceID: abc, context: quiet) == .select(sourceID: pinyin))
+    }
+
     @Test("a panel hiding gives the app underneath its own source, and the launcher keeps its own")
     func hideRestoresUnderneath() {
         var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat, settings: AppActivationSettings(remembersPerApp: true))
