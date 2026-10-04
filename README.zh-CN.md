@@ -77,7 +77,7 @@ curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/inst
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.17.1 CMDIME_SHA256=a175b9426f9e15d315f32a31d9a959860b9b96c35375435e6f29d2b3ba754875 bash
+  CMDIME_VERSION=0.18.0 CMDIME_SHA256=ea8697a7de3bd818a3c48363bb780cb9e8bbf794160b4e0efa74a8e6d210adea bash
 ```
 
 从源码构建：
