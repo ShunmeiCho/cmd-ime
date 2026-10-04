@@ -111,6 +111,8 @@ public struct AppActivationSettings: Equatable, Sendable {
     /// Program rules, one per exact name; paused rules are retained but never applied.
     public var programRules: [ProgramRule]
     public var programRulesPaused: Bool
+    /// Another machine's Herdr is read over CmdIME's own ssh connection, not the herdr CLI.
+    public var readsHerdrMachinesOverSSH: Bool
     public var programTargets: [String: AppRuleTarget] {
         Dictionary(programRules.map { ($0.name, $0.target) }, uniquingKeysWith: { _, later in later })
     }
@@ -124,6 +126,7 @@ public struct AppActivationSettings: Equatable, Sendable {
         websiteRules: [WebsiteRule] = [],
         programRules: [ProgramRule] = [],
         programRulesPaused: Bool = false,
+        readsHerdrMachinesOverSSH: Bool = false,
         launcherSlot: InputRole? = nil
     ) {
         self.remembersPerApp = remembersPerApp
@@ -135,6 +138,7 @@ public struct AppActivationSettings: Equatable, Sendable {
         self.websiteRules = websiteRules
         self.programRules = programRules
         self.programRulesPaused = programRulesPaused
+        self.readsHerdrMachinesOverSSH = readsHerdrMachinesOverSSH
         self.launcherSlot = launcherSlot
     }
 
@@ -148,6 +152,7 @@ public struct AppActivationSettings: Equatable, Sendable {
             websiteRules: config.websiteRules,
             programRules: config.programRules,
             programRulesPaused: config.programRulesPaused,
+            readsHerdrMachinesOverSSH: config.readsHerdrMachinesOverSSH,
             launcherSlot: config.launcherSlot
         )
     }

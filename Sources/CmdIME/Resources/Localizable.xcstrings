@@ -21168,6 +21168,126 @@
           }
         }
       }
+    },
+    "Read Herdr machines over SSH": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read Herdr machines over SSH"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 SSH 读取 Herdr 远程机器"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSH で Herdr のリモートマシンを読み取る"
+          }
+        }
+      }
+    },
+    "Faster for panes on another machine Herdr shows. CmdIME opens its own SSH connection with your SSH settings and forwards that machine's Herdr socket here; it runs nothing there, never asks for a password, and reads only pane focus and program names. Off: CmdIME asks through the herdr command, about a second slower.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faster for panes on another machine Herdr shows. CmdIME opens its own SSH connection with your SSH settings and forwards that machine's Herdr socket here; it runs nothing there, never asks for a password, and reads only pane focus and program names. Off: CmdIME asks through the herdr command, about a second slower."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "让 Herdr 显示的其他机器上的 pane 切换得更快。CmdIME 会按你的 SSH 设置自己建立 SSH 连接，把那台机器的 Herdr socket 转发到本机；不在那台机器上运行任何东西，从不询问密码，只读取 pane 焦点和程序名。关闭时，CmdIME 通过 herdr 命令询问，慢约一秒。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herdr が表示する別のマシンのペインで、より速く切り替えます。CmdIME はあなたの SSH 設定で独自の SSH 接続を開き、そのマシンの Herdr ソケットをこの Mac に転送します。そのマシンでは何も実行せず、パスワードを尋ねることはなく、読み取るのはペインのフォーカスとプログラム名だけです。オフのときは herdr コマンドで問い合わせるため、約 1 秒遅くなります。"
+          }
+        }
+      }
+    },
+    "Herdr machines are read over SSH": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herdr machines are read over SSH"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 SSH 读取 Herdr 远程机器"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herdr のリモートマシンを SSH で読み取ります"
+          }
+        }
+      }
+    },
+    "Herdr machines are read through the herdr command": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herdr machines are read through the herdr command"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过 herdr 命令读取 Herdr 远程机器"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herdr のリモートマシンを herdr コマンドで読み取ります"
+          }
+        }
+      }
+    },
+    "New in 0.18: program rules follow Herdr's SSH machines too, and an optional switch on the Apps page reads them over SSH as quickly as local panes.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.18: program rules follow Herdr's SSH machines too, and an optional switch on the Apps page reads them over SSH as quickly as local panes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.18 新增：程序规则也能跟随 Herdr 的 SSH 远程机器；在「应用」页打开一个可选开关，可通过 SSH 读取它们，和本地面板一样快。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.18 の新機能：プログラムのルールが Herdr の SSH リモートマシンにも追従します。「アプリ」ページのオプションのスイッチで、SSH 経由でローカルのペインと同じ速さで読み取れます。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

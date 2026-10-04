@@ -32,6 +32,9 @@ final class AppMemoryController {
         },
         onPaneFocus: { [weak self] pid, paneID, time in
             MainActor.assumeIsolated { self?.paneDidFocus(pid: pid, paneID: paneID, at: time) }
+        },
+        onSlowRead: { [weak self] _, generation in
+            MainActor.assumeIsolated { self?.extendHold(generation: generation) }
         }
     )
     private var programTarget: ProgramTarget?
@@ -43,6 +46,8 @@ final class AppMemoryController {
     private var launcherInFront: NSRunningApplication?
     /// The generation whose wait for the page already has its expiry scheduled.
     private var heldGeneration: Int?
+    /// Which expiry ends a wait that a read of another machine's panes asked to extend.
+    private var holdExtension = SurfaceHoldExtension()
     /// Where a tracker built by the next `start()` begins counting.
     private var nextGenerationBase = 0
 
@@ -56,6 +61,7 @@ final class AppMemoryController {
         let pid: pid_t
         let generation: Int
         let rules: [ProgramRule]
+        let readsOverSSH: Bool
     }
 
     private(set) var isActive = false
@@ -274,8 +280,8 @@ final class AppMemoryController {
     }
 
     /// The browser's own target waited for its page and no read came in time.
-    private func websiteHoldDidExpire(generation: Int) {
-        guard isActive, isPermitted else { return }
+    private func websiteHoldDidExpire(generation: Int, isExtended: Bool = false) {
+        guard isActive, isPermitted, holdExtension.counts(generation: generation, isExtended: isExtended) else { return }
         let actual = actualFrontmostApp()
         let context = context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier)
         // The wait belongs to a browser or to a terminal; the tracker ignores the other's expiry.
@@ -310,10 +316,14 @@ final class AppMemoryController {
             websites.retarget(pid: target?.pid, generation: target?.generation ?? 0, rules: target?.rules ?? [])
         }
         let programWatch = isActive && isPermitted ? tracker.programWatch : nil
-        let program = programWatch.map { ProgramTarget(pid: $0.pid, generation: $0.generation, rules: settings.programRules) }
+        let program = programWatch.map {
+            ProgramTarget(pid: $0.pid, generation: $0.generation, rules: settings.programRules,
+                          readsOverSSH: settings.readsHerdrMachinesOverSSH)
+        }
         if program != programTarget {
             programTarget = program
-            programs.retarget(pid: program?.pid, generation: program?.generation ?? 0, rules: program?.rules ?? [])
+            programs.retarget(pid: program?.pid, generation: program?.generation ?? 0, rules: program?.rules ?? [],
+                              readsOverSSH: program?.readsOverSSH ?? false)
         }
         guard isActive, tracker.isWebsiteHoldWaiting, heldGeneration != tracker.activationGeneration else { return }
         let generation = tracker.activationGeneration
@@ -325,6 +335,17 @@ final class AppMemoryController {
 
     /// How long a browser's own target waits for the first read of its page.
     private static let websiteHoldBudget: TimeInterval = 0.25
+
+    /// The watcher is reading another machine's panes for `generation`: a terminal's own target
+    /// still waiting for that read waits `HerdrRemote.holdBudget` instead, counted from now.
+    private func extendHold(generation: Int) {
+        let waiting = isActive && tracker.isWebsiteHoldWaiting && heldGeneration == tracker.activationGeneration
+            ? tracker.activationGeneration : nil
+        guard holdExtension.extend(generation: generation, waitingGeneration: waiting) else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + HerdrRemote.holdBudget) { [weak self] in
+            self?.websiteHoldDidExpire(generation: generation, isExtended: true)
+        }
+    }
 
     private func perform(_ restore: AppMemoryTracker.Restore) {
         guard let monitor = monitor() else { return }

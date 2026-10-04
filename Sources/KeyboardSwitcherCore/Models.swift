@@ -373,6 +373,10 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
     public var programRules: [ProgramRule]
     /// Pause automatic program switching without discarding any rules.
     public var programRulesPaused: Bool
+    /// Read another machine's Herdr panes over a standing ssh connection of CmdIME's own (a short
+    /// python3 relay to that machine's Herdr socket) instead of the herdr CLI. Off by default:
+    /// CmdIME then connects to the user's machines and runs code there.
+    public var readsHerdrMachinesOverSSH: Bool
     /// The slot an app with no rule and nothing remembered gets when it comes to the front;
     /// nil leaves the input source unchanged.
     public var appDefaultSlot: InputRole?
@@ -409,6 +413,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         websiteRules: [WebsiteRule] = [],
         programRules: [ProgramRule] = [],
         programRulesPaused: Bool = false,
+        readsHerdrMachinesOverSSH: Bool = false,
         appDefaultSlot: InputRole? = nil,
         launcherDefault: LauncherDefault = .english,
         restoreAfterPasswordField: Bool = true,
@@ -434,6 +439,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         self.websiteRules = websiteRules
         self.programRules = programRules
         self.programRulesPaused = programRulesPaused
+        self.readsHerdrMachinesOverSSH = readsHerdrMachinesOverSSH
         self.appDefaultSlot = appDefaultSlot
         self.launcherDefault = launcherDefault
         self.restoreAfterPasswordField = restoreAfterPasswordField
@@ -601,6 +607,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         case websiteRules
         case programRules
         case programRulesPaused
+        case readsHerdrMachinesOverSSH = "herdrMachinesOverSSH"
         case appDefaultSlot
         case launcherDefault
         case restoreAfterPasswordField
@@ -663,6 +670,7 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
             .compactMap(\.rule)
             .uniquedByName()
         programRulesPaused = try container.decodeIfPresent(Bool.self, forKey: .programRulesPaused) ?? false
+        readsHerdrMachinesOverSSH = try container.decodeIfPresent(Bool.self, forKey: .readsHerdrMachinesOverSSH) ?? false
         appDefaultSlot = try container.decodeIfPresent(InputRole.self, forKey: .appDefaultSlot)
         // A kind from a newer build reads as English rather than costing every setting.
         launcherDefault = (try? container.decodeIfPresent(LauncherDefault.self, forKey: .launcherDefault)) ?? .english
@@ -705,6 +713,9 @@ public struct SwitcherConfig: Codable, Equatable, Sendable {
         }
         if programRulesPaused {
             try container.encode(programRulesPaused, forKey: .programRulesPaused)
+        }
+        if readsHerdrMachinesOverSSH {
+            try container.encode(readsHerdrMachinesOverSSH, forKey: .readsHerdrMachinesOverSSH)
         }
         try container.encodeIfPresent(appDefaultSlot, forKey: .appDefaultSlot)
         // Written only when changed, so a file that never had it reads back byte for byte.

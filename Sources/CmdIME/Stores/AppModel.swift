@@ -866,6 +866,14 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func setReadsHerdrMachinesOverSSH(_ isOn: Bool) {
+        if commitFromAppsPage(config.settingReadsHerdrMachinesOverSSH(isOn)) {
+            statusText = isOn
+                ? String(localized: "Herdr machines are read over SSH")
+                : String(localized: "Herdr machines are read through the herdr command")
+        }
+    }
+
     func setAppDefaultSlot(_ slot: InputRole?) {
         var next = config
         next.appDefaultSlot = slot

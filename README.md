@@ -423,7 +423,11 @@ apps always wins.
   trigger you press afterwards still wins, and a program without a rule changes nothing.
   One switch pauses all program rules. For this CmdIME reads only the name of the program
   running in the terminal, never what is on the screen. It follows panes of a
-  [Herdr](https://herdr.dev) server on this Mac; in other terminals zsh can report the
+  [Herdr](https://herdr.dev) server on this Mac, and of the SSH machines Herdr shows (asked
+  through the `herdr` command, a second or two behind). **Read Herdr machines over SSH**
+  (off by default) makes those as quick as local panes: CmdIME opens its own SSH connection
+  with your SSH settings, minus the forwards they set up, and forwards that machine's Herdr
+  socket to this Mac; it runs nothing there and never asks for a password. In other terminals zsh can report the
   program instead, through one line in `.zshrc` (**Shell Integration…**, or
   `keyboardctl shell-integration install`, which copies the file first). With shell
   integration a tab that was already running its program says nothing when you return to
