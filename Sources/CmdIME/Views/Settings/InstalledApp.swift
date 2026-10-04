@@ -60,7 +60,7 @@ struct InstalledApp: Identifiable, Hashable {
     static func running() -> [InstalledApp] {
         let own = Bundle.main.bundleIdentifier
         let apps = NSWorkspace.shared.runningApplications.compactMap { app -> InstalledApp? in
-            guard LauncherCatalog.countsAsApp(bundleID: app.bundleIdentifier, isRegularApp: app.activationPolicy == .regular),
+            guard app.countsAsApp,
                   let id = app.cmdIMEAppID,
                   id != own else { return nil }
             return InstalledApp(id: id, name: app.localizedName ?? InstalledApp(id: id).name)

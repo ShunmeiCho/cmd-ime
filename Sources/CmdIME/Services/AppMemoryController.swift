@@ -117,7 +117,7 @@ final class AppMemoryController {
             tracker.triggerConfirmed(
                 sourceID: sourceID,
                 actualFrontmostAppID: Self.appID(of: actual),
-                isRegularApp: Self.countsAsApp(actual),
+                isRegularApp: actual?.countsAsApp ?? false,
                 context: context,
                 browserPID: Self.browserPID(of: actual),
                 terminalPID: Self.terminalPID(of: actual),
@@ -189,7 +189,7 @@ final class AppMemoryController {
         let actual = actualFrontmostApp() ?? app
         let restore = tracker.appActivated(
             noticedID,
-            isRegularApp: Self.countsAsApp(actual),
+            isRegularApp: actual.countsAsApp,
             currentSourceID: currentSourceID(),
             // Secure input belongs to the process in front, which a system alert can be; identity comes from `actual`.
             context: context(frontmostPID: NSWorkspace.shared.frontmostApplication?.processIdentifier),
@@ -445,7 +445,6 @@ final class AppMemoryController {
 
     private static let ownAppID = appID(of: .current)
 
-    /// Bundle id, or the executable path for an app without one.
     /// The app the user is in: a launcher whose panel has the keyboard, else the menu bar owner,
     /// which a system alert or menu bar agent in front does not take over, so it is the last
     /// regular app underneath. Falls back to the frontmost app when nothing owns the menu bar.
@@ -456,12 +455,8 @@ final class AppMemoryController {
         return NSWorkspace.shared.menuBarOwningApplication ?? NSWorkspace.shared.frontmostApplication
     }
 
-    /// A regular app, or a launcher (an accessory app with a text field of its own).
-    private static func countsAsApp(_ app: NSRunningApplication?) -> Bool {
-        guard let app else { return false }
-        return LauncherCatalog.countsAsApp(bundleID: app.bundleIdentifier, isRegularApp: app.activationPolicy == .regular)
-    }
 
+    /// Bundle id, or the executable path for an app without one.
     private static func appID(of app: NSRunningApplication?) -> String? {
         app?.cmdIMEAppID
     }
@@ -495,6 +490,6 @@ final class AppMemoryController {
     /// `AppMemoryTracker.appActivated`): a regular app, or CmdIME.
     private static func trackedAppID(of app: NSRunningApplication?) -> String? {
         guard let app, let id = appID(of: app) else { return nil }
-        return countsAsApp(app) || id == ownAppID ? id : nil
+        return app.countsAsApp || id == ownAppID ? id : nil
     }
 }

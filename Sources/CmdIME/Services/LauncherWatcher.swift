@@ -16,9 +16,13 @@ final class LauncherWatcher: NSObject, @unchecked Sendable {
 
     private let onChange: @Sendable (pid_t?) -> Void
     private var thread: Thread?
+    /// Counts `setRunning` calls; touched only on main. A change posted under an older run is dropped
+    /// there, so a panel seen before a stop never lands after the next start.
+    private var run = 0
 
     // Touched only on the watcher thread.
     private var timer: Timer?
+    private var runNumber = 0
     private var systemWide: AXUIElement?
     private var presence = LauncherPresence()
     private var lastFocusedPID: pid_t?
@@ -41,7 +45,18 @@ final class LauncherWatcher: NSObject, @unchecked Sendable {
             thread.start()
         }
         guard let thread else { return }
-        perform(#selector(apply(_:)), on: thread, with: NSNumber(value: running), waitUntilDone: false)
+        run += 1
+        perform(#selector(apply(_:)), on: thread, with: Run(isRunning: running, number: run), waitUntilDone: false)
+    }
+
+    private final class Run: NSObject {
+        let isRunning: Bool
+        let number: Int
+
+        init(isRunning: Bool, number: Int) {
+            self.isRunning = isRunning
+            self.number = number
+        }
     }
 
     private func runThread() {
@@ -52,16 +67,19 @@ final class LauncherWatcher: NSObject, @unchecked Sendable {
         }
     }
 
-    @objc private func apply(_ running: NSNumber) {
+    @objc private func apply(_ run: Run) {
         dispatchPrecondition(condition: .notOnQueue(.main))
         timer?.invalidate()
         timer = nil
-        guard running.boolValue else {
+        runNumber = run.number
+        guard run.isRunning else {
             // Stopping ends any panel: main hears nothing more until polling starts again.
             presence = LauncherPresence()
             systemWide = nil
             return
         }
+        // Starting from no panel: the first launcher read is posted even if one showed before the stop.
+        presence = LauncherPresence()
         let systemWide = AXUIElementCreateSystemWide()
         AXUIElementSetMessagingTimeout(systemWide, Self.readBudget)
         self.systemWide = systemWide
@@ -74,7 +92,11 @@ final class LauncherWatcher: NSObject, @unchecked Sendable {
         guard let systemWide else { return }
         guard presence.record(read(systemWide)) else { return }
         let pid = presence.launcherPID
-        DispatchQueue.main.async { [onChange] in onChange(pid) }
+        let posted = runNumber
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.run == posted else { return }
+            self.onChange(pid)
+        }
     }
 
     private func read(_ systemWide: AXUIElement) -> LauncherPresence.Read {

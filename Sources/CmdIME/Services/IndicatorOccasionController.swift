@@ -99,4 +99,9 @@ extension NSRunningApplication {
     var cmdIMEAppID: String? {
         AppRuleBoard.appID(bundleIdentifier: bundleIdentifier, executablePath: executableURL?.path)
     }
+
+    /// Somewhere the user types, for App Memory and App Rules: a regular app, or a launcher.
+    var countsAsApp: Bool {
+        LauncherCatalog.countsAsApp(bundleID: bundleIdentifier, isRegularApp: activationPolicy == .regular)
+    }
 }
