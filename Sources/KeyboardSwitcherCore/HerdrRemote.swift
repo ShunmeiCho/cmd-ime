@@ -28,6 +28,19 @@ public enum HerdrRemote {
     public static let holdBudget: TimeInterval = 2
     /// The waits after one, two, three... failed reads in a row; the last repeats.
     public static let backoffIntervals: [TimeInterval] = [2, 5, 10, 30]
+    /// The pause between two reads that answered. A read is itself about 0.4-1.2 s of ssh round
+    /// trips and nothing is pushed, so reads follow each other almost at once.
+    public static let pollInterval: TimeInterval = 0.1
+
+    /// The program of a pane Herdr has recognised an agent in: the agent's name (`claude`, `codex`,
+    /// `pi`), read from `pane list` alone, which saves two ssh round trips and names `pi` where the
+    /// remote process name says `node`. Herdr clears it when the agent leaves the foreground, up to
+    /// about 0.4 s after the process does (measured 2026-10-04: exit, Ctrl+Z, `fg`). Nil when no
+    /// agent is recognised: the program is asked for.
+    public static func agentProgram(of pane: HerdrReplyParser.FocusedPane) -> String? {
+        guard let agent = pane.agent, !agent.isEmpty else { return nil }
+        return agent
+    }
 
     /// The machine a Herdr window title names, when it is not this Mac. Herdr writes the host name
     /// of the server the panes run on (`{hostname}: ...`), which is not always a machine's label:

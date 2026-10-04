@@ -79,6 +79,17 @@ struct HerdrRemoteTests {
             == ["--machine", "1ab3", "pane", "process-info", "--pane", "w6:p2"])
     }
 
+    @Test("a pane with a recognised agent is read as that agent; one without is asked for its program")
+    func agentProgram() throws {
+        let agentPane = try #require(HerdrReplyParser.focusedPane(from: Data(remotePaneList(agent: "pi").utf8)))
+        let shellPane = try #require(HerdrReplyParser.focusedPane(from: Data(remotePaneList(agent: nil).utf8)))
+        let emptyAgent = try #require(HerdrReplyParser.focusedPane(from: Data(remotePaneList(agent: "").utf8)))
+
+        #expect(HerdrRemote.agentProgram(of: agentPane) == "pi")
+        #expect(HerdrRemote.agentProgram(of: shellPane) == nil)
+        #expect(HerdrRemote.agentProgram(of: emptyAgent) == nil)
+    }
+
     @Test("failed reads wait longer each time up to the last interval, and a success resets")
     func backoff() {
         var backoff = HerdrRemote.Backoff()
@@ -124,6 +135,12 @@ struct HerdrRemoteTests {
         #expect(!second)
         #expect(hold.counts(generation: 5, isExtended: false))
     }
+}
+
+private func remotePaneList(agent: String?) -> String {
+    let agentField = agent.map { #","agent":""# + $0 + #"""# } ?? ""
+    return #"{"id":"cli:pane:list","result":{"panes":[{"focused":true,"pane_id":"w6:p2","tab_id":"w6:t2","workspace_id":"w6""#
+        + agentField + #"}],"type":"pane_list"}}"#
 }
 
 // Reduced from `herdr machine list --json` and `herdr --machine venus pane process-info` (2026-10-04).

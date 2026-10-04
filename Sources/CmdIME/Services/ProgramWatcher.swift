@@ -188,7 +188,7 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
             scheduleRead(after: remoteBackoff.failed())
         } else {
             if answer.isRemote { remoteBackoff.succeeded() }
-            scheduleRead(after: Self.pollInterval)
+            scheduleRead(after: answer.isRemote ? HerdrRemote.pollInterval : Self.pollInterval)
         }
     }
 
@@ -361,7 +361,8 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
             rules: rules,
             focusedPane: { herdr.reply(to: HerdrSurface.paneListRequest).flatMap(HerdrReplyParser.focusedPane(from:)) },
             program: { herdr.reply(to: HerdrSurface.processInfoRequest(paneID: $0)) },
-            trackerPaneID: { $0 }
+            trackerPaneID: { $0 },
+            usesAgent: false
         )
     }
 
@@ -374,19 +375,25 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
                 runHerdr(binary, HerdrRemote.paneListArguments(machineID: machineID)).flatMap(HerdrReplyParser.focusedPane(from:))
             },
             program: { runHerdr(binary, HerdrRemote.processInfoArguments(machineID: machineID, paneID: $0)) },
-            trackerPaneID: { HerdrRemote.paneID(machineID: machineID, paneID: $0) }
+            trackerPaneID: { HerdrRemote.paneID(machineID: machineID, paneID: $0) },
+            usesAgent: true
         )
     }
 
     /// The focused pane is asked for again after its program: a pane switch between the two
-    /// questions would pair one pane's program with the other pane.
+    /// questions would pair one pane's program with the other pane. With `usesAgent`, a pane
+    /// Herdr names an agent in is answered from the one pane list, which needs no second look.
     private static func readConfirmed(
         rules: [ProgramRule],
         focusedPane: () -> HerdrReplyParser.FocusedPane?,
         program: (String) -> Data?,
-        trackerPaneID: (String) -> String
+        trackerPaneID: (String) -> String,
+        usesAgent: Bool
     ) -> Answer {
         guard let pane = focusedPane() else { return Answer(context: .unknown) }
+        if usesAgent, let agent = HerdrRemote.agentProgram(of: pane) {
+            return Answer(context: HerdrSurface.context(program: agent, rules: rules), paneID: trackerPaneID(pane.paneID))
+        }
         let name = program(pane.paneID).flatMap(HerdrReplyParser.program(from:))
         // Only a pane read again says whose program this is: a second answer that fails is
         // "cannot tell", and one that names another pane is that pane with its program unread.
