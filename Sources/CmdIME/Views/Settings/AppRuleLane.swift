@@ -200,7 +200,9 @@ struct AppRuleChip: View {
                 Button(look.title(lane)) { model.dropApp(appID: rule.appID, name: nil, on: lane.target) }
             }
         }
+        // Its own group: right after the Move To section it was not shown (owner, test copy).
         if case .slot = rule.target {
+            Divider()
             Toggle("Remember", isOn: rememberBinding)
         }
         Divider()
