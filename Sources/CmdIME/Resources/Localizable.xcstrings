@@ -20809,6 +20809,30 @@
         }
       }
     },
+    "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you give it a rule.": {
+      "extractionState": "manual",
+      "generatesSymbol": false,
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New in 0.17: Raycast, Spotlight and Alfred count as apps, and a launcher opens in English unless you give it a rule."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.17 新增：Raycast、Spotlight、Alfred 会被当作应用；没有规则时，启动器打开即为英文。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.17 の新機能：Raycast、Spotlight、Alfred をアプリとして扱い、ルールがなければランチャーは英語で開きます。"
+          }
+        }
+      }
+    },
     "Terminal.app, and Ghostty from a release that reports it, can say which program runs in the tab in front: CmdIME asks them, and macOS asks you once per terminal whether CmdIME may. If you said no, allow CmdIME in System Settings > Privacy & Security > Automation, then quit and reopen CmdIME.": {
       "extractionState": "manual",
       "generatesSymbol": false,

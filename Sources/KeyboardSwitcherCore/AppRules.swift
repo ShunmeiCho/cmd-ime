@@ -94,6 +94,9 @@ public struct AppActivationSettings: Equatable, Sendable {
     public var rules: [String: AppRule]
     /// For an app with no rule and nothing remembered; nil leaves the source unchanged.
     public var defaultSlot: InputRole?
+    /// For a launcher panel with no rule and nothing remembered, before the default slot: people
+    /// search a launcher in English. Nil when no slot is English.
+    public var launcherSlot: InputRole?
     public var restoresAfterPasswordField: Bool
     /// Slots that exist: a rule or default naming a deleted slot does nothing.
     public var slotIDs: Set<InputRole>
@@ -120,7 +123,8 @@ public struct AppActivationSettings: Equatable, Sendable {
         slotIDs: Set<InputRole> = [],
         websiteRules: [WebsiteRule] = [],
         programRules: [ProgramRule] = [],
-        programRulesPaused: Bool = false
+        programRulesPaused: Bool = false,
+        launcherSlot: InputRole? = nil
     ) {
         self.remembersPerApp = remembersPerApp
         // A later duplicate wins, the same as `setting(_:)` replacing in place.
@@ -131,6 +135,7 @@ public struct AppActivationSettings: Equatable, Sendable {
         self.websiteRules = websiteRules
         self.programRules = programRules
         self.programRulesPaused = programRulesPaused
+        self.launcherSlot = launcherSlot
     }
 
     public init(config: SwitcherConfig) {
@@ -142,7 +147,8 @@ public struct AppActivationSettings: Equatable, Sendable {
             slotIDs: Set(config.slots.map(\.id)),
             websiteRules: config.websiteRules,
             programRules: config.programRules,
-            programRulesPaused: config.programRulesPaused
+            programRulesPaused: config.programRulesPaused,
+            launcherSlot: config.englishSlot
         )
     }
 
@@ -203,6 +209,9 @@ public struct AppActivationSettings: Equatable, Sendable {
             guard case .slot(let slot) = rule.target, slotIDs.contains(slot) else { return .none }
             return .slot(slot)
         }
+        if LauncherCatalog.isLauncher(appID), let launcherSlot, slotIDs.contains(launcherSlot) {
+            return .slot(launcherSlot)
+        }
         if let defaultSlot, slotIDs.contains(defaultSlot) {
             return .slot(defaultSlot)
         }
@@ -211,6 +220,19 @@ public struct AppActivationSettings: Equatable, Sendable {
 }
 
 extension SwitcherConfig {
+    /// The first slot, in slot order, whose language is English: its same-language fallback (a
+    /// detected slot) or one of its language prefixes (the legacy default) is English.
+    var englishSlot: InputRole? {
+        slots.first { slot in
+            guard let preference = inputSources[slot.id.rawValue] else { return false }
+            return ([preference.fallbackLanguage].compactMap { $0 } + preference.languagePrefixes).contains(where: Self.isEnglish)
+        }?.id
+    }
+
+    private static func isEnglish(_ language: String) -> Bool {
+        language == "en" || language.hasPrefix("en-") || language.hasPrefix("en_")
+    }
+
     public func appRule(for appID: String) -> AppRule? {
         appRules.first { $0.appID == appID }
     }

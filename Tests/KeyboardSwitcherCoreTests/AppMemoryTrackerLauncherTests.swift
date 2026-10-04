@@ -37,6 +37,53 @@ struct AppMemoryTrackerLauncherTests {
         #expect(tracker.frontmostAppID == raycast)
     }
 
+    @Test("a launcher with no rule and nothing remembered opens in the English slot, ahead of the default slot")
+    func launcherDefaultsToEnglish() {
+        var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat, settings: AppActivationSettings(
+            remembersPerApp: true, defaultSlot: .chinese, slotIDs: slots, launcherSlot: .english
+        ))
+
+        #expect(tracker.appActivated(raycast, isRegularApp: launcherCounts, currentSourceID: pinyin, context: quiet,
+                                     slotOfSource: slotOf) == .selectSlot(.english))
+        #expect(tracker.appActivated(wechat, currentSourceID: abc, context: quiet, slotOfSource: slotOf)
+            == .select(sourceID: pinyin))
+    }
+
+    @Test("a launcher's own rule and its memory beat the English default")
+    func launcherRuleAndMemoryBeatEnglish() {
+        var ruled = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat, settings: AppActivationSettings(
+            rules: [AppRule(appID: raycast, target: .slot(.chinese))], slotIDs: slots, launcherSlot: .english
+        ))
+        #expect(ruled.appActivated(raycast, isRegularApp: launcherCounts, currentSourceID: abc, context: quiet,
+                                   slotOfSource: slotOf) == .selectSlot(.chinese))
+
+        var remembering = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat, settings: AppActivationSettings(
+            remembersPerApp: true, slotIDs: slots, launcherSlot: .english
+        ))
+        _ = remembering.appActivated(raycast, isRegularApp: launcherCounts, currentSourceID: pinyin, context: quiet)
+        remembering.sourceChanged(to: pinyin, context: quiet)
+        _ = remembering.appActivated(wechat, currentSourceID: pinyin, context: quiet)
+        #expect(remembering.appActivated(raycast, isRegularApp: launcherCounts, currentSourceID: pinyin, context: quiet,
+                                         slotOfSource: slotOf) == .none)
+    }
+
+    @Test("an ordinary app never gets the launcher's English default")
+    func englishDefaultIsForLaunchersOnly() {
+        var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat, settings: AppActivationSettings(
+            slotIDs: slots, launcherSlot: .english
+        ))
+
+        #expect(tracker.appActivated(ghostty, currentSourceID: pinyin, context: quiet, slotOfSource: slotOf) == .none)
+    }
+
+    @Test("the English slot is the first slot whose fallback language is English")
+    func englishSlotFromConfig() {
+        #expect(AppActivationSettings(config: .default).launcherSlot == .english)
+        var config = SwitcherConfig.default
+        config.inputSources[InputRole.english.rawValue] = RoleInputSourcePreference(fallbackLanguage: "fr")
+        #expect(AppActivationSettings(config: config).launcherSlot == nil)
+    }
+
     @Test("Keep as is on a launcher switches nothing on show, and the hide still restores the app underneath")
     func keepAsIsLauncher() {
         var tracker = AppMemoryTracker(ownAppID: own, frontmostAppID: wechat, settings: AppActivationSettings(

@@ -451,9 +451,10 @@ If macOS's own "Automatically switch to a document's input source" (Keyboard > I
 Sources) is on, App Memory warns about it: macOS then selects its remembered source on
 every window change, which fights the per-app switching. The panels of Raycast, Spotlight
 and Alfred count as apps: give one a rule, and closing the panel gives the app underneath
-its own source back. On macOS 27 Spotlight is listed as Siri AI. Alfred has not been
-tested yet. Menu bar apps and system alerts are not seen as apps: a switch made in one
-counts for the app underneath, and a rule for one never applies.
+its own source back. A launcher with no rule and nothing remembered opens in your English
+slot. On macOS 27 Spotlight is listed as Siri AI. Alfred has not been tested yet. Menu bar
+apps and system alerts are not seen as apps: a switch made in one counts for the app
+underneath, and a rule for one never applies.
 
 From the command line:
 
