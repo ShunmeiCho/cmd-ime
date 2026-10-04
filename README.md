@@ -81,7 +81,7 @@ To pin an exact version and checksum (copy both from the release notes):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ShunmeiCho/cmd-ime/main/script/install.sh | \
-  CMDIME_VERSION=0.17.0 CMDIME_SHA256=16df5e82e93017d5534b7b6b0f1be2193e189d68c82b1ed2b9ee33181dc8f1c9 bash
+  CMDIME_VERSION=0.17.1 CMDIME_SHA256=a175b9426f9e15d315f32a31d9a959860b9b96c35375435e6f29d2b3ba754875 bash
 ```
 
 To build from source:
