@@ -10,7 +10,10 @@ import KeyboardSwitcherCore
 /// starts or ends). Whether the window in front shows Herdr at all is told from the window title's
 /// first word; the title stays in `read`. A title that names another machine Herdr has saved is read
 /// through the herdr CLI (`--machine`, about 0.4 s a call over ssh, nothing pushed): polled, with a
-/// longer first wait asked of main and a backoff while the machine does not answer. The second is the terminal itself where it can say which
+/// longer first wait asked of main and a backoff while the machine does not answer. With the
+/// user's consent (`readsHerdrMachinesOverSSH`) the machine's Herdr socket is instead forwarded
+/// here by an ssh of CmdIME's own (`HerdrForwardConnection`, nothing runs on the machine): about
+/// 110 ms a request, focus pushed; a forward that fails leaves the CLI in charge for a minute. The second is the terminal itself where it can say which
 /// program runs in its tab in front (`TerminalScriptSource`: Ghostty builds with `pid`, Terminal.app),
 /// asked through `osascript` once per read. Only the name of a program with a rule, which the user
 /// wrote, leaves this class. CmdIME never reads what is on the terminal's screen.
@@ -46,6 +49,15 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
     /// events then name panes that are not on screen.
     private var isRemoteShown = false
     private var remoteBackoff = HerdrRemote.Backoff()
+    /// The user let CmdIME forward another machine's Herdr socket over ssh.
+    private var readsOverSSH = false
+    /// Open forwards by machine id, and when a forward last failed.
+    private var forwards: [String: HerdrForwardConnection] = [:]
+    private var forwardFailures: [String: TimeInterval] = [:]
+    /// The machine whose panes the last read found in front, and the focus subscription on it.
+    private var shownMachineID: String?
+    private var remoteFocusStream: HerdrFocusStream?
+    private var remoteStreamMachineID: String?
 
     init(
         onReading: @escaping @Sendable (ProgramReading) -> Void,
@@ -56,10 +68,14 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         self.onPaneFocus = onPaneFocus
         self.onSlowRead = onSlowRead
         super.init()
+        // An ssh with `-N` outlives the app unless it is ended.
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.willTerminateNotification, object: nil, queue: nil
+        ) { _ in HerdrForwardConnection.endAll() }
     }
 
     /// Points the watcher at the terminal in front (or at nothing). Called on main; returns at once.
-    func retarget(pid: pid_t?, generation: Int, rules: [ProgramRule]) {
+    func retarget(pid: pid_t?, generation: Int, rules: [ProgramRule], readsOverSSH: Bool) {
         if thread == nil {
             guard pid != nil else { return }
             let thread = Thread { [weak self] in self?.runThread() }
@@ -69,8 +85,8 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
             thread.start()
         }
         guard let thread else { return }
-        perform(#selector(apply(_:)), on: thread, with: Target(pid: pid, generation: generation, rules: rules),
-                waitUntilDone: false)
+        let target = Target(pid: pid, generation: generation, rules: rules, readsOverSSH: readsOverSSH)
+        perform(#selector(apply(_:)), on: thread, with: target, waitUntilDone: false)
     }
 
     /// Asks again though nothing was pushed. Called on main; returns at once.
@@ -83,11 +99,13 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         let pid: pid_t?
         let generation: Int
         let rules: [ProgramRule]
+        let readsOverSSH: Bool
 
-        init(pid: pid_t?, generation: Int, rules: [ProgramRule]) {
+        init(pid: pid_t?, generation: Int, rules: [ProgramRule], readsOverSSH: Bool) {
             self.pid = pid
             self.generation = generation
             self.rules = rules
+            self.readsOverSSH = readsOverSSH
         }
     }
 
@@ -108,6 +126,10 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         pid = target.pid
         generation = target.generation
         rules = target.rules
+        readsOverSSH = target.readsOverSSH
+        if !readsOverSSH {
+            closeForwards()
+        }
         guard target.pid != nil else {
             focusStream?.cancel()
             focusStream = nil
@@ -127,11 +149,20 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
     /// The pane and the time go to main as they were received: asking again here could name a
     /// pane focus has moved on to since.
     @objc private func focusPushed(_ notice: FocusNotice) {
-        guard let pid else { return }
-        settleUntil = now + Self.focusSettle
         // Another machine's panes are on screen: a local pane focused behind them is not a focus
         // change the user sees. The read still runs and says what is in front.
-        guard !isRemoteShown else {
+        pushFocus(notice, isShown: !isRemoteShown)
+    }
+
+    /// The same for a focus event of a forwarded machine; its pane id already names the machine.
+    @objc private func remoteFocusPushed(_ notice: FocusNotice) {
+        pushFocus(notice, isShown: isRemoteShown && shownMachineID == remoteStreamMachineID)
+    }
+
+    private func pushFocus(_ notice: FocusNotice, isShown: Bool) {
+        guard let pid else { return }
+        settleUntil = now + Self.focusSettle
+        guard isShown else {
             scheduleRead(after: Self.focusSettle)
             return
         }
@@ -156,6 +187,11 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
 
     @objc private func focusStreamClosed() {
         focusStream = nil
+    }
+
+    @objc private func remoteFocusStreamClosed() {
+        remoteFocusStream = nil
+        remoteStreamMachineID = nil
     }
 
     private func scheduleRead(after delay: TimeInterval) {
@@ -188,8 +224,11 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
             scheduleRead(after: remoteBackoff.failed())
         } else {
             if answer.isRemote { remoteBackoff.succeeded() }
-            scheduleRead(after: answer.isRemote ? HerdrRemote.pollInterval : Self.pollInterval)
+            let interval = answer.isForwarded ? HerdrForward.pollInterval
+                : answer.isRemote ? HerdrRemote.pollInterval : Self.pollInterval
+            scheduleRead(after: interval)
         }
+        closeIdleForwards()
     }
 
     /// The window in front against Herdr: this Mac's panes over the socket, a saved machine's
@@ -198,6 +237,7 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         guard let title = Self.focusedWindowTitle(pid: pid) else { return Answer(context: .unknown) }
         let titleMachine = HerdrSurface.machine(inWindowTitle: title)
         isRemoteShown = false
+        shownMachineID = nil
         if let titleMachine, titleMachine == localMachine {
             return Self.readLocal(rules: rules)
         }
@@ -207,12 +247,90 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
             return Answer(context: .noRule)
         }
         isRemoteShown = true
+        shownMachineID = machine.id
         let send = onSlowRead
         let generation = generation
         DispatchQueue.main.async { send(pid, generation) }
-        var answer = Self.readRemote(binary: binary, machineID: machine.id, rules: rules)
+        var answer = readForwarded(machine: machine) ?? Self.readRemote(binary: binary, machineID: machine.id, rules: rules)
         answer.isRemote = true
         return answer
+    }
+
+    /// A read of `machine` over its ssh forward, opened if needed; nil when there is none to use
+    /// (off, failed within the last minute, or failing now), and the CLI reads instead.
+    private func readForwarded(machine: HerdrMachine) -> Answer? {
+        guard HerdrForward.shouldTry(isOn: readsOverSSH, lastFailure: forwardFailures[machine.id], now: now) else { return nil }
+        let connection: HerdrForwardConnection
+        if let open = forwards[machine.id], open.isAlive {
+            connection = open
+        } else {
+            forwards[machine.id]?.close()
+            forwards[machine.id] = nil
+            guard let opened = HerdrForwardConnection.open(machine: machine) else {
+                forwardFailures[machine.id] = now
+                return nil
+            }
+            forwards[machine.id] = opened
+            connection = opened
+        }
+        connection.lastUsed = now
+        var answer = Self.readConfirmed(
+            rules: rules,
+            focusedPane: {
+                connection.socket.reply(to: HerdrSurface.paneListRequest, budget: HerdrForward.requestBudget)
+                    .flatMap(HerdrReplyParser.focusedPane(from:))
+            },
+            program: { connection.socket.reply(to: HerdrSurface.processInfoRequest(paneID: $0), budget: HerdrForward.requestBudget) },
+            trackerPaneID: { HerdrRemote.paneID(machineID: machine.id, paneID: $0) },
+            usesAgent: true
+        )
+        // A forward that cannot tell is given up: the CLI answers this read and the next minute.
+        guard answer.context != .unknown || answer.paneChangedDuringRead else {
+            closeForward(machine.id)
+            forwardFailures[machine.id] = now
+            return nil
+        }
+        openRemoteFocusStreamIfNeeded(connection: connection, machineID: machine.id)
+        answer.isForwarded = true
+        return answer
+    }
+
+    private func openRemoteFocusStreamIfNeeded(connection: HerdrForwardConnection, machineID: String) {
+        guard remoteFocusStream == nil || remoteStreamMachineID != machineID else { return }
+        remoteFocusStream?.cancel()
+        remoteFocusStream = nil
+        guard let descriptor = connection.socket.openSubscription(HerdrSurface.focusSubscriptionRequest) else { return }
+        remoteStreamMachineID = machineID
+        remoteFocusStream = HerdrFocusStream(
+            descriptor: descriptor,
+            onFocus: { [weak self] paneID, time in
+                let notice = FocusNotice(paneID: HerdrRemote.paneID(machineID: machineID, paneID: paneID), time: time)
+                self?.onWatcherThread(#selector(ProgramWatcher.remoteFocusPushed(_:)), with: notice)
+            },
+            onClose: { [weak self] in self?.onWatcherThread(#selector(ProgramWatcher.remoteFocusStreamClosed)) }
+        )
+    }
+
+    private func closeForward(_ machineID: String) {
+        forwards[machineID]?.close()
+        forwards[machineID] = nil
+        if remoteStreamMachineID == machineID {
+            remoteFocusStream?.cancel()
+            remoteFocusStream = nil
+            remoteStreamMachineID = nil
+        }
+    }
+
+    private func closeForwards() {
+        for machineID in Array(forwards.keys) {
+            closeForward(machineID)
+        }
+    }
+
+    private func closeIdleForwards() {
+        for (machineID, connection) in forwards where now - connection.lastUsed >= HerdrForward.idleTimeout {
+            closeForward(machineID)
+        }
     }
 
     /// The program in the tab in front, asked of the terminal; nil when this terminal is not asked
@@ -322,6 +440,7 @@ final class ProgramWatcher: NSObject, @unchecked Sendable {
         var paneID: String?
         var paneChangedDuringRead = false
         var isRemote = false
+        var isForwarded = false
     }
 
     /// Every read is sent, as for a page: main may drop one, and a repeat gets it through later.

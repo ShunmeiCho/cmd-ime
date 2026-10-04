@@ -61,6 +61,7 @@ final class AppMemoryController {
         let pid: pid_t
         let generation: Int
         let rules: [ProgramRule]
+        let readsOverSSH: Bool
     }
 
     private(set) var isActive = false
@@ -315,10 +316,14 @@ final class AppMemoryController {
             websites.retarget(pid: target?.pid, generation: target?.generation ?? 0, rules: target?.rules ?? [])
         }
         let programWatch = isActive && isPermitted ? tracker.programWatch : nil
-        let program = programWatch.map { ProgramTarget(pid: $0.pid, generation: $0.generation, rules: settings.programRules) }
+        let program = programWatch.map {
+            ProgramTarget(pid: $0.pid, generation: $0.generation, rules: settings.programRules,
+                          readsOverSSH: settings.readsHerdrMachinesOverSSH)
+        }
         if program != programTarget {
             programTarget = program
-            programs.retarget(pid: program?.pid, generation: program?.generation ?? 0, rules: program?.rules ?? [])
+            programs.retarget(pid: program?.pid, generation: program?.generation ?? 0, rules: program?.rules ?? [],
+                              readsOverSSH: program?.readsOverSSH ?? false)
         }
         guard isActive, tracker.isWebsiteHoldWaiting, heldGeneration != tracker.activationGeneration else { return }
         let generation = tracker.activationGeneration

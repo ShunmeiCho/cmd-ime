@@ -148,6 +148,24 @@ struct AppRulesSection: View {
                 .foregroundStyle(DesignTokens.Colors.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
                 .explanation()
+            HStack {
+                Text("Read Herdr machines over SSH")
+                Spacer(minLength: DesignTokens.Layout.rowGap)
+                Toggle("Read Herdr machines over SSH", isOn: Binding(
+                    get: { model.config.readsHerdrMachinesOverSSH },
+                    set: { [model] isOn in model.setReadsHerdrMachinesOverSSH(isOn) }
+                ))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .tint(DesignTokens.Colors.success)
+                .controlSize(.small)
+            }
+            // New in 0.18: shown in Brief too (owner rule, issue #7), and it says what CmdIME does
+            // outside this Mac when the switch is on.
+            Text("Faster for panes on another machine Herdr shows. CmdIME opens its own SSH connection with your SSH settings and forwards that machine's Herdr socket here; it runs nothing there, never asks for a password, and reads only pane focus and program names. Off: CmdIME asks through the herdr command, about a second slower.")
+                .font(DesignTokens.Typography.auxiliary)
+                .foregroundStyle(DesignTokens.Colors.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

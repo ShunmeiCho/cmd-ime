@@ -113,4 +113,10 @@ extension SwitcherConfig {
         copy.programRulesPaused = paused
         return copy
     }
+
+    public func settingReadsHerdrMachinesOverSSH(_ isOn: Bool) -> SwitcherConfig {
+        var copy = self
+        copy.readsHerdrMachinesOverSSH = isOn
+        return copy
+    }
 }
