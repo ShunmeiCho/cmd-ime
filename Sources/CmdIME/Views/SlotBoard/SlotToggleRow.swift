@@ -157,7 +157,8 @@ struct SlotToggleRow: View {
     /// Same voice as the slot cards' tap menus: glyph and side ("⌥ Right ×2"), so it fits the row.
     private var shortKeyValue: String {
         guard let trigger else { return String(localized: "None") }
-        guard trigger.kind == .oneShotModifier else { return trigger.localizedDisplayName }
+        // A chord reads like the slot cards' Shortcut field ("⌃ ⇧ K"); the spelled-out name does not fit.
+        guard trigger.kind == .oneShotModifier else { return TriggerKeycapText.summary(trigger) }
         let cap = LiveKeycap(keyName: trigger.keyName)
         let side = cap.detail == "L" ? String(localized: "Left") : cap.detail == "R" ? String(localized: "Right") : nil
         return [cap.label, side, trigger.gesture == .doubleTap ? "×2" : nil].compactMap { $0 }.joined(separator: " ")
