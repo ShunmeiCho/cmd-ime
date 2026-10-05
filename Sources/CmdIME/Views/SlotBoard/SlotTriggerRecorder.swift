@@ -114,7 +114,7 @@ struct SlotTriggerRecorder: View {
     }
 }
 
-private struct TriggerRecorderPopover: View {
+struct TriggerRecorderPopover: View {
     @ObservedObject var session: TriggerRecordingSession
     let role: InputRole
     let name: String

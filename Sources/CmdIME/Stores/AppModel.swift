@@ -769,6 +769,18 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Why a recorded Toggle trigger would be refused, from the same check the save goes through.
+    func toggleTriggerConflict(_ trigger: KeyTrigger, slots first: InputRole, _ second: InputRole) -> String? {
+        do {
+            _ = try config.replacingToggleBinding(with: trigger, slots: first, second)
+            return nil
+        } catch .conflictingBinding(let binding) {
+            return String(localized: "\(binding.trigger.localizedDisplayName) is already used by \(config.ownerDescription(of: binding))")
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
     func setRememberInputSourcePerApp(_ enabled: Bool) {
         var next = config
         next.rememberInputSourcePerApp = enabled
