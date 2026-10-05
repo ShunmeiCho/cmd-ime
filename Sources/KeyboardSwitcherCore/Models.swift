@@ -97,15 +97,6 @@ public struct KeyTrigger: Codable, Equatable, Hashable, Sendable {
                    modifierSides: sides, gesture: gesture)
     }
 
-    public var isReservedMacInputSourceShortcut: Bool {
-        guard kind == .keyPress, keyCode == 49 else {
-            return false
-        }
-
-        let modifierSet = Set(modifiers)
-        return modifierSet == [.control] || modifierSet == [.control, .option]
-    }
-
     private enum CodingKeys: String, CodingKey {
         case kind
         case gesture

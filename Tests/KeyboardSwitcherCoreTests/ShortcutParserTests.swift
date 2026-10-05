@@ -129,9 +129,9 @@ final class ShortcutParserTests: XCTestCase {
         let previousInputSource = try ShortcutParser.parse("control+space")
         let nextInputSource = try ShortcutParser.parse("control+option+space")
 
-        XCTAssertTrue(previousInputSource.isReservedMacInputSourceShortcut)
-        XCTAssertTrue(nextInputSource.isReservedMacInputSourceShortcut)
-        XCTAssertFalse(try ShortcutParser.parse("command+shift+space").isReservedMacInputSourceShortcut)
+        XCTAssertTrue(previousInputSource.isReserved(by: MacInputSourceShortcuts.defaults))
+        XCTAssertTrue(nextInputSource.isReserved(by: MacInputSourceShortcuts.defaults))
+        XCTAssertFalse(try ShortcutParser.parse("command+shift+space").isReserved(by: MacInputSourceShortcuts.defaults))
     }
 
     func testRejectsModifierOnlyShortcutWithoutSide() {

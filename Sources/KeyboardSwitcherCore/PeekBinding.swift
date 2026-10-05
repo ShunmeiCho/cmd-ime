@@ -24,11 +24,13 @@ extension SwitcherConfig {
     /// Replaces the peek trigger, or removes it when `trigger` is nil. Refuses a trigger another
     /// enabled binding already answers to, with the same rule the slot board uses: a single and a
     /// double tap of one modifier key are different triggers, anything else on that key is not.
-    public func replacingPeekBinding(with trigger: KeyTrigger?) throws(PeekBindingError) -> SwitcherConfig {
+    public func replacingPeekBinding(
+        with trigger: KeyTrigger?, reserved: [SystemChord] = MacInputSourceShortcuts.current()
+    ) throws(PeekBindingError) -> SwitcherConfig {
         var result = self
         result.bindings.removeAll { $0.action.type == .showIndicator }
         guard let trigger else { return result }
-        if trigger.isReservedMacInputSourceShortcut {
+        if trigger.isReserved(by: reserved) {
             throw .reservedByMacOS(trigger)
         }
         if let occupant = result.bindings.first(where: { $0.enabled && Self.triggers($0.trigger, collideWith: trigger) }) {

@@ -45,13 +45,16 @@ extension SwitcherConfig {
     /// taken from that slot (the Toggle reaches it anyway); a trigger anything else answers to is
     /// refused, with the rule Peek uses. A trigger the old Toggle took goes back to its slot once the
     /// Toggle no longer uses it, when that slot still exists and nothing else has taken the key.
-    public func replacingToggleBinding(with trigger: KeyTrigger?, slots first: InputRole, _ second: InputRole) throws(ToggleBindingError) -> SwitcherConfig {
+    public func replacingToggleBinding(
+        with trigger: KeyTrigger?, slots first: InputRole, _ second: InputRole,
+        reserved: [SystemChord] = MacInputSourceShortcuts.current()
+    ) throws(ToggleBindingError) -> SwitcherConfig {
         var result = self
         let previous = toggleBinding
         result.bindings.removeAll { $0.action.type == .toggleSlots }
         guard let trigger else { return result.givingBack(previous) }
         try validateToggle(first, second)
-        if trigger.isReservedMacInputSourceShortcut {
+        if trigger.isReserved(by: reserved) {
             throw .reservedByMacOS(trigger)
         }
         // The same key as before keeps the slot it came from; a key taken now records its slot.
