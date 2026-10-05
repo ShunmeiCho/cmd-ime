@@ -44,7 +44,7 @@ struct PeekBindingTests {
     @Test("macOS's own input-source shortcut is refused")
     func refusesTheReservedShortcut() throws {
         #expect(throws: PeekBindingError.reservedByMacOS(try trigger("control+space"))) {
-            try SwitcherConfig.default.replacingPeekBinding(with: trigger("control+space"))
+            try SwitcherConfig.default.replacingPeekBinding(with: trigger("control+space"), reserved: MacInputSourceShortcuts.defaults)
         }
     }
 

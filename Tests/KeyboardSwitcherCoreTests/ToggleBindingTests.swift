@@ -53,7 +53,9 @@ struct ToggleBindingTests {
             try SwitcherConfig.default.replacingToggleBinding(with: trigger("option+t"), slots: .english, InputRole(rawValue: "korean"))
         }
         #expect(throws: ToggleBindingError.reservedByMacOS(try trigger("control+space"))) {
-            try SwitcherConfig.default.replacingToggleBinding(with: trigger("control+space"), slots: .english, .chinese)
+            try SwitcherConfig.default.replacingToggleBinding(
+                with: trigger("control+space"), slots: .english, .chinese, reserved: MacInputSourceShortcuts.defaults
+            )
         }
     }
 
