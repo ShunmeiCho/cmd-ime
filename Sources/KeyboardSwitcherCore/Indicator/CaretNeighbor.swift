@@ -82,6 +82,26 @@ public enum CaretNeighbor {
         return Rect(x: field.x, y: field.y + (field.height - height) / 2, width: 0, height: height)
     }
 
+    /// A rect taller than this is not one line of text.
+    public static let maxLineBoxHeight = 40.0
+
+    /// The caret from the bounds an editor gives for its selected text marker range while nothing is selected
+    /// (Chromium and Electron, where the plain range bounds come back empty: Slack). Measured in Slack's
+    /// composer: a zero-width rect at the caret inside text, or the box of the line when the line is empty,
+    /// whose leading edge is where typing starts. Nil for an empty or taller-than-a-line rect.
+    public static func caret(fromTextMarkerBounds rect: Rect) -> Rect? {
+        guard rect.width >= 0, rect.height > 0, rect.height <= maxLineBoxHeight else { return nil }
+        return Rect(x: rect.x, y: rect.y, width: 0, height: rect.height)
+    }
+
+    /// Text this long or shorter is read to tell whether it is blank.
+    public static let blankCheckMaxLength = 4
+
+    /// Text with nothing visible in it: an empty Electron editor can report itself as one newline (Slack).
+    public static func isBlank(_ text: String?) -> Bool {
+        text?.allSatisfy(\.isWhitespace) ?? false
+    }
+
     /// Known text that is not right-to-left. Unknown text is not taken as left-to-right.
     static func isLeftToRight(_ neighbor: Neighbor) -> Bool {
         neighbor.text?.isEmpty == false && !isRightToLeft(neighbor)

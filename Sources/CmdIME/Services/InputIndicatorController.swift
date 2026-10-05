@@ -600,17 +600,49 @@ final class InputIndicatorController {
             found[candidate.side] = .found(.init(rect: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height),
                                                  text: text as? String))
         }
+        if let caret = CaretNeighbor.caret(before: found[.before] ?? .unknown, after: found[.after] ?? .unknown) {
+            return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
+        }
+        // Electron editors (Slack) answer empty rects for every character but a real one for the text marker range.
+        if let caret = textMarkerCaret(focusedElement, budget: withRemainingBudget) {
+            return caret
+        }
         // An empty field has no character to measure: its leading edge is where typing starts. A field with text
         // whose caret cannot be told is left to the pointer (review A3: wrapped, right-to-left or partial evidence).
         // Without a length, an empty field shows as nothing before the start and nothing after it.
         let isEmpty = length == 0 || (length == nil && selection.location == 0 && found[.after] == CaretNeighbor.Lookup.none)
-        if isEmpty {
+        if isEmpty || isBlank(focusedElement, length: length, budget: withRemainingBudget) {
             return fieldCaret(focusedElement, budget: withRemainingBudget)
         }
-        guard let caret = CaretNeighbor.caret(before: found[.before] ?? .unknown, after: found[.after] ?? .unknown) else {
+        return nil
+    }
+
+    /// The caret from the selected text marker range, for editors whose plain range bounds come back empty.
+    private nonisolated static func textMarkerCaret(_ element: AXUIElement, budget: (AXUIElement) -> Bool) -> CGRect? {
+        var markerRange: CFTypeRef?, boundsValue: CFTypeRef?
+        guard budget(element),
+              AXUIElementCopyAttributeValue(element, "AXSelectedTextMarkerRange" as CFString, &markerRange) == .success,
+              let markerRange, budget(element),
+              AXUIElementCopyParameterizedAttributeValue(
+                  element, "AXBoundsForTextMarkerRange" as CFString, markerRange, &boundsValue) == .success,
+              let rect = realRect(boundsValue),
+              let caret = CaretNeighbor.caret(fromTextMarkerBounds: .init(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height)) else {
             return nil
         }
         return CGRect(x: caret.x, y: caret.y, width: caret.width, height: caret.height)
+    }
+
+    /// Whether a short field holds only whitespace: Slack reports its empty composer as one newline.
+    private nonisolated static func isBlank(_ element: AXUIElement, length: Int?, budget: (AXUIElement) -> Bool) -> Bool {
+        guard let length, length > 0, length <= CaretNeighbor.blankCheckMaxLength else { return false }
+        var range = CFRange(location: 0, length: length)
+        var text: CFTypeRef?
+        guard let parameter = AXValueCreate(.cfRange, &range), budget(element),
+              AXUIElementCopyParameterizedAttributeValue(
+                  element, kAXStringForRangeParameterizedAttribute as CFString, parameter, &text) == .success else {
+            return false
+        }
+        return CaretNeighbor.isBlank(text as? String)
     }
 
     /// For an empty field only: the field itself, when it is short enough that its leading edge is where typing

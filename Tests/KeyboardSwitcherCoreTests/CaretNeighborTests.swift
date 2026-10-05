@@ -37,4 +37,20 @@ struct CaretNeighborTests {
         #expect(CaretNeighbor.caret(inField: .init(x: 0, y: 0, width: 800, height: 600)) == nil)
         #expect(CaretNeighbor.caret(inField: .init(x: 0, y: 0, width: 0, height: 0)) == nil)
     }
+
+    @Test("a text marker caret is the zero-width rect inside text, or the leading edge of an empty line's box (Slack)")
+    func textMarkerCaret() {
+        #expect(CaretNeighbor.caret(fromTextMarkerBounds: .init(x: 489, y: 915, width: 0, height: 18)) == .init(x: 489, y: 915, width: 0, height: 18))
+        #expect(CaretNeighbor.caret(fromTextMarkerBounds: .init(x: 440, y: 913, width: 671, height: 22)) == .init(x: 440, y: 913, width: 0, height: 22))
+        #expect(CaretNeighbor.caret(fromTextMarkerBounds: .init(x: 0, y: 1112, width: 0, height: 0)) == nil)
+        #expect(CaretNeighbor.caret(fromTextMarkerBounds: .init(x: 0, y: 0, width: 800, height: 600)) == nil)
+    }
+
+    @Test("only whitespace counts as blank; unknown text does not")
+    func blank() {
+        #expect(CaretNeighbor.isBlank("\n"))
+        #expect(CaretNeighbor.isBlank(" \n"))
+        #expect(!CaretNeighbor.isBlank("a\n"))
+        #expect(!CaretNeighbor.isBlank(nil))
+    }
 }
