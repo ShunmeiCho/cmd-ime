@@ -1,3 +1,4 @@
+import AppKit
 import KeyboardSwitcherCore
 import SwiftUI
 
@@ -6,6 +7,9 @@ import SwiftUI
 struct SlotToggleRow: View {
     @ObservedObject var model: AppModel
     @State private var draft: [InputRole]?
+    @StateObject private var session = TriggerRecordingSession()
+    @State private var recorderShown = false
+    @State private var host = HostViewBox()
 
     private static let keys = [
         ("left-command", String(localized: "Left Command")), ("right-command", String(localized: "Right Command")),
@@ -65,6 +69,8 @@ struct SlotToggleRow: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(SwitcherConfig.toggleDisplayName)
+        .background(HostViewReader(box: host).frame(width: 0, height: 0))
+        .onDisappear { session.end(reason: .disappeared) }
     }
 
     private func slotMenu(at index: Int, pair: [InputRole]) -> some View {
@@ -100,11 +106,43 @@ struct SlotToggleRow: View {
                     .accessibilityValue(owner.map { String(localized: "Used by \($0)") } ?? (trigger == candidate ? String(localized: "Selected") : String(localized: "Not selected")))
                 }
             }
+            Divider()
+            Button(String(localized: "Record Shortcut…")) {
+                // The list closes on this tap; open the recorder once it has gone.
+                DispatchQueue.main.async { record(pair: pair) }
+            }
+            .accessibilityValue(trigger?.kind == .keyPress ? String(localized: "Selected") : String(localized: "Not selected"))
         }
         .frame(maxWidth: .infinity)
+        .appearancePopover(isPresented: recorderPresentation, arrowEdge: .bottom) {
+            let generation = session.sessionID
+            TriggerRecorderPopover(session: session, role: pair[0], name: SwitcherConfig.toggleDisplayName)
+                .environment(\.slotLook, SlotLook(slots: model.config.slots))
+                .id(generation)
+                .onDisappear { session.end(reason: .disappeared, sessionID: generation) }
+        }
         .opacity(trigger == nil ? 0.7 : 1)
         .accessibilityLabel("Trigger for \(SwitcherConfig.toggleDisplayName)")
         .accessibilityValue(keyValue)
+    }
+
+    private var recorderPresentation: Binding<Bool> {
+        Binding(get: { recorderShown }, set: { visible in
+            recorderShown = visible
+            if !visible { session.end(reason: .explicitClose) }
+        })
+    }
+
+    /// A chord (modifier + ordinary key) for the Toggle, recorded the way a slot's shortcut is.
+    private func record(pair: [InputRole]) {
+        guard let window = host.view?.window else { return }
+        let owner = UUID()
+        session.begin(in: window, existingTrigger: trigger?.kind == .keyPress ? trigger : nil,
+                      onCaptureChanged: { model.setShortcutRecording($0, for: pair[0], owner: owner) },
+                      onValidate: { model.toggleTriggerConflict($0, slots: pair[0], pair[1]) },
+                      onCommit: { model.commitToggle($0, slots: pair[0], pair[1]) },
+                      onDismiss: { recorderShown = false })
+        recorderShown = true
     }
 
     /// Picking the slot the other menu holds swaps the two.
@@ -154,4 +192,22 @@ struct SlotToggleRow: View {
             return nil
         }
     }
+}
+
+/// Holds the row's own view so the recorder starts in the window the row is in, never a guessed key window.
+private final class HostViewBox {
+    weak var view: NSView?
+}
+
+private struct HostViewReader: NSViewRepresentable {
+    let box: HostViewBox
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        view.setAccessibilityHidden(true)
+        box.view = view
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) { box.view = view }
 }
