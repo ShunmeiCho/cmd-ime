@@ -31,12 +31,15 @@ public struct ActivationRecipe: Codable, Equatable, Sendable {
 
 public enum SwitchActivationPolicy {
     /// Input methods measured to need more than a plain select.
-    /// azooKey and WeType switch reliably without it (12 of 12 and 9 of 9), so they are not listed.
+    /// WeType switches reliably without it (9 of 9), so it is not listed.
     public static let builtInRecipes = [
         ActivationRecipe(sourceIDPrefix: "com.google.inputmethod.Japanese", strategy: .kanaThenSelect),
         // azooKey keeps its own alphanumeric/kana mode across selections. Once left in
         // alphanumeric, a plain select shows azooKey in the menu bar while keys stay latin.
         ActivationRecipe(sourceIDPrefix: "dev.ensan.inputmethod.azooKeyMac", strategy: .kanaThenSelect),
+        // Apple Japanese keeps alphanumeric as RomajiTyping.Roman. Selecting
+        // RomajiTyping.Japanese leaves that mode in place, so Kana has to enter Hiragana first.
+        ActivationRecipe(sourceIDPrefix: "com.apple.inputmethod.Kotoeri", strategy: .kanaThenSelect),
     ]
 
     public static let delayRangeMs = 0...500

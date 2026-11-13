@@ -440,7 +440,7 @@ keyboardctl shell-integration install     # 在 ~/.zshrc 里加一行；uninstal
 <summary><strong>切换后仍然打出拉丁字母的输入法</strong></summary>
 
 从后台选中输入源，有时输入法并没有接到当前应用上：菜单栏显示的是新输入源，打出来的
-却还是拉丁字母。Google 日本語入力在你用 ABC 打过字之后就会这样，azooKey 在停留于英数模式时也会这样。对这两个
+却还是拉丁字母。Google 日本語入力在你用 ABC 打过字之后就会这样，azooKey 和系统自带的日文输入法在停留于英数模式时也会这样。对这三个
 输入法，CmdIME 会先按一下かな键，通过系统自己的路径进入日文，60 毫秒后再选中槽位指定的输入源。其他输入法仍然是
 直接选中，不增加延迟。
 
