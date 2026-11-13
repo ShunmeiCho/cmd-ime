@@ -491,10 +491,10 @@ keyboardctl shell-integration install     # one line in ~/.zshrc; uninstall remo
 
 Selecting a source from the background can leave an input method detached from the
 focused app: the menu bar shows the new source, but Latin letters keep coming out.
-Google Japanese Input does this after you have typed under ABC, and azooKey when it was
-left in its alphanumeric mode. For both, CmdIME presses the Kana key first, which enters
-Japanese through the system's own path, and selects the slot's source 60 ms later. Other input methods keep the plain select with no added
-delay.
+Google Japanese Input does this after you have typed under ABC, and azooKey and Apple's
+Japanese input method do it when left in alphanumeric mode. For these, CmdIME presses the
+Kana key first, which enters Japanese through the system's own path, and selects the slot's
+source 60 ms later. Other input methods keep the plain select with no added delay.
 
 If another Japanese input method shows the same symptom, add an activation recipe to
 `~/.config/cmd-ime/activation-recipes.json` and press the Refresh button above the input

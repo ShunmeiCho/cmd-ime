@@ -10,15 +10,19 @@ final class SwitchActivationPolicyTests: XCTestCase {
         let abc = source("com.apple.keylayout.ABC", "en")
         let google = source("com.google.inputmethod.Japanese.base", "ja")
         let azooKey = source("dev.ensan.inputmethod.azooKeyMac.Japanese", "ja")
+        let kotoeri = source("com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese", "ja")
         let pinyin = source("com.tencent.inputmethod.wetype.pinyin", "zh-Hans")
 
         XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: google, current: abc))
         XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: google, current: pinyin))
         XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: azooKey, current: abc))
         XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: azooKey, current: pinyin))
+        XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: kotoeri, current: abc))
+        XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: kotoeri, current: pinyin))
         XCTAssertTrue(SwitchActivationPolicy.needsKanaPrelude(target: google, current: nil))
         // Inside Japanese the system passes Kana to the app instead of switching.
         XCTAssertFalse(SwitchActivationPolicy.needsKanaPrelude(target: google, current: azooKey))
+        XCTAssertFalse(SwitchActivationPolicy.needsKanaPrelude(target: kotoeri, current: google))
         XCTAssertFalse(SwitchActivationPolicy.needsKanaPrelude(target: pinyin, current: abc))
         XCTAssertFalse(SwitchActivationPolicy.needsKanaPrelude(target: abc, current: google))
         XCTAssertFalse(SwitchActivationPolicy.needsKanaPrelude(target: source("com.apple.keylayout.Japanese", "ja"), current: abc))
@@ -62,8 +66,10 @@ final class SwitchActivationPolicyTests: XCTestCase {
     func testSelectWithKanaPreludePostsKanaThenSelectsAfterTheDelay() {
         let abc = source("com.apple.keylayout.ABC", "en")
         let google = source("com.google.inputmethod.Japanese.base", "ja")
+        let kotoeri = source("com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese", "ja")
 
         XCTAssertEqual(preludeSteps(target: google, current: abc), ["kana", "wait \(SwitchActivationPolicy.kanaToSelectDelay)", "select"])
+        XCTAssertEqual(preludeSteps(target: kotoeri, current: abc), ["kana", "wait \(SwitchActivationPolicy.kanaToSelectDelay)", "select"])
     }
 
     func testSelectWithKanaPreludeSelectsAtOnceWhenNoPreludeIsNeeded() {
@@ -73,7 +79,7 @@ final class SwitchActivationPolicyTests: XCTestCase {
 
         let kotoeri = source("com.apple.inputmethod.Kotoeri.RomajiTyping.Japanese", "ja")
 
-        XCTAssertEqual(preludeSteps(target: kotoeri, current: abc), ["select"])
+        XCTAssertEqual(preludeSteps(target: kotoeri, current: google), ["select"], "already in Japanese")
         XCTAssertEqual(preludeSteps(target: google, current: azooKey), ["select"], "already in Japanese")
         XCTAssertEqual(preludeSteps(target: abc, current: google), ["select"])
     }
